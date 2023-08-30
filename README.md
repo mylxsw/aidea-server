@@ -22,3 +22,13 @@ Android/IOS APP：https://aidea.aicode.cc/
 Mac 桌面端：https://github.com/mylxsw/aidea/releases
 
 Web 端：https://app.aicode.cc/
+
+## Star History
+
+<a href="https://star-history.com/#mylxsw/aidea-server">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=mylxsw/aidea-server&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=mylxsw/aidea-server&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=mylxsw/aidea-server&type=Date" />
+  </picture>
+</a>
