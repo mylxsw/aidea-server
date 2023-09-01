@@ -23,6 +23,11 @@ Mac 桌面端：https://github.com/mylxsw/aidea/releases
 
 Web 端：https://app.aicode.cc/
 
+## 架构草图
+
+![image](https://github.com/mylxsw/aidea-server/assets/2330911/ffb59bb3-46d7-4fe6-a777-b409acff17e2)
+
+
 ## Star History
 
 <a href="https://star-history.com/#mylxsw/aidea-server">
