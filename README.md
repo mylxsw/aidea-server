@@ -27,7 +27,7 @@ Android/IOS APP：https://aidea.aicode.cc/
 
 Mac 桌面端：https://github.com/mylxsw/aidea/releases
 
-Web 端：https://app.aicode.cc/
+Web 端：https://web.aicode.cc/
 
 ## 架构草图
 
