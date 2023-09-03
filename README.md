@@ -1,6 +1,6 @@
 # AIdea 服务端 - AI 聊天、协作、图像生成
 
-> 代码正在准备中，即将完全开源。
+> 代码正在准备中，即将完全开源（预计 9 月 10 日前）。
 
 一款集成了主流大语言模型以及绘图模型的 APP  服务端，使用 Golang 开发，代码完全开源，支持以下功能：
 
@@ -15,11 +15,9 @@
 
 微信技术交流群：
 
-技术交流群 1 | 技术交流群 2
-:-------------------------:|:-------------------------:
-![images](https://github.com/mylxsw/aidea/assets/2330911/bff2b9a7-7c60-4471-be71-d3b6a825c8e6)  | ![images](https://github.com/mylxsw/aidea/assets/2330911/c3123fed-75f9-4e4f-b3a1-e76cf24499ee) 
+<img src="https://github.com/mylxsw/aidea/assets/2330911/c3123fed-75f9-4e4f-b3a1-e76cf24499ee" width="400" />
 
-> 微信群满了加不进去的话，可以添加微信号 `x-prometheus` 为好友，把你拉进去哈。
+> 微信群满了加不进去的话，可以添加微信号 `x-prometheus` 为好友，拉你进群。
 > 
 > <img src="https://github.com/mylxsw/aidea/assets/2330911/655601c1-9371-4460-9657-c58521260336" width="400"/>
 
@@ -39,6 +37,11 @@ Web 端：https://web.aicode.cc/
 
 ![image](https://github.com/mylxsw/aidea-server/assets/2330911/ffb59bb3-46d7-4fe6-a777-b409acff17e2)
 
+## 开源不易，请我喝杯酒吧
+
+微信  | 支付宝
+:-------------------------:|:-------------------------:
+![image](https://github.com/mylxsw/aidea/assets/2330911/46e2242b-17bc-41ff-bebe-b5cc466b7f17) | ![image](https://github.com/mylxsw/aidea/assets/2330911/f3c85d4a-bea8-4a76-b582-c673613f76cb)
 
 ## Star History
 
