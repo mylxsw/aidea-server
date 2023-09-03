@@ -37,7 +37,7 @@ Web 端：https://web.aicode.cc/
 
 ![image](https://github.com/mylxsw/aidea-server/assets/2330911/ffb59bb3-46d7-4fe6-a777-b409acff17e2)
 
-## 开源不易，请我喝杯酒吧
+## 如果对你有帮助，请我喝杯酒吧
 
 微信  | 支付宝
 :-------------------------:|:-------------------------:
