@@ -1,0 +1,27 @@
+package: model
+
+models:
+- name: image_filter
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: name 
+      type: string
+      tag: json:"name,omitempty"
+    - name: model_id 
+      type: string
+      tag: json:"model_id,omitempty"
+    - name: meta 
+      type: string
+      tag: json:"-"
+    - name: preview_image
+      type: string
+      tag: json:"preview_image,omitempty"
+    - name: description
+      type: string
+      tag: json:"description,omitempty"
+    - name: status
+      type: int64
+      tag: json:"status,omitempty"

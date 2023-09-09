@@ -1,0 +1,61 @@
+package: model
+
+models:
+
+  - name: creative_gallery_random
+    definition:
+      without_create_time: true
+      without_update_time: true
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: gallery_id
+          type: int64
+          tag: json:"gallery_id"
+
+  - name: creative_gallery
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: user_id
+          type: int64
+          tag: json:"user_id,omitempty"
+        - name: username
+          type: string
+          tag: json:"username,omitempty"
+        - name: creative_history_id
+          type: int64
+          tag: json:"creative_history_id,omitempty"
+        - name: creative_type
+          type: int64
+          tag: json:"creative_type,omitempty"
+        - name: meta
+          type: string
+          tag: json:"meta,omitempty"
+        - name: prompt
+          type: string
+          tag: json:"prompt,omitempty"
+        - name: negative_prompt
+          type: string
+          tag: json:"negative_prompt,omitempty"
+        - name: answer
+          type: string
+          tag: json:"answer,omitempty"
+        - name: tags
+          type: string
+          tag: json:"tags,omitempty"
+        - name: ref_count
+          type: int64
+          tag: json:"ref_count,omitempty"
+        - name: star_level
+          type: int64
+          tag: json:"star_level,omitempty"
+        - name: hot_value
+          type: int64
+          tag: json:"hot_value,omitempty"
+        - name: status
+          type: int64
+          tag: json:"status,omitempty"

@@ -1,0 +1,15 @@
+package: model
+
+models:
+- name: debt
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id"
+    - name: used
+      type: int64
+      tag: json:"used"

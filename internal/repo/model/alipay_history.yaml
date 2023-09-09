@@ -1,0 +1,52 @@
+
+package: model
+
+models:
+- name: alipay_history
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id,omitempty"
+    - name: payment_id
+      type: string
+      tag: json:"payment_id,omitempty"
+    - name: product_id
+      type: string
+      tag: json:"product_id,omitempty"
+    - name: buyer_id
+      type: string
+      tag: json:"buyer_id,omitempty"
+    - name: invoice_amount
+      type: int64
+      tag: json:"invoice_amount,omitempty"
+    - name: receipt_amount
+      type: int64
+      tag: json:"receipt_amount,omitempty"
+    - name: buyer_pay_amount
+      type: int64
+      tag: json:"buyer_pay_amount,omitempty"
+    - name: total_amount
+      type: int64
+      tag: json:"total_amount,omitempty"
+    - name: point_amount
+      type: int64
+      tag: json:"point_amount,omitempty"
+    - name: trade_no
+      type: string
+      tag: json:"trade_no,omitempty"
+    - name: buyer_logon_id
+      type: string
+      tag: json:"buyer_logon_id,omitempty"
+    - name: status
+      type: int
+      tag: json:"status,omitempty"
+    - name: purchase_at
+      type: time.Time
+      tag: json:"purchase_at"
+    - name: note
+      type: string
+      tag: json:"note"

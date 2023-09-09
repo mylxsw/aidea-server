@@ -1,0 +1,42 @@
+package: model
+
+models:
+- name: users
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: email
+      type: string
+      tag: json:"email"
+    - name: phone
+      type: string
+      tag: json:"phone"
+    - name: password
+      type: string
+      tag: json:"-"
+    - name: realname
+      type: string
+      tag: json:"realname"
+    - name: avatar
+      type: string
+      tag: json:"avatar"
+    - name: apple_uid
+      type: string
+      tag: json:"apple_uid"
+    - name: invited_by
+      type: int64
+      tag: json:"invite_by"
+    - name: invite_code
+      type: string
+      tag: json:"invite_code"
+    - name: user_type
+      type: int64
+      tag: json:"user_type"
+    - name: prefer_signin_method
+      type: string
+      tag: json:"prefer_signin_method"
+    - name: status
+      type: string
+      tag: json:"status"

@@ -1,0 +1,18 @@
+package: model
+
+models:
+- name: quota_statistics
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id"
+    - name: used
+      type: int64
+      tag: json:"used"
+    - name: cal_date
+      type: time.Time
+      tag: json:"cal_date"

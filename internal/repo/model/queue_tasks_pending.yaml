@@ -1,0 +1,30 @@
+package: model
+
+models:
+  - name: queue_tasks_pending
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: task_id
+          type: string
+          tag: json:"task_id"
+        - name: task_type
+          type: string
+          tag: json:"task_type"
+        - name: payload
+          type: string
+          tag: json:"-"
+        - name: next_execute_at
+          type: time.Time
+          tag: json:"next_execute_at"
+        - name: execute_times
+          type: int64
+          tag: json:"execute_times"
+        - name: deadline_at
+          type: time.Time
+          tag: json:"deadline_at"
+        - name: status
+          type: int64
+          tag: json:"status"

@@ -1,0 +1,43 @@
+
+package: model
+
+models:
+- name: apple_pay_history
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id"
+    - name: payment_id
+      type: string
+      tag: json:"payment_id"
+    - name: purchase_id
+      type: string 
+      tag: json:"purchase_id"
+    - name: transaction_id
+      type: string
+      tag: json:"transaction_id"
+    - name: product_id
+      type: string
+      tag: json:"product_id"
+    - name: source
+      type: string
+      tag: json:"source"
+    - name: status
+      type: int
+      tag: json:"status"
+    - name: environment
+      type: string
+      tag: json:"environment"
+    - name: server_verify_data
+      type: string
+      tag: json:"server_verify_data"
+    - name: purchase_at
+      type: time.Time
+      tag: json:"purchase_at"
+    - name: note
+      type: string
+      tag: json:"note"

@@ -1,0 +1,42 @@
+package: model
+
+models:
+- name: creative_history
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id"
+    - name: island_id
+      type: string 
+      tag: json:"island_id"
+    - name: island_type
+      type: int64
+      tag: json:"island_type"
+    - name: island_model
+      type: string
+      tag: json:"island_model"
+    - name: arguments
+      type: string
+      tag: json:"arguments"
+    - name: prompt
+      type: string
+      tag: json:"prompt"
+    - name: answer
+      type: string
+      tag: json:"answer"
+    - name: task_id
+      type: string 
+      tag: json:"task_id"
+    - name: shared
+      type: int64
+      tag: json:"shared"
+    - name: quota_used
+      type: int64
+      tag: json:"quota_used"
+    - name: status
+      type: int64
+      tag: json:"status"

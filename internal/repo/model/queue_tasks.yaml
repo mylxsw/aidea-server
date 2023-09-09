@@ -1,0 +1,33 @@
+package: model
+
+models:
+  - name: queue_tasks
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: title
+          type: string
+          tag: json:"title"
+        - name: uid
+          type: int64
+          tag: json:"uid"
+        - name: task_id
+          type: string
+          tag: json:"task_id"
+        - name: task_type
+          type: string
+          tag: json:"task_type"
+        - name: queue_name
+          type: string
+          tag: json:"queue_name"
+        - name: payload
+          type: string
+          tag: json:"-"
+        - name: result
+          type: string
+          tag: json:"result"
+        - name: status
+          type: string
+          tag: json:"status"

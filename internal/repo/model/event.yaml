@@ -1,0 +1,18 @@
+package: model
+
+models:
+- name: events
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: event_type
+      type: string
+      tag: json:"event_type"
+    - name: payload
+      type: string
+      tag: json:"payload"
+    - name: status
+      type: string
+      tag: json:"status"

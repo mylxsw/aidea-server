@@ -1,0 +1,16 @@
+
+package: model
+
+models:
+- name: chat_sys_prompt_example
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: title
+      type: string
+      tag: json:"title,omitempty"
+    - name: content
+      type: string
+      tag: json:"content,omitempty"

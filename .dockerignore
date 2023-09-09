@@ -1,0 +1,15 @@
+node_modules
+Dockerfile*
+*.Dockerfile
+docker-compose*
+.dockerignore
+.git
+.gitignore
+.env
+*/bin
+*/obj
+README.md
+LICENSE
+.vscode
+build/*
+docker-build.sh

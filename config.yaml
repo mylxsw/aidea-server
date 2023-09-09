@@ -1,0 +1,198 @@
+######## 基本配置 ########
+
+# Web 服务监听地址
+listen: 0.0.0.0:8080
+# 日志文件存储目录，留空则写入到标准输出
+log-path: /data/logs/ai-server
+
+# 数据库配置
+db-uri: "root:123456@tcp(mysql-server.host:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local"
+
+# Redis 配置
+redis-host: redis-server.host
+redis-port: 6379
+redis-password: "123456"
+
+# 代理服务器
+# 如果启用了 xxx-autoproxy，则该选项必须
+socks5-proxy: 127.0.0.1:1080
+
+# 任务队列：用于处理图片生成、邮件发送、短信发送、用户注册等耗时任务
+# 这里指任务队列工作线程（Goroutine）数量，设置为 0 则不启用任务队列，该进程实例无法处理上述任务
+queue-workers: 10
+# 定时任务
+enable-scheduler: true
+
+# 支持的短信通道，支持 aliyun, tencent，配置多个则随机选择
+sms-channels: [ "aliyun", "tencent" ]
+
+######## OpenAI 配置 ########
+
+# 是否启用 OpenAI 代理，依赖于 socks5-proxy 配置
+openai-autoproxy: false
+# OpenAI 服务配置
+openai-organization: ""
+# OpenAI 服务地址，可以配置多个，用于负载均衡
+openai-servers: [ "https://api.openai.com/v1" ]
+# OpenAI API Key，可以配置多个，用于负载均衡
+openai-keys: [ "sk-xxxxxxxxxxxxxxxx" ]
+
+# Azure OpenAI 服务配置
+#openai-azure: true
+#openai-apiversion: "2023-05-15"
+#openai-servers: ["https://xxxx.openai.azure.com"]
+#openai-keys: ["xxxxxxxxxxxxxxxxxxxxxxx"]
+
+######## 百度文心大模型 ########
+
+# API 申请：https://cloud.baidu.com/product/wenxinworkshop
+
+#baiduwx-key: ""
+#baiduwx-secret: ""
+
+######### 阿里灵积模型 ########
+
+# API 申请：https://dashscope.aliyun.com/
+
+#dashscope-key: ""
+
+######### 讯飞星火大语言模型 ########
+
+# API 申请：https://xinghuo.xfyun.cn/
+
+#xfyun-appid: ""
+#xfyun-apikey: ""
+#xfyun-apisecret: ""
+
+######## DeepAI 配置 ########
+
+# 用于图片超分辨率、图片上色
+# DeepAI API 申请：https://deepai.org/
+
+enable-deepai: false
+# 是否启用 DeepAI 代理，依赖于 socks5-proxy 配置
+deepai-autoproxy: true
+deepai-servers: [ "https://api.deepai.org" ]
+deepai-key: ""
+
+######## StabilityAI 配置 ########
+
+# 官方提供的 Stable Diffusion 托管服务，用于文生图、图生图
+# API 申请：https://stability.ai/
+
+enable-stabilityai: true
+# 是否启用 StabilityAI 代理，依赖于 socks5-proxy 配置
+stabilityai-autoproxy: true
+stabilityai-servers: [ "https://api.stability.ai" ]
+stabilityai-organization: ""
+stabilityai-key: ""
+
+######## LeapAI 配置 ########
+
+# Leap 提供的 Stable Diffusion 托管服务，用于文生图、图生图
+# API 申请：https://tryleap.ai/
+
+enable-leapai: true
+# 是否启用 LeapAI 代理，依赖于 socks5-proxy 配置
+leapai-autoproxy: false
+leapai-servers: [ "https://api.tryleap.ai" ]
+leapai-key: ""
+
+######## 6pen 配置 ########
+
+# 国内厂商 6pen 提供的 Stable Diffusion 托管服务，用于文生图、图生图
+# API 申请：https://fromston.6pen.art/
+
+enable-fromstonai: true
+fromston-server: https://ston.6pen.art
+fromston-key: ""
+
+######## getimg.ai ########
+
+# getimg.ai 提供的图片生成服务，用于文生图、图生图
+# API 申请：https://getimg.ai/tools/api
+
+enable-getimgai: false
+getimgai-autoproxy: false
+getimgai-server: "https://api.getimg.ai"
+getimgai-key: ""
+
+
+######## 有道翻译配置 ########
+
+# 用于提供文本翻译，文生图、图生图 prompt 翻译
+# API 申请：https://ai.youdao.com/DOCSIRMA/html/trans/api/wbfy/index.html
+
+translate-appid: ""
+translate-appkey: ""
+
+######## 七牛云存储配置 ########
+
+# 用于提供图片存储服务，图片上传、图片下载、缩略图生成等
+
+storage-appkey: ""
+storage-secret: ""
+storage-bucket: "aicode"
+storage-callback: "https://ai-api.example.com/v1/callback/storage/qiniu"
+
+######## Apple 配置 ########
+
+# 用于提供 Apple 登录、Apple 支付服务
+
+apple-keyid: ""
+apple-teamid: ""
+apple-secret: /data/webroot/ai-server/etc/apple-key.p8
+
+######## 邮件服务器配置 ########
+
+# 用于邮箱注册、密码找回、邮件通知等
+enable-mail: false
+mail-from: AIdea
+mail-username: ai@example.com
+mail-password: "123456"
+mail-host: smtp.qiye.aliyun.com
+mail-port: 465
+mail-ssl: true
+
+######## 腾讯云云配置 ########
+
+# 腾讯云云服务配置，提供语音合成、短信验证码服务
+
+# 是否启用腾讯语音转文本服务（不启用则默认使用 OpenAI 的 Whisper 模型）
+tencent-voice: true
+
+tencent-id: ""
+tencent-key: ""
+
+# 腾讯云短信服务 appid
+tencent-smssdkappid: "1400827805"
+
+######## 阿里云配置 ########
+
+# 阿里云服务配置，提供短信验证码、内容安全服务（用于用户输入信息是否合规）
+
+aliyun-key: ""
+aliyun-secret: ""
+
+# 是否启用内容安全检测（提示语敏感内容检测）
+enable-contentdetect: true
+
+######## 支付宝配置 ########
+
+# 支付宝配置，用于支持 Android 端的支付宝支付
+
+alipay-appid: ""
+# APP 私钥文件路径
+alipay-app-private-key: ""
+# APP 公钥文件路径
+alipay-app-public-key: ""
+# 支付宝根证书文件路径
+alipay-root-cert: ""
+# 支付宝公钥文件路径
+alipay-public-key: ""
+
+######## 钉钉通知配置 ########
+
+# 钉钉群通知 Token，留空则不通知，用于用户注册、支付通知到管理员
+dingding-token: ""
+dingding-secret: ""

@@ -1,0 +1,87 @@
+package: model
+
+models:
+- name: creative_island
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: island_id
+      type: string
+      tag: json:"island_id"
+    - name: title 
+      type: string
+      tag: json:"title"
+    - name: title_color
+      type: string
+      tag: json:"title_color"
+    - name: description
+      type: string
+      tag: json:"description"
+    - name: category
+      type: string
+      tag: json:"category"
+    - name: model_type
+      type: string
+      tag: json:"model_type"
+    - name: word_count
+      type: int64
+      tag: json:"word_count"
+    - name: hint 
+      type: string
+      tag: json:"hint"
+    - name: vendor
+      type: string
+      tag: json:"vendor"
+    - name: model
+      type: string
+      tag: json:"model"
+    - name: style_preset
+      type: string
+      tag: json:"style_preset,omitempty"
+    - name: prompt
+      type: string
+      tag: json:"prompt"
+    - name: bg_image
+      type: string
+      tag: json:"bg_image,omitempty"
+    - name: bg_embedded_image
+      type: string
+      tag: json:"bg_embedded_image,omitempty"
+    - name: label
+      type: string
+      tag: json:"label,omitempty"
+    - name: label_color
+      type: string
+      tag: json:"label_color,omitempty"
+    - name: submit_btn_text
+      type: string
+      tag: json:"submit_btn_text,omitempty"
+    - name: prompt_input_title
+      type: string
+      tag: json:"prompt_input_title,omitempty"
+    - name: wait_seconds
+      type: int64
+      tag: json:"wait_seconds,omitempty"
+    - name: show_image_style_selector
+      type: int64
+      tag: json:"show_image_style_selector,omitempty"
+    - name: no_prompt
+      type: int64
+      tag: json:"no_prompt,omitempty"
+    - name: version_min
+      type: string
+      tag: json:"version_min,omitempty"
+    - name: version_max
+      type: string
+      tag: json:"version_max,omitempty"
+    - name: status 
+      type: int64
+      tag: json:"status"
+    - name: priority
+      type: int64
+      tag: json:"priority,omitempty"
+    - name: ext
+      type: string
+      tag: json:"ext,omitempty"

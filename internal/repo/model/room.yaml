@@ -1,0 +1,48 @@
+package: model
+
+models:
+- name: rooms
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id"
+    - name: avatar_id
+      type: int64
+      tag: json:"avatar_id,omitempty"
+    - name: avatar_url
+      type: string
+      tag: json:"avatar_url,omitempty"
+    - name: name
+      type: string
+      tag: json:"name,omitempty"
+    - name: description
+      type: string
+      tag: json:"description,omitempty"
+    - name: priority
+      type: int64
+      tag: json:"priority,omitempty"
+    - name: model 
+      type: string
+      tag: json:"model,omitempty"
+    - name: vendor
+      type: string
+      tag: json:"vendor,omitempty"
+    - name: system_prompt
+      type: string
+      tag: json:"system_prompt,omitempty"
+    - name: max_context
+      type: int64
+      tag: json:"max_context,omitempty"
+    - name: room_type
+      type: int64
+      tag: json:"room_type,omitempty"
+    - name: init_message
+      type: string
+      tag: json:"init_message,omitempty"
+    - name: last_active_time
+      type: time.Time
+      tag: json:"last_active_time,omitempty"

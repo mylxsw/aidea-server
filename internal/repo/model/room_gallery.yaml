@@ -1,0 +1,48 @@
+package: model
+
+models:
+- name: room_gallery
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: avatar_id
+      type: int64
+      tag: json:"avatar_id,omitempty"
+    - name: avatar_url
+      type: string
+      tag: json:"avatar_url,omitempty"
+    - name: name
+      type: string
+      tag: json:"name,omitempty"
+    - name: model 
+      type: string
+      tag: json:"model,omitempty"
+    - name: vendor
+      type: string
+      tag: json:"vendor,omitempty"
+    - name: prompt
+      type: string
+      tag: json:"prompt,omitempty"
+    - name: description
+      type: string
+      tag: json:"description,omitempty"
+    - name: max_context
+      type: int64
+      tag: json:"max_context,omitempty"
+    - name: init_message
+      type: string
+      tag: json:"init_message,omitempty"
+    - name: tags
+      type: string
+      tag: json:"tags,omitempty"
+    - name: version_min
+      type: string
+      tag: json:"version_min,omitempty"
+    - name: version_max
+      type: string
+      tag: json:"version_max,omitempty"
+    - name: room_type
+      type: string
+      tag: json:"room_type,omitempty"

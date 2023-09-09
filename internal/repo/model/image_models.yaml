@@ -1,0 +1,33 @@
+package: model
+
+models:
+- name: image_model
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: model_id
+      type: string
+      tag: json:"model_id,omitempty"
+    - name: model_name
+      type: string
+      tag: json:"model_name,omitempty"
+    - name: vendor 
+      type: string
+      tag: json:"vendor,omitempty"
+    - name: real_model 
+      type: string
+      tag: json:"real_model,omitempty"
+    - name: meta
+      type: string
+      tag: json:"-"
+    - name: preview_image
+      type: string
+      tag: json:"preview_image,omitempty"
+    - name: description
+      type: string
+      tag: json:"description,omitempty"
+    - name: status
+      type: int64
+      tag: json:"status,omitempty"

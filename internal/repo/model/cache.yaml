@@ -1,0 +1,18 @@
+package: model
+
+models:
+- name: cache
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: key
+      type: string
+      tag: json:"key"
+    - name: value
+      type: string
+      tag: json:"value"
+    - name: valid_until
+      type: time.Time
+      tag: json:"valid_until"

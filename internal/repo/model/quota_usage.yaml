@@ -1,0 +1,24 @@
+package: model
+
+models:
+- name: quota_usage
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id"
+    - name: used
+      type: int64
+      tag: json:"used"
+    - name: quota_ids
+      type: string
+      tag: json:"quota_ids"
+    - name: debt
+      type: int64
+      tag: json:"debt"
+    - name: meta 
+      type: string
+      tag: json:"meta"

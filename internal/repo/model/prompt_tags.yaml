@@ -1,0 +1,33 @@
+package: model
+
+models:
+  - name: prompt_tags
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: tag_name
+          type: string
+          tag: json:"tag_name"
+        - name: tag_value
+          type: string
+          tag: json:"tag_value"
+        - name: description
+          type: string
+          tag: json:"description"
+        - name: category
+          type: string
+          tag: json:"category"
+        - name: category_sub
+          type: string
+          tag: json:"category_sub"
+        - name: tag_type
+          type: int64
+          tag: json:"tag_type"
+        - name: meta
+          type: string
+          tag: json:"meta"
+        - name: status
+          type: int64
+          tag: json:"status"

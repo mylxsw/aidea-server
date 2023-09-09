@@ -1,0 +1,12 @@
+[Unit]
+Description=ai server
+
+[Service]
+Type=simple
+ExecStart=/data/webroot/ai-server/ai-server --conf /data/webroot/ai-server/etc/config.yaml
+ExecStop=/bin/kill -INT $MAINPID
+Restart=on-failure
+RestartSec=42s
+
+[Install]
+WantedBy=multi-user.target

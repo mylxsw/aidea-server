@@ -1,0 +1,30 @@
+package: model
+
+models:
+- name: quota
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id"
+    - name: quota
+      type: int64
+      tag: json:"quota"
+    - name: rest 
+      type: int64
+      tag: json:"rest"
+    - name: note
+      type: string
+      tag: json:"note"
+    - name: payment_id
+      type: string
+      tag: json:"payment_id"
+    - name: period_start_at
+      type: time.Time
+      tag: json:"period_start_at"
+    - name: period_end_at
+      type: time.Time
+      tag: json:"period_end_at"

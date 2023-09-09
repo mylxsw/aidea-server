@@ -1,0 +1,27 @@
+package: model
+
+models:
+- name: chat_messages
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id,omitempty"
+    - name: room_id 
+      type: int64
+      tag: json:"room_id,omitempty"
+    - name: message 
+      type: string
+      tag: json:"message,omitempty"
+    - name: role
+      type: int64
+      tag: json:"role,omitempty"
+    - name: token_consumed
+      type: int64
+      tag: json:"token_consumed,omitempty"
+    - name: quota_consumed
+      type: int64
+      tag: json:"quota_consumed,omitempty"
