@@ -177,13 +177,15 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 
 	// 写入用户消息
-	if _, err := ctl.messageRepo.Add(ctx, repo.MessageAddReq{
-		UserID:  user.ID,
-		Message: req.Messages[len(req.Messages)-1].Content,
-		Role:    repo.MessageRoleUser,
-		RoomID:  roomID,
-	}); err != nil {
-		log.With(req).Errorf("add message failed: %s", err)
+	if ctl.conf.EnableRecordChat {
+		if _, err := ctl.messageRepo.Add(ctx, repo.MessageAddReq{
+			UserID:  user.ID,
+			Message: req.Messages[len(req.Messages)-1].Content,
+			Role:    repo.MessageRoleUser,
+			RoomID:  roomID,
+		}); err != nil {
+			log.With(req).Errorf("add message failed: %s", err)
+		}
 	}
 
 	// log.WithFields(log.Fields{"req": req}).Debugf("chat request")
