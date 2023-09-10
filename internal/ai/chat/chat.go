@@ -99,7 +99,13 @@ func (ai *ChatImp) selectImp(model string) Chat {
 
 	// TODO 根据模型名称判断使用哪个 AI
 	switch model {
-	case string(baidu.ModelErnieBot), string(baidu.ModelErnieBotTurbo):
+	case string(baidu.ModelErnieBot),
+		baidu.ModelErnieBotTurbo,
+		baidu.ModelAquilaChat7B,
+		baidu.ModelChatGLM2_6B_32K,
+		baidu.ModelBloomz7B,
+		baidu.ModelLlama2_7b_CN,
+		baidu.ModelLlama2_70b:
 		return ai.baiduAI
 	case dashscope.ModelQWenV1, dashscope.ModelQWenPlusV1, dashscope.ModelQWen7BV1, dashscope.ModelQWen7BChatV1:
 		return ai.dashScope
