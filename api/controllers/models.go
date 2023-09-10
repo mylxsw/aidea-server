@@ -3,6 +3,8 @@ package controllers
 import (
 	"context"
 
+	"github.com/mylxsw/aidea-server/internal/ai/baidu"
+
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/helper"
@@ -541,9 +543,54 @@ func chinaModels(conf *config.Config) []Model {
 
 	if conf.EnableBaiduWXAI {
 		models = append(models, Model{
-			ID:          "文心千帆:model_ernie_bot_turbo",
+			ID:          "文心千帆:" + baidu.ModelErnieBotTurbo,
 			Name:        "文心一言",
-			Description: "百度研发的知识增强大语言模型，中文名是文心一言，英文名是ERNIE Bot，能够与人对话互动，回答问题，协助创作，高效便捷地帮助人们获取信息、知识和灵感",
+			Description: "百度研发的知识增强大语言模型，中文名是文心一言，英文名是 ERNIE Bot，能够与人对话互动，回答问题，协助创作，高效便捷地帮助人们获取信息、知识和灵感",
+			Category:    "文心千帆",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.3",
+		})
+		models = append(models, Model{
+			ID:          "文心千帆:" + baidu.ModelLlama2_70b,
+			Name:        "Llama 2 70B",
+			Description: "由 Meta AI 研发并开源，在编码、推理及知识应用等场景表现优秀，暂不支持中文输出",
+			Category:    "文心千帆",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.3",
+		})
+		models = append(models, Model{
+			ID:          "文心千帆:" + baidu.ModelLlama2_7b_CN,
+			Name:        "Llama 2 7B 中文版",
+			Description: "由 Meta AI 研发并开源，在编码、推理及知识应用等场景表现优秀，当前版本是千帆团队的中文增强版本",
+			Category:    "文心千帆",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.3",
+		})
+		models = append(models, Model{
+			ID:          "文心千帆:" + baidu.ModelChatGLM2_6B_32K,
+			Name:        "ChatGLM2 6B",
+			Description: "ChatGLM2-6B 是由智谱 AI 与清华 KEG 实验室发布的中英双语对话模型，具备强大的推理性能、效果、较低的部署门槛及更长的上下文",
+			Category:    "文心千帆",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.3",
+		})
+		models = append(models, Model{
+			ID:          "文心千帆:" + baidu.ModelAquilaChat7B,
+			Name:        "AquilaChat 7B",
+			Description: "AquilaChat-7B 是由智源研究院研发，支持流畅的文本对话及多种语言类生成任务，通过定义可扩展的特殊指令规范",
+			Category:    "文心千帆",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.3",
+		})
+		models = append(models, Model{
+			ID:          "文心千帆:" + baidu.ModelBloomz7B,
+			Name:        "BLOOMZ 7B",
+			Description: "BLOOMZ-7B 是业内知名的⼤语⾔模型，由 BigScience 研发并开源，能够以46种语⾔和13种编程语⾔输出⽂本",
 			Category:    "文心千帆",
 			IsChat:      true,
 			Disabled:    false,

@@ -41,7 +41,7 @@ func TestBaiduAIChat_Chat(t *testing.T) {
 func TestBaiduAIChat_ChatStream(t *testing.T) {
 	chatClient := createBaiduClient()
 	response, err := chatClient.ChatStream(context.TODO(), chat.Request{
-		Model: baidu.ModelErnieBotTurbo,
+		Model: baidu.ModelLlama2_70b,
 		Messages: []chat.Message{
 			{
 				Role:    "system",

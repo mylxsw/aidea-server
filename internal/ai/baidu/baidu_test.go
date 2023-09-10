@@ -11,6 +11,14 @@ import (
 )
 
 func TestBaiduAI_Chat(t *testing.T) {
+	testBaiduAI_Chat(t, baidu.ModelLlama2_70b)
+}
+
+func TestBaiduAI_ChatStream(t *testing.T) {
+	testBaiduAI_ChatStream(t, baidu.ModelLlama2_7b_CN)
+}
+
+func testBaiduAI_Chat(t *testing.T, model baidu.Model) {
 	messages := []baidu.ChatMessage{
 		{
 			Role:    baidu.ChatMessageRoleUser,
@@ -28,7 +36,7 @@ func TestBaiduAI_Chat(t *testing.T) {
 
 	client := baidu.NewBaiduAI(os.Getenv("BAIDU_WXQF_API_KEY"), os.Getenv("BAIDU_WXQF_SECRET"))
 	chatResp, err := client.Chat(
-		baidu.ModelErnieBotTurbo,
+		model,
 		baidu.ChatRequest{
 			Messages: messages,
 		},
@@ -38,7 +46,7 @@ func TestBaiduAI_Chat(t *testing.T) {
 	log.With(chatResp).Debug("chat response")
 }
 
-func TestBaiduAI_ChatStream(t *testing.T) {
+func testBaiduAI_ChatStream(t *testing.T, model baidu.Model) {
 	messages := []baidu.ChatMessage{
 		{
 			Role:    baidu.ChatMessageRoleUser,
@@ -56,7 +64,7 @@ func TestBaiduAI_ChatStream(t *testing.T) {
 
 	client := baidu.NewBaiduAI(os.Getenv("BAIDU_WXQF_API_KEY"), os.Getenv("BAIDU_WXQF_SECRET"))
 	chatResp, err := client.ChatStream(
-		baidu.ModelErnieBotTurbo,
+		model,
 		baidu.ChatRequest{
 			Messages: messages,
 		},
@@ -65,17 +73,17 @@ func TestBaiduAI_ChatStream(t *testing.T) {
 
 	tokenConsumed, promptTokens := 0, 0
 	for res := range chatResp {
-		if !res.IsEND {
-			fmt.Print(res.Result)
-		} else {
-			fmt.Println()
-		}
+		//if !res.IsEND {
+		//	fmt.Print(res.Result)
+		//} else {
+		//	fmt.Println()
+		//}
+		fmt.Println("-> " + res.Result)
 
 		tokenConsumed, promptTokens = res.Usage.TotalTokens, res.Usage.PromptTokens
 	}
 
 	log.Debugf("token consumed: %d, prompt tokens: %d", tokenConsumed, promptTokens)
-
 }
 
 func TestChatMessageFix(t *testing.T) {

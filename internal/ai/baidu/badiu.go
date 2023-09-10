@@ -5,13 +5,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/asteria/log"
-	"github.com/mylxsw/go-utils/array"
-	"gopkg.in/resty.v1"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/go-utils/array"
+	"gopkg.in/resty.v1"
 )
 
 type BaiduAI struct {
@@ -196,8 +197,27 @@ type Usage struct {
 type Model string
 
 const (
-	ModelErnieBot      Model = "model_ernie_bot"
-	ModelErnieBotTurbo       = "model_ernie_bot_turbo"
+	// ModelErnieBot ERNIE-Bot是百度自行研发的大语言模型，覆盖海量中文数据，具有更强的对话问答、内容创作生成等能力。
+	// ¥0.012元/千tokens
+	ModelErnieBot Model = "model_ernie_bot"
+	// ModelErnieBotTurbo ERNIE-Bot-turbo是百度自行研发的大语言模型，覆盖海量中文数据，具有更强的对话问答、内容创作生成等能力，响应速度更快。
+	// ¥0.008元/千tokens
+	ModelErnieBotTurbo = "model_ernie_bot_turbo"
+	// ModelLlama2_70b Llama-2-70b-chat由Meta AI研发并开源，在编码、推理及知识应用等场景表现优秀
+	// ¥0.044元/千tokens
+	ModelLlama2_70b = "model_badiu_llama2_70b"
+	// ModelLlama2_7b_CN Qianfan-Chinese-Llama-2-7B是千帆团队在Llama-2-7b基础上的中文增强版本，在CMMLU、C-EVAL等中文数据集上表现优异
+	// ¥0.006元/千tokens
+	ModelLlama2_7b_CN = "model_baidu_llama2_7b_cn"
+	// ModelChatGLM2_6B_32K ChatGLM2-6B是由智谱AI与清华KEG实验室发布的中英双语对话模型，具备强大的推理性能、效果、较低的部署门槛及更长的上下文，在MMLU、CEval等数据集上相比初代有大幅的性能提升。
+	// ¥0.006元/千tokens
+	ModelChatGLM2_6B_32K = "model_baidu_chatglm2_6b_32k"
+	// ModelAquilaChat7B AquilaChat-7B是由智源研究院研发，基于Aquila-7B训练的对话模型，支持流畅的文本对话及多种语言类生成任务，通过定义可扩展的特殊指令规范，实现 AquilaChat对其它模型和工具的调用，且易于扩展
+	// ¥0.006元/千tokens
+	ModelAquilaChat7B = "model_baidu_aquila_chat7b"
+	// ModelBloomz7B BLOOMZ-7B是业内知名的⼤语⾔模型，由BigScience研发并开源，能够以46种语⾔和13种编程语⾔输出⽂本
+	// ¥0.006元/千tokens
+	ModelBloomz7B = "model_baidu_bloomz_7b"
 )
 
 func (ai *BaiduAI) Chat(model Model, req ChatRequest) (*ChatResponse, error) {
@@ -207,15 +227,7 @@ func (ai *BaiduAI) Chat(model Model, req ChatRequest) (*ChatResponse, error) {
 		return nil, err
 	}
 
-	var url string
-	switch model {
-	case ModelErnieBot:
-		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions"
-	case ModelErnieBotTurbo:
-		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant"
-	default:
-		panic("invalid model")
-	}
+	url := ai.modelURL(model)
 
 	resp, err := resty.R().SetQueryParam("access_token", ai.getAccessToken()).
 		SetHeader("Content-Type", "application/json").
@@ -237,6 +249,30 @@ func (ai *BaiduAI) Chat(model Model, req ChatRequest) (*ChatResponse, error) {
 	return &chatResponse, nil
 }
 
+func (ai *BaiduAI) modelURL(model Model) string {
+	var url string
+	switch model {
+	case ModelErnieBot:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions"
+	case ModelErnieBotTurbo:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant"
+	case ModelLlama2_70b:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/llama_2_70b"
+	case ModelLlama2_7b_CN:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/qianfan_chinese_llama_2_7b"
+	case ModelChatGLM2_6B_32K:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/chatglm2_6b_32k"
+	case ModelAquilaChat7B:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/aquilachat_7b"
+	case ModelBloomz7B:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/bloomz_7b1"
+	default:
+		panic("invalid model")
+	}
+
+	return url
+}
+
 func (ai *BaiduAI) ChatStream(model Model, req ChatRequest) (<-chan ChatResponse, error) {
 	req.Stream = true
 	body, err := json.Marshal(req.Fix())
@@ -244,15 +280,7 @@ func (ai *BaiduAI) ChatStream(model Model, req ChatRequest) (<-chan ChatResponse
 		return nil, err
 	}
 
-	var url string
-	switch model {
-	case ModelErnieBot:
-		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions"
-	case ModelErnieBotTurbo:
-		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant"
-	default:
-		panic("invalid model")
-	}
+	url := ai.modelURL(model)
 
 	httpReq, err := http.NewRequest("POST", url+"?access_token="+ai.getAccessToken(), bytes.NewReader(body))
 	if err != nil {
