@@ -85,7 +85,7 @@ Web 端：https://web.aicode.cc/
 项目编译：
 
 ```bash
-go build -o build/debug/aidea-server main.go
+go build -o build/debug/aidea-server cmd/main.go
 ```
 
 ## 服务端部署
