@@ -8,6 +8,8 @@
 
 ## 项目依赖
 
+![image](https://github.com/mylxsw/aidea-server/assets/2330911/43c095f5-4964-46c7-8c50-9b44b6d36fef)
+
 必选依赖
 
 - MySQL 5.7+
