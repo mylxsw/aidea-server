@@ -18,7 +18,7 @@ func TestSendSMS(t *testing.T) {
 		SMSChannels:        []string{"aliyun"},
 	})
 
-	assert.NoError(t, ali.SendSMS(context.TODO(), "SMS_279297328", map[string]string{"code": "123456"}, "18678859721"))
+	assert.NoError(t, ali.SendSMS(context.TODO(), "SMS_279297328", map[string]string{"code": "123456"}, "18888888888"))
 }
 
 func TestContentDetect(t *testing.T) {

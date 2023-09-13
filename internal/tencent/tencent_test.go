@@ -31,5 +31,5 @@ func TestSendSMS(t *testing.T) {
 	}
 
 	c := tencent.NewTencent(conf)
-	assert.NoError(t, c.SendSMS(context.TODO(), "1822196", []string{"123456"}, "17347870010"))
+	assert.NoError(t, c.SendSMS(context.TODO(), "1822196", []string{"123456"}, "18888888888"))
 }
