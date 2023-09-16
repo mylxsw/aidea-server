@@ -113,7 +113,8 @@ func (r *PromptRepo) ChatSystemPromptExamples(ctx context.Context) ([]model.Chat
 
 // PromptExample 用户提示语示例
 type PromptExample struct {
-	Title   string   `json:"title,omitempty" yaml:"title,omitempty"`
+	// Title  标题，返回值必须包含该字段，即使为空字符串（客户端未做兼容）
+	Title   string   `json:"title" yaml:"title"`
 	Content string   `json:"content,omitempty" yaml:"content,omitempty"`
 	Models  []string `json:"models,omitempty" yaml:"models,omitempty"`
 	Tags    []string `json:"tags,omitempty" yaml:"tags,omitempty"`

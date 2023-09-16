@@ -45,7 +45,7 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 
 	var suggests []repo.GalleryRoom
 	if len(rooms) == 0 {
-		suggests, err = ctl.roomRepo.GallerySuggests(ctx, 8)
+		suggests, err = ctl.roomRepo.GallerySuggests(ctx, 11)
 		if err != nil {
 			log.Errorf("查询推荐房间列表失败: %v", err)
 			// 注意：这里不返回错误，因为推荐房间列表不是必须的

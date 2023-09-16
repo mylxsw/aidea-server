@@ -15,6 +15,7 @@ import (
 	"github.com/mylxsw/aidea-server/internal/ai/fromston"
 	"github.com/mylxsw/aidea-server/internal/ai/leap"
 	"github.com/mylxsw/aidea-server/internal/ai/openai"
+	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
 	"github.com/mylxsw/aidea-server/internal/ai/stabilityai"
 	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
 	"github.com/mylxsw/aidea-server/internal/dingding"
@@ -227,6 +228,7 @@ func main() {
 		xfyun.Provider{},
 		leap.Provider{},
 		baidu.Provider{},
+		sensenova.Provider{},
 	)
 
 	app.MustRun(ins)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
+	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
 	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
 	"github.com/mylxsw/go-utils/array"
 )
@@ -78,10 +79,11 @@ type ChatImp struct {
 	baiduAI   *BaiduAIChat
 	dashScope *DashScopeChat
 	xfyunAI   *XFYunChat
+	snAI      *SenseNovaChat
 }
 
-func NewChat(openAI *OpenAIChat, baiduAI *BaiduAIChat, dashScope *DashScopeChat, xfyunAI *XFYunChat) Chat {
-	return &ChatImp{openAI: openAI, baiduAI: baiduAI, dashScope: dashScope, xfyunAI: xfyunAI}
+func NewChat(openAI *OpenAIChat, baiduAI *BaiduAIChat, dashScope *DashScopeChat, xfyunAI *XFYunChat, sn *SenseNovaChat) Chat {
+	return &ChatImp{openAI: openAI, baiduAI: baiduAI, dashScope: dashScope, xfyunAI: xfyunAI, snAI: sn}
 }
 
 func (ai *ChatImp) selectImp(model string) Chat {
@@ -95,6 +97,10 @@ func (ai *ChatImp) selectImp(model string) Chat {
 
 	if strings.HasPrefix(model, "讯飞星火:") {
 		return ai.xfyunAI
+	}
+
+	if strings.HasPrefix(model, "商汤日日新:") {
+		return ai.snAI
 	}
 
 	// TODO 根据模型名称判断使用哪个 AI
@@ -111,6 +117,8 @@ func (ai *ChatImp) selectImp(model string) Chat {
 		return ai.dashScope
 	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2):
 		return ai.xfyunAI
+	case string(sensenova.ModelNovaPtcXLV1), string(sensenova.ModelNovaPtcXSV1):
+		return ai.snAI
 	}
 
 	return ai.openAI

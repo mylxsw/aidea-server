@@ -202,7 +202,8 @@ func createGalleryRoomFromModel(room model.RoomGallery) GalleryRoom {
 }
 
 func (r *RoomRepo) GallerySuggests(ctx context.Context, limit int64) ([]GalleryRoom, error) {
-	systemModelQ := query.Builder().Where(model.FieldRoomGalleryRoomType, "system").OrderBy(model.FieldRoomGalleryCreatedAt, "DESC")
+	systemModelQ := query.Builder().Where(model.FieldRoomGalleryRoomType, "system").
+		OrderByRaw("RAND() DESC").Limit(3)
 	systemModels, err := model.NewRoomGalleryModel(r.db).Get(ctx, systemModelQ)
 	if err != nil {
 		return nil, err
@@ -210,7 +211,13 @@ func (r *RoomRepo) GallerySuggests(ctx context.Context, limit int64) ([]GalleryR
 
 	defaultModelLimit := limit - int64(len(systemModels))
 	if defaultModelLimit > 0 {
-		items, err := model.NewRoomGalleryModel(r.db).Get(ctx, query.Builder().Limit(defaultModelLimit).OrderByRaw("RAND()"))
+		items, err := model.NewRoomGalleryModel(r.db).Get(
+			ctx,
+			query.Builder().
+				Where(model.FieldRoomGalleryRoomType, "default").
+				Limit(defaultModelLimit).
+				OrderByRaw("RAND()"),
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -224,7 +231,11 @@ func (r *RoomRepo) GallerySuggests(ctx context.Context, limit int64) ([]GalleryR
 }
 
 func (r *RoomRepo) Galleries(ctx context.Context) ([]GalleryRoom, error) {
-	items, err := model.NewRoomGalleryModel(r.db).Get(ctx, query.Builder().OrderBy(model.FieldRoomGalleryCreatedAt, "DESC"))
+	items, err := model.NewRoomGalleryModel(r.db).Get(
+		ctx,
+		query.Builder().
+			OrderBy(model.FieldRoomGalleryCreatedAt, "DESC"),
+	)
 	if err != nil {
 		return nil, err
 	}

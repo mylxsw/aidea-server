@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
+	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/config"
@@ -604,6 +605,18 @@ func chinaModels(conf *config.Config) []Model {
 			Name:        "通义千问",
 			Description: "阿里达摩院自主研发的超大规模语言模型，能够回答问题、创作文字，还能表达观点、撰写代码",
 			Category:    "灵积",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.3",
+		})
+	}
+
+	if conf.EnableSenseNovaAI {
+		models = append(models, Model{
+			ID:          "商汤日日新:" + string(sensenova.ModelNovaPtcXLV1),
+			Name:        "商汤日日新",
+			Description: "商汤科技自主研发的超大规模语言模型，能够回答问题、创作文字，还能表达观点、撰写代码",
+			Category:    "商汤日日新",
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",

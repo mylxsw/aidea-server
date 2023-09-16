@@ -83,6 +83,10 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 			return false
 		}
 
+		if !ctl.conf.EnableSenseNovaAI && item.Vendor == " 商汤日日新" {
+			return false
+		}
+
 		// 检查版本是否满足条件
 		if item.VersionMax == "" && item.VersionMin == "" {
 			return true
@@ -364,13 +368,7 @@ func (ctl *RoomController) parseRoomRequest(webCtx web.Context, isUpdate bool) (
 
 	req.Model = modelId
 
-	vendor := webCtx.Input("vendor")
-	if !array.In(vendor, []string{"openai", "baidu", "aliyun", "百度", "阿里", "文心千帆", "灵积", "讯飞星火"}) {
-		return nil, errors.New("不支持该类型的模型")
-	}
-
-	req.Vendor = vendor
-
+	req.Vendor = webCtx.Input("vendor")
 	systemPrompt := webCtx.Input("system_prompt")
 	if utf8.RuneCountInString(systemPrompt) > 1000 {
 		return nil, errors.New("系统提示不能超过 1000 个字符")

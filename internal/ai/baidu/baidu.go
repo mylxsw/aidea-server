@@ -5,14 +5,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/go-utils/array"
+	"gopkg.in/resty.v1"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
-
-	"github.com/mylxsw/asteria/log"
-	"github.com/mylxsw/go-utils/array"
-	"gopkg.in/resty.v1"
 )
 
 type BaiduAI struct {

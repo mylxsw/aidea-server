@@ -42,6 +42,11 @@ type Config struct {
 	XFYunAPIKey    string `json:"-" yaml:"-"`
 	XFYunAPISecret string `json:"-" yaml:"-"`
 
+	// 商汤日日新
+	EnableSenseNovaAI  bool   `json:"enable_sensenova_ai" yaml:"enable_sensenova_ai"`
+	SenseNovaKeyID     string `json:"sensenova_keyid" yaml:"sensenova_keyid"`
+	SenseNovaKeySecret string `json:"-" yaml:"-"`
+
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
 
@@ -203,6 +208,10 @@ func Register(ins *app.App) {
 			XFYunAppID:     ctx.String("xfyun-appid"),
 			XFYunAPIKey:    ctx.String("xfyun-apikey"),
 			XFYunAPISecret: ctx.String("xfyun-apisecret"),
+
+			EnableSenseNovaAI:  ctx.Bool("enable-sensenovaai"),
+			SenseNovaKeyID:     ctx.String("sensenova-keyid"),
+			SenseNovaKeySecret: ctx.String("sensenova-keysecret"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
 
