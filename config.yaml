@@ -196,3 +196,10 @@ alipay-public-key: ""
 # 钉钉群通知 Token，留空则不通知，用于用户注册、支付通知到管理员
 dingding-token: ""
 dingding-secret: ""
+
+######## 支付配置 ########
+
+# 启用支付宝支付功能
+enable-alipay: true
+# 启用 Apple 应用内支付功能
+enable-applepay: true
