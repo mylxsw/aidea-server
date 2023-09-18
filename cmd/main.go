@@ -95,6 +95,10 @@ func main() {
 	ins.AddStringFlag("xfyun-apikey", "", "讯飞星火 API Key")
 	ins.AddStringFlag("xfyun-apisecret", "", "讯飞星火 API Secret")
 
+	ins.AddBoolFlag("enable-sensenovaai", "是否启用商汤日日新 AI")
+	ins.AddStringFlag("sensenova-keyid", "", "商汤日日新 Key ID")
+	ins.AddStringFlag("sensenova-keysecret", "", "商汤日日新 Key Secret")
+
 	ins.AddBoolFlag("enable-stabilityai", "是否启用 StabilityAI 文生图、图生图服务")
 	ins.AddBoolFlag("stabilityai-autoproxy", "使用 socks5 代理访问 StabilityAI 服务")
 	ins.AddStringFlag("stabilityai-organization", "", "stabilityai organization")

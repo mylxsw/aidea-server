@@ -74,6 +74,14 @@ enable-xfyunai: false
 #xfyun-apikey: ""
 #xfyun-apisecret: ""
 
+######## 商汤日日新 ########
+
+# API 申请：https://console.sensenova.cn/
+
+enable-sensenovaai: false
+sensenova-keyid: ""
+sensenova-keysecret: ""
+
 ######## DeepAI 配置 ########
 
 # 用于图片超分辨率、图片上色

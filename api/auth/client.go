@@ -15,8 +15,7 @@ type ClientInfo struct {
 
 // IsIOS 返回客户端是否是 IOS 平台
 func (inf ClientInfo) IsIOS() bool {
-	// TODO 测试阶段以 macos 为例，生产需要更换为 ios
-	return inf.Platform == "macos"
+	return inf.Platform == "ios"
 }
 
 // IsCNLocalMode 是否启用国产化模式
