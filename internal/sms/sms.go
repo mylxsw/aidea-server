@@ -43,9 +43,9 @@ func (client *Client) SendVerifyCode(ctx context.Context, verifyCode string, rec
 	selectedClient := client.conf.SMSChannels[rand.Intn(len(client.conf.SMSChannels))]
 	switch selectedClient {
 	case "tencent":
-		return client.tencent.SendSMS(ctx, "1822196", []string{verifyCode}, receiver)
+		return client.tencent.SendSMS(ctx, client.conf.TencentSMSTemplateID, []string{verifyCode}, receiver)
 	case "aliyun":
-		return client.aliyun.SendSMS(ctx, "SMS_279297328", map[string]string{"code": verifyCode}, receiver)
+		return client.aliyun.SendSMS(ctx, client.conf.AliyunSMSTemplateID, map[string]string{"code": verifyCode}, receiver)
 	default:
 		log.Errorf("invalid sms client selected: %s", selectedClient)
 	}

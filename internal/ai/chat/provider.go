@@ -12,7 +12,7 @@ import (
 type Provider struct{}
 
 func (Provider) Register(binder infra.Binder) {
-	binder.MustSingleton(func(oai *openai.OpenAI, bai *baidu.BaiduAI, ds *dashscope.DashScope, xf *xfyun.XFYunAI, sn *sensenova.SenseNova) Chat {
+	binder.MustSingleton(func(oai *openai.OpenAI, bai baidu.BaiduAI, ds *dashscope.DashScope, xf *xfyun.XFYunAI, sn *sensenova.SenseNova) Chat {
 		return NewChat(
 			NewOpenAIChat(oai),
 			NewBaiduAIChat(bai),

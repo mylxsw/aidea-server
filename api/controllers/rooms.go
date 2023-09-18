@@ -144,7 +144,7 @@ func (ctl *RoomController) GalleryItem(ctx context.Context, webCtx web.Context) 
 }
 
 // CopyGalleryItem 用户选择数字人，本地复制一份
-func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	idsStr := strings.Split(webCtx.Input(`ids`), ",")
 	ids := array.Filter(
 		array.Map(
@@ -162,10 +162,17 @@ func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Conte
 		return webCtx.JSONError("invalid ids", http.StatusBadRequest)
 	}
 
+	// TODO 实时查询，而不是每次全部查询出来再判断是否满足条件，前期内置数字人数量少没关系
 	rooms, err := ctl.roomRepo.Galleries(ctx)
 	if err != nil {
 		log.Errorf("query rooms galleries failed: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	// 启用国产化模式时，如果内置的模型为 GPT 系列，替换为国产模型
+	var replaceVendor, replaceModel string
+	if client.IsCNLocalMode(ctl.conf) {
+		replaceVendor, replaceModel = ctl.conf.CNLocalVendor, ctl.conf.CNLocalModel
 	}
 
 	for _, item := range rooms {
@@ -173,10 +180,18 @@ func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Conte
 			continue
 		}
 
+		vendor := item.Vendor
+		mod := item.Model
+
+		// 如果替换模型和服务商不为空，则替换当前 Room 的模型为国产化模型
+		if replaceVendor != "" && replaceModel != "" {
+			vendor, mod = replaceVendor, replaceModel
+		}
+
 		if _, err := ctl.roomRepo.Create(ctx, user.ID, &model.Rooms{
 			Name:           item.Name,
-			Model:          item.Model,
-			Vendor:         item.Vendor,
+			Model:          mod,
+			Vendor:         vendor,
 			SystemPrompt:   item.Prompt,
 			MaxContext:     item.MaxContext,
 			RoomType:       repo.RoomTypePreset,
@@ -185,7 +200,7 @@ func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Conte
 			AvatarUrl:      item.AvatarUrl,
 			LastActiveTime: time.Now(),
 		}, true); err != nil {
-			if err == repo.ErrRoomNameExists {
+			if errors.Is(err, repo.ErrRoomNameExists) {
 				continue
 			}
 

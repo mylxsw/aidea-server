@@ -3,6 +3,7 @@ package v2
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -41,7 +42,7 @@ type CreativeIslandController struct {
 	conf         *config.Config
 	quotaRepo    *repo.QuotaRepo          `autowire:"@"`
 	queue        *queue.Queue             `autowire:"@"`
-	translater   youdao.Translater        `autowire:"@"`
+	trans        youdao.Translater        `autowire:"@"`
 	creativeRepo *repo.CreativeRepo       `autowire:"@"`
 	securitySrv  *service.SecurityService `autowire:"@"`
 }
@@ -260,20 +261,20 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 func (ctl *CreativeIslandController) ShareHistoryItem(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	hid, _ := strconv.Atoi(webCtx.PathVar("hid"))
 	if hid <= 0 {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
 	err := ctl.creativeRepo.ShareCreativeHistoryToGallery(ctx, user.ID, user.Name, int64(hid))
 	if err != nil {
 		if err == repo.ErrNotFound {
-			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrNotFound), http.StatusNotFound)
+			return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrNotFound), http.StatusNotFound)
 		}
 
 		log.WithFields(log.Fields{
 			"uid":    user.ID,
 			"his_id": hid,
 		}).Errorf("share creative item failed: %v", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	return webCtx.JSON(web.M{})
@@ -283,7 +284,7 @@ func (ctl *CreativeIslandController) ShareHistoryItem(ctx context.Context, webCt
 func (ctl *CreativeIslandController) CancelShareHistoryItem(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	hid, _ := strconv.Atoi(webCtx.PathVar("hid"))
 	if hid <= 0 {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
 	err := ctl.creativeRepo.CancelCreativeHistoryShare(ctx, user.ID, int64(hid))
@@ -292,7 +293,7 @@ func (ctl *CreativeIslandController) CancelShareHistoryItem(ctx context.Context,
 			"uid":    user.ID,
 			"his_id": hid,
 		}).Errorf("cancel share creative item failed: %v", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	return webCtx.JSON(web.M{})
@@ -318,7 +319,7 @@ func (ctl *CreativeIslandController) Histories(ctx context.Context, webCtx web.C
 	})
 	if err != nil {
 		log.Errorf("query creative items failed: %v", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	// 以下字段不需要返回给前端
@@ -385,17 +386,22 @@ type CreativeHistoryItemResp struct {
 func (ctl *CreativeIslandController) HistoryItem(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	hid, _ := strconv.Atoi(webCtx.PathVar("hid"))
 	if hid <= 0 {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	item, err := ctl.creativeRepo.FindHistoryRecord(ctx, user.ID, int64(hid))
+	userId := user.ID
+	if user.InternalUser() && user.WithLab {
+		userId = 0
+	}
+
+	item, err := ctl.creativeRepo.FindHistoryRecord(ctx, userId, int64(hid))
 	if err != nil {
-		if err == repo.ErrNotFound {
-			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrNotFound), http.StatusNotFound)
+		if errors.Is(err, repo.ErrNotFound) {
+			return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrNotFound), http.StatusNotFound)
 		}
 
 		log.Errorf("query creative item failed: %v", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	return webCtx.JSON(CreativeHistoryItemResp{
@@ -408,7 +414,7 @@ func (ctl *CreativeIslandController) HistoryItem(ctx context.Context, webCtx web
 func (ctl *CreativeIslandController) DeleteHistoryItem(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	hid, _ := strconv.Atoi(webCtx.PathVar("hid"))
 	if hid <= 0 {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
 	log.WithFields(log.Fields{
@@ -418,7 +424,7 @@ func (ctl *CreativeIslandController) DeleteHistoryItem(ctx context.Context, webC
 
 	if err := ctl.creativeRepo.DeleteHistoryRecord(ctx, user.ID, int64(hid)); err != nil {
 		log.Errorf("delete creative item failed: %v", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	return webCtx.JSON(web.M{})
@@ -438,7 +444,7 @@ func (ctl *CreativeIslandController) CompletionsEvaluate(ctx context.Context, we
 	quota, err := ctl.quotaRepo.GetUserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	if !user.InternalUser() {
@@ -751,12 +757,12 @@ func (ctl *CreativeIslandController) ImageUpscale(ctx context.Context, webCtx we
 	quota, err := ctl.quotaRepo.GetUserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	quotaConsume := int64(coins.GetUnifiedImageGenCoins())
 	if quota.Quota < quota.Used+quotaConsume {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
 	upscaleBy := "x4"
@@ -773,7 +779,7 @@ func (ctl *CreativeIslandController) ImageUpscale(ctx context.Context, webCtx we
 	taskID, err := ctl.queue.Enqueue(&req, queue.NewImageUpscaleTask)
 	if err != nil {
 		log.Errorf("enqueue task failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
 
@@ -792,7 +798,7 @@ func (ctl *CreativeIslandController) ImageUpscale(ctx context.Context, webCtx we
 	// 保存历史记录
 	if _, err := ctl.creativeRepo.CreateRecordWithArguments(ctx, user.ID, &creativeItem, &arg); err != nil {
 		log.Errorf("create creative item failed: %v", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	return webCtx.JSON(web.M{
@@ -816,12 +822,12 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 	quota, err := ctl.quotaRepo.GetUserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	quotaConsume := int64(coins.GetUnifiedImageGenCoins())
 	if quota.Quota < quota.Used+quotaConsume {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
 	req := queue.ImageColorizationPayload{
@@ -835,7 +841,7 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 	taskID, err := ctl.queue.Enqueue(&req, queue.NewImageColorizationTask)
 	if err != nil {
 		log.Errorf("enqueue task failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
 
@@ -853,7 +859,7 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 	// 保存历史记录
 	if _, err := ctl.creativeRepo.CreateRecordWithArguments(ctx, user.ID, &creativeItem, &arg); err != nil {
 		log.Errorf("create creative item failed: %v", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	return webCtx.JSON(web.M{
@@ -883,11 +889,11 @@ func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web
 	quota, err := ctl.quotaRepo.GetUserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	if quota.Quota < quota.Used+req.Quota {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
 	// 内容安全检测
@@ -906,7 +912,7 @@ func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web
 	taskID, err := ctl.queue.Enqueue(req, queue.NewImageCompletionTask)
 	if err != nil {
 		log.Errorf("enqueue task failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
 
@@ -914,7 +920,7 @@ func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web
 	creativeItem, arg := ctl.buildHistorySaveRecord(req, taskID)
 	if _, err := ctl.creativeRepo.CreateRecordWithArguments(ctx, user.ID, &creativeItem, &arg); err != nil {
 		log.Errorf("create creative item failed: %v", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	return webCtx.JSON(web.M{

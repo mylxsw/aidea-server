@@ -146,10 +146,14 @@ func main() {
 	ins.AddStringFlag("tencent-id", "", "tencent app id")
 	ins.AddStringFlag("tencent-key", "", "tencent app key")
 	ins.AddStringFlag("tencent-smssdkappid", "", "tencent sms sdk app id")
+	ins.AddStringFlag("tencent-smstemplateid", "", "腾讯短信验证码模板 ID")
+	ins.AddStringFlag("tencent-smssign", "AIdea", "腾讯短信签名")
 	ins.AddBoolFlag("tencent-voice", "是否使用腾讯的语音转文本服务，不启用则使用 OpenAI 的 Whisper 模型")
 
 	ins.AddStringFlag("aliyun-key", "", "aliyun app key")
 	ins.AddStringFlag("aliyun-secret", "", "aliyun app secret")
+	ins.AddStringFlag("aliyun-smstemplateid", "", "阿里云短信验证码模板 ID")
+	ins.AddStringFlag("aliyun-smssign", "AIdea", "阿里云短信签名")
 	ins.AddBoolFlag("enable-contentdetect", "是否启用内容安全检测（使用阿里云的内容安全服务）")
 
 	ins.AddBoolFlag("enable-applepay", "启用 Apple 应用内支付")
@@ -167,6 +171,11 @@ func main() {
 
 	ins.AddStringFlag("dingding-token", "", "钉钉群通知 Token，留空则不通知")
 	ins.AddStringFlag("dingding-secret", "", "钉钉群通知 Secret")
+
+	ins.AddBoolFlag("cnlocal-mode", "是否启用国产化模式，启用后，将使用 cnlocal-vendor/cnlocal-model 指定的模型替代数字人默认的 GPT 模型")
+	ins.AddBoolFlag("cnlocal-onlyios", "国产化模式只对 IOS 系统有效，客户端版本 > 1.0.4")
+	ins.AddStringFlag("cnlocal-vendor", "讯飞星火", "国产化模型服务商，目前支持讯飞星火、灵积、文心千帆、商汤日日新")
+	ins.AddStringFlag("cnlocal-model", "generalv2", "国产化模型名称，讯飞星火支持 generalv2, 灵积支持 qwen-v1, 商汤日日新支持 nova-ptc-xl-v1，文心千帆支持 model_ernie_bot_turbo、model_badiu_llama2_70b、model_baidu_llama2_7b_cn、model_baidu_chatglm2_6b_32k、model_baidu_aquila_chat7b、model_baidu_bloomz_7b")
 
 	// 配置文件
 	config.Register(ins)

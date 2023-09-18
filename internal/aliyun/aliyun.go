@@ -13,7 +13,7 @@ import (
 	util "github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/glacier/log"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
 	"github.com/mylxsw/go-utils/str"
 )
@@ -33,6 +33,15 @@ func New(conf *config.Config) *Aliyun {
 			log.Errorf("create aliyun client failed: %v", err)
 		} else {
 			aliyun.sms = client
+		}
+
+		// 额外参数检查
+		if conf.AliyunSMSSign == "" {
+			log.Errorf("阿里云短信发送必须通过 aliyun-smssign 配置参数指定短信签名")
+		}
+
+		if conf.AliyunSMSTemplateID == "" {
+			log.Errorf("阿里云短信发送必须通过 aliyun-smstemplateid 配置参数指定短信验证码模板")
 		}
 	}
 
@@ -55,13 +64,13 @@ func New(conf *config.Config) *Aliyun {
 }
 
 func (a *Aliyun) createClient(accessKeyId, accessKeySecret string) (*dysmsapi.Client, error) {
-	config := &openapi.Config{
+	conf := &openapi.Config{
 		AccessKeyId:     &accessKeyId,
 		AccessKeySecret: &accessKeySecret,
 	}
 	// 访问的域名
-	config.Endpoint = tea.String("dysmsapi.aliyuncs.com")
-	return dysmsapi.NewClient(config)
+	conf.Endpoint = tea.String("dysmsapi.aliyuncs.com")
+	return dysmsapi.NewClient(conf)
 }
 
 // SendSMS 发送短信
@@ -73,7 +82,7 @@ func (a *Aliyun) SendSMS(ctx context.Context, templateId string, templateParams 
 
 	signNames := make([]string, len(receivers))
 	for i := range receivers {
-		signNames[i] = "AIdea"
+		signNames[i] = a.conf.AliyunSMSSign
 	}
 	signNamesJson, _ := json.Marshal(signNames)
 	request.SetSignNameJson(string(signNamesJson))

@@ -102,7 +102,7 @@ func (ctl *ExampleController) ExampleByTag(ctx web.Context) web.Response {
 	}))
 }
 
-// Example 获取所有用户提示语示例
+// Examples 获取所有用户提示语示例
 func (ctl *ExampleController) Examples(ctx web.Context) web.Response {
 	examples, err := ctl.loadAllExamples()
 	if err != nil {
@@ -135,6 +135,7 @@ func (ctl *ExampleController) Example(ctx web.Context) web.Response {
 	}
 
 	return ctx.JSON(array.Filter(examples, func(example repo.PromptExample, _ int) bool {
+		// TODO
 		return array.In(model, example.Models) || arrayContains(model, example.Models)
 	}))
 

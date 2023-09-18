@@ -9,10 +9,10 @@ import (
 )
 
 type BaiduAIChat struct {
-	bai *baidu.BaiduAI
+	bai baidu.BaiduAI
 }
 
-func NewBaiduAIChat(bai *baidu.BaiduAI) *BaiduAIChat {
+func NewBaiduAIChat(bai baidu.BaiduAI) *BaiduAIChat {
 	return &BaiduAIChat{bai: bai}
 }
 

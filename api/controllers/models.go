@@ -259,9 +259,7 @@ func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web
 			return false
 		}
 
-		// TODO 测试阶段以 macos 为例，生产需要更换为 ios
-		// ios 系统禁用 openai 服务
-		if client.Platform == "macos" && helper.VersionNewer(client.Version, "1.0.4") {
+		if client.IsCNLocalMode(ctl.conf) {
 			if item.Category == "openai" {
 				return false
 			}

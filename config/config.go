@@ -118,11 +118,15 @@ type Config struct {
 	TencentSecretID       string `json:"tencent_secret_id" yaml:"tencent_secret_id"`
 	TencentSecretKey      string `json:"-" yaml:"tencent_secret_key"`
 	TencentSMSSDKAppID    string `json:"tencent_sms_sdk_appid" yaml:"tencent_sms_sdk_appid"`
+	TencentSMSTemplateID  string `json:"tencent_sms_template_id" yaml:"tencent_sms_template_id"`
+	TencentSMSSign        string `json:"tencent_sms_sign" yaml:"tencent_sms_sign"`
 
 	// Aliyun
 	AliyunAccessKeyID   string `json:"aliyun_access_key_id" yaml:"aliyun_access_key_id"`
 	AliyunAccessSecret  string `json:"-" yaml:"aliyun_access_secret"`
 	EnableContentDetect bool   `json:"enable_content_detect" yaml:"enable_content_detect"`
+	AliyunSMSTemplateID string `json:"aliyun_sms_template_id" yaml:"aliyun_sms_template_id"`
+	AliyunSMSSign       string `json:"aliyun_sms_sign" yaml:"aliyun_sms_sign"`
 
 	// Apple 应用内支付
 	EnableApplePay bool `json:"enable_apple_pay" yaml:"enable_apple_pay"`
@@ -141,6 +145,12 @@ type Config struct {
 	// 钉钉通知设置
 	DingDingToken  string `json:"-" yaml:"dingding_token"`
 	DingDingSecret string `json:"-" yaml:"dingding_secret"`
+
+	// 国产化模式
+	CNLocalMode    bool   `json:"cn_local_mode" yaml:"cn_local_mode"`
+	CNLocalOnlyIOS bool   `json:"cn_local_only_ios" yaml:"cn_local_only_ios"`
+	CNLocalModel   string `json:"cn_local_model" yaml:"cn_local_model"`
+	CNLocalVendor  string `json:"cn_local_vendor" yaml:"cn_local_vendor"`
 }
 
 type Mail struct {
@@ -271,10 +281,14 @@ func Register(ins *app.App) {
 			TencentSecretID:       ctx.String("tencent-id"),
 			TencentSecretKey:      ctx.String("tencent-key"),
 			TencentSMSSDKAppID:    ctx.String("tencent-smssdkappid"),
+			TencentSMSTemplateID:  ctx.String("tencent-smstemplateid"),
+			TencentSMSSign:        ctx.String("tencent-smssign"),
 
 			AliyunAccessKeyID:   ctx.String("aliyun-key"),
 			AliyunAccessSecret:  ctx.String("aliyun-secret"),
 			EnableContentDetect: ctx.Bool("enable-contentdetect"),
+			AliyunSMSTemplateID: ctx.String("aliyun-smstemplateid"),
+			AliyunSMSSign:       ctx.String("aliyun-smssign"),
 
 			EnableApplePay: ctx.Bool("enable-applepay"),
 
@@ -289,6 +303,11 @@ func Register(ins *app.App) {
 
 			DingDingToken:  ctx.String("dingding-token"),
 			DingDingSecret: ctx.String("dingding-secret"),
+
+			CNLocalMode:    ctx.Bool("cnlocal-mode"),
+			CNLocalOnlyIOS: ctx.Bool("cnlocal-onlyios"),
+			CNLocalVendor:  ctx.String("cnlocal-vendor"),
+			CNLocalModel:   ctx.String("cnlocal-model"),
 		}
 	})
 }

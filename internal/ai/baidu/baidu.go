@@ -14,15 +14,20 @@ import (
 	"sync"
 )
 
-type BaiduAI struct {
+type BaiduAI interface {
+	Chat(model Model, req ChatRequest) (*ChatResponse, error)
+	ChatStream(model Model, req ChatRequest) (<-chan ChatResponse, error)
+}
+
+type BaiduAIImpl struct {
 	APIKey      string
 	APISecret   string
 	accessToken string
 	lock        sync.RWMutex
 }
 
-func NewBaiduAI(apiKey, apiSecret string) *BaiduAI {
-	ai := &BaiduAI{
+func NewBaiduAI(apiKey, apiSecret string) *BaiduAIImpl {
+	ai := &BaiduAIImpl{
 		APIKey:    apiKey,
 		APISecret: apiSecret,
 	}
@@ -44,7 +49,7 @@ type RefreshAccessTokenResponse struct {
 }
 
 // RefreshAccessToken 刷新 AccessToken
-func (ai *BaiduAI) RefreshAccessToken() error {
+func (ai *BaiduAIImpl) RefreshAccessToken() error {
 	resp, err := resty.R().
 		SetQueryParam("grant_type", "client_credentials").
 		SetQueryParam("client_id", ai.APIKey).
@@ -72,7 +77,7 @@ func (ai *BaiduAI) RefreshAccessToken() error {
 	return nil
 }
 
-func (ai *BaiduAI) getAccessToken() string {
+func (ai *BaiduAIImpl) getAccessToken() string {
 	ai.lock.RLock()
 	defer ai.lock.RUnlock()
 	return ai.accessToken
@@ -219,7 +224,7 @@ const (
 	ModelBloomz7B = "model_baidu_bloomz_7b"
 )
 
-func (ai *BaiduAI) Chat(model Model, req ChatRequest) (*ChatResponse, error) {
+func (ai *BaiduAIImpl) Chat(model Model, req ChatRequest) (*ChatResponse, error) {
 	req.Stream = false
 	body, err := json.Marshal(req.Fix())
 	if err != nil {
@@ -248,7 +253,7 @@ func (ai *BaiduAI) Chat(model Model, req ChatRequest) (*ChatResponse, error) {
 	return &chatResponse, nil
 }
 
-func (ai *BaiduAI) modelURL(model Model) string {
+func (ai *BaiduAIImpl) modelURL(model Model) string {
 	var url string
 	switch model {
 	case ModelErnieBot:
@@ -272,7 +277,7 @@ func (ai *BaiduAI) modelURL(model Model) string {
 	return url
 }
 
-func (ai *BaiduAI) ChatStream(model Model, req ChatRequest) (<-chan ChatResponse, error) {
+func (ai *BaiduAIImpl) ChatStream(model Model, req ChatRequest) (<-chan ChatResponse, error) {
 	req.Stream = true
 	body, err := json.Marshal(req.Fix())
 	if err != nil {

@@ -28,6 +28,9 @@ sms-channels: [ "aliyun", "tencent" ]
 
 ######## OpenAI 配置 ########
 
+# 是否启用 OpenAI
+enable-openai: true
+
 # 是否启用 OpenAI 代理，依赖于 socks5-proxy 配置
 openai-autoproxy: false
 # OpenAI 服务配置
@@ -47,6 +50,9 @@ openai-keys: [ "sk-xxxxxxxxxxxxxxxx" ]
 
 # API 申请：https://cloud.baidu.com/product/wenxinworkshop
 
+# 是否启用百度文心大模型
+enable-baiduwxai: false
+
 #baiduwx-key: ""
 #baiduwx-secret: ""
 
@@ -54,11 +60,15 @@ openai-keys: [ "sk-xxxxxxxxxxxxxxxx" ]
 
 # API 申请：https://dashscope.aliyun.com/
 
+# 是否启用阿里云灵积模型平台
+enable-dashscopeai: false
 #dashscope-key: ""
 
 ######### 讯飞星火大语言模型 ########
 
 # API 申请：https://xinghuo.xfyun.cn/
+# 是否启用讯飞星火模型
+enable-xfyunai: false
 
 #xfyun-appid: ""
 #xfyun-apikey: ""
@@ -166,6 +176,8 @@ tencent-key: ""
 
 # 腾讯云短信服务 appid
 tencent-smssdkappid: "1400827805"
+tencent-smstemplateid: "18220292"
+tencent-smssign: "AIdea"
 
 ######## 阿里云配置 ########
 
@@ -176,6 +188,11 @@ aliyun-secret: ""
 
 # 是否启用内容安全检测（提示语敏感内容检测）
 enable-contentdetect: true
+
+# 短信配置
+# 短信验证码模板 ID
+aliyun-smstemplateid: "SMS_279000000"
+aliyun-smssign: "AIdea"
 
 ######## 支付宝配置 ########
 
@@ -203,3 +220,19 @@ dingding-secret: ""
 enable-alipay: true
 # 启用 Apple 应用内支付功能
 enable-applepay: true
+
+######## 国产化配置 ########
+
+# 是否启用国产化模式，启用后，将使用 cnlocal-vendor/cnlocal-model 指定的模型替代数字人默认的 GPT 模型
+cnlocal-mode: false
+# 国产化模式只对 IOS 系统有效
+cnlocal-onlyios: false
+# 国产化模型服务商，目前支持讯飞星火、灵积、文心千帆、商汤日日新
+cnlocal-vendor: "讯飞星火"
+# 国产化模型名称，
+# 讯飞星火支持 generalv2,
+# 灵积支持 qwen-v1,
+# 商汤日日新支持 nova-ptc-xl-v1，
+# 文心千帆支持 model_ernie_bot_turbo、model_badiu_llama2_70b、model_baidu_llama2_7b_cn、
+#    model_baidu_chatglm2_6b_32k、model_baidu_aquila_chat7b、model_baidu_bloomz_7b
+cnlocal-model: "generalv2"

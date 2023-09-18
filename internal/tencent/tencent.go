@@ -39,6 +39,15 @@ func NewTencent(conf *config.Config) *Tencent {
 			} else {
 				tencent.sms = smsClient
 			}
+
+			// 额外参数检查
+			if conf.TencentSMSSign == "" {
+				log.Errorf("腾讯云短信发送必须通过 tencent-smssign 配置参数指定短信签名")
+			}
+
+			if conf.TencentSMSTemplateID == "" {
+				log.Errorf("腾讯云短信发送必须通过 tencent-smstemplateid 配置参数指定短信验证码模板")
+			}
 		}
 	}
 
@@ -69,7 +78,7 @@ func (t *Tencent) createVoiceClient() (*asr.Client, error) {
 func (t *Tencent) SendSMS(ctx context.Context, templateID string, templateParams []string, receivers ...string) error {
 	req := sms.NewSendSmsRequest()
 	req.SmsSdkAppId = common.StringPtr(t.conf.TencentSMSSDKAppID)
-	req.SignName = common.StringPtr("爱代码网")
+	req.SignName = common.StringPtr(t.conf.TencentSMSSign)
 	req.TemplateId = common.StringPtr(templateID)
 	req.TemplateParamSet = common.StringPtrs(templateParams)
 	req.PhoneNumberSet = common.StringPtrs(receivers)
