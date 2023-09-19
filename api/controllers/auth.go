@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -55,6 +56,7 @@ func (ctl *AuthController) Register(router web.Router) {
 		router.Post("/sign-in-apple", ctl.signInWithApple)
 		router.Post("/sign-in", ctl.signInWithPassword)
 		router.Post("/sign-in/sms-code", ctl.sendSigninSMSCode)
+		router.Post("/sign-in/email-code", ctl.sendEmailCode)
 
 		// 注册登录二合一
 		router.Post("/2in1/check", ctl.checkPhoneExistence)
@@ -66,7 +68,7 @@ func (ctl *AuthController) Register(router web.Router) {
 		router.Post("/sign-up/sms-code", ctl.bindPhoneSendSMSCode)
 
 		// 找回密码
-		router.Post("/reset-password/email-code", ctl.resetPasswordEmailCode)
+		router.Post("/reset-password/email-code", ctl.sendEmailCode)
 		router.Post("/reset-password/sms-code", ctl.resetPasswordSMSCode)
 		router.Post("/reset-password", ctl.resetPassword)
 
@@ -92,21 +94,30 @@ func isPhoneNumber(value string) bool {
 func (ctl *AuthController) checkPhoneExistence(ctx context.Context, webCtx web.Context) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "手机号不能为空"), http.StatusBadRequest)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "账号不能为空"), http.StatusBadRequest)
 	}
 
-	if !isPhoneNumber(username) {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "手机号格式错误"), http.StatusBadRequest)
+	if !isPhoneNumber(username) && !isEmail(username) {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "账号格式错误，必须为手机号码或者邮箱"), http.StatusBadRequest)
 	}
 
 	// 检查用户是否存在
-	user, err := ctl.userRepo.GetUserByPhone(ctx, username)
+	var user *model.Users
+	var err error
+	var signInMethod string
+	if isPhoneNumber(username) {
+		user, err = ctl.userRepo.GetUserByPhone(ctx, username)
+		signInMethod = "sms_code"
+	} else {
+		user, err = ctl.userRepo.GetUserByEmail(ctx, username)
+		signInMethod = "email_code"
+	}
 	if err != nil {
-		if err == repo.ErrNotFound {
-			return webCtx.JSON(web.M{"exist": false, "sign_in_method": "sms_code"})
+		if errors.Is(err, repo.ErrNotFound) {
+			return webCtx.JSON(web.M{"exist": false, "sign_in_method": signInMethod})
 		}
 
-		if err == repo.ErrUserAccountDisabled {
+		if errors.Is(err, repo.ErrUserAccountDisabled) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "账号不可用：用户账号已注销"), http.StatusForbidden)
 		}
 
@@ -121,7 +132,7 @@ func (ctl *AuthController) checkPhoneExistence(ctx context.Context, webCtx web.C
 		if user.Password != "" {
 			user.PreferSigninMethod = "password"
 		} else {
-			user.PreferSigninMethod = "sms_code"
+			user.PreferSigninMethod = signInMethod
 		}
 	}
 
@@ -131,17 +142,17 @@ func (ctl *AuthController) checkPhoneExistence(ctx context.Context, webCtx web.C
 func (ctl *AuthController) signInOrUpWithSMSCode(ctx context.Context, webCtx web.Context) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "手机号不能为空"), http.StatusBadRequest)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "账号不能为空"), http.StatusBadRequest)
 	}
 
-	if !isPhoneNumber(username) {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "手机号格式错误"), http.StatusBadRequest)
+	if !isPhoneNumber(username) && !isEmail(username) {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "账号格式错误，必须为手机号码或者邮箱"), http.StatusBadRequest)
 	}
 
 	inviteCode := strings.TrimSpace(webCtx.Input("invite_code"))
 	if inviteCode != "" {
 		if err := ctl.verifyInviteCode(ctx, inviteCode); err != nil {
-			if err == repo.ErrNotFound {
+			if errors.Is(err, repo.ErrNotFound) {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "邀请码无效"), http.StatusBadRequest)
 			}
 
@@ -183,9 +194,14 @@ func (ctl *AuthController) signInOrUpWithSMSCode(ctx context.Context, webCtx web
 	_ = ctl.rds.Del(ctx, fmt.Sprintf("auth:verify-code:%s:%s", verifyCodeId, username)).Err()
 
 	// 检查用户信息
-	user, err := ctl.userRepo.GetUserByPhone(ctx, username)
+	var user *model.Users
+	if isPhoneNumber(username) {
+		user, err = ctl.userRepo.GetUserByPhone(ctx, username)
+	} else {
+		user, err = ctl.userRepo.GetUserByEmail(ctx, username)
+	}
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			// 用户不存在，注册新用户
 			return ctl.createAccount(ctx, webCtx, username, "", inviteCode)
 		}
@@ -203,7 +219,7 @@ func (ctl *AuthController) sendSigninSMSCode(ctx context.Context, webCtx web.Con
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if _, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-			if err == repo.ErrNotFound {
+			if errors.Is(err, repo.ErrNotFound) {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 			}
 
@@ -221,7 +237,7 @@ func (ctl *AuthController) sendSigninSMSCode(ctx context.Context, webCtx web.Con
 // verifyInviteCode 验证邀请码
 func (ctl *AuthController) verifyInviteCode(ctx context.Context, code string) error {
 	_, err := ctl.userRepo.GetUserByInviteCode(ctx, code)
-	if err == repo.ErrUserAccountDisabled {
+	if errors.Is(err, repo.ErrUserAccountDisabled) {
 		return repo.ErrNotFound
 	}
 
@@ -452,8 +468,8 @@ func (ctl *AuthController) resetPassword(ctx context.Context, webCtx web.Context
 	return webCtx.JSON(web.M{})
 }
 
-// resetPasswordEmailCode 发送找回密码邮件验证码
-func (ctl *AuthController) resetPasswordEmailCode(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
+// sendEmailCode 发送邮件验证码
+func (ctl *AuthController) sendEmailCode(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名不能为空"), http.StatusBadRequest)
@@ -479,7 +495,7 @@ func (ctl *AuthController) resetPasswordEmailCode(ctx context.Context, webCtx we
 
 	// 流控：每个用户每小时只能发送 5 次邮件
 	if err := ctl.limiter.Allow(ctx, fmt.Sprintf("auth:email-code:limit:%s:retrive-pwd", username), rate.MaxRequestsInPeriod(5, time.Hour)); err != nil {
-		if err == rate.ErrRateLimitExceeded {
+		if errors.Is(err, rate.ErrRateLimitExceeded) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "操作频率过高，请稍后再试"), http.StatusTooManyRequests)
 		}
 		log.WithFields(log.Fields{
@@ -490,7 +506,7 @@ func (ctl *AuthController) resetPasswordEmailCode(ctx context.Context, webCtx we
 
 	// 检查用户是否存在
 	if _, err := userRepo.GetUserByEmail(ctx, username); err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 		}
 
@@ -514,7 +530,7 @@ func (ctl *AuthController) resetPasswordEmailCode(ctx context.Context, webCtx we
 
 	mailPayload := &queue.MailPayload{
 		To:        []string{username},
-		Subject:   common.Text(webCtx, ctl.translater, "找回密码"),
+		Subject:   common.Text(webCtx, ctl.translater, "验证码"),
 		Body:      common.Text(webCtx, ctl.translater, fmt.Sprintf("您的验证码是：%s， 请在 %s 之前使用。", code, time.Now().Add(10*time.Minute).Format("2006-01-02 15:04:05"))),
 		CreatedAt: time.Now(),
 	}
@@ -719,7 +735,7 @@ func (ctl *AuthController) signUpSendEmailCode(ctx context.Context, webCtx web.C
 
 	// 检查用户是否存在
 	if u, err := ctl.userRepo.GetUserByEmail(ctx, username); err != nil {
-		if err != repo.ErrNotFound {
+		if !errors.Is(err, repo.ErrNotFound) {
 			log.WithFields(log.Fields{
 				"username": username,
 			}).Errorf("failed to get user: %s", err)
