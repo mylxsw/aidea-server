@@ -39,8 +39,11 @@ type GenImageRequest struct {
 	// 模型ID
 	ModelID int64 `json:"model_id,omitempty"`
 	// Multiply 生成图片数量
-	Multiply int64             `json:"multiply,omitempty"`
+	Multiply int64 `json:"multiply,omitempty"`
+	// Addition 模型参数
 	Addition *GenImageAddition `json:"addition,omitempty"`
+	// ControlNet controlnet 配置
+	ControlNet *ControlNet `json:"controlnet,omitempty"`
 }
 
 type GenImageAddition struct {
@@ -55,6 +58,93 @@ type GenImageAddition struct {
 	NegativePrompt string `json:"negative_prompt,omitempty"`
 	// ImgFmt 图片生成格式，png的质量会更高，三方模型不支持 png jpg
 	ImgFmt string `json:"img_fmt,omitempty"`
+}
+
+type ControlNetID int64
+
+const (
+	// ControlNetPosture 生成图片将使用参考图中的人物姿势和动作，适用于固定动作，姿态
+	// {
+	// 		"id": 1,
+	//  	"module": "openpose_full",
+	//  	"model": "control_v11p_sd15_openpose"
+	//	}
+	ControlNetPosture ControlNetID = 1
+
+	// ControlNetLayout 生成图片将使用参考图的结构和轮廓，适用于动物，物体等
+	// {
+	// 		"id": 2,
+	// 		"module": "canny",
+	// 		"model": "control_v11p_sd15_canny"
+	// }
+	ControlNetLayout ControlNetID = 2
+
+	// ControlNetLine 生成图片将使用参考图的线条，适用于线稿上色
+	// {
+	//		"id": 3,
+	//		"module": "lineart_anime",
+	//		"model": "control_v11p_sd15_lineart"
+	// }
+	ControlNetLine ControlNetID = 3
+
+	// ControlNetColor 生成图片将使用参考图的颜色分布
+	// {
+	// 		"id": 4,
+	// 		"module": "shuffle",
+	// 		"model": "control_v11e_sd15_shuffle"
+	// }
+	ControlNetColor ControlNetID = 4
+
+	// ControlNetBlueprint 生成图将按照参考图的设计方式进行生成，适用于线条设计稿生成实物图片
+	// {
+	// 		"id": 5,
+	// 		"module": "mlsd",
+	// 		"model": "control_v11p_sd15_mlsd"
+	// }
+	ControlNetBlueprint ControlNetID = 5
+
+	// ControlNetScene 生成图将遵循参考图的大场景构造，适用于建筑或场景室外图变换不同风格，真实摄影风格的照片
+	// {
+	// 		"id": 6,
+	// 		"module": "seg_ofade20k",
+	// 		"model": "control_v11p_sd15_seg"
+	// }
+	ControlNetScene ControlNetID = 6
+
+	// ControlNetPartialRepaint 局部重绘，你可以涂抹原图的一部分，新图片将仅在这片区域生成，并保持画面和谐
+	// mask中白色区域为重绘区域，mask图和参考图使用同一接口上传，同一方式传参
+	// {
+	// 		"id": 7,
+	// 		"module": "inpaint_only",
+	// 		"model": "control_v11p_sd15_inpaint",
+	// 		"mask": "https//xxx/xx/x.jpeg"
+	// }
+	ControlNetPartialRepaint ControlNetID = 7
+
+	// ControlNetShadow 参考光影，生成图片将使用参考图的明暗对比，适用于光影、艺术字
+	// - weight【引导权重】默认0.75，范围0~2，调整步长0.05
+	// - guidance_start【引导初始值】默认0.25，范围0~1，调整步长0.05
+	// - weight 和 guidance_start 字段同样会影响其他方式的生成效果，所以非参考光影请勿传参
+	// {
+	//    "id": 8,
+	//    "module": null,
+	//    "model": "control_v11f1e_sd15_tile",
+	//    "weight": 0.75,
+	//    "guidance_start": 0.2,
+	// }
+	ControlNetShadow ControlNetID = 8
+)
+
+type ControlNet struct {
+	ID     ControlNetID `json:"id"`
+	Module string       `json:"module,omitempty"`
+	Model  string       `json:"model,omitempty"`
+	// Mask mask 图，局部重绘（controlnet.id=7）时必传，Mask 的基础大小应和原图一致，涂抹区域的大小形状没有限制
+	Mask string `json:"mask,omitempty"`
+	// Weight 引导权重，参考光影（controlnet.id=8）时必传，范围0~2，调整步长0.05，建议0.75
+	Weight float64 `json:"weight,omitempty"`
+	// GuidanceStart 引导初始值，参考光影（controlnet.id=8）时必传，范围0~1，调整步长0.05，建议0.25
+	GuidanceStart float64 `json:"guidance_start,omitempty"`
 }
 
 type Response[T any] struct {

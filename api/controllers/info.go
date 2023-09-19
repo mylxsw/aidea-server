@@ -104,13 +104,13 @@ func (ctl *InfoController) Capabilities(webCtx web.Context, client *auth.ClientI
 		{
 			Name:    "GPT-3.5",
 			ModelID: "gpt-3.5-turbo",
-			Desc:    "Fast & Cost-Effective",
+			Desc:    "速度快，成本低",
 			Color:   "FF67AC5C",
 		},
 		{
 			Name:     "GPT-4",
 			ModelID:  "gpt-4",
-			Desc:     "Powerful & Precise",
+			Desc:     "能力强，更精准",
 			Color:    "FF714BD7",
 			Powerful: true,
 		},

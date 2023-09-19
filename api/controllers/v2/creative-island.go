@@ -88,6 +88,7 @@ type CreativeIslandItem struct {
 	TitleColor   string `json:"title_color,omitempty"`
 	PreviewImage string `json:"preview_image,omitempty"`
 	RouteURI     string `json:"route_uri,omitempty"`
+	Tag          string `json:"tag,omitempty"`
 }
 
 func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Context, client *auth.ClientInfo) web.Response {
@@ -101,10 +102,11 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 		},
 		{
 			ID:           "image-to-image",
-			Title:        "图生图（Beta）",
+			Title:        "图生图",
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-image-to-image.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create?mode=image-to-image&id=image-to-image",
+			Tag:          "BETA",
 		},
 	}
 
