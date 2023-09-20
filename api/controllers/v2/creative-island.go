@@ -35,6 +35,7 @@ import (
 const (
 	AllInOneIslandID            = "all-in-one"
 	DefaultImageCompletionModel = "sb-stable-diffusion-xl-1024-v1-0"
+	DefaultImageToImageModel    = "lb-realistic-versionv4.0"
 )
 
 // CreativeIslandController 创作岛
@@ -509,7 +510,10 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 
 	stylePreset := webCtx.Input("style_preset")
 
-	modelID := webCtx.InputWithDefault("model", DefaultImageCompletionModel)
+	modelID := webCtx.InputWithDefault(
+		"model",
+		ternary.If(image != "", DefaultImageToImageModel, DefaultImageCompletionModel),
+	)
 	filterID := webCtx.Int64Input("filter_id", 0)
 	var filterName string
 	if filterID > 0 {
