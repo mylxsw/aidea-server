@@ -12,9 +12,9 @@ import (
 func TestDashScope_Chat(t *testing.T) {
 	client := dashscope.New(os.Getenv("ALI_LINGJI_API_KEY"))
 	resp, err := client.Chat(dashscope.ChatRequest{
-		Model: "qwen-v1",
+		Model: "qwen-plus",
 		Input: dashscope.ChatInput{
-			Prompt: "你好",
+			Prompt: "鲁迅为什么要暴打周树人呢",
 		},
 	})
 	assert.NoError(t, err)

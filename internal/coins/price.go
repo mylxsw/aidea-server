@@ -22,10 +22,13 @@ var coinTables = map[string]CoinTable{
 		"DALL·E": 50,
 
 		// 国产模型
-		"model_ernie_bot_turbo": 5, // valid 文心一言
-		"qwen-v1":               5, // valid 通义千问
-		"generalv2":             5, // valid 讯飞星火 v2
-		"general":               3, // valid 讯飞星火 v1.5
+		"model_ernie_bot_turbo": 5,  // valid 文心一言
+		"qwen-v1":               5,  // valid 通义千问 v1
+		"qwen-plus-v1":          20, // valid 通义千问 plus v1
+		"qwen-turbo":            5,  // valid 通义千问 turbo
+		"qwen-plus":             20, // valid 通义千问 plus
+		"generalv2":             5,  // valid 讯飞星火 v2
+		"general":               3,  // valid 讯飞星火 v1.5
 	},
 	"deepai": {
 		"default": 30, // valid
@@ -344,7 +347,7 @@ func GetUploadCoins() int64 {
 
 // GetUnifiedImageGenCoins 统一的图片生成计费
 func GetUnifiedImageGenCoins() int {
-	return 20
+	return 15
 }
 
 func GetTextToVoiceCoins() int64 {
