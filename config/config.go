@@ -27,6 +27,12 @@ type Config struct {
 	OpenAIServers      []string `json:"openai_servers" yaml:"openai_servers"`
 	OpenAIKeys         []string `json:"openai_keys" yaml:"openai_keys"`
 
+	// Anthropic 配置
+	EnableAnthropic    bool   `json:"enable_anthropic" yaml:"enable_anthropic"`
+	AnthropicAutoProxy bool   `json:"anthropic_auto_proxy" yaml:"anthropic_auto_proxy"`
+	AnthropicServer    string `json:"anthropic_server" yaml:"anthropic_server"`
+	AnthropicAPIKey    string `json:"anthropic_api_key" yaml:"anthropic_api_key"`
+
 	// 百度文心大模型配置
 	EnableBaiduWXAI bool   `json:"enable_baiduwx_ai" yaml:"enable_baiduwx_ai"`
 	BaiduWXKey      string `json:"baidu_ai_key" yaml:"baidu_ai_key"`
@@ -117,6 +123,8 @@ type Config struct {
 	UseTencentVoiceToText bool   `json:"use_tencent_voice_to_text" yaml:"use_tencent_voice_to_text"`
 	TencentSecretID       string `json:"tencent_secret_id" yaml:"tencent_secret_id"`
 	TencentSecretKey      string `json:"-" yaml:"tencent_secret_key"`
+	TencentAppID          int    `json:"tencent_app_id" yaml:"tencent_app_id"`
+	EnableTencentAI       bool   `json:"enable_tencent_ai" yaml:"enable_tencent_ai"`
 	TencentSMSSDKAppID    string `json:"tencent_sms_sdk_appid" yaml:"tencent_sms_sdk_appid"`
 	TencentSMSTemplateID  string `json:"tencent_sms_template_id" yaml:"tencent_sms_template_id"`
 	TencentSMSSign        string `json:"tencent_sms_sign" yaml:"tencent_sms_sign"`
@@ -207,6 +215,11 @@ func Register(ins *app.App) {
 			OpenAIServers:      ctx.StringSlice("openai-servers"),
 			OpenAIKeys:         ctx.StringSlice("openai-keys"),
 
+			EnableAnthropic:    ctx.Bool("enable-anthropic"),
+			AnthropicAutoProxy: ctx.Bool("anthropic-autoproxy"),
+			AnthropicServer:    ctx.String("anthropic-server"),
+			AnthropicAPIKey:    ctx.String("anthropic-apikey"),
+
 			EnableBaiduWXAI: ctx.Bool("enable-baiduwxai"),
 			BaiduWXKey:      ctx.String("baiduwx-key"),
 			BaiduWXSecret:   ctx.String("baiduwx-secret"),
@@ -283,6 +296,8 @@ func Register(ins *app.App) {
 			TencentSMSSDKAppID:    ctx.String("tencent-smssdkappid"),
 			TencentSMSTemplateID:  ctx.String("tencent-smstemplateid"),
 			TencentSMSSign:        ctx.String("tencent-smssign"),
+			TencentAppID:          ctx.Int("tencent-appid"),
+			EnableTencentAI:       ctx.Bool("enable-tencentai"),
 
 			AliyunAccessKeyID:   ctx.String("aliyun-key"),
 			AliyunAccessSecret:  ctx.String("aliyun-secret"),

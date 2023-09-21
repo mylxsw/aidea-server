@@ -4,9 +4,11 @@ import (
 	"context"
 	"strings"
 
+	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
 	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
+	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
 	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
 	"github.com/mylxsw/go-utils/array"
 )
@@ -75,15 +77,17 @@ type Chat interface {
 }
 
 type ChatImp struct {
-	openAI    *OpenAIChat
-	baiduAI   *BaiduAIChat
-	dashScope *DashScopeChat
-	xfyunAI   *XFYunChat
-	snAI      *SenseNovaChat
+	openAI      *OpenAIChat
+	baiduAI     *BaiduAIChat
+	dashScope   *DashScopeChat
+	xfyunAI     *XFYunChat
+	snAI        *SenseNovaChat
+	tencentAI   *TencentAIChat
+	anthropicAI *AnthropicChat
 }
 
-func NewChat(openAI *OpenAIChat, baiduAI *BaiduAIChat, dashScope *DashScopeChat, xfyunAI *XFYunChat, sn *SenseNovaChat) Chat {
-	return &ChatImp{openAI: openAI, baiduAI: baiduAI, dashScope: dashScope, xfyunAI: xfyunAI, snAI: sn}
+func NewChat(openAI *OpenAIChat, baiduAI *BaiduAIChat, dashScope *DashScopeChat, xfyunAI *XFYunChat, sn *SenseNovaChat, tencentAI *TencentAIChat, anthropicAI *AnthropicChat) Chat {
+	return &ChatImp{openAI: openAI, baiduAI: baiduAI, dashScope: dashScope, xfyunAI: xfyunAI, snAI: sn, tencentAI: tencentAI, anthropicAI: anthropicAI}
 }
 
 func (ai *ChatImp) selectImp(model string) Chat {
@@ -103,6 +107,14 @@ func (ai *ChatImp) selectImp(model string) Chat {
 		return ai.snAI
 	}
 
+	if strings.HasPrefix(model, "腾讯:") {
+		return ai.tencentAI
+	}
+
+	if strings.HasPrefix(model, "Anthropic:") {
+		return ai.anthropicAI
+	}
+
 	// TODO 根据模型名称判断使用哪个 AI
 	switch model {
 	case string(baidu.ModelErnieBot),
@@ -112,13 +124,23 @@ func (ai *ChatImp) selectImp(model string) Chat {
 		baidu.ModelBloomz7B,
 		baidu.ModelLlama2_7b_CN,
 		baidu.ModelLlama2_70b:
+		// 百度文心千帆
 		return ai.baiduAI
 	case dashscope.ModelQWenV1, dashscope.ModelQWenPlusV1, dashscope.ModelQWen7BV1, dashscope.ModelQWen7BChatV1:
+		// 阿里灵积平台
 		return ai.dashScope
 	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2):
+		// 讯飞星火
 		return ai.xfyunAI
 	case string(sensenova.ModelNovaPtcXLV1), string(sensenova.ModelNovaPtcXSV1):
+		// 商汤日日新
 		return ai.snAI
+	case tencentai.ModelHyllm:
+		// 腾讯混元大模型
+		return ai.tencentAI
+	case string(anthropic.ModelClaude2), string(anthropic.ModelClaudeInstant):
+		// Anthropic
+		return ai.anthropicAI
 	}
 
 	return ai.openAI

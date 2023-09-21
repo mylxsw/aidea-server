@@ -9,14 +9,19 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/go-uuid"
 	"io"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-uuid"
+	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/go-utils/array"
 )
+
+const ModelHyllm = "hyllm"
 
 type TencentAI struct {
 	appID     int
@@ -89,6 +94,8 @@ func (ai *TencentAI) ChatStream(req Request) (<-chan Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	log.With(req).Debug("tencent chat stream request")
 
 	httpReq.Header.Set("Authorization", sign)
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -181,7 +188,7 @@ func (ai *TencentAI) buildSignURL(req Request) string {
 	messageStr = strings.TrimSuffix(messageStr, ",")
 	params = append(params, "messages=["+messageStr+"]")
 
-	sort.Sort(sort.StringSlice(params))
+	sort.Strings(params)
 	return "hunyuan.cloud.tencent.com/hyllm/v1/chat/completions?" + strings.Join(params, "&")
 }
 
@@ -225,7 +232,7 @@ type Request struct {
 	Stream int `json:"stream"`
 	// Messages 会话内容, 长度最多为40, 按对话时间从旧到新在数组中排列
 	// 输入 content 总数最大支持 3000 token。
-	Messages []Message `json:"messages"`
+	Messages Messages `json:"messages"`
 }
 
 type Message struct {
@@ -236,6 +243,37 @@ type Message struct {
 	Role string `json:"role"`
 	// Content 消息的内容
 	Content string `json:"content"`
+}
+
+type Messages []Message
+
+func (ms Messages) Fix() Messages {
+	last := ms[len(ms)-1]
+	if last.Role != "user" {
+		last = Message{
+			Role:    "user",
+			Content: "继续",
+		}
+		ms = append(ms, last)
+	}
+
+	finalMessages := make([]Message, 0)
+	var lastRole string
+
+	for _, m := range array.Reverse(ms) {
+		if m.Role == lastRole {
+			continue
+		}
+
+		lastRole = m.Role
+		finalMessages = append(finalMessages, m)
+	}
+
+	if len(finalMessages)%2 == 0 {
+		finalMessages = finalMessages[:len(finalMessages)-1]
+	}
+
+	return array.Reverse(finalMessages)
 }
 
 type Response struct {

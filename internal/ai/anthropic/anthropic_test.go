@@ -3,6 +3,7 @@ package anthropic_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 
@@ -12,7 +13,7 @@ import (
 )
 
 func TestAnthropic_Chat(t *testing.T) {
-	client := anthropic.New("", os.Getenv("ANTHROPIC_API_KEY"))
+	client := anthropic.New("", os.Getenv("ANTHROPIC_API_KEY"), http.DefaultClient)
 
 	resp, err := client.Chat(context.TODO(), anthropic.NewRequest(anthropic.ModelClaudeInstant, []anthropic.Message{
 		{
@@ -39,7 +40,7 @@ func TestAnthropic_Chat(t *testing.T) {
 }
 
 func TestAnthropic_ChatStream(t *testing.T) {
-	client := anthropic.New("", os.Getenv("ANTHROPIC_API_KEY"))
+	client := anthropic.New("", os.Getenv("ANTHROPIC_API_KEY"), http.DefaultClient)
 
 	resp, err := client.ChatStream(anthropic.NewRequest(anthropic.ModelClaudeInstant, []anthropic.Message{
 		{

@@ -14,6 +14,8 @@ import (
 type Anthropic struct {
 	apiKey    string
 	serverURL string
+
+	client *http.Client
 }
 
 type Model string
@@ -23,12 +25,16 @@ const (
 	ModelClaude2       Model = "claude-2"
 )
 
-func New(serverURL, apiKey string) *Anthropic {
+func New(serverURL, apiKey string, client *http.Client) *Anthropic {
 	if serverURL == "" {
 		serverURL = "https://api.anthropic.com"
 	}
 
-	return &Anthropic{apiKey: apiKey, serverURL: serverURL}
+	if client == nil {
+		client = http.DefaultClient
+	}
+
+	return &Anthropic{apiKey: apiKey, serverURL: serverURL, client: client}
 }
 
 func (ai *Anthropic) Chat(ctx context.Context, req Request) (*Response, error) {
@@ -51,7 +57,7 @@ func (ai *Anthropic) Chat(ctx context.Context, req Request) (*Response, error) {
 	httpReq.Header.Set("anthropic-version", "2023-06-01")
 	httpReq.Header.Set("x-api-key", ai.apiKey)
 
-	httpResp, err := http.DefaultClient.Do(httpReq)
+	httpResp, err := ai.client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("chat failed: %s", err)
 	}
@@ -95,7 +101,7 @@ func (ai *Anthropic) ChatStream(req Request) (<-chan Response, error) {
 	httpReq.Header.Set("Cache-Control", "no-cache")
 	httpReq.Header.Set("Connection", "keep-alive")
 
-	httpResp, err := http.DefaultClient.Do(httpReq)
+	httpResp, err := ai.client.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +196,9 @@ type Message struct {
 	Content string
 }
 
-func NewRequest(model Model, messages []Message) Request {
+type Messages []Message
+
+func NewRequest(model Model, messages Messages) Request {
 	var prompt string
 	for _, msg := range messages {
 		switch msg.Role {

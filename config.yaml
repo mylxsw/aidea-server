@@ -46,6 +46,20 @@ openai-keys: [ "sk-xxxxxxxxxxxxxxxx" ]
 #openai-servers: ["https://xxxx.openai.azure.com"]
 #openai-keys: ["xxxxxxxxxxxxxxxxxxxxxxx"]
 
+######## Anthropic #######
+
+# API 申请：https://www.anthropic.com/
+
+# 是否启用 Anthropic
+enable-anthropic: false
+
+# 是否启用 Anthropic 代理，依赖于 socks5-proxy 配置
+anthropic-autoproxy: false
+# Anthropic 服务地址
+anthropic-server: "https://api.anthropic.com"
+# Anthropic API Key
+anthropic-apikey: ""
+
 ######## 百度文心大模型 ########
 
 # API 申请：https://cloud.baidu.com/product/wenxinworkshop
@@ -182,10 +196,19 @@ tencent-voice: true
 tencent-id: ""
 tencent-key: ""
 
+
 # 腾讯云短信服务 appid
 tencent-smssdkappid: "1400827805"
 tencent-smstemplateid: "18220292"
 tencent-smssign: "AIdea"
+
+# 混元大模型
+# API 申请：https://hunyuan.tencent.com/
+
+# 腾讯云 APP ID，用于混元大模型
+tencent-appid: 1256440000
+# 是否启用腾讯混元大模型
+enable-tencentai: false
 
 ######## 阿里云配置 ########
 

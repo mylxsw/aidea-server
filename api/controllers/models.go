@@ -3,8 +3,10 @@ package controllers
 import (
 	"context"
 
+	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
+	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/config"
@@ -239,7 +241,7 @@ func (ctl *ModelController) Model(ctx web.Context, client *auth.ClientInfo) web.
 func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web.Response {
 	var models []Model
 	models = append(models, openAIModels(ctl.conf)...)
-	models = append(models, claudeModels()...)
+	models = append(models, anthropicModels(ctl.conf)...)
 	models = append(models, googleModels()...)
 	models = append(models, chinaModels(ctl.conf)...)
 
@@ -260,7 +262,7 @@ func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web
 		}
 
 		if client.IsCNLocalMode(ctl.conf) {
-			if item.Category == "openai" {
+			if item.Category == "openai" || item.Category == "Anthropic" {
 				return false
 			}
 		}
@@ -629,6 +631,18 @@ func chinaModels(conf *config.Config) []Model {
 		})
 	}
 
+	if conf.EnableTencentAI {
+		models = append(models, Model{
+			ID:          "腾讯:" + tencentai.ModelHyllm,
+			Name:        "混元大模型",
+			Description: "由腾讯研发的大语言模型，具备强大的中文创作能力，复杂语境下的逻辑推理能力，以及可靠的任务执行能力",
+			Category:    "腾讯",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.5",
+		})
+	}
+
 	return models
 }
 
@@ -645,23 +659,29 @@ func googleModels() []Model {
 	}
 }
 
-func claudeModels() []Model {
+func anthropicModels(conf *config.Config) []Model {
+	if !conf.EnableAnthropic {
+		return []Model{}
+	}
+
 	return []Model{
 		{
-			ID:          "claude:claude-instant",
-			Name:        "Claude-instant",
+			ID:          "Anthropic:" + string(anthropic.ModelClaudeInstant),
+			Name:        "Claude instant",
 			Description: "Anthropic's fastest model, with strength in creative tasks. Features a context window of 9k tokens (around 7,000 words).",
-			Category:    "claude",
+			Category:    "Anthropic",
 			IsChat:      true,
-			Disabled:    true,
+			Disabled:    false,
+			VersionMin:  "1.0.5",
 		},
 		{
-			ID:          "claude:claude+",
-			Name:        "Claude+",
+			ID:          "Anthropic:" + string(anthropic.ModelClaude2),
+			Name:        "Claude 2.0",
 			Description: "Anthropic's most powerful model. Particularly good at creative writing.",
-			Category:    "claude",
+			Category:    "Anthropic",
 			IsChat:      true,
-			Disabled:    true,
+			Disabled:    false,
+			VersionMin:  "1.0.5",
 		},
 	}
 }

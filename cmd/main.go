@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
@@ -17,6 +18,7 @@ import (
 	"github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
 	"github.com/mylxsw/aidea-server/internal/ai/stabilityai"
+	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
 	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
 	"github.com/mylxsw/aidea-server/internal/dingding"
 	"github.com/mylxsw/aidea-server/internal/mail"
@@ -82,6 +84,11 @@ func main() {
 	ins.AddStringFlag("openai-organization", "", "openai organization")
 	ins.AddStringSliceFlag("openai-servers", []string{"https://api.openai.com/v1"}, "OpenAI 服务地址，配置多个时会自动在多个服务之间平衡负载，不要忘记在在 URL 后面添加 /v1")
 	ins.AddStringSliceFlag("openai-keys", []string{}, "OpenAI Keys，如果指定多个，会在多个服务之间平衡负载")
+
+	ins.AddBoolFlag("enable-anthropic", "是否启用 Anthropic")
+	ins.AddBoolFlag("anthropic-autoproxy", "使用 socks5 代理访问 Anthropic 服务")
+	ins.AddStringFlag("anthropic-server", "https://api.anthropic.com", "anthropic server")
+	ins.AddStringFlag("anthropic-apikey", "", "anthropic api key")
 
 	ins.AddBoolFlag("enable-baiduwxai", "是否启用百度文心千帆大模型")
 	ins.AddStringFlag("baiduwx-key", "", "百度文心大模型 Key")
@@ -153,6 +160,8 @@ func main() {
 	ins.AddStringFlag("tencent-smstemplateid", "", "腾讯短信验证码模板 ID")
 	ins.AddStringFlag("tencent-smssign", "AIdea", "腾讯短信签名")
 	ins.AddBoolFlag("tencent-voice", "是否使用腾讯的语音转文本服务，不启用则使用 OpenAI 的 Whisper 模型")
+	ins.AddIntFlag("tencent-appid", 0, "腾讯云 APP ID，用于腾讯混元大模型")
+	ins.AddBoolFlag("enable-tencentai", "是否启用腾讯混元大模型 AI 服务")
 
 	ins.AddStringFlag("aliyun-key", "", "aliyun app key")
 	ins.AddStringFlag("aliyun-secret", "", "aliyun app secret")
@@ -242,6 +251,8 @@ func main() {
 		leap.Provider{},
 		baidu.Provider{},
 		sensenova.Provider{},
+		tencentai.Provider{},
+		anthropic.Provider{},
 	)
 
 	app.MustRun(ins)

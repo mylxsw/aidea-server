@@ -3,13 +3,14 @@ package tencentai_test
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
+	"testing"
+
 	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/assert"
 	"github.com/mylxsw/go-utils/must"
-	"os"
-	"strconv"
-	"testing"
 )
 
 func TestTencentAI_Chat(t *testing.T) {
@@ -74,4 +75,23 @@ func TestTencentAI_ChatStream(t *testing.T) {
 
 		fmt.Print(res.Choices[0].Delta.Content)
 	}
+}
+
+func TestTencentMessageFix(t *testing.T) {
+	messages := tencentai.Messages{
+		{
+			Role:    "user",
+			Content: "你是一名占卜师，我给你名字，你帮我占卜运势",
+		},
+		{
+			Role:    "assistant",
+			Content: "OK，请告诉我你的名字",
+		},
+		{
+			Role:    "user",
+			Content: "我的名字是李逍遥",
+		},
+	}
+
+	log.With(messages.Fix()).Debug("messages")
 }
