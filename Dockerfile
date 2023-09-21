@@ -5,10 +5,10 @@ WORKDIR /data
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -o /data/bin/aidea-server main.go
+RUN go build -ldflags "-s -w" -o /data/bin/aidea-server cmd/main.go
 
 # final stage
-FROM ubuntu:23.10
+FROM ubuntu:22.04
 
 ENV TZ=Asia/Shanghai
 
