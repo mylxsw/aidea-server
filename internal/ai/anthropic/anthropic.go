@@ -203,13 +203,13 @@ func NewRequest(model Model, messages Messages) Request {
 	for _, msg := range messages {
 		switch msg.Role {
 		case "user":
-			prompt += "\n\nHuman: " + msg.Content
+			prompt += "\n\nHuman: " + strings.TrimSpace(msg.Content)
 		case "assistant":
-			prompt += "\n\nAssistant: " + msg.Content
+			prompt += "\n\nAssistant: " + strings.TrimSpace(msg.Content)
 		}
 	}
 
-	prompt += "\n\nAssistant:"
+	prompt += "\n\nAssistant: "
 
 	return Request{
 		Prompt: prompt,

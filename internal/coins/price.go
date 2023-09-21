@@ -21,6 +21,10 @@ var coinTables = map[string]CoinTable{
 		// 每次计费
 		"DALL·E": 50,
 
+		// Anthropic 估价 = ( input + output ) / 2 * 7 / 1000000 * 1000
+		"claude-instant-1": 5,  // valid 0.02492 RMB/1000 Token (input $1.63/million, output $5.51/million)
+		"claude-2":         30, // valid 0.15358 RMB/1000 Token (input $11.2/million, output $32.68/million)
+
 		// 国产模型
 		"model_ernie_bot_turbo": 5,  // valid 文心一言
 		"qwen-v1":               5,  // valid 通义千问 v1
@@ -29,6 +33,7 @@ var coinTables = map[string]CoinTable{
 		"qwen-plus":             20, // valid 通义千问 plus
 		"generalv2":             5,  // valid 讯飞星火 v2
 		"general":               3,  // valid 讯飞星火 v1.5
+		"hyllm":                 5,  // valid 腾讯混元大模型
 	},
 	"deepai": {
 		"default": 30, // valid
@@ -76,18 +81,19 @@ var coinTables = map[string]CoinTable{
 	},
 }
 
-// 价格表
+// PriceTable 价格表  @deprecated
 type PriceTable map[string]float64
 
+// @deprecated
 var priceTables = map[string]PriceTable{
 	"openai": {
 		"gpt-3.5-turbo":          0.014,
 		"gpt-3.5-turbo-0613":     0.014,
 		"gpt-3.5-turbo-16k":      0.028,
 		"gpt-3.5-turbo-16k-0613": 0.028,
-		"gpt-4":                  0.546, // 原价 0.42，因为使用了三方 API，价格上浮 30%
-		"gpt-4-8k":               0.546, // 原价 0.42，因为使用了三方 API，价格上浮 30%
-		"gpt-4-32k":              1.092, // 原价 0.84，因为使用了三方 API，价格上浮 30%
+		"gpt-4":                  0.546, // 原价 0.42
+		"gpt-4-8k":               0.546, // 原价 0.42
+		"gpt-4-32k":              1.092, // 原价 0.84
 		"DALL·E":                 0.14,
 	},
 	"deepai": {
