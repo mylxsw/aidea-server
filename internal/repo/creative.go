@@ -672,6 +672,11 @@ func (r *CreativeRepo) Gallery(ctx context.Context, page, perPage int64) ([]mode
 		return item.GalleryId.ValueOrZero()
 	})
 
+	if len(randomIds) == 0 {
+		meta.LastPage = 1
+		return []model.CreativeGallery{}, meta, nil
+	}
+
 	q := query.Builder().
 		WhereIn(model.FieldCreativeGalleryId, randomIds).
 		Select(

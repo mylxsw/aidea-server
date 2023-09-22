@@ -83,7 +83,15 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 			return false
 		}
 
-		if !ctl.conf.EnableSenseNovaAI && item.Vendor == " 商汤日日新" {
+		if !ctl.conf.EnableSenseNovaAI && item.Vendor == "商汤日日新" {
+			return false
+		}
+
+		if !ctl.conf.EnableTencentAI && item.Vendor == "腾讯" {
+			return false
+		}
+
+		if !ctl.conf.EnableAnthropic && item.Vendor == "Anthropic" {
 			return false
 		}
 

@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/mylxsw/aidea-server/internal/service"
+	"github.com/mylxsw/asteria/log"
 
 	"github.com/mylxsw/aidea-server/api/controllers/common"
 	"github.com/mylxsw/aidea-server/config"
@@ -49,6 +50,7 @@ func (ctl *CreativeController) Gallery(ctx context.Context, webCtx web.Context) 
 
 	res, err := ctl.gallerySrv.Gallery(ctx, page, pageSize)
 	if err != nil {
+		log.WithFields(log.Fields{"page": page, "per_page": pageSize}).Errorf("get gallery list failed: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 

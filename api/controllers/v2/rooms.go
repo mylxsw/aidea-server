@@ -6,6 +6,7 @@ import (
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/api/controllers/common"
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/helper"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/youdao"
@@ -16,6 +17,7 @@ import (
 )
 
 type RoomController struct {
+	conf       *config.Config    `autowire:"@"`
 	roomRepo   *repo.RoomRepo    `autowire:"@"`
 	translater youdao.Translater `autowire:"@"`
 }
@@ -52,6 +54,35 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 		}
 
 		suggests = array.Filter(suggests, func(item repo.GalleryRoom, _ int) bool {
+			// 检查模型是否满足条件
+			if !ctl.conf.EnableOpenAI && item.Vendor == "openai" {
+				return false
+			}
+
+			if !ctl.conf.EnableBaiduWXAI && item.Vendor == "文心千帆" {
+				return false
+			}
+
+			if !ctl.conf.EnableDashScopeAI && item.Vendor == "灵积" {
+				return false
+			}
+
+			if !ctl.conf.EnableXFYunAI && item.Vendor == "讯飞星火" {
+				return false
+			}
+
+			if !ctl.conf.EnableSenseNovaAI && item.Vendor == "商汤日日新" {
+				return false
+			}
+
+			if !ctl.conf.EnableTencentAI && item.Vendor == "腾讯" {
+				return false
+			}
+
+			if !ctl.conf.EnableAnthropic && item.Vendor == "Anthropic" {
+				return false
+			}
+
 			if item.VersionMax == "" && item.VersionMin == "" {
 				return true
 			}
