@@ -2,12 +2,13 @@ package uploader_test
 
 import (
 	"context"
-	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/asteria/log"
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/internal/uploader"
+	"github.com/mylxsw/asteria/log"
 )
 
 func TestUploader_DeleteFile(t *testing.T) {
