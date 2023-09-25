@@ -253,7 +253,7 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 		InitMessage:    req.InitMessage,
 	}
 
-	id, err := ctl.roomRepo.Create(ctx, user.ID, &room, false)
+	id, err := ctl.roomRepo.Create(ctx, user.ID, &room, true)
 	if err != nil {
 		if err == repo.ErrRoomNameExists {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人名称已存在"), http.StatusBadRequest)
