@@ -54,7 +54,6 @@ func CreateAuthUserFromModel(user *model.Users) *User {
 		// 仅限实验室用户
 		WithLab: array.In(user.Id, []int64{
 			1, /* 初始用户 */
-			5,
 			24,
 		}),
 	}
