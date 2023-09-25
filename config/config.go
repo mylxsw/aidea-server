@@ -27,6 +27,12 @@ type Config struct {
 	OpenAIServers      []string `json:"openai_servers" yaml:"openai_servers"`
 	OpenAIKeys         []string `json:"openai_keys" yaml:"openai_keys"`
 
+	// Anthropic 配置
+	EnableAnthropic    bool   `json:"enable_anthropic" yaml:"enable_anthropic"`
+	AnthropicAutoProxy bool   `json:"anthropic_auto_proxy" yaml:"anthropic_auto_proxy"`
+	AnthropicServer    string `json:"anthropic_server" yaml:"anthropic_server"`
+	AnthropicAPIKey    string `json:"anthropic_api_key" yaml:"anthropic_api_key"`
+
 	// 百度文心大模型配置
 	EnableBaiduWXAI bool   `json:"enable_baiduwx_ai" yaml:"enable_baiduwx_ai"`
 	BaiduWXKey      string `json:"baidu_ai_key" yaml:"baidu_ai_key"`
@@ -41,6 +47,11 @@ type Config struct {
 	XFYunAppID     string `json:"xfyun_appid" yaml:"xfyun_appid"`
 	XFYunAPIKey    string `json:"-" yaml:"-"`
 	XFYunAPISecret string `json:"-" yaml:"-"`
+
+	// 商汤日日新
+	EnableSenseNovaAI  bool   `json:"enable_sensenova_ai" yaml:"enable_sensenova_ai"`
+	SenseNovaKeyID     string `json:"sensenova_keyid" yaml:"sensenova_keyid"`
+	SenseNovaKeySecret string `json:"-" yaml:"-"`
 
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
@@ -112,12 +123,18 @@ type Config struct {
 	UseTencentVoiceToText bool   `json:"use_tencent_voice_to_text" yaml:"use_tencent_voice_to_text"`
 	TencentSecretID       string `json:"tencent_secret_id" yaml:"tencent_secret_id"`
 	TencentSecretKey      string `json:"-" yaml:"tencent_secret_key"`
+	TencentAppID          int    `json:"tencent_app_id" yaml:"tencent_app_id"`
+	EnableTencentAI       bool   `json:"enable_tencent_ai" yaml:"enable_tencent_ai"`
 	TencentSMSSDKAppID    string `json:"tencent_sms_sdk_appid" yaml:"tencent_sms_sdk_appid"`
+	TencentSMSTemplateID  string `json:"tencent_sms_template_id" yaml:"tencent_sms_template_id"`
+	TencentSMSSign        string `json:"tencent_sms_sign" yaml:"tencent_sms_sign"`
 
 	// Aliyun
 	AliyunAccessKeyID   string `json:"aliyun_access_key_id" yaml:"aliyun_access_key_id"`
 	AliyunAccessSecret  string `json:"-" yaml:"aliyun_access_secret"`
 	EnableContentDetect bool   `json:"enable_content_detect" yaml:"enable_content_detect"`
+	AliyunSMSTemplateID string `json:"aliyun_sms_template_id" yaml:"aliyun_sms_template_id"`
+	AliyunSMSSign       string `json:"aliyun_sms_sign" yaml:"aliyun_sms_sign"`
 
 	// Apple 应用内支付
 	EnableApplePay bool `json:"enable_apple_pay" yaml:"enable_apple_pay"`
@@ -136,6 +153,12 @@ type Config struct {
 	// 钉钉通知设置
 	DingDingToken  string `json:"-" yaml:"dingding_token"`
 	DingDingSecret string `json:"-" yaml:"dingding_secret"`
+
+	// 国产化模式
+	CNLocalMode    bool   `json:"cn_local_mode" yaml:"cn_local_mode"`
+	CNLocalOnlyIOS bool   `json:"cn_local_only_ios" yaml:"cn_local_only_ios"`
+	CNLocalModel   string `json:"cn_local_model" yaml:"cn_local_model"`
+	CNLocalVendor  string `json:"cn_local_vendor" yaml:"cn_local_vendor"`
 }
 
 type Mail struct {
@@ -192,6 +215,11 @@ func Register(ins *app.App) {
 			OpenAIServers:      ctx.StringSlice("openai-servers"),
 			OpenAIKeys:         ctx.StringSlice("openai-keys"),
 
+			EnableAnthropic:    ctx.Bool("enable-anthropic"),
+			AnthropicAutoProxy: ctx.Bool("anthropic-autoproxy"),
+			AnthropicServer:    ctx.String("anthropic-server"),
+			AnthropicAPIKey:    ctx.String("anthropic-apikey"),
+
 			EnableBaiduWXAI: ctx.Bool("enable-baiduwxai"),
 			BaiduWXKey:      ctx.String("baiduwx-key"),
 			BaiduWXSecret:   ctx.String("baiduwx-secret"),
@@ -203,6 +231,10 @@ func Register(ins *app.App) {
 			XFYunAppID:     ctx.String("xfyun-appid"),
 			XFYunAPIKey:    ctx.String("xfyun-apikey"),
 			XFYunAPISecret: ctx.String("xfyun-apisecret"),
+
+			EnableSenseNovaAI:  ctx.Bool("enable-sensenovaai"),
+			SenseNovaKeyID:     ctx.String("sensenova-keyid"),
+			SenseNovaKeySecret: ctx.String("sensenova-keysecret"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
 
@@ -262,10 +294,16 @@ func Register(ins *app.App) {
 			TencentSecretID:       ctx.String("tencent-id"),
 			TencentSecretKey:      ctx.String("tencent-key"),
 			TencentSMSSDKAppID:    ctx.String("tencent-smssdkappid"),
+			TencentSMSTemplateID:  ctx.String("tencent-smstemplateid"),
+			TencentSMSSign:        ctx.String("tencent-smssign"),
+			TencentAppID:          ctx.Int("tencent-appid"),
+			EnableTencentAI:       ctx.Bool("enable-tencentai"),
 
 			AliyunAccessKeyID:   ctx.String("aliyun-key"),
 			AliyunAccessSecret:  ctx.String("aliyun-secret"),
 			EnableContentDetect: ctx.Bool("enable-contentdetect"),
+			AliyunSMSTemplateID: ctx.String("aliyun-smstemplateid"),
+			AliyunSMSSign:       ctx.String("aliyun-smssign"),
 
 			EnableApplePay: ctx.Bool("enable-applepay"),
 
@@ -280,6 +318,11 @@ func Register(ins *app.App) {
 
 			DingDingToken:  ctx.String("dingding-token"),
 			DingDingSecret: ctx.String("dingding-secret"),
+
+			CNLocalMode:    ctx.Bool("cnlocal-mode"),
+			CNLocalOnlyIOS: ctx.Bool("cnlocal-onlyios"),
+			CNLocalVendor:  ctx.String("cnlocal-vendor"),
+			CNLocalModel:   ctx.String("cnlocal-model"),
 		}
 	})
 }

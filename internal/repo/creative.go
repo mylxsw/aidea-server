@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -424,12 +425,15 @@ func (r *CreativeRepo) FindHistoryRecordByTaskId(ctx context.Context, userId int
 
 func (r *CreativeRepo) FindHistoryRecord(ctx context.Context, userId, id int64) (*CreativeHistoryItem, error) {
 	q := query.Builder().
-		Where(model.FieldCreativeHistoryUserId, userId).
 		Where(model.FieldCreativeHistoryId, id)
+
+	if userId > 0 {
+		q = q.Where(model.FieldCreativeHistoryUserId, userId)
+	}
 
 	item, err := model.NewCreativeHistoryModel(r.db).First(ctx, q)
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -667,6 +671,11 @@ func (r *CreativeRepo) Gallery(ctx context.Context, page, perPage int64) ([]mode
 	randomIds := array.Map(ids, func(item model.CreativeGalleryRandomN, _ int) any {
 		return item.GalleryId.ValueOrZero()
 	})
+
+	if len(randomIds) == 0 {
+		meta.LastPage = 1
+		return []model.CreativeGallery{}, meta, nil
+	}
 
 	q := query.Builder().
 		WhereIn(model.FieldCreativeGalleryId, randomIds).

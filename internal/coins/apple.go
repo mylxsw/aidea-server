@@ -26,7 +26,15 @@ type AppleProduct struct {
 	ExpirePolicyText string       `json:"expire_policy_text"`
 	Recommend        bool         `json:"recommend"`
 	Description      string       `json:"description"`
+	PlatformLimit    Platform     `json:"platform_limits"`
 }
+
+type Platform string
+
+const (
+	PlatformNoneIOS Platform = "none_ios"
+	PlatformIOS     Platform = "ios"
+)
 
 func (ap AppleProduct) GetExpirePolicyText() string {
 	switch ap.ExpirePolicy {
@@ -74,7 +82,7 @@ func (ap AppleProduct) ExpiredAt() time.Time {
 
 func buildDescription(quota int64) string {
 	multiple := float64(quota) / 100.0
-	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4 约 %.0f 次），或创作 %d 张图片", 30*multiple, 2*multiple, quota/20)
+	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4 约 %.0f 次），或创作 %d 张图片", 30*multiple, 2*multiple, quota/15)
 }
 
 func GetAppleProduct(productId string) *AppleProduct {
@@ -98,19 +106,28 @@ func IsAppleProduct(productId string) bool {
 }
 
 var AppleProducts = []AppleProduct{
+	// {
+	// 	ID:             "cc.aicode.aidea.coins_100",
+	// 	Quota:          50,
+	// 	RetailPrice:    100,
+	// 	Name:           "1元尝鲜", // 1 元
+	// 	ExpirePolicy:   ExpirePolicyWeek,
+	// 	Description:    buildDescription(50),
+	// },
 	{
-		ID:           "cc.aicode.aidea.coins_100",
-		Quota:        50,
-		RetailPrice:  100,
-		Name:         "1元尝鲜", // 1 元
-		ExpirePolicy: ExpirePolicyWeek,
-		Description:  buildDescription(100),
+		ID:            "cc.aicode.aidea.coins_300",
+		Quota:         200,
+		RetailPrice:   300,
+		Name:          "3元得200个", // 3 元
+		ExpirePolicy:  ExpirePolicyWeek,
+		Description:   buildDescription(200),
+		PlatformLimit: PlatformNoneIOS, // 非 iOS 平台专属
 	},
 	{
 		ID:           "cc.aicode.aidea.coins_600_2",
-		Quota:        700,
+		Quota:        600,
 		RetailPrice:  600,
-		Name:         "6元得700个", // 6 元
+		Name:         "6元得600个", // 6 元
 		ExpirePolicy: ExpirePolicyMonth,
 		Description:  buildDescription(700),
 	},

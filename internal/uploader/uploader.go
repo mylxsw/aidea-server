@@ -37,7 +37,11 @@ func NewUploader(resolver infra.Resolver, conf *config.Config) *Uploader {
 		})
 	}
 
-	return &Uploader{conf: conf, baseURL: "https://ssl.aicode.cc", httpClient: client}
+	return &Uploader{conf: conf, baseURL: conf.StorageDomain, httpClient: client}
+}
+
+func New(conf *config.Config) *Uploader {
+	return &Uploader{conf: conf, baseURL: conf.StorageDomain, httpClient: &http.Client{Timeout: 120 * time.Second}}
 }
 
 type UploadInit struct {
@@ -176,6 +180,17 @@ func (u *Uploader) uploadStream(ctx context.Context, uid int, expireAfterDays in
 	}
 
 	return fmt.Sprintf("%s/%s", u.baseURL, key), nil
+}
+
+// RemoveFile 删除文件
+func (u *Uploader) RemoveFile(ctx context.Context, pathWithoutURLPrefix string) error {
+	mac := qiniuAuth.New(u.conf.StorageAppKey, u.conf.StorageAppSecret)
+	cfg := storage.Config{
+		UseHTTPS: true,
+	}
+
+	bucketManager := storage.NewBucketManager(mac, &cfg)
+	return bucketManager.Delete(u.conf.StorageBucket, pathWithoutURLPrefix)
 }
 
 func fileExt(filename string) string {

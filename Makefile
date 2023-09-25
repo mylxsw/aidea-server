@@ -12,9 +12,12 @@ build-release:
 	GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o build/release/aidea-server-darwin cmd/main.go
 	GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o build/release/aidea-server.exe cmd/main.go
 
+build-linux:
+	GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o build/release/aidea-server-linux cmd/main.go
+
 orm:
 	# https://github.com/mylxsw/eloquent
 	eloquent gen --source 'internal/repo/model/*.yaml'
 	gofmt -s -w internal/repo/model/*.go
 
-.PHONY: build build-release orm
+.PHONY: build build-release orm build-linux

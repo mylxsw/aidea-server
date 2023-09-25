@@ -89,25 +89,77 @@ func (ctl *InfoController) Version(ctx web.Context) web.Response {
 	})
 }
 
+// HomeModel 主页显示的模型
+type HomeModel struct {
+	Name     string `json:"name"`
+	ModelID  string `json:"model_id"`
+	Desc     string `json:"desc,omitempty"`
+	Color    string `json:"color,omitempty"`
+	Powerful bool   `json:"powerful,omitempty"`
+}
+
 // Capabilities 获取 AI 平台的能力列表
-func (ctl *InfoController) Capabilities(ctx web.Context) web.Response {
-	return ctx.JSON(web.M{
+func (ctl *InfoController) Capabilities(webCtx web.Context, client *auth.ClientInfo) web.Response {
+	enableOpenAI := ctl.conf.EnableOpenAI
+	homeModels := []HomeModel{
+		{
+			Name:    "GPT-3.5",
+			ModelID: "gpt-3.5-turbo",
+			Desc:    "速度快，成本低",
+			Color:   "FF67AC5C",
+		},
+		{
+			Name:     "GPT-4",
+			ModelID:  "gpt-4",
+			Desc:     "能力强，更精准",
+			Color:    "FF714BD7",
+			Powerful: true,
+		},
+	}
+
+	if client.IsCNLocalMode(ctl.conf) {
+		enableOpenAI = false
+		homeModels = []HomeModel{
+			{
+				Name:     "南贤",
+				ModelID:  "讯飞星火:generalv2",
+				Desc:     "速度快，成本低",
+				Color:    "FF67AC5C",
+				Powerful: false,
+			},
+			{
+				Name:     "北丑",
+				ModelID:  "灵积:qwen-plus",
+				Desc:     "能力强，更精准",
+				Color:    "FF714BD7",
+				Powerful: true,
+			},
+		}
+	}
+
+	return webCtx.JSON(web.M{
 		// 是否启用苹果 App 支付
-		"applepay-enabled": ctl.conf.EnableApplePay,
+		"applepay_enabled": ctl.conf.EnableApplePay,
 		// 是否启用支付宝支付
-		"alipay-enabled": ctl.conf.EnableAlipay,
+		"alipay_enabled": ctl.conf.EnableAlipay,
 		// 是否启用讯飞星火模型
-		"xfyunai-enabled": ctl.conf.EnableXFYunAI,
+		"xfyunai_enabled": ctl.conf.EnableXFYunAI,
 		// 是否启用百度文心千帆模型
-		"baiduwxai-enabled": ctl.conf.EnableBaiduWXAI,
+		"baiduwxai_enabled": ctl.conf.EnableBaiduWXAI,
 		// 是否启用阿里灵积平台
-		"dashscopeai-enabled": ctl.conf.EnableDashScopeAI,
+		"dashscopeai_enabled": ctl.conf.EnableDashScopeAI,
 		// 是否启用 OpenAI
-		"openai-enabled": ctl.conf.EnableOpenAI,
+		"openai_enabled": enableOpenAI,
 		// 是否启用翻译功能
-		"translate-enabled": ctl.conf.EnableTranslate,
+		"translate_enabled": ctl.conf.EnableTranslate,
 		// 是否启用邮件发送功能
-		"mail-enabled": ctl.conf.EnableMail,
+		"mail_enabled": ctl.conf.EnableMail,
+		// 是否显示绘玩
+		"enable_gallery": true,
+		// 是否启用创作岛
+		"enable_creation_island": true,
+		// 首页模型
+		"home_models": homeModels,
 	})
 }
 

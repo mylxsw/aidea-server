@@ -156,8 +156,8 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 
 	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
-	// 假设当前请求消耗 1 个智慧果
-	restQuota := quota.Quota - quota.Used - 1
+	// 假设当前请求消耗 2 个智慧果
+	restQuota := quota.Quota - quota.Used - 2
 	if restQuota <= 0 {
 		webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse()
 		return

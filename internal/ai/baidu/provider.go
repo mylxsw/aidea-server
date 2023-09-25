@@ -8,7 +8,11 @@ import (
 type Provider struct{}
 
 func (Provider) Register(binder infra.Binder) {
-	binder.MustSingleton(func(conf *config.Config) *BaiduAI {
-		return NewBaiduAI(conf.BaiduWXKey, conf.BaiduWXSecret)
+	binder.MustSingleton(func(conf *config.Config) BaiduAI {
+		if conf.EnableBaiduWXAI {
+			return NewBaiduAI(conf.BaiduWXKey, conf.BaiduWXSecret)
+		}
+
+		return FakeBaiduAI{}
 	})
 }

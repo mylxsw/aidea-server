@@ -154,52 +154,56 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 			}),
 			mw.AuthHandlerSkippable(
 				func(webCtx web.Context, typ string, credential string) error {
-					if typ != "Bearer" {
+					needAuth := str.HasPrefixes(webCtx.Request().Raw().URL.Path, needAuthPrefix)
+
+					if needAuth && typ != "Bearer" {
 						return errors.New("invalid auth type")
 					}
 
 					claims, err := tk.ParseToken(credential)
-					if err != nil {
+					if needAuth && err != nil {
 						return errors.New("invalid auth credential")
 					}
 
-					// // 请求限流(基于用户 ID)
-					// ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-					// defer cancel()
+					if needAuth {
+						// // 请求限流(基于用户 ID)
+						// ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+						// defer cancel()
 
-					// m, err := limiter.Allow(ctx, fmt.Sprintf("request:%d:freq", claims.Int64Value("id")), rate.MaxRequestsInPeriod(10, 1*time.Minute))
-					// if err != nil {
-					// 	return errors.New("rate-limiter: interapi server error")
-					// }
+						// m, err := limiter.Allow(ctx, fmt.Sprintf("request:%d:freq", claims.Int64Value("id")), rate.MaxRequestsInPeriod(10, 1*time.Minute))
+						// if err != nil {
+						// 	return errors.New("rate-limiter: interapi server error")
+						// }
 
-					// if m.Remaining <= 0 {
-					// 	return errors.New("request frequency is too high, please try again later")
-					// }
+						// if m.Remaining <= 0 {
+						// 	return errors.New("request frequency is too high, please try again later")
+						// }
 
-					// 查询用户信息
-					u, err := userSrv.GetUserByID(context.TODO(), claims.Int64Value("id"), false)
-					if err != nil {
-						if err == repo.ErrNotFound {
-							return errors.New("invalid auth credential, user not found")
+						// 查询用户信息
+						u, err := userSrv.GetUserByID(context.TODO(), claims.Int64Value("id"), false)
+						if err != nil {
+							if err == repo.ErrNotFound {
+								return errors.New("invalid auth credential, user not found")
+							}
+
+							return err
 						}
 
-						return err
+						// log.WithFields(log.Fields{
+						// 	"token": credential,
+						// }).Debugf("auth token for %d", u.Id)
+
+						if u.Status == repo.UserStatusDeleted {
+							return ErrUserDestroyed
+						}
+
+						user := auth.CreateAuthUserFromModel(u)
+
+						webCtx.Provide(func() *auth.User { return user })
+						webCtx.Provide(func() *auth.UserOptional {
+							return &auth.UserOptional{User: user}
+						})
 					}
-
-					// log.WithFields(log.Fields{
-					// 	"token": credential,
-					// }).Debugf("auth token for %d", u.Id)
-
-					if u.Status == repo.UserStatusDeleted {
-						return ErrUserDestroyed
-					}
-
-					user := auth.CreateAuthUserFromModel(u)
-
-					webCtx.Provide(func() *auth.User { return user })
-					webCtx.Provide(func() *auth.UserOptional {
-						return &auth.UserOptional{User: user}
-					})
 
 					return nil
 				},

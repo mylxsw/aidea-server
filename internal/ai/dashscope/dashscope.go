@@ -26,6 +26,10 @@ const (
 	// 通义千问
 	ModelQWenV1     = "qwen-v1"
 	ModelQWenPlusV1 = "qwen-plus-v1"
+	// ModelQWenTurbo 模型支持 8k tokens上下文，为了保障正常使用和正常输出，API限定用户输入为6k Tokens
+	ModelQWenTurbo = "qwen-turbo"
+	// ModelQWenPlus 模型支持 8k tokens上下文，为了保障正常使用和正常输出，API限定用户输入为6k Tokens
+	ModelQWenPlus = "qwen-plus"
 
 	// 通义千问7B
 	ModelQWen7BV1     = "qwen-7b-v1"
