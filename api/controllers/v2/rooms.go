@@ -53,7 +53,13 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 			// 注意：这里不返回错误，因为推荐房间列表不是必须的
 		}
 
+		cnLocalMode := client.IsCNLocalMode(ctl.conf)
 		suggests = array.Filter(suggests, func(item repo.GalleryRoom, _ int) bool {
+			// 如果启用了国产化模式，则过滤掉 openai 和 Anthropic 的模型
+			if cnLocalMode && array.In(item.Vendor, []string{"openai", "Anthropic"}) {
+				return false
+			}
+
 			// 检查模型是否满足条件
 			if !ctl.conf.EnableOpenAI && item.Vendor == "openai" {
 				return false
