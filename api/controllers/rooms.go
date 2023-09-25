@@ -192,7 +192,7 @@ func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Conte
 		mod := item.Model
 
 		// 如果替换模型和服务商不为空，则替换当前 Room 的模型为国产化模型
-		if replaceVendor != "" && replaceModel != "" {
+		if array.In(vendor, []string{"openai", "Anthropic"}) && replaceVendor != "" && replaceModel != "" {
 			vendor, mod = replaceVendor, replaceModel
 		}
 
