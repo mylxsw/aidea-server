@@ -126,7 +126,9 @@ func (ai *ChatImp) selectImp(model string) Chat {
 		baidu.ModelLlama2_70b:
 		// 百度文心千帆
 		return ai.baiduAI
-	case dashscope.ModelQWenV1, dashscope.ModelQWenPlusV1, dashscope.ModelQWen7BV1, dashscope.ModelQWen7BChatV1:
+	case dashscope.ModelQWenV1, dashscope.ModelQWenPlusV1,
+		dashscope.ModelQWen7BV1, dashscope.ModelQWen7BChatV1,
+		dashscope.ModelQWenTurbo, dashscope.ModelQWenPlus:
 		// 阿里灵积平台
 		return ai.dashScope
 	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2):
