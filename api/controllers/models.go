@@ -562,7 +562,7 @@ func chinaModels(conf *config.Config) []Model {
 			VersionMin:  "1.0.3",
 		})
 		models = append(models, Model{
-			ID:          "文心千帆:" + baidu.ModelErnieBotTurbo,
+			ID:          "文心千帆:" + string(baidu.ModelErnieBot),
 			Name:        "文心一言",
 			Description: "百度研发的知识增强大语言模型增强版，中文名是文心一言，英文名是 ERNIE Bot，能够与人对话互动，回答问题，协助创作，高效便捷地帮助人们获取信息、知识和灵感",
 			Category:    "文心千帆",
