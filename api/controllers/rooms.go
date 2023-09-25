@@ -118,7 +118,7 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 
 	showTags = array.Uniq(showTags)
 
-	tags := []string{"全部", "大模型", "职场", "学习", "娱乐", "世界名人", "创意创作", "生活"}
+	tags := []string{"全部", "大模型", "职场", "学习", "娱乐", "世界名人", "创意生活"}
 	tags = array.Filter(tags, func(item string, index int) bool {
 		return array.In(item, showTags)
 	})
