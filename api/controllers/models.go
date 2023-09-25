@@ -5,6 +5,7 @@ import (
 
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
+	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
 	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
 	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
 
@@ -553,8 +554,17 @@ func chinaModels(conf *config.Config) []Model {
 	if conf.EnableBaiduWXAI {
 		models = append(models, Model{
 			ID:          "文心千帆:" + baidu.ModelErnieBotTurbo,
-			Name:        "文心一言",
+			Name:        "文心一言 Turbo",
 			Description: "百度研发的知识增强大语言模型，中文名是文心一言，英文名是 ERNIE Bot，能够与人对话互动，回答问题，协助创作，高效便捷地帮助人们获取信息、知识和灵感",
+			Category:    "文心千帆",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.3",
+		})
+		models = append(models, Model{
+			ID:          "文心千帆:" + baidu.ModelErnieBotTurbo,
+			Name:        "文心一言",
+			Description: "百度研发的知识增强大语言模型增强版，中文名是文心一言，英文名是 ERNIE Bot，能够与人对话互动，回答问题，协助创作，高效便捷地帮助人们获取信息、知识和灵感",
 			Category:    "文心千帆",
 			IsChat:      true,
 			Disabled:    false,
@@ -609,9 +619,18 @@ func chinaModels(conf *config.Config) []Model {
 
 	if conf.EnableDashScopeAI {
 		models = append(models, Model{
-			ID:          "灵积:qwen-v1",
-			Name:        "通义千问",
-			Description: "阿里达摩院自主研发的超大规模语言模型，能够回答问题、创作文字，还能表达观点、撰写代码",
+			ID:          "灵积:" + dashscope.ModelQWenTurbo,
+			Name:        "通义千问 Turbo",
+			Description: "通义千问超大规模语言模型，支持中文英文等不同语言输入",
+			Category:    "灵积",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.3",
+		})
+		models = append(models, Model{
+			ID:          "灵积:" + dashscope.ModelQWenPlus,
+			Name:        "通义千问 Plus",
+			Description: "通义千问超大规模语言模型增强版，支持中文英文等不同语言输入",
 			Category:    "灵积",
 			IsChat:      true,
 			Disabled:    false,

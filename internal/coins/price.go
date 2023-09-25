@@ -11,29 +11,47 @@ type CoinTable map[string]int64
 var coinTables = map[string]CoinTable{
 	"openai": {
 		// 1000 Token 计费
-		"gpt-3.5-turbo":          5,  // valid
-		"gpt-3.5-turbo-0613":     5,  // valid
-		"gpt-3.5-turbo-16k":      10, // valid
-		"gpt-3.5-turbo-16k-0613": 10, // valid
-		"gpt-4":                  50, // valid
-		"gpt-4-8k":               50, // valid
-		"gpt-4-32k":              200,
+		"gpt-3.5-turbo":          3,  // valid $0.002/1K tokens -> ¥0.014/1K tokens
+		"gpt-3.5-turbo-0613":     3,  // valid $0.002/1K tokens -> ¥0.014/1K tokens
+		"gpt-3.5-turbo-16k":      5,  // valid $0.004/1K tokens -> ¥0.028/1K tokens
+		"gpt-3.5-turbo-16k-0613": 5,  // valid $0.004/1K tokens -> ¥0.028/1K tokens
+		"gpt-4":                  45, // valid $0.06/1K tokens  -> ¥0.42/1K tokens
+		"gpt-4-8k":               45, // $0.06/1K tokens        -> ¥0.42/1K tokens
+		"gpt-4-32k":              90, // $0.12/1K tokens        -> ¥0.84/1K tokens
 		// 每次计费
 		"DALL·E": 50,
 
-		// Anthropic 估价 = ( input + output ) / 2 * 7 / 1000000 * 1000
-		"claude-instant-1": 5,  // valid 0.02492 RMB/1000 Token (input $1.63/million, output $5.51/million)
-		"claude-2":         30, // valid 0.15358 RMB/1000 Token (input $11.2/million, output $32.68/million)
+		// Anthropic
+		"claude-instant-1": 5,  // valid (input $1.63/million, output $5.51/million)  -> ¥0.039/1K tokens
+		"claude-2":         25, // valid (input $11.2/million, output $32.68/million) -> ¥0.229/1K tokens
 
 		// 国产模型
-		"model_ernie_bot_turbo": 5,  // valid 文心一言
-		"qwen-v1":               5,  // valid 通义千问 v1
-		"qwen-plus-v1":          20, // valid 通义千问 plus v1
-		"qwen-turbo":            5,  // valid 通义千问 turbo
-		"qwen-plus":             20, // valid 通义千问 plus
-		"generalv2":             5,  // valid 讯飞星火 v2
-		"general":               3,  // valid 讯飞星火 v1.5
-		"hyllm":                 5,  // valid 腾讯混元大模型
+
+		// 百度 https://console.bce.baidu.com/qianfan/chargemanage/list
+		"model_ernie_bot_turbo":       2, // valid 文心一言 ¥0.008/1K tokens
+		"model_ernie_bot":             4, // valid 文心一言 ¥0.012/1K tokens
+		"model_badiu_llama2_70b":      6, // valid llama2 70b ¥0.044元/千tokens
+		"model_baidu_llama2_7b_cn":    2, // valid llama2 7b cn ¥0.006元/千tokens
+		"model_baidu_chatglm2_6b_32k": 2, // valid chatglm2 6b ¥0.006/1K tokens
+		"model_baidu_aquila_chat7b":   2, // valid aquila chat7b ¥0.006/1K tokens
+		"model_baidu_bloomz_7b":       2, // valid bloomz 7b ¥0.006/1K tokens
+
+		// 阿里 https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing
+		"qwen-v1":      3,  // valid 通义千问 v1    ¥0.012/1K tokens
+		"qwen-plus-v1": 20, // valid 通义千问 plus v1 ¥0.14/1K tokens
+		"qwen-turbo":   3,  // valid 通义千问 turbo ¥0.012/1K tokens
+		"qwen-plus":    20, // valid 通义千问 plus ¥0.14/1K tokens
+
+		// 讯飞星火 https://xinghuo.xfyun.cn/sparkapi
+		"generalv2": 5, // valid 讯飞星火 v2    ¥0.036/1K tokens
+		"general":   3, // valid 讯飞星火 v1.5  ¥0.018/1K tokens
+
+		// 商汤（官方暂未公布价格）
+		"nova-ptc-xl-v1": 3, // 大参数量
+		"nova-ptc-xs-v1": 2, // 小参数量
+
+		// 腾讯
+		"hyllm": 15, // valid 腾讯混元大模型 ¥0.10/1K tokens
 	},
 	"deepai": {
 		"default": 30, // valid

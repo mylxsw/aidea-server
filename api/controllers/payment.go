@@ -373,13 +373,29 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 }
 
 // AppleProducts 支付产品清单
-func (ctl *PaymentController) AppleProducts(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+func (ctl *PaymentController) AppleProducts(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	products := array.Map(coins.AppleProducts, func(product coins.AppleProduct, _ int) coins.AppleProduct {
 		product.ExpirePolicyText = product.GetExpirePolicyText()
 		if product.RetailPrice == 0 {
 			product.RetailPrice = product.Quota
 		}
 		return product
+	})
+
+	products = array.Filter(products, func(prod coins.AppleProduct, _ int) bool {
+		if prod.PlatformLimit == "" {
+			return true
+		}
+
+		if prod.PlatformLimit == coins.PlatformNoneIOS && client.IsIOS() {
+			return false
+		}
+
+		if prod.PlatformLimit == coins.PlatformIOS && !client.IsIOS() {
+			return false
+		}
+
+		return true
 	})
 
 	return webCtx.JSON(web.M{
