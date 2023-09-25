@@ -2,10 +2,11 @@ package controllers
 
 import (
 	"fmt"
+	"math/rand"
+
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/helper"
 	"github.com/mylxsw/glacier/infra"
-	"math/rand"
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/glacier/web"
@@ -120,18 +121,18 @@ func (ctl *InfoController) Capabilities(webCtx web.Context, client *auth.ClientI
 		enableOpenAI = false
 		homeModels = []HomeModel{
 			{
-				Name:     "讯飞星火",
+				Name:     "南贤",
 				ModelID:  "讯飞星火:generalv2",
-				Desc:     "Powerful & Precise",
-				Color:    "FF714BD7",
-				Powerful: true,
-			},
-			{
-				Name:     "ChatGLM 2",
-				ModelID:  "文心千帆:model_baidu_chatglm2_6b_32k",
-				Desc:     "Powerful & Precise",
+				Desc:     "速度快，成本低",
 				Color:    "FF67AC5C",
 				Powerful: false,
+			},
+			{
+				Name:     "北丑",
+				ModelID:  "灵积:qwen-plus",
+				Desc:     "能力强，更精准",
+				Color:    "FF714BD7",
+				Powerful: true,
 			},
 		}
 	}

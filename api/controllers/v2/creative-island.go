@@ -107,7 +107,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-image-to-image.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create?mode=image-to-image&id=image-to-image",
-			Tag:          "BETA",
+			Tag:          ternary.If(client != nil && client.IsIOS(), "", "BETA"),
 		},
 	}
 

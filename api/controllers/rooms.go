@@ -68,7 +68,7 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 	cnLocalMode := client.IsCNLocalMode(ctl.conf)
 	rooms = array.Filter(rooms, func(item repo.GalleryRoom, _ int) bool {
 		// 如果启用了国产化模式，则过滤掉 openai 和 Anthropic 的模型
-		if cnLocalMode && array.In(item.Vendor, []string{"openai", "Anthropic"}) {
+		if cnLocalMode && item.RoomType == "system" && array.In(item.Vendor, []string{"openai", "Anthropic"}) {
 			return false
 		}
 
