@@ -498,11 +498,6 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 		aiRewrite = false
 	}
 
-	mode := webCtx.InputWithDefault("mode", "canny")
-	if !array.In(mode, []string{"canny", "mlsd", "pose", "scribble"}) {
-		mode = "canny"
-	}
-
 	upscaleBy := webCtx.InputWithDefault("upscale_by", "x1")
 	if !array.In(upscaleBy, []string{"x1", "x2", "x4"}) {
 		return nil, webCtx.JSONError("invalid upscale_by", http.StatusBadRequest)
@@ -515,7 +510,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 		ternary.If(image != "", DefaultImageToImageModel, DefaultImageCompletionModel),
 	)
 	filterID := webCtx.Int64Input("filter_id", 0)
-	var filterName string
+	var filterName, defaultFilterMode string
 	if filterID > 0 {
 		filter := ctl.getStyleByID(ctx, filterID)
 		if filter == nil {
@@ -524,6 +519,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 
 		modelID = filter.ModelID
 		filterName = filter.Name
+		defaultFilterMode = filter.Mode
 	} else {
 		// 如果没有指定 filter， 则自动根据模型补充 filter 信息
 		mode := ternary.If(image != "", "image-to-image", "text-to-image")
@@ -531,6 +527,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 		if filter != nil {
 			filterID = filter.ID
 			filterName = filter.Name
+			defaultFilterMode = filter.Mode
 		}
 	}
 
@@ -542,6 +539,16 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 	imageRatio := webCtx.InputWithDefault("image_ratio", "1:1")
 	if !array.In(imageRatio, []string{"1:1", "4:3", "3:4", "3:2", "2:3", "16:9"}) {
 		return nil, webCtx.JSONError("invalid image ratio", http.StatusBadRequest)
+	}
+
+	// 图生图模式下有效（ControlNet）
+	if defaultFilterMode == "" {
+		defaultFilterMode = "canny"
+	}
+
+	mode := webCtx.InputWithDefault("mode", defaultFilterMode)
+	if !array.In(mode, []string{"canny", "mlsd", "pose", "scribble"}) {
+		mode = defaultFilterMode
 	}
 
 	// 根据模型配置，自动调整相关参数（width/height）
@@ -629,6 +636,7 @@ type ImageStyle struct {
 	Name           string   `json:"name,omitempty"`
 	PreviewImage   string   `json:"preview_image,omitempty"`
 	Description    string   `json:"description,omitempty"`
+	Mode           string   `json:"mode,omitempty"`
 	ModelID        string   `json:"-"`
 	Prompt         string   `json:"-"`
 	NegativePrompt string   `json:"-"`
@@ -649,6 +657,7 @@ func (ctl *CreativeIslandController) getAllImageStyles(ctx context.Context) []Im
 			PreviewImage:   f.PreviewImage,
 			Description:    f.Description,
 			ModelID:        f.ModelId,
+			Mode:           f.ImageMeta.Mode,
 			Prompt:         f.ImageMeta.Prompt,
 			NegativePrompt: f.ImageMeta.NegativePrompt,
 			Supports:       f.ImageMeta.Supports,

@@ -928,6 +928,9 @@ type ImageFilterMeta struct {
 	// UseTemplateWhenNotContain 当 prompt 不包含 UseTemplateWhenNotContain 时，自动应用提示语模板
 	UseTemplateWhenNotContain []string `json:"use_template_when_not_contain,omitempty"`
 	Template                  string   `json:"template,omitempty"`
+	// Mode 用于图生图（ControlNet）
+	// 可选值："canny", "mlsd", "pose", "scribble"
+	Mode string `json:"mode,omitempty"`
 }
 
 func (meta ImageFilterMeta) ApplyTemplate(prompt string) string {
