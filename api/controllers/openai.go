@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/rate"
 	"net/http"
 	"os"
 	"strconv"
@@ -38,6 +39,7 @@ type OpenAIController struct {
 	tencent     *tencent.Tencent         `autowire:"@"`
 	messageRepo *repo.MessageRepo        `autowire:"@"`
 	securitySrv *service.SecurityService `autowire:"@"`
+	limiter     *rate.RateLimiter        `autowire:"@"`
 }
 
 // NewOpenAIController 创建 OpenAI 控制器
@@ -148,19 +150,39 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
-	quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
-	if err != nil {
-		log.Errorf("get user quota failed: %s", err)
-		webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError).CreateResponse()
-		return
+	// 免费模型：每 24 小时免费 24 次
+	var isFreeRequest bool
+	if coins.IsFreeModel(req.Model) {
+		limitKey := fmt.Sprintf("free-chat:uid:%d:model:%s", user.ID, req.Model)
+		optCount, err := ctl.limiter.OperationCount(ctx, limitKey)
+		if err != nil {
+			log.With(req).Errorf("get chat operation count failed: %s", err)
+		} else {
+			if optCount < 24 {
+				if err := ctl.limiter.OperationIncr(ctx, limitKey, 24*time.Hour); err != nil {
+					log.With(req).Errorf("incr chat operation count failed: %s", err)
+				} else {
+					isFreeRequest = true
+				}
+			}
+		}
 	}
 
-	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
-	// 假设当前请求消耗 2 个智慧果
-	restQuota := quota.Quota - quota.Used - 2
-	if restQuota <= 0 {
-		webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse()
-		return
+	if !isFreeRequest {
+		quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
+		if err != nil {
+			log.Errorf("get user quota failed: %s", err)
+			webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError).CreateResponse()
+			return
+		}
+
+		// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
+		// 假设当前请求消耗 2 个智慧果
+		restQuota := quota.Quota - quota.Used - 2
+		if restQuota <= 0 {
+			webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse()
+			return
+		}
 	}
 
 	// 内容安全检测
@@ -229,6 +251,11 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 		//  返回自定义控制信息，告诉客户端当前消耗情况
 		if user.InternalUser() {
+			if isFreeRequest {
+				// 免费请求，不扣除智慧果
+				quotaConsumed = 0
+			}
+
 			finalWord := openai.ChatCompletionStreamResponse{
 				ID: "final",
 				Choices: []openai.ChatCompletionStreamChoice{
@@ -273,8 +300,10 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			}
 		}
 
-		if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo.NewQuotaUsedMeta("chat", model)); err != nil {
-			log.Errorf("used quota add failed: %s", err)
+		if !isFreeRequest {
+			if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo.NewQuotaUsedMeta("chat", model)); err != nil {
+				log.Errorf("used quota add failed: %s", err)
+			}
 		}
 	}()
 
