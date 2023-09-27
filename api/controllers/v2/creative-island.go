@@ -602,7 +602,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 		UpscaleBy:      upscaleBy,
 		StylePreset:    stylePreset,
 		Seed:           seed,
-		ImageStrength:  1.0 - imageStrength,
+		ImageStrength:  imageStrength,
 		FilterID:       filterID,
 		FilterName:     filterName,
 		GalleryCopyID:  webCtx.Int64Input("gallery_copy_id", 0),

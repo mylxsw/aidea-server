@@ -150,7 +150,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 				Steps:       int(payload.Steps),
 				StylePreset: payload.StylePreset,
 				// Sampler:     "K_DPMPP_2M",
-				ImageStrength: payload.ImageStrength,
+				ImageStrength: 1.0 - payload.ImageStrength,
 			})
 		} else {
 			prompts := []stabilityai.TextPrompts{{Text: prompt, Weight: 0.9}}
