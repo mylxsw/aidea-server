@@ -894,7 +894,8 @@ func (r *CreativeRepo) Model(ctx context.Context, vendor, realModel string) (*Im
 func (r *CreativeRepo) Models(ctx context.Context) ([]ImageModel, error) {
 	q := query.Builder().
 		Where(model.FieldImageModelStatus, 1).
-		OrderBy(model.FieldImageModelId, "DESC")
+		OrderBy(model.FieldImageModelVendor, "ASC").
+		OrderBy(model.FieldImageModelModelName, "ASC")
 
 	items, err := model.NewImageModelModel(r.db).Get(ctx, q)
 	if err != nil {
