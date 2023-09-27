@@ -547,7 +547,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 
 	vendorModel := ctl.getVendorModel(ctx, modelID)
 	if vendorModel == nil {
-		return nil, webCtx.JSONError("invalid model", http.StatusBadRequest)
+		return nil, webCtx.JSONError("没有找到匹配的模型", http.StatusBadRequest)
 	}
 
 	imageRatio := webCtx.InputWithDefault("image_ratio", "1:1")
