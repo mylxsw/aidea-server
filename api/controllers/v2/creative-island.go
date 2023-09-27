@@ -33,9 +33,7 @@ import (
 )
 
 const (
-	AllInOneIslandID            = "all-in-one"
-	DefaultImageCompletionModel = "sb-stable-diffusion-xl-1024-v1-0"
-	DefaultImageToImageModel    = "lb-realistic-versionv4.0"
+	AllInOneIslandID = "all-in-one"
 )
 
 // CreativeIslandController 创作岛
@@ -224,6 +222,22 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 
 	filters := array.Sort(
 		array.Filter(ctl.getAllImageStyles(ctx), func(item ImageStyle, index int) bool {
+			if !ctl.conf.EnableLeapAI && item.Vendor == "leapai" {
+				return false
+			}
+
+			if !ctl.conf.EnableStabilityAI && item.Vendor == "stabilityai" {
+				return false
+			}
+
+			if !ctl.conf.EnableFromstonAI && item.Vendor == "fromston" {
+				return false
+			}
+
+			if !ctl.conf.EnableGetimgAI && item.Vendor == "getimgai" {
+				return false
+			}
+
 			return str.In(mode, item.Supports)
 		}),
 		func(f1, f2 ImageStyle) bool { return sortorder.NaturalLess(f1.Name, f2.Name) },
@@ -507,7 +521,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 
 	modelID := webCtx.InputWithDefault(
 		"model",
-		ternary.If(image != "", DefaultImageToImageModel, DefaultImageCompletionModel),
+		ternary.If(image != "", ctl.conf.DefaultImageToImageModel, ctl.conf.DefaultTextToImageModel),
 	)
 	filterID := webCtx.Int64Input("filter_id", 0)
 	var filterName, defaultFilterMode string
@@ -638,6 +652,7 @@ type ImageStyle struct {
 	Description    string   `json:"description,omitempty"`
 	Mode           string   `json:"mode,omitempty"`
 	ModelID        string   `json:"-"`
+	Vendor         string   `json:"-"`
 	Prompt         string   `json:"-"`
 	NegativePrompt string   `json:"-"`
 	Supports       []string `json:"-"`
@@ -661,6 +676,7 @@ func (ctl *CreativeIslandController) getAllImageStyles(ctx context.Context) []Im
 			Prompt:         f.ImageMeta.Prompt,
 			NegativePrompt: f.ImageMeta.NegativePrompt,
 			Supports:       f.ImageMeta.Supports,
+			Vendor:         f.Vendor,
 		}
 	})
 }
@@ -711,26 +727,26 @@ type VendorModel struct {
 	ShowStyle         bool                      `json:"show_style,omitempty"`
 	ShowImageStrength bool                      `json:"show_image_strength,omitempty"`
 	IntroURL          string                    `json:"intro_url,omitempty"`
-	RatioDimensions   map[string]repo.Dimension `json:"–"`
+	RatioDimensions   map[string]repo.Dimension `json:"-"`
 }
 
 func (vm VendorModel) defaultDimension(ratio string) repo.Dimension {
 	switch ratio {
 	case "1:1":
-		return repo.Dimension{512, 512}
+		return repo.Dimension{Width: 512, Height: 512}
 	case "4:3":
-		return repo.Dimension{768, 576}
+		return repo.Dimension{Width: 768, Height: 576}
 	case "3:4":
-		return repo.Dimension{576, 768}
+		return repo.Dimension{Width: 576, Height: 768}
 	case "3:2":
-		return repo.Dimension{768, 512}
+		return repo.Dimension{Width: 768, Height: 512}
 	case "2:3":
-		return repo.Dimension{512, 768}
+		return repo.Dimension{Width: 512, Height: 768}
 	case "16:9":
-		return repo.Dimension{1024, 576}
+		return repo.Dimension{Width: 1024, Height: 576}
 	}
 
-	return repo.Dimension{512, 512}
+	return repo.Dimension{Width: 512, Height: 512}
 }
 
 func (vm VendorModel) GetDimension(ratio string) repo.Dimension {
@@ -891,7 +907,7 @@ func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web
 	}
 
 	// 图片地址检查
-	if req.Image != "" && !strings.HasPrefix(req.Image, "https://ssl.aicode.cc/") {
+	if req.Image != "" && !str.HasPrefixes(req.Image, []string{"https://ssl.aicode.cc/", ctl.conf.StorageDomain}) {
 		return webCtx.JSONError("invalid image", http.StatusBadRequest)
 	}
 

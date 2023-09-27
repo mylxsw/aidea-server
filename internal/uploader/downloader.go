@@ -17,7 +17,7 @@ var supportImages = []string{".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 // BuildImageURLWithFilter build image url with filter
 func BuildImageURLWithFilter(remoteURL string, filter, storageDomain string) string {
-	if !strings.HasPrefix(remoteURL, storageDomain) {
+	if !str.HasPrefixes(remoteURL, []string{"https://ssl.aicode.cc/", storageDomain}) {
 		return remoteURL
 	}
 

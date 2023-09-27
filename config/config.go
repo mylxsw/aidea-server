@@ -159,6 +159,10 @@ type Config struct {
 	CNLocalOnlyIOS bool   `json:"cn_local_only_ios" yaml:"cn_local_only_ios"`
 	CNLocalModel   string `json:"cn_local_model" yaml:"cn_local_model"`
 	CNLocalVendor  string `json:"cn_local_vendor" yaml:"cn_local_vendor"`
+
+	// 文生图、图生图控制
+	DefaultImageToImageModel string `json:"default_image_to_image_model" yaml:"default_image_to_image_model"`
+	DefaultTextToImageModel  string `json:"default_text_to_image_model" yaml:"default_text_to_image_model"`
 }
 
 type Mail struct {
@@ -323,6 +327,9 @@ func Register(ins *app.App) {
 			CNLocalOnlyIOS: ctx.Bool("cnlocal-onlyios"),
 			CNLocalVendor:  ctx.String("cnlocal-vendor"),
 			CNLocalModel:   ctx.String("cnlocal-model"),
+
+			DefaultImageToImageModel: ctx.String("default-img2img-model"),
+			DefaultTextToImageModel:  ctx.String("default-txt2img-model"),
 		}
 	})
 }

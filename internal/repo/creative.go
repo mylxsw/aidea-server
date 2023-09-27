@@ -918,6 +918,7 @@ func (r *CreativeRepo) Models(ctx context.Context) ([]ImageModel, error) {
 
 type ImageFilter struct {
 	model.ImageFilter
+	Vendor    string          `json:"-"`
 	ImageMeta ImageFilterMeta `json:"meta"`
 }
 
@@ -957,6 +958,25 @@ func (meta ImageFilterMeta) ShouldUseTemplate(prompt string) bool {
 	return len(containsWords) == 0
 }
 
+// modelVendors 查询所有的模型（模型 id->模型服务商）
+func (r *CreativeRepo) modelVendors(ctx context.Context) (map[string]string, error) {
+	q := query.Builder().
+		Where(model.FieldImageModelStatus, 1).
+		Select(model.FieldImageModelModelId, model.FieldImageModelVendor)
+
+	items, err := model.NewImageModelModel(r.db).Get(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make(map[string]string)
+	for _, item := range items {
+		ret[item.ModelId.ValueOrZero()] = item.Vendor.ValueOrZero()
+	}
+
+	return ret, nil
+}
+
 func (r *CreativeRepo) Filters(ctx context.Context) ([]ImageFilter, error) {
 	q := query.Builder().
 		Where(model.FieldImageFilterStatus, 1).
@@ -965,6 +985,16 @@ func (r *CreativeRepo) Filters(ctx context.Context) ([]ImageFilter, error) {
 	items, err := model.NewImageFilterModel(r.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
+	}
+
+	modelVenders, err := r.modelVendors(ctx)
+	if err == nil {
+		// 过滤掉模型不存在的风格
+		items = array.Filter(items, func(item model.ImageFilterN, _ int) bool {
+			return modelVenders[item.ModelId.ValueOrZero()] != ""
+		})
+	} else {
+		log.Errorf("get model venders failed: %v", err)
 	}
 
 	return array.Map(items, func(item model.ImageFilterN, _ int) ImageFilter {
@@ -978,6 +1008,7 @@ func (r *CreativeRepo) Filters(ctx context.Context) ([]ImageFilter, error) {
 
 		return ImageFilter{
 			ImageFilter: m,
+			Vendor:      modelVenders[item.ModelId.ValueOrZero()],
 			ImageMeta:   meta,
 		}
 	}), nil
@@ -996,6 +1027,8 @@ func (r *CreativeRepo) Filter(ctx context.Context, id int64) (*ImageFilter, erro
 
 		return nil, err
 	}
+
+	// TODO 暂时无用，但是为了接口完整性，这里应该查询模型服务商
 
 	m := item.ToImageFilter()
 	var meta ImageFilterMeta
