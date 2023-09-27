@@ -146,6 +146,8 @@ type Config struct {
 	AliPayAppPublicKeyPath  string `json:"alipay_app_public_key_path" yaml:"alipay_app_public_key_path"`
 	AliPayRootCertPath      string `json:"alipay_root_cert_path" yaml:"alipay_root_cert_path"`
 	AliPayPublicKeyPath     string `json:"alipay_public_key_path" yaml:"alipay_public_key_path"`
+	AliPayNotifyURL         string `json:"alipay_notify_url" yaml:"alipay_notify_url"`
+	AliPayReturnURL         string `json:"alipay_return_url" yaml:"alipay_return_url"`
 
 	// 短信通道
 	SMSChannels []string `json:"sms_channels" yaml:"sms_channels"`
@@ -317,6 +319,8 @@ func Register(ins *app.App) {
 			AliPayAppPublicKeyPath:  ctx.String("alipay-app-public-key"),
 			AliPayRootCertPath:      ctx.String("alipay-root-cert"),
 			AliPayPublicKeyPath:     ctx.String("alipay-public-key"),
+			AliPayNotifyURL:         ctx.String("alipay-notify-url"),
+			AliPayReturnURL:         ctx.String("alipay-return-url"),
 
 			SMSChannels: ctx.StringSlice("sms-channels"),
 

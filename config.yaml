@@ -238,6 +238,9 @@ alipay-app-public-key: ""
 alipay-root-cert: ""
 # 支付宝公钥文件路径
 alipay-public-key: ""
+# 支付宝通知地址
+alipay-notify-url: https://your_domain/v1/payment/callback/alipay-notify
+alipay-return-url: https://your_domain/public/payment/alipay-return
 
 ######## 钉钉通知配置 ########
 
