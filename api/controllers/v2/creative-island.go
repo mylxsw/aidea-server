@@ -246,7 +246,11 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 	var models []VendorModel
 	if user.InternalUser() && user.WithLab {
 		models = array.Sort(array.Filter(ctl.getAllModels(ctx), func(v VendorModel, _ int) bool { return v.Enabled }), func(v1, v2 VendorModel) bool {
-			return sortorder.NaturalLess(v1.Name, v2.Name)
+			if v1.Vendor == v2.Vendor {
+				return sortorder.NaturalLess(v1.Name, v2.Name)
+			}
+
+			return sortorder.NaturalLess(v1.Vendor, v2.Vendor)
 		})
 
 		models = array.Map(models, func(item VendorModel, _ int) VendorModel {
