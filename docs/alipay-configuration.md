@@ -16,25 +16,37 @@
 
 开放平台地址：https://open.alipay.com/
 
+应用图标：
+
+![icons](./appicon-320.png)
+
 安卓 APP 信息如下
 
 - 应用签名 6d8ce4fe64934f062d445ec78f6a4082
 - 应用包名 cc.aicode.flutter.askaide.askaide
 
+操作步骤：
+
 1. 控制中心-创建移动应用
-    ![](https://ssl.aicode.cc/mweb/16957844790413.jpg)
+ 
+   ![](https://ssl.aicode.cc/mweb/16957844790413.jpg)
+
 2. 填写应用信息
-    ![](https://ssl.aicode.cc/mweb/16957849751549.jpg)
+
+   ![](https://ssl.aicode.cc/mweb/16957849751549.jpg)
    ![](https://ssl.aicode.cc/mweb/16957854300644.jpg)
 
-3. 开发设置，设置密钥加签方式
-    ![](https://ssl.aicode.cc/mweb/16957850449046.jpg)
-4. 下载密钥到本地
-    ![](https://ssl.aicode.cc/mweb/16957850632285.jpg)
-5. 绑定支付产品
-    ![](https://ssl.aicode.cc/mweb/16957850769504.jpg)
+4. 开发设置，设置密钥加签方式
 
+   ![](https://ssl.aicode.cc/mweb/16957850449046.jpg)
 
+6. 下载密钥到本地
+
+   ![](https://ssl.aicode.cc/mweb/16957850632285.jpg)
+
+8. 绑定支付产品
+
+   ![](https://ssl.aicode.cc/mweb/16957850769504.jpg)
 
 ## 配置服务端
 
