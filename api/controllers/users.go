@@ -63,6 +63,10 @@ func (ctl *UserController) Register(router web.Router) {
 		// 获取当前用户配额情况统计
 		router.Get("/quota/usage-stat", ctl.UserQuotaUsageStatistics)
 
+		// 用户免费聊天次数统计
+		router.Get("/stat/free-chat-counts", ctl.UserFreeChatCounts)
+		router.Get("/stat/free-chat-counts/{model}", ctl.UserFreeChatCountsForModel)
+
 		// 重置密码
 		router.Post("/reset-password/sms-code", ctl.SendResetPasswordSMSCode)
 		router.Post("/reset-password", ctl.ResetPassword)
@@ -488,4 +492,22 @@ func (ctl *UserController) UserQuotaUsageStatistics(ctx context.Context, webCtx 
 	return webCtx.JSON(web.M{
 		"usages": results,
 	})
+}
+
+// UserFreeChatCounts 用户免费聊天次数统计
+func (ctl *UserController) UserFreeChatCounts(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	return webCtx.JSON(web.M{
+		"data": ctl.userSrv.FreeChatStatistics(ctx, user.ID),
+	})
+}
+
+// UserFreeChatCountsForModel 用户模型免费聊天次数统计
+func (ctl *UserController) UserFreeChatCountsForModel(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	modelID := webCtx.PathVar("model")
+	res, err := ctl.userSrv.FreeChatStatisticsForModel(ctx, user.ID, modelID)
+	if err != nil {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(res)
 }

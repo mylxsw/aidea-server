@@ -3,7 +3,6 @@ package helper
 import (
 	"encoding/base64"
 	"fmt"
-	"gopkg.in/resty.v1"
 	"net/http"
 	"os"
 	"strconv"
@@ -11,6 +10,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"gopkg.in/resty.v1"
 
 	"github.com/hashicorp/go-version"
 	"github.com/speps/go-hashids/v2"
@@ -182,4 +183,11 @@ func ImageToBase64Image(imagePath string) (string, error) {
 
 	mimeType := http.DetectContentType(data)
 	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
+}
+
+// TodayRemainTimeSeconds 获取今日剩余时间
+func TodayRemainTimeSeconds() float64 {
+	now := time.Now()
+	endOfDay := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
+	return endOfDay.Sub(now).Seconds()
 }

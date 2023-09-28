@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/aidea-server/internal/rate"
 	"net/http"
 	"os"
 	"strconv"
@@ -39,7 +38,7 @@ type OpenAIController struct {
 	tencent     *tencent.Tencent         `autowire:"@"`
 	messageRepo *repo.MessageRepo        `autowire:"@"`
 	securitySrv *service.SecurityService `autowire:"@"`
-	limiter     *rate.RateLimiter        `autowire:"@"`
+	userSrv     *service.UserService     `autowire:"@"`
 }
 
 // NewOpenAIController 创建 OpenAI 控制器
@@ -150,23 +149,9 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
-	// 免费模型：每 24 小时免费 24 次
-	var isFreeRequest bool
-	if coins.IsFreeModel(req.Model) {
-		limitKey := fmt.Sprintf("free-chat:uid:%d:model:%s", user.ID, req.Model)
-		optCount, err := ctl.limiter.OperationCount(ctx, limitKey)
-		if err != nil {
-			log.With(req).Errorf("get chat operation count failed: %s", err)
-		} else {
-			if optCount < 24 {
-				if err := ctl.limiter.OperationIncr(ctx, limitKey, 24*time.Hour); err != nil {
-					log.With(req).Errorf("incr chat operation count failed: %s", err)
-				} else {
-					isFreeRequest = true
-				}
-			}
-		}
-	}
+	// 免费模型
+	leftCount, maxFreeCount := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, req.Model)
+	isFreeRequest := leftCount > 0
 
 	if !isFreeRequest {
 		quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
@@ -180,6 +165,11 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		// 假设当前请求消耗 2 个智慧果
 		restQuota := quota.Quota - quota.Used - 2
 		if restQuota <= 0 {
+			if maxFreeCount > 0 {
+				webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已用完，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
+				return
+			}
+
 			webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse()
 			return
 		}
@@ -298,6 +288,13 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			}); err != nil {
 				log.With(req).Errorf("add message failed: %s", err)
 			}
+		}
+
+		if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
+			log.WithFields(log.Fields{
+				"user_id": user.ID,
+				"model":   req.Model,
+			}).Errorf("update free chat count failed: %s", err)
 		}
 
 		if !isFreeRequest {
