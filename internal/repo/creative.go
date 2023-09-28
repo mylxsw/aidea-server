@@ -50,6 +50,8 @@ const (
 	CreativeStatusProcessing CreativeStatus = 2
 	CreativeStatusSuccess    CreativeStatus = 3
 	CreativeStatusFailed     CreativeStatus = 4
+	// CreativeStatusForbid  资源封禁
+	CreativeStatusForbid CreativeStatus = 5
 )
 
 type CreativeRepo struct {
@@ -297,6 +299,15 @@ func (r *CreativeRepo) UpdateRecordByID(ctx context.Context, userId, id int64, a
 		Answer:    null.StringFrom(answer),
 		Status:    null.IntFrom(int64(status)),
 		QuotaUsed: null.IntFrom(quotaUsed),
+	})
+	return err
+}
+
+func (r *CreativeRepo) UpdateRecordStatusByID(ctx context.Context, id int64, answer string, status CreativeStatus) error {
+	q := query.Builder().Where(model.FieldCreativeHistoryId, id)
+	_, err := model.NewCreativeHistoryModel(r.db).Update(ctx, q, model.CreativeHistoryN{
+		Status: null.IntFrom(int64(status)),
+		Answer: null.StringFrom(answer),
 	})
 	return err
 }
@@ -562,7 +573,7 @@ func (r *CreativeRepo) DeleteHistoryRecord(ctx context.Context, userId, id int64
 
 func (r *CreativeRepo) UserGallery(ctx context.Context, userID int64, islandModel string, limit int64) ([]CreativeHistoryItem, error) {
 	q := query.Builder().
-		Where(model.FieldCreativeHistoryStatus, int64(CreativeStatusSuccess)).
+		// Where(model.FieldCreativeHistoryStatus, int64(CreativeStatusSuccess)).
 		Where(model.FieldCreativeHistoryIslandType, int64(IslandTypeImage)).
 		Select(
 			model.FieldCreativeHistoryId,

@@ -49,8 +49,8 @@ func NewCreativeIslandController(resolver infra.Resolver, conf *config.Config) w
 
 func (ctl *CreativeIslandController) Register(router web.Router) {
 	router.Group("/creative-island", func(router web.Router) {
-		router.Get("/items", ctl.list)
-		router.Get("/items/{id}", ctl.item)
+		router.Get("/items", ctl.List)
+		router.Get("/items/{id}", ctl.Item)
 		router.Get("/items/{id}/tasks", ctl.completionsTasks)
 
 		router.Get("/histories", ctl.histories)
@@ -123,7 +123,14 @@ func (ctl *CreativeIslandController) histories(ctx context.Context, webCtx web.C
 	}
 
 	return webCtx.JSON(web.M{
-		"data":      items,
+		"data": array.Map(items, func(item repo.CreativeHistoryItem, _ int) repo.CreativeHistoryItem {
+			// 客户端目前不支持封禁状态展示，这里转换为失败
+			if item.Status == int64(repo.CreativeStatusForbid) {
+				item.Status = int64(repo.CreativeStatusFailed)
+			}
+
+			return item
+		}),
 		"page":      meta.Page,
 		"per_page":  meta.PerPage,
 		"total":     meta.Total,
@@ -148,7 +155,14 @@ func (ctl *CreativeIslandController) itemHistories(ctx context.Context, webCtx w
 	}
 
 	return webCtx.JSON(web.M{
-		"data": items,
+		"data": array.Map(items, func(item repo.CreativeHistoryItem, _ int) repo.CreativeHistoryItem {
+			// 客户端目前不支持封禁状态展示，这里转换为失败
+			if item.Status == int64(repo.CreativeStatusForbid) {
+				item.Status = int64(repo.CreativeStatusFailed)
+			}
+
+			return item
+		}),
 	})
 }
 
@@ -172,6 +186,11 @@ func (ctl *CreativeIslandController) historyItem(ctx context.Context, webCtx web
 
 		log.Errorf("query creative item failed: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	// 客户端目前不支持封禁状态展示，这里转换为失败
+	if item.Status == int64(repo.CreativeStatusForbid) {
+		item.Status = int64(repo.CreativeStatusFailed)
 	}
 
 	return webCtx.JSON(item)
@@ -203,8 +222,8 @@ func (ctl *CreativeIslandController) deleteHistoryItem(ctx context.Context, webC
 	return webCtx.JSON(web.M{})
 }
 
-// list 列出创作岛的所有项目
-func (ctl *CreativeIslandController) list(ctx context.Context, webCtx web.Context, client *auth.ClientInfo) web.Response {
+// List 列出创作岛的所有项目
+func (ctl *CreativeIslandController) List(ctx context.Context, webCtx web.Context, client *auth.ClientInfo) web.Response {
 	mode := webCtx.Input("mode")
 	if mode != "" && !array.In(mode, []string{"creative-island", "image-draw"}) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInvalidRequest), http.StatusBadRequest)
@@ -274,8 +293,8 @@ var imageTypes = []CreativeIslandModelType{
 	CreativeIslandModelTypeImageToImage,
 }
 
-// item 获取创作岛项目详情
-func (ctl *CreativeIslandController) item(ctx context.Context, webCtx web.Context) web.Response {
+// Item 获取创作岛项目详情
+func (ctl *CreativeIslandController) Item(ctx context.Context, webCtx web.Context) web.Response {
 	id := webCtx.PathVar("id")
 	island, err := ctl.creativeRepo.Island(ctx, id)
 	if err != nil {

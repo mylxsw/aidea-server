@@ -378,6 +378,11 @@ func (ctl *CreativeIslandController) Histories(ctx context.Context, webCtx web.C
 			item.IslandTitle = "图片上色"
 		}
 
+		// 客户端目前不支持封禁状态展示，这里转换为失败
+		if item.Status == int64(repo.CreativeStatusForbid) {
+			item.Status = int64(repo.CreativeStatusFailed)
+		}
+
 		return item
 	})
 
@@ -423,6 +428,11 @@ func (ctl *CreativeIslandController) HistoryItem(ctx context.Context, webCtx web
 
 		log.Errorf("query creative item failed: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	// 客户端目前不支持封禁状态展示，这里转换为失败
+	if item.Status == int64(repo.CreativeStatusForbid) {
+		item.Status = int64(repo.CreativeStatusFailed)
 	}
 
 	return webCtx.JSON(CreativeHistoryItemResp{
