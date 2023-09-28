@@ -452,6 +452,7 @@ func (r *CreativeRepo) FindHistoryRecord(ctx context.Context, userId, id int64) 
 
 	return &CreativeHistoryItem{
 		Id:         item.Id.ValueOrZero(),
+		UserID:     item.UserId.ValueOrZero(),
 		IslandId:   item.IslandId.ValueOrZero(),
 		IslandType: item.IslandType.ValueOrZero(),
 		Arguments:  item.Arguments.ValueOrZero(),

@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -46,7 +47,7 @@ func (ctl *CreativeIslandController) ForbidCreativeHistory(ctx context.Context, 
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, "当前记录已封禁，请勿重复操作"), http.StatusBadRequest)
 	}
 
-	if err := ctl.creativeRepo.UpdateRecordStatusByID(ctx, int64(historyID), "", repo.CreativeStatusForbid); err != nil {
+	if err := ctl.creativeRepo.UpdateRecordStatusByID(ctx, int64(historyID), fmt.Sprintf("内容违规\n%s", item.Answer), repo.CreativeStatusForbid); err != nil {
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
