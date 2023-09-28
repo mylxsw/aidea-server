@@ -112,7 +112,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 	if client != nil && helper.VersionNewer(client.Version, "1.0.2") && ctl.conf.EnableDeepAI {
 		items = append(items, CreativeIslandItem{
 			ID:           "image-upscale",
-			Title:        "图片高清修复",
+			Title:        "高清修复",
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/super-res.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-upscale",
@@ -373,7 +373,7 @@ func (ctl *CreativeIslandController) Histories(ctx context.Context, webCtx web.C
 				item.IslandTitle = "文生图"
 			}
 		case int64(repo.IslandTypeUpscale):
-			item.IslandTitle = "图片高清修复"
+			item.IslandTitle = "高清修复"
 		case int64(repo.IslandTypeImageColorization):
 			item.IslandTitle = "图片上色"
 		}
