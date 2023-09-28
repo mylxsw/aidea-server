@@ -73,7 +73,7 @@ func (ctl *CreativeIslandController) gallery(ctx context.Context, webCtx web.Con
 	limit := int64(100)
 	if mode == "all" && user.WithLab {
 		userId = 0
-		limit = 1000
+		limit = 500
 	}
 
 	model := webCtx.Input("model")
