@@ -17,6 +17,7 @@ import (
 	"github.com/mylxsw/go-utils/must"
 	"github.com/mylxsw/go-utils/ternary"
 	qiniuAuth "github.com/qiniu/go-sdk/v7/auth"
+	"github.com/qiniu/go-sdk/v7/cdn"
 	"github.com/qiniu/go-sdk/v7/storage"
 	"golang.org/x/net/proxy"
 )
@@ -211,6 +212,14 @@ func (u *Uploader) ForbidFile(ctx context.Context, pathWithoutURLPrefix string) 
 
 	bucketManager := storage.NewBucketManager(mac, &cfg)
 	return bucketManager.UpdateObjectStatus(u.conf.StorageBucket, pathWithoutURLPrefix, false)
+}
+
+// RefreshCDN 刷新 CDN 缓存
+func (u *Uploader) RefreshCDN(ctx context.Context, urls []string) (cdn.RefreshResp, error) {
+	mac := qiniuAuth.New(u.conf.StorageAppKey, u.conf.StorageAppSecret)
+
+	cdnManager := cdn.NewCdnManager(mac)
+	return cdnManager.RefreshUrls(urls)
 }
 
 func fileExt(filename string) string {

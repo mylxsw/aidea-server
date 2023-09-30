@@ -72,12 +72,16 @@ func (ctl *CreativeIslandController) ForbidCreativeHistory(ctx context.Context, 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
+		urls := make([]string, 0)
+
 		var answers []string
 		_ = json.Unmarshal([]byte(item.Answer), &answers)
 		for _, answer := range answers {
 			if err := ctl.uploader.ForbidFile(ctx, strings.TrimPrefix(answer, strings.TrimSuffix(ctl.conf.StorageDomain, "/")+"/")); err != nil {
 				log.WithFields(log.Fields{"file": answer}).Errorf("禁用文件失败: %v", err)
 			}
+
+			urls = append(urls, answer)
 		}
 
 		var arguments map[string]any
@@ -85,6 +89,13 @@ func (ctl *CreativeIslandController) ForbidCreativeHistory(ctx context.Context, 
 		if image, ok := arguments["image"]; ok {
 			if err := ctl.uploader.ForbidFile(ctx, strings.TrimPrefix(image.(string), strings.TrimSuffix(ctl.conf.StorageDomain, "/")+"/")); err != nil {
 				log.WithFields(log.Fields{"file": image}).Errorf("禁用文件失败: %v", err)
+			}
+			urls = append(urls, image.(string))
+		}
+
+		if len(urls) > 0 {
+			if _, err := ctl.uploader.RefreshCDN(ctx, urls); err != nil {
+				log.WithFields(log.Fields{"urls": urls}).Errorf("清空 CDN 缓存失败: %v", err)
 			}
 		}
 	}()
