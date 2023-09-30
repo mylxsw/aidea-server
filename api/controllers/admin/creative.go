@@ -2,21 +2,29 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/api/controllers/common"
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/repo"
+	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/aidea-server/internal/youdao"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
 )
 
 type CreativeIslandController struct {
+	conf         *config.Config     `autowire:"@"`
 	trans        youdao.Translater  `autowire:"@"`
 	creativeRepo *repo.CreativeRepo `autowire:"@"`
+	uploader     *uploader.Uploader `autowire:"@"`
 }
 
 func NewCreativeIslandController(resolver infra.Resolver) web.Controller {
@@ -50,6 +58,36 @@ func (ctl *CreativeIslandController) ForbidCreativeHistory(ctx context.Context, 
 	if err := ctl.creativeRepo.UpdateRecordStatusByID(ctx, int64(historyID), fmt.Sprintf("内容违规\n%s", item.Answer), repo.CreativeStatusForbid); err != nil {
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
+
+	// 禁用文件（arguments->image，answer)
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				log.WithFields(log.Fields{
+					"history_id": historyID,
+				}).Errorf("禁用文件失败: %v", err)
+			}
+		}()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		var answers []string
+		_ = json.Unmarshal([]byte(item.Answer), &answers)
+		for _, answer := range answers {
+			if err := ctl.uploader.ForbidFile(ctx, strings.TrimPrefix(answer, strings.TrimSuffix(ctl.conf.StorageDomain, "/")+"/")); err != nil {
+				log.WithFields(log.Fields{"file": answer}).Errorf("禁用文件失败: %v", err)
+			}
+		}
+
+		var arguments map[string]any
+		_ = json.Unmarshal([]byte(item.Arguments), &arguments)
+		if image, ok := arguments["image"]; ok {
+			if err := ctl.uploader.ForbidFile(ctx, strings.TrimPrefix(image.(string), strings.TrimSuffix(ctl.conf.StorageDomain, "/")+"/")); err != nil {
+				log.WithFields(log.Fields{"file": image}).Errorf("禁用文件失败: %v", err)
+			}
+		}
+	}()
 
 	return webCtx.JSON(web.M{
 		"message": "success",

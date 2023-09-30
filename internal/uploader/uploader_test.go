@@ -30,5 +30,4 @@ func TestUploader_DeleteFile(t *testing.T) {
 			log.WithFields(log.Fields{"file": f}).Errorf("delete file failed: %v", err)
 		}
 	}
-
 }
