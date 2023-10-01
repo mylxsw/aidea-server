@@ -140,6 +140,18 @@ func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web
 //	return strings.TrimPrefix(m.ID, "openai:")
 //})
 
+type FinalMessage struct {
+	QuotaConsumed int64 `json:"quota_consumed,omitempty"`
+	Token         int64 `json:"token,omitempty"`
+	QuestionID    int64 `json:"question_id,omitempty"`
+	AnswerID      int64 `json:"answer_id,omitempty"`
+}
+
+func (m FinalMessage) ToJSON() string {
+	data, _ := json.Marshal(m)
+	return string(data)
+}
+
 // Chat 聊天接口，接口参数参考 https://platform.openai.com/docs/api-reference/chat/create
 // 该接口会返回一个 SSE 流，接口参数 stream 总是为 true（忽略客户端设置）
 func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo, w http.ResponseWriter) {
@@ -189,15 +201,20 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 
 	// 写入用户消息
+	var questionID int64
 	if ctl.conf.EnableRecordChat {
-		if _, err := ctl.messageRepo.Add(ctx, repo.MessageAddReq{
+		qid, err := ctl.messageRepo.Add(ctx, repo.MessageAddReq{
 			UserID:  user.ID,
 			Message: req.Messages[len(req.Messages)-1].Content,
 			Role:    repo.MessageRoleUser,
 			RoomID:  roomID,
-		}); err != nil {
+			Model:   req.Model,
+		})
+		if err != nil {
 			log.With(req).Errorf("add message failed: %s", err)
 		}
+
+		questionID = qid
 	}
 
 	// log.WithFields(log.Fields{"req": req}).Debugf("chat request")
@@ -239,35 +256,57 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		realWordCount, _ := openaiHelper.NumTokensFromMessages(messages, model)
 		quotaConsumed := coins.GetOpenAITextCoins(model, int64(realWordCount))
 
-		//  返回自定义控制信息，告诉客户端当前消耗情况
-		if user.InternalUser() {
-			if isFreeRequest {
-				// 免费请求，不扣除智慧果
-				quotaConsumed = 0
-			}
+		// 返回自定义控制信息，告诉客户端当前消耗情况
+		if isFreeRequest {
+			// 免费请求，不扣除智慧果
+			quotaConsumed = 0
+		}
 
-			finalWord := openai.ChatCompletionStreamResponse{
-				ID: "final",
-				Choices: []openai.ChatCompletionStreamChoice{
-					{
-						Index:        0,
-						FinishReason: "",
-						Delta: openai.ChatCompletionStreamChoiceDelta{
-							Content: fmt.Sprintf(`{"quota_consumed":%d,"token":%d}`, quotaConsumed, realWordCount),
-							Role:    "system",
-						},
-					},
-				},
-				Model: model,
-			}
-
-			data, _ := json.Marshal(finalWord)
-			if _, err := w.Write([]byte("data: " + string(data) + "\n\n")); err != nil {
-				log.Errorf("write response failed: %v", err)
+		var answerID int64
+		if ctl.conf.EnableRecordChat {
+			// 写入用户消息
+			answerID, err = ctl.messageRepo.Add(ctx, repo.MessageAddReq{
+				UserID:        user.ID,
+				Message:       replyText,
+				Role:          repo.MessageRoleAssistant,
+				QuotaConsumed: quotaConsumed,
+				TokenConsumed: int64(realWordCount),
+				RoomID:        roomID,
+				Model:         req.Model,
+				PID:           questionID,
+			})
+			if err != nil {
+				log.With(req).Errorf("add message failed: %s", err)
 			}
 		}
 
-		w.Write([]byte("data: [DONE]\n\n"))
+		finalMsg := FinalMessage{QuestionID: questionID, AnswerID: answerID}
+		if user.InternalUser() {
+			finalMsg.QuotaConsumed = quotaConsumed
+			finalMsg.Token = int64(realWordCount)
+		}
+
+		finalWord := openai.ChatCompletionStreamResponse{
+			ID: "final",
+			Choices: []openai.ChatCompletionStreamChoice{
+				{
+					Index:        0,
+					FinishReason: "",
+					Delta: openai.ChatCompletionStreamChoiceDelta{
+						Content: finalMsg.ToJSON(),
+						Role:    "system",
+					},
+				},
+			},
+			Model: model,
+		}
+
+		data, _ := json.Marshal(finalWord)
+		if _, err := w.Write([]byte("data: " + string(data) + "\n\n")); err != nil {
+			log.Errorf("write response failed: %v", err)
+		}
+
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
 
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()
@@ -275,20 +314,6 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
-
-		if ctl.conf.EnableRecordChat {
-			// 写入用户消息
-			if _, err := ctl.messageRepo.Add(ctx, repo.MessageAddReq{
-				UserID:        user.ID,
-				Message:       replyText,
-				Role:          repo.MessageRoleAssistant,
-				QuotaConsumed: quotaConsumed,
-				TokenConsumed: int64(realWordCount),
-				RoomID:        roomID,
-			}); err != nil {
-				log.With(req).Errorf("add message failed: %s", err)
-			}
-		}
 
 		if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
 			log.WithFields(log.Fields{

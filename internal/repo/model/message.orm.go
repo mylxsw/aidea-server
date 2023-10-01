@@ -27,6 +27,8 @@ type ChatMessagesN struct {
 	Role          null.Int    `json:"role,omitempty"`
 	TokenConsumed null.Int    `json:"token_consumed,omitempty"`
 	QuotaConsumed null.Int    `json:"quota_consumed,omitempty"`
+	Pid           null.Int    `json:"pid,omitempty"`
+	Model         null.String `json:"model,omitempty"`
 	CreatedAt     null.Time
 	UpdatedAt     null.Time
 }
@@ -51,6 +53,8 @@ type chatMessagesOriginal struct {
 	Role          null.Int
 	TokenConsumed null.Int
 	QuotaConsumed null.Int
+	Pid           null.Int
+	Model         null.String
 	CreatedAt     null.Time
 	UpdatedAt     null.Time
 }
@@ -82,6 +86,12 @@ func (inst *ChatMessagesN) Staled(onlyFields ...string) bool {
 			return true
 		}
 		if inst.QuotaConsumed != inst.original.QuotaConsumed {
+			return true
+		}
+		if inst.Pid != inst.original.Pid {
+			return true
+		}
+		if inst.Model != inst.original.Model {
 			return true
 		}
 		if inst.CreatedAt != inst.original.CreatedAt {
@@ -120,6 +130,14 @@ func (inst *ChatMessagesN) Staled(onlyFields ...string) bool {
 				}
 			case "quota_consumed":
 				if inst.QuotaConsumed != inst.original.QuotaConsumed {
+					return true
+				}
+			case "pid":
+				if inst.Pid != inst.original.Pid {
+					return true
+				}
+			case "model":
+				if inst.Model != inst.original.Model {
 					return true
 				}
 			case "created_at":
@@ -169,6 +187,12 @@ func (inst *ChatMessagesN) StaledKV(onlyFields ...string) query.KV {
 		if inst.QuotaConsumed != inst.original.QuotaConsumed {
 			kv["quota_consumed"] = inst.QuotaConsumed
 		}
+		if inst.Pid != inst.original.Pid {
+			kv["pid"] = inst.Pid
+		}
+		if inst.Model != inst.original.Model {
+			kv["model"] = inst.Model
+		}
 		if inst.CreatedAt != inst.original.CreatedAt {
 			kv["created_at"] = inst.CreatedAt
 		}
@@ -206,6 +230,14 @@ func (inst *ChatMessagesN) StaledKV(onlyFields ...string) query.KV {
 			case "quota_consumed":
 				if inst.QuotaConsumed != inst.original.QuotaConsumed {
 					kv["quota_consumed"] = inst.QuotaConsumed
+				}
+			case "pid":
+				if inst.Pid != inst.original.Pid {
+					kv["pid"] = inst.Pid
+				}
+			case "model":
+				if inst.Model != inst.original.Model {
+					kv["model"] = inst.Model
 				}
 			case "created_at":
 				if inst.CreatedAt != inst.original.CreatedAt {
@@ -321,6 +353,8 @@ type ChatMessages struct {
 	Role          int64  `json:"role,omitempty"`
 	TokenConsumed int64  `json:"token_consumed,omitempty"`
 	QuotaConsumed int64  `json:"quota_consumed,omitempty"`
+	Pid           int64  `json:"pid,omitempty"`
+	Model         string `json:"model,omitempty"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -336,6 +370,8 @@ func (w ChatMessages) ToChatMessagesN(allows ...string) ChatMessagesN {
 			Role:          null.IntFrom(int64(w.Role)),
 			TokenConsumed: null.IntFrom(int64(w.TokenConsumed)),
 			QuotaConsumed: null.IntFrom(int64(w.QuotaConsumed)),
+			Pid:           null.IntFrom(int64(w.Pid)),
+			Model:         null.StringFrom(w.Model),
 			CreatedAt:     null.TimeFrom(w.CreatedAt),
 			UpdatedAt:     null.TimeFrom(w.UpdatedAt),
 		}
@@ -359,6 +395,10 @@ func (w ChatMessages) ToChatMessagesN(allows ...string) ChatMessagesN {
 			res.TokenConsumed = null.IntFrom(int64(w.TokenConsumed))
 		case "quota_consumed":
 			res.QuotaConsumed = null.IntFrom(int64(w.QuotaConsumed))
+		case "pid":
+			res.Pid = null.IntFrom(int64(w.Pid))
+		case "model":
+			res.Model = null.StringFrom(w.Model)
 		case "created_at":
 			res.CreatedAt = null.TimeFrom(w.CreatedAt)
 		case "updated_at":
@@ -386,6 +426,8 @@ func (w *ChatMessagesN) ToChatMessages() ChatMessages {
 		Role:          w.Role.Int64,
 		TokenConsumed: w.TokenConsumed.Int64,
 		QuotaConsumed: w.QuotaConsumed.Int64,
+		Pid:           w.Pid.Int64,
+		Model:         w.Model.String,
 		CreatedAt:     w.CreatedAt.Time,
 		UpdatedAt:     w.UpdatedAt.Time,
 	}
@@ -417,6 +459,8 @@ const (
 	FieldChatMessagesRole          = "role"
 	FieldChatMessagesTokenConsumed = "token_consumed"
 	FieldChatMessagesQuotaConsumed = "quota_consumed"
+	FieldChatMessagesPid           = "pid"
+	FieldChatMessagesModel         = "model"
 	FieldChatMessagesCreatedAt     = "created_at"
 	FieldChatMessagesUpdatedAt     = "updated_at"
 )
@@ -431,6 +475,8 @@ func ChatMessagesFields() []string {
 		"role",
 		"token_consumed",
 		"quota_consumed",
+		"pid",
+		"model",
 		"created_at",
 		"updated_at",
 	}
@@ -570,6 +616,8 @@ func (m *ChatMessagesModel) Get(ctx context.Context, builders ...query.SQLBuilde
 			"role",
 			"token_consumed",
 			"quota_consumed",
+			"pid",
+			"model",
 			"created_at",
 			"updated_at",
 		)
@@ -594,6 +642,10 @@ func (m *ChatMessagesModel) Get(ctx context.Context, builders ...query.SQLBuilde
 		case "token_consumed":
 			selectFields = append(selectFields, f)
 		case "quota_consumed":
+			selectFields = append(selectFields, f)
+		case "pid":
+			selectFields = append(selectFields, f)
+		case "model":
 			selectFields = append(selectFields, f)
 		case "created_at":
 			selectFields = append(selectFields, f)
@@ -623,6 +675,10 @@ func (m *ChatMessagesModel) Get(ctx context.Context, builders ...query.SQLBuilde
 				scanFields = append(scanFields, &chatMessagesVar.TokenConsumed)
 			case "quota_consumed":
 				scanFields = append(scanFields, &chatMessagesVar.QuotaConsumed)
+			case "pid":
+				scanFields = append(scanFields, &chatMessagesVar.Pid)
+			case "model":
+				scanFields = append(scanFields, &chatMessagesVar.Model)
 			case "created_at":
 				scanFields = append(scanFields, &chatMessagesVar.CreatedAt)
 			case "updated_at":
