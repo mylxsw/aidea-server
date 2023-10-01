@@ -98,7 +98,7 @@ func (Provider) Jobs(cc infra.Resolver, creator scheduler.JobCreator) {
 	// 用户注册通知（管理）
 	if err := creator.Add(
 		"user-signup-notification",
-		"@every 1h",
+		"@daily",
 		scheduler.WithoutOverlap(UserSignupNotificationJob),
 	); err != nil {
 		log.Errorf("注册定时任务 user-signup-notification 失败: %v", err)
