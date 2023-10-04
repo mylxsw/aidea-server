@@ -326,7 +326,7 @@ func leapAsyncJobProcesser(client *leap.LeapAI, up *uploader.Uploader, quotaRepo
 			if !resp.IsProcessing() {
 				log.Warningf("task %s state is %s", payload.Payload.ID, resp.GetState())
 				update = &repo.PendingTaskUpdate{Status: repo.PendingTaskStatusFailed}
-				panic(fmt.Errorf("invalid task status %s", resp.GetState()))
+				panic(fmt.Errorf("leap: invalid task status [%s]", resp.GetState()))
 			}
 
 			return &repo.PendingTaskUpdate{

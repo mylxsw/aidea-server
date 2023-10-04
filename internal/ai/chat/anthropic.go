@@ -52,6 +52,11 @@ func (chat *AnthropicChat) initRequest(req Request) anthropic.Request {
 		contextMessages = append(finalSystemMessages, contextMessages...)
 	}
 
+	// Bugfix: prompt must start with "\n\nHuman:" turn
+	if len(contextMessages) > 0 && contextMessages[0].Role != "user" {
+		contextMessages = contextMessages[1:]
+	}
+
 	return anthropic.NewRequest(anthropic.Model(req.Model), contextMessages)
 }
 

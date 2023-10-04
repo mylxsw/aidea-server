@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -347,7 +348,7 @@ func (ctl *UserController) ResetPassword(ctx context.Context, webCtx web.Context
 	// 流控：每个用户每 60 分钟只能重置密码 5 次
 	err := ctl.limiter.Allow(ctx, fmt.Sprintf("auth:reset-password:%s:limit", user.Phone), rate.MaxRequestsInPeriod(5, 60*time.Minute))
 	if err != nil {
-		if err == rate.ErrRateLimitExceeded {
+		if errors.Is(err, rate.ErrRateLimitExceeded) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "操作频率过高，请稍后再试"), http.StatusTooManyRequests)
 		}
 
@@ -504,8 +505,22 @@ func (ctl *UserController) UserFreeChatCounts(ctx context.Context, webCtx web.Co
 // UserFreeChatCountsForModel 用户模型免费聊天次数统计
 func (ctl *UserController) UserFreeChatCountsForModel(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	modelID := webCtx.PathVar("model")
+	segs := strings.Split(modelID, ":")
+	modelID = segs[len(segs)-1]
+
 	res, err := ctl.userSrv.FreeChatStatisticsForModel(ctx, user.ID, modelID)
 	if err != nil {
+		if errors.Is(err, service.ErrorModelNotFree) {
+			return webCtx.JSON(service.FreeChatState{
+				ModelWithName: coins.ModelWithName{
+					Model: modelID,
+				},
+				LeftCount: 0,
+				MaxCount:  0,
+			})
+		}
+
+		log.WithFields(log.Fields{"model": modelID}).Errorf("get free chat statistics for model failed: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 

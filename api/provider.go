@@ -85,6 +85,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v1/rooms",           // 数字人管理
 		"/v1/room-galleries",  // 数字人 Gallery
 		"/v1/voice",           // 语音合成
+		"/v1/notifications",   // 通知管理
 		"/v1/admin",           // 管理员接口
 
 		// v2 版本
@@ -278,6 +279,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		controllers.NewPaymentController(resolver),
 		controllers.NewRoomController(resolver),
 		controllers.NewVoiceController(resolver),
+		controllers.NewNotificationController(resolver),
 	)
 
 	r.Controllers(

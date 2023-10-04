@@ -335,7 +335,7 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 		}
 
 		if strings.TrimSpace(negativePrompt) != "" && helper.IsChinese(negativePrompt) {
-			translateRes, err := translator.Translate(ctx, youdao.LanguageAuto, youdao.LanguageEnglish, prompt)
+			translateRes, err := translator.Translate(ctx, youdao.LanguageAuto, youdao.LanguageEnglish, negativePrompt)
 			if err != nil {
 				log.With(payload).Errorf("translate failed: %v", err)
 			} else {

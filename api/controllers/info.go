@@ -30,7 +30,7 @@ func (ctl *InfoController) Register(router web.Router) {
 		router.Get("/version", ctl.Version)
 		router.Get("/privacy-policy", ctl.PrivacyPolicy)
 		router.Get("/terms-of-user", ctl.TermsOfUser)
-		router.Post("/version-check", ctl.VersionCheck)
+		router.Any("/version-check", ctl.VersionCheck)
 	})
 	router.Group("/share", func(router web.Router) {
 		router.Get("/info", ctl.shareInfo)
@@ -62,7 +62,7 @@ func (ctl *InfoController) shareInfo(ctx web.Context, user *auth.UserOptional) w
 	return ctx.JSON(res)
 }
 
-const CurrentVersion = "1.0.4"
+const CurrentVersion = "1.0.5"
 
 func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 	clientVersion := ctx.Input("version")

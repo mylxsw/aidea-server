@@ -28,8 +28,6 @@ func NewUserService(userRepo *repo.UserRepo, quotaRepo *repo.QuotaRepo, rds *red
 	return &UserService{userRepo: userRepo, quotaRepo: quotaRepo, rds: rds, limiter: limiter}
 }
 
-const maxFreeCount = 15
-
 type FreeChatState struct {
 	coins.ModelWithName
 	LeftCount int `json:"left_count"`
@@ -37,9 +35,9 @@ type FreeChatState struct {
 }
 
 // FreeChatStatistics 用户免费聊天次数统计
-func (src *UserService) FreeChatStatistics(ctx context.Context, userID int64) []FreeChatState {
+func (srv *UserService) FreeChatStatistics(ctx context.Context, userID int64) []FreeChatState {
 	return array.Map(coins.FreeModels(), func(item coins.ModelWithName, _ int) FreeChatState {
-		leftCount, maxCount := src.FreeChatRequestCounts(ctx, userID, item.Model)
+		leftCount, maxCount := srv.FreeChatRequestCounts(ctx, userID, item.Model)
 		return FreeChatState{
 			ModelWithName: item,
 			LeftCount:     leftCount,
@@ -48,14 +46,18 @@ func (src *UserService) FreeChatStatistics(ctx context.Context, userID int64) []
 	})
 }
 
+var (
+	ErrorModelNotFree = fmt.Errorf("model is not free")
+)
+
 // FreeChatStatisticsForModel 用户免费聊天次数统计
-func (src *UserService) FreeChatStatisticsForModel(ctx context.Context, userID int64, model string) (*FreeChatState, error) {
+func (srv *UserService) FreeChatStatisticsForModel(ctx context.Context, userID int64, model string) (*FreeChatState, error) {
 	freeModel := coins.GetFreeModel(model)
-	if freeModel == nil {
-		return nil, fmt.Errorf("model %s is not free", model)
+	if freeModel == nil || freeModel.FreeCount <= 0 {
+		return nil, ErrorModelNotFree
 	}
 
-	leftCount, maxCount := src.FreeChatRequestCounts(ctx, userID, model)
+	leftCount, maxCount := srv.FreeChatRequestCounts(ctx, userID, model)
 	return &FreeChatState{
 		ModelWithName: *freeModel,
 		LeftCount:     leftCount,
@@ -63,19 +65,20 @@ func (src *UserService) FreeChatStatisticsForModel(ctx context.Context, userID i
 	}, nil
 }
 
-func (src *UserService) freeChatCacheKey(userID int64, model string) string {
+func (srv *UserService) freeChatCacheKey(userID int64, model string) string {
 	return fmt.Sprintf("free-chat:uid:%d:model:%s", userID, model)
 }
 
-// FreeChatRequestCounts 免费模型使用次数：每天免费 15 次
-func (src *UserService) FreeChatRequestCounts(ctx context.Context, userID int64, model string) (leftCount int, maxCount int) {
+// FreeChatRequestCounts 免费模型使用次数：每天免费 n 次
+func (srv *UserService) FreeChatRequestCounts(ctx context.Context, userID int64, model string) (leftCount int, maxCount int) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	if coins.IsFreeModel(model) {
-		leftCount, maxCount = maxFreeCount, maxFreeCount
+	freeModel := coins.GetFreeModel(model)
+	if freeModel != nil && freeModel.FreeCount > 0 {
+		leftCount, maxCount = freeModel.FreeCount, freeModel.FreeCount
 
-		optCount, err := src.limiter.OperationCount(ctx, src.freeChatCacheKey(userID, model))
+		optCount, err := srv.limiter.OperationCount(ctx, srv.freeChatCacheKey(userID, model))
 		if err != nil {
 			log.WithFields(log.Fields{
 				"user_id": userID,
@@ -93,19 +96,19 @@ func (src *UserService) FreeChatRequestCounts(ctx context.Context, userID int64,
 		leftCount, maxCount = 0, 0
 	}
 
-	return leftCount, maxFreeCount
+	return leftCount, maxCount
 }
 
 // UpdateFreeChatCount 更新免费聊天次数使用情况
-func (src *UserService) UpdateFreeChatCount(ctx context.Context, userID int64, model string) error {
+func (srv *UserService) UpdateFreeChatCount(ctx context.Context, userID int64, model string) error {
 	if !coins.IsFreeModel(model) {
 		return nil
 	}
 
 	secondsRemain := helper.TodayRemainTimeSeconds()
-	if err := src.limiter.OperationIncr(
+	if err := srv.limiter.OperationIncr(
 		ctx,
-		src.freeChatCacheKey(userID, model),
+		srv.freeChatCacheKey(userID, model),
 		time.Duration(secondsRemain)*time.Second,
 	); err != nil {
 		log.WithFields(log.Fields{
