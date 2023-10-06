@@ -23,6 +23,12 @@ const (
 	ModelNovaPtcXSV1 Model = "nova-ptc-xs-v1"
 )
 
+var (
+	// ErrContextExceedLimit 上下文长度超过限制
+	ErrContextExceedLimit = fmt.Errorf("context exceed limit")
+	ErrSensitivityWord    = fmt.Errorf("sensitivity")
+)
+
 type SenseNova struct {
 	keyID     string
 	keySecret string
@@ -130,8 +136,12 @@ func (sn *SenseNova) Chat(ctx context.Context, req Request) (*Response, error) {
 	defer httpResp.Body.Close()
 
 	if httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusBadRequest {
-		data, _ := io.ReadAll(httpResp.Body)
-		return nil, fmt.Errorf("chat failed [%d]: %s", httpResp.StatusCode, string(data))
+		errResponse := tryParseErrorResponse(httpResp.Body)
+		if err := errResponse.Error(); err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("sensenova chat failed, status [%d], code [%d]: %s", httpResp.StatusCode, errResponse.Code, errResponse.Message)
 	}
 
 	var chatResp Response
@@ -142,16 +152,50 @@ func (sn *SenseNova) Chat(ctx context.Context, req Request) (*Response, error) {
 	return &chatResp, nil
 }
 
+// ErrorResponse 错误相应 https://platform.sensenova.cn/#/doc?path=/overview/ErrorCode.md
+type ErrorResponse struct {
+	Code    int    `json:"code,omitempty"`
+	Message string `json:"message,omitempty"`
+	Details any    `json:"details,omitempty"`
+}
+
+func (e ErrorResponse) Error() error {
+	if e.Code == 0 {
+		return nil
+	}
+
+	switch e.Code {
+	case 17:
+		return ErrContextExceedLimit
+	case 18:
+		return ErrSensitivityWord
+	}
+
+	return fmt.Errorf("sensenova error: [%d] %s", e.Code, e.Message)
+}
+
+func tryParseErrorResponse(body io.Reader) ErrorResponse {
+	var errResp struct {
+		Error ErrorResponse `json:"error"`
+	}
+
+	if err := json.NewDecoder(body).Decode(&errResp); err != nil {
+		return ErrorResponse{}
+	}
+
+	return errResp.Error
+}
+
 func (sn *SenseNova) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	req.Stream = true
 	body, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal request failed: %w", err)
 	}
 
 	httpReq, err := http.NewRequest("POST", "https://api.sensenova.cn/v1/llm/chat-completions", bytes.NewReader(body))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create http request failed: %w", err)
 	}
 
 	httpReq.Header.Set("Authorization", "Bearer "+sn.buildToken())
@@ -166,8 +210,13 @@ func (sn *SenseNova) ChatStream(ctx context.Context, req Request) (<-chan Respon
 	}
 
 	if httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusBadRequest {
+		errResponse := tryParseErrorResponse(httpResp.Body)
 		_ = httpResp.Body.Close()
-		return nil, fmt.Errorf("chat failed [%d]: %s", httpResp.StatusCode, httpResp.Status)
+		if err := errResponse.Error(); err != nil {
+			return nil, err
+		}
+
+		return nil, fmt.Errorf("sensenova chat failed, status [%d], code [%d]: %s", httpResp.StatusCode, errResponse.Code, errResponse.Message)
 	}
 
 	res := make(chan Response)

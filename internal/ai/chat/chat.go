@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
@@ -13,6 +14,10 @@ import (
 	"github.com/mylxsw/go-utils/array"
 )
 
+var (
+	ErrContextExceedLimit = errors.New("上下文长度超过最大限制")
+)
+
 type Message struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
@@ -21,24 +26,27 @@ type Message struct {
 type Messages []Message
 
 func (ms Messages) Fix() Messages {
-	last := ms[len(ms)-1]
+	msgs := ms
+	// 如果最后一条消息不是用户消息，则补充一条用户消息
+	last := msgs[len(msgs)-1]
 	if last.Role != "user" {
 		last = Message{
 			Role:    "user",
 			Content: "继续",
 		}
-		ms = append(ms, last)
+		msgs = append(msgs, last)
 	}
 
-	systemMsgs := array.Filter(ms, func(m Message, _ int) bool { return m.Role == "system" })
+	// 过滤掉 system 消息，因为 system 消息需要在每次对话中保留，不受上下文长度限制
+	systemMsgs := array.Filter(msgs, func(m Message, _ int) bool { return m.Role == "system" })
 	if len(systemMsgs) > 0 {
-		ms = array.Filter(ms, func(m Message, _ int) bool { return m.Role != "system" })
+		msgs = array.Filter(msgs, func(m Message, _ int) bool { return m.Role != "system" })
 	}
 
 	finalMessages := make([]Message, 0)
 	var lastRole string
 
-	for _, m := range array.Reverse(ms) {
+	for _, m := range array.Reverse(msgs) {
 		if m.Role == lastRole {
 			continue
 		}
@@ -72,11 +80,15 @@ type Response struct {
 }
 
 type Chat interface {
+	// Chat 以请求-响应的方式进行对话
 	Chat(ctx context.Context, req Request) (*Response, error)
+	// ChatStream 以流的方式进行对话
 	ChatStream(ctx context.Context, req Request) (<-chan Response, error)
+	// MaxContextLength 获取模型的最大上下文长度
+	MaxContextLength(model string) int
 }
 
-type ChatImp struct {
+type Imp struct {
 	openAI      *OpenAIChat
 	baiduAI     *BaiduAIChat
 	dashScope   *DashScopeChat
@@ -87,10 +99,10 @@ type ChatImp struct {
 }
 
 func NewChat(openAI *OpenAIChat, baiduAI *BaiduAIChat, dashScope *DashScopeChat, xfyunAI *XFYunChat, sn *SenseNovaChat, tencentAI *TencentAIChat, anthropicAI *AnthropicChat) Chat {
-	return &ChatImp{openAI: openAI, baiduAI: baiduAI, dashScope: dashScope, xfyunAI: xfyunAI, snAI: sn, tencentAI: tencentAI, anthropicAI: anthropicAI}
+	return &Imp{openAI: openAI, baiduAI: baiduAI, dashScope: dashScope, xfyunAI: xfyunAI, snAI: sn, tencentAI: tencentAI, anthropicAI: anthropicAI}
 }
 
-func (ai *ChatImp) selectImp(model string) Chat {
+func (ai *Imp) selectImp(model string) Chat {
 	if strings.HasPrefix(model, "灵积:") {
 		return ai.dashScope
 	}
@@ -148,10 +160,14 @@ func (ai *ChatImp) selectImp(model string) Chat {
 	return ai.openAI
 }
 
-func (ai *ChatImp) Chat(ctx context.Context, req Request) (*Response, error) {
+func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
 	return ai.selectImp(req.Model).Chat(ctx, req)
 }
 
-func (ai *ChatImp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
+func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	return ai.selectImp(req.Model).ChatStream(ctx, req)
+}
+
+func (ai *Imp) MaxContextLength(model string) int {
+	return ai.selectImp(model).MaxContextLength(model)
 }

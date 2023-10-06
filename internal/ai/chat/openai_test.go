@@ -15,7 +15,7 @@ import (
 
 func createOpenAIChatClient() chat.Chat {
 	openaiConf := openailib.DefaultConfig(os.Getenv("OPENAI_API_KEY"))
-	openaiConf.HTTPClient.Timeout = 120 * time.Second
+	openaiConf.HTTPClient.Timeout = 300 * time.Second
 	openaiConf.APIType = openailib.APITypeOpenAI
 
 	client := openailib.NewClientWithConfig(openaiConf)

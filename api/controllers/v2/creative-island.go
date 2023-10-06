@@ -88,6 +88,7 @@ type CreativeIslandItem struct {
 	PreviewImage string `json:"preview_image,omitempty"`
 	RouteURI     string `json:"route_uri,omitempty"`
 	Tag          string `json:"tag,omitempty"`
+	Note         string `json:"note,omitempty"`
 }
 
 func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Context, client *auth.ClientInfo) web.Response {
@@ -116,6 +117,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/super-res.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-upscale",
+			Note:         "图片的高清修复功能能够把低分辨率的照片升级到高分辨率，让图片的清晰度得到明显提升。",
 		})
 
 		items = append(items, CreativeIslandItem{
@@ -124,6 +126,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-colorizev2.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-colorize",
+			Note:         "图片上色功能能够把黑白照片变成彩色照片，让照片的色彩更加丰富。",
 		})
 	}
 

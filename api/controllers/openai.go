@@ -161,6 +161,20 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
+	// 过滤掉内容为空的 message
+	req.Messages = array.Filter(req.Messages, func(item chat.Message, _ int) bool { return strings.TrimSpace(item.Content) != "" })
+	// 自动缩减上下文长度至满足模型要求的最大长度，尽可能避免出现超过模型上下文长度的问题
+	var inputTokens int
+	var err error
+	if req.Messages, inputTokens, err = chat.ReduceMessageContext(
+		req.Messages,
+		req.Model,
+		ctl.chat.MaxContextLength(req.Model),
+	); err != nil {
+		webCtx.JSONError(common.Text(webCtx, ctl.translater, "超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度"), http.StatusBadRequest).CreateResponse()
+		return
+	}
+
 	// 免费模型
 	leftCount, maxFreeCount := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, req.Model)
 	isFreeRequest := leftCount > 0
@@ -174,8 +188,8 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 
 		// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
-		// 假设当前请求消耗 2 个智慧果
-		restQuota := quota.Quota - quota.Used - 2
+		// 假设当前响应消耗 2 个智慧果
+		restQuota := quota.Quota - quota.Used - coins.GetOpenAITextCoins(req.Model, int64(inputTokens)) - 2
 		if restQuota <= 0 {
 			if maxFreeCount > 0 {
 				webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已用完，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
@@ -223,8 +237,8 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 	stream, err := ctl.chat.ChatStream(ctx, req)
 	if err != nil {
-		log.Errorf("ChatCompletionStream error: %v", err)
-		webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError).CreateResponse()
+		log.Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
+		webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse()
 		return
 	}
 
@@ -240,20 +254,12 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	model := strings.Join(modelSegs, ":")
 
 	defer func() {
-		messages := append(
-			array.Map(req.Messages, func(item chat.Message, _ int) openai.ChatCompletionMessage {
-				return openai.ChatCompletionMessage{
-					Role:    item.Role,
-					Content: item.Content,
-				}
-			}),
-			openai.ChatCompletionMessage{
-				Role:    "assistant",
-				Content: replyText,
-			},
-		)
+		messages := append(req.Messages, chat.Message{
+			Role:    "assistant",
+			Content: replyText,
+		})
 
-		realWordCount, _ := openaiHelper.NumTokensFromMessages(messages, model)
+		realWordCount, _ := chat.MessageTokenCount(messages, req.Model)
 		quotaConsumed := coins.GetOpenAITextCoins(model, int64(realWordCount))
 
 		// 返回自定义控制信息，告诉客户端当前消耗情况
@@ -303,7 +309,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 		data, _ := json.Marshal(finalWord)
 		if _, err := w.Write([]byte("data: " + string(data) + "\n\n")); err != nil {
-			log.Errorf("write response failed: %v", err)
+			log.Warningf("write response failed: %v", err)
 		}
 
 		_, _ = w.Write([]byte("data: [DONE]\n\n"))
@@ -334,7 +340,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		id++
 
 		if res.ErrorCode != "" {
-			log.Errorf("chat error: %v", res)
+			log.With(req).Errorf("chat error: %v", res)
 			return
 		}
 
