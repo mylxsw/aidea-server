@@ -85,7 +85,7 @@ func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 // Version 获取版本信息
 func (ctl *InfoController) Version(ctx web.Context) web.Response {
 	return ctx.JSON(web.M{
-		"version": "1.0.1",
+		"version": CurrentVersion,
 	})
 }
 
