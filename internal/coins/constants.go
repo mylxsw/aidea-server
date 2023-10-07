@@ -4,7 +4,7 @@ package coins
 const SignupGiftCoins = 0
 
 // BindPhoneGiftCoins 绑定手机赠币数量
-const BindPhoneGiftCoins = 50
+const BindPhoneGiftCoins = 25
 
 // InviteGiftCoins 邀请赠币数量
 const InviteGiftCoins = 100

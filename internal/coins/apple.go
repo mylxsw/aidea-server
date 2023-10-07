@@ -106,22 +106,22 @@ func IsAppleProduct(productId string) bool {
 }
 
 var AppleProducts = []AppleProduct{
-	// {
-	// 	ID:             "cc.aicode.aidea.coins_100",
-	// 	Quota:          50,
-	// 	RetailPrice:    100,
-	// 	Name:           "1元尝鲜", // 1 元
-	// 	ExpirePolicy:   ExpirePolicyWeek,
-	// 	Description:    buildDescription(50),
-	// },
 	{
-		ID:           "cc.aicode.aidea.coins_300",
-		Quota:        200,
-		RetailPrice:  300,
-		Name:         "3元200个", // 3 元
+		ID:           "cc.aicode.aidea.coins_100",
+		Quota:        50,
+		RetailPrice:  100,
+		Name:         "1元尝鲜", // 1 元
 		ExpirePolicy: ExpirePolicyWeek,
-		Description:  buildDescription(200),
+		Description:  buildDescription(50),
 	},
+	//{
+	//	ID:           "cc.aicode.aidea.coins_300",
+	//	Quota:        200,
+	//	RetailPrice:  300,
+	//	Name:         "3元200个", // 3 元
+	//	ExpirePolicy: ExpirePolicyWeek,
+	//	Description:  buildDescription(200),
+	//},
 	{
 		ID:           "cc.aicode.aidea.coins_600_2",
 		Quota:        700,
@@ -155,14 +155,14 @@ var AppleProducts = []AppleProduct{
 		ExpirePolicy: ExpirePolicy6Month,
 		Description:  buildDescription(10000),
 	},
-	{
-		ID:           "cc.aicode.aidea.coins_12800",
-		Quota:        22800,
-		RetailPrice:  12800,
-		Name:         "128元22800个", // 128 元
-		ExpirePolicy: ExpirePolicyYear,
-		Description:  buildDescription(22800),
-	},
+	//{
+	//	ID:           "cc.aicode.aidea.coins_12800",
+	//	Quota:        22800,
+	//	RetailPrice:  12800,
+	//	Name:         "128元22800个", // 128 元
+	//	ExpirePolicy: ExpirePolicyYear,
+	//	Description:  buildDescription(22800),
+	//},
 	// {
 	// 	ID:           "cc.aicode.aidea.coins_19800",
 	// 	Quota:        38000,
