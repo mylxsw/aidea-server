@@ -104,3 +104,7 @@ func TestSplitText(t *testing.T) {
 		fmt.Println(line)
 	}
 }
+
+func TestTodayRemainTimeSeconds(t *testing.T) {
+	fmt.Println(helper.TodayRemainTimeSeconds())
+}

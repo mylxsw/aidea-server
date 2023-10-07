@@ -59,10 +59,10 @@ func (Provider) Jobs(cc infra.Resolver, creator scheduler.JobCreator) {
 		log.Errorf("注册定时任务 pending-task 失败: %v", err)
 	}
 
-	// 每 30分钟 执行一次 HealthCheck 任务
+	// 每 60 分钟 执行一次 HealthCheck 任务
 	if err := creator.Add(
 		"healthcheck-task",
-		"0 */30 * * * *",
+		"0 */60 * * * *",
 		scheduler.WithoutOverlap(HealthCheckJob),
 	); err != nil {
 		log.Errorf("注册定时任务 healthcheck-task 失败: %v", err)
@@ -98,7 +98,7 @@ func (Provider) Jobs(cc infra.Resolver, creator scheduler.JobCreator) {
 	// 用户注册通知（管理）
 	if err := creator.Add(
 		"user-signup-notification",
-		"@every 1h",
+		"@daily",
 		scheduler.WithoutOverlap(UserSignupNotificationJob),
 	); err != nil {
 		log.Errorf("注册定时任务 user-signup-notification 失败: %v", err)

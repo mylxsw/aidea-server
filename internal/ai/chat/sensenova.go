@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -37,6 +38,10 @@ func (ds *SenseNovaChat) Chat(ctx context.Context, req Request) (*Response, erro
 	chatReq := ds.initRequest(req)
 	resp, err := ds.sensenova.Chat(ctx, chatReq)
 	if err != nil {
+		if errors.Is(err, sensenova.ErrContextExceedLimit) {
+			return nil, ErrContextExceedLimit
+		}
+
 		return nil, err
 	}
 
@@ -62,6 +67,10 @@ func (ds *SenseNovaChat) Chat(ctx context.Context, req Request) (*Response, erro
 func (ds *SenseNovaChat) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	stream, err := ds.sensenova.ChatStream(ctx, ds.initRequest(req))
 	if err != nil {
+		if errors.Is(err, sensenova.ErrContextExceedLimit) {
+			return nil, ErrContextExceedLimit
+		}
+
 		return nil, err
 	}
 
@@ -95,4 +104,9 @@ func (ds *SenseNovaChat) ChatStream(ctx context.Context, req Request) (<-chan Re
 	}()
 
 	return res, nil
+}
+
+func (ds *SenseNovaChat) MaxContextLength(model string) int {
+	// https://platform.sensenova.cn/#/doc?path=/chat/GetStarted/ModelList.md
+	return 2000
 }

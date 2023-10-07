@@ -103,3 +103,8 @@ func (chat *TencentAIChat) ChatStream(ctx context.Context, req Request) (<-chan 
 
 	return res, nil
 }
+
+func (chat *TencentAIChat) MaxContextLength(model string) int {
+	// https://cloud.tencent.com/document/product/1729/97732
+	return 3000
+}

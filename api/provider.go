@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/api/controllers"
+	"github.com/mylxsw/aidea-server/api/controllers/admin"
 	"github.com/mylxsw/aidea-server/api/controllers/common"
 	"github.com/mylxsw/aidea-server/api/controllers/interapi"
 	v2 "github.com/mylxsw/aidea-server/api/controllers/v2"
@@ -84,6 +85,8 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v1/rooms",           // 数字人管理
 		"/v1/room-galleries",  // 数字人 Gallery
 		"/v1/voice",           // 语音合成
+		"/v1/notifications",   // 通知管理
+		"/v1/admin",           // 管理员接口
 
 		// v2 版本
 		"/v2/creative-island", // 创作岛
@@ -154,7 +157,8 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 			}),
 			mw.AuthHandlerSkippable(
 				func(webCtx web.Context, typ string, credential string) error {
-					needAuth := str.HasPrefixes(webCtx.Request().Raw().URL.Path, needAuthPrefix)
+					urlPath := webCtx.Request().Raw().URL.Path
+					needAuth := str.HasPrefixes(urlPath, needAuthPrefix)
 
 					if needAuth && typ != "Bearer" {
 						return errors.New("invalid auth type")
@@ -199,10 +203,17 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 
 						user := auth.CreateAuthUserFromModel(u)
 
+						// 管理员接口，只对内部用户开放
+						if strings.HasPrefix(urlPath, "/v1/admin/") && !user.InternalUser() {
+							return errors.New("permission denied")
+						}
+
 						webCtx.Provide(func() *auth.User { return user })
 						webCtx.Provide(func() *auth.UserOptional {
 							return &auth.UserOptional{User: user}
 						})
+					} else {
+						webCtx.Provide(func() *auth.UserOptional { return &auth.UserOptional{User: nil} })
 					}
 
 					return nil
@@ -268,6 +279,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		controllers.NewPaymentController(resolver),
 		controllers.NewRoomController(resolver),
 		controllers.NewVoiceController(resolver),
+		controllers.NewNotificationController(resolver),
 	)
 
 	r.Controllers(
@@ -281,6 +293,12 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 	r.Controllers(
 		"/internal",
 		interapi.NewManagerController(resolver),
+	)
+
+	// 管理员接口
+	r.Controllers(
+		"/v1/admin",
+		admin.NewCreativeIslandController(resolver),
 	)
 
 	// 公开访问信息

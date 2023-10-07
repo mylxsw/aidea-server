@@ -238,6 +238,9 @@ alipay-app-public-key: ""
 alipay-root-cert: ""
 # 支付宝公钥文件路径
 alipay-public-key: ""
+# 支付宝通知地址
+alipay-notify-url: https://your_domain/v1/payment/callback/alipay-notify
+alipay-return-url: https://your_domain/public/payment/alipay-return
 
 ######## 钉钉通知配置 ########
 
@@ -267,3 +270,15 @@ cnlocal-vendor: "讯飞星火"
 # 文心千帆支持 model_ernie_bot_turbo、model_badiu_llama2_70b、model_baidu_llama2_7b_cn、
 #    model_baidu_chatglm2_6b_32k、model_baidu_aquila_chat7b、model_baidu_bloomz_7b
 cnlocal-model: "generalv2"
+
+######## 默认文生图、图生图模型 ########
+# 当用户没有选择风格时，默认使用这里配置的模型
+default-img2img-model: lb-realistic-versionv4.0
+default-txt2img-model: sb-stable-diffusion-xl-1024-v1-0
+
+######## 虚拟模型配置 ########
+virtual-model-implementation: "openai"
+virtual-model-nanxian-rel: "gpt-3.5-turbo"
+virtual-model-nanxian-prompt: ""
+virtual-model-beichou-rel: "gpt-4"
+virtual-model-beichou-prompt: ""

@@ -40,7 +40,7 @@ func New(serverURL, apiKey string, client *http.Client) *Anthropic {
 func (ai *Anthropic) Chat(ctx context.Context, req Request) (*Response, error) {
 	req.Stream = false
 	if req.MaxTokensToSample <= 0 {
-		req.MaxTokensToSample = 2000
+		req.MaxTokensToSample = 4000
 	}
 
 	body, err := json.Marshal(req)
@@ -80,7 +80,7 @@ func (ai *Anthropic) Chat(ctx context.Context, req Request) (*Response, error) {
 func (ai *Anthropic) ChatStream(req Request) (<-chan Response, error) {
 	req.Stream = true
 	if req.MaxTokensToSample <= 0 {
-		req.MaxTokensToSample = 2000
+		req.MaxTokensToSample = 4000
 	}
 
 	body, err := json.Marshal(req)

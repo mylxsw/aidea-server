@@ -115,19 +115,18 @@ var AppleProducts = []AppleProduct{
 	// 	Description:    buildDescription(50),
 	// },
 	{
-		ID:            "cc.aicode.aidea.coins_300",
-		Quota:         200,
-		RetailPrice:   300,
-		Name:          "3元得200个", // 3 元
-		ExpirePolicy:  ExpirePolicyWeek,
-		Description:   buildDescription(200),
-		PlatformLimit: PlatformNoneIOS, // 非 iOS 平台专属
+		ID:           "cc.aicode.aidea.coins_300",
+		Quota:        200,
+		RetailPrice:  300,
+		Name:         "3元200个", // 3 元
+		ExpirePolicy: ExpirePolicyWeek,
+		Description:  buildDescription(200),
 	},
 	{
 		ID:           "cc.aicode.aidea.coins_600_2",
-		Quota:        600,
+		Quota:        700,
 		RetailPrice:  600,
-		Name:         "6元得600个", // 6 元
+		Name:         "6元700个", // 6 元
 		ExpirePolicy: ExpirePolicyMonth,
 		Description:  buildDescription(700),
 	},
@@ -135,7 +134,7 @@ var AppleProducts = []AppleProduct{
 		ID:           "cc.aicode.aidea.coins_1200",
 		Quota:        1500,
 		RetailPrice:  1200,
-		Name:         "12元得300个", // 12 元
+		Name:         "12元1500个", // 12 元
 		ExpirePolicy: ExpirePolicyMonth,
 		Description:  buildDescription(1500),
 	},
@@ -143,7 +142,7 @@ var AppleProducts = []AppleProduct{
 		ID:           "cc.aicode.aidea.coins_3800",
 		Quota:        5000,
 		RetailPrice:  3800,
-		Name:         "38元得1200个", // 38 元
+		Name:         "38元5000个", // 38 元
 		ExpirePolicy: ExpirePolicy3Month,
 		Recommend:    true,
 		Description:  buildDescription(5000),
@@ -152,18 +151,18 @@ var AppleProducts = []AppleProduct{
 		ID:           "cc.aicode.aidea.coins_6800_2",
 		Quota:        10000,
 		RetailPrice:  6800,
-		Name:         "68元得3200", // 68 元
+		Name:         "68元10000个", // 68 元
 		ExpirePolicy: ExpirePolicy6Month,
 		Description:  buildDescription(10000),
 	},
-	//{
-	//	ID:           "cc.aicode.aidea.coins_12800",
-	//	Quota:        22800,
-	//	RetailPrice:  12800,
-	//	Name:         "128元得10000个", // 128 元
-	//	ExpirePolicy: ExpirePolicyYear,
-	//	Description:  buildDescription(22800),
-	//},
+	{
+		ID:           "cc.aicode.aidea.coins_12800",
+		Quota:        22800,
+		RetailPrice:  12800,
+		Name:         "128元22800个", // 128 元
+		ExpirePolicy: ExpirePolicyYear,
+		Description:  buildDescription(22800),
+	},
 	// {
 	// 	ID:           "cc.aicode.aidea.coins_19800",
 	// 	Quota:        38000,

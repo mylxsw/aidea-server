@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/starter/app"
@@ -146,6 +147,8 @@ type Config struct {
 	AliPayAppPublicKeyPath  string `json:"alipay_app_public_key_path" yaml:"alipay_app_public_key_path"`
 	AliPayRootCertPath      string `json:"alipay_root_cert_path" yaml:"alipay_root_cert_path"`
 	AliPayPublicKeyPath     string `json:"alipay_public_key_path" yaml:"alipay_public_key_path"`
+	AliPayNotifyURL         string `json:"alipay_notify_url" yaml:"alipay_notify_url"`
+	AliPayReturnURL         string `json:"alipay_return_url" yaml:"alipay_return_url"`
 
 	// 短信通道
 	SMSChannels []string `json:"sms_channels" yaml:"sms_channels"`
@@ -159,6 +162,13 @@ type Config struct {
 	CNLocalOnlyIOS bool   `json:"cn_local_only_ios" yaml:"cn_local_only_ios"`
 	CNLocalModel   string `json:"cn_local_model" yaml:"cn_local_model"`
 	CNLocalVendor  string `json:"cn_local_vendor" yaml:"cn_local_vendor"`
+
+	// 文生图、图生图控制
+	DefaultImageToImageModel string `json:"default_image_to_image_model" yaml:"default_image_to_image_model"`
+	DefaultTextToImageModel  string `json:"default_text_to_image_model" yaml:"default_text_to_image_model"`
+
+	// 虚拟模型
+	VirtualModel VirtualModel `json:"virtual_model" yaml:"virtual_model"`
 }
 
 type Mail struct {
@@ -178,6 +188,14 @@ type AppleSignIn struct {
 
 func (conf *Config) RedisAddr() string {
 	return fmt.Sprintf("%s:%d", conf.RedisHost, conf.RedisPort)
+}
+
+type VirtualModel struct {
+	Implementation string `json:"implementation"`
+	NanxianRel     string `json:"nanxian_rel"`
+	NanxianPrompt  string `json:"nanxian_prompt"`
+	BeichouRel     string `json:"beichou_rel"`
+	BeichouPrompt  string `json:"beichou_prompt"`
 }
 
 func Register(ins *app.App) {
@@ -313,6 +331,8 @@ func Register(ins *app.App) {
 			AliPayAppPublicKeyPath:  ctx.String("alipay-app-public-key"),
 			AliPayRootCertPath:      ctx.String("alipay-root-cert"),
 			AliPayPublicKeyPath:     ctx.String("alipay-public-key"),
+			AliPayNotifyURL:         ctx.String("alipay-notify-url"),
+			AliPayReturnURL:         ctx.String("alipay-return-url"),
 
 			SMSChannels: ctx.StringSlice("sms-channels"),
 
@@ -323,6 +343,17 @@ func Register(ins *app.App) {
 			CNLocalOnlyIOS: ctx.Bool("cnlocal-onlyios"),
 			CNLocalVendor:  ctx.String("cnlocal-vendor"),
 			CNLocalModel:   ctx.String("cnlocal-model"),
+
+			DefaultImageToImageModel: ctx.String("default-img2img-model"),
+			DefaultTextToImageModel:  ctx.String("default-txt2img-model"),
+
+			VirtualModel: VirtualModel{
+				Implementation: ctx.String("virtual-model-implementation"),
+				NanxianRel:     ctx.String("virtual-model-nanxian-rel"),
+				NanxianPrompt:  strings.TrimSpace(ctx.String("virtual-model-nanxian-prompt")),
+				BeichouRel:     ctx.String("virtual-model-beichou-rel"),
+				BeichouPrompt:  strings.TrimSpace(ctx.String("virtual-model-beichou-prompt")),
+			},
 		}
 	})
 }

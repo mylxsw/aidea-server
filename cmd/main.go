@@ -177,6 +177,8 @@ func main() {
 	ins.AddStringFlag("alipay-app-public-key", "path/to/appCertPublicKey_2021004100000000.crt", "支付宝 APP 公钥证书存储路径")
 	ins.AddStringFlag("alipay-root-cert", "path/to/alipayRootCert.crt", "支付宝根证书路径")
 	ins.AddStringFlag("alipay-public-key", "path/to/alipayCertPublicKey_RSA2.crt", "支付宝公钥证书路径")
+	ins.AddStringFlag("alipay-notify-url", "https://ai-api.aicode.cc/v1/payment/callback/alipay-notify", "支付宝支付回调地址")
+	ins.AddStringFlag("alipay-return-url", "https://ai-api.aicode.cc/public/payment/alipay-return", "支付宝支付 return url")
 
 	ins.AddStringSliceFlag("sms-channels", []string{}, "启用的短信通道，支持腾讯云和阿里云: tencent, aliyun，多个值时随机每次发送随机选择")
 
@@ -189,6 +191,15 @@ func main() {
 	ins.AddBoolFlag("cnlocal-onlyios", "国产化模式只对 IOS 系统有效，客户端版本 > 1.0.4")
 	ins.AddStringFlag("cnlocal-vendor", "讯飞星火", "国产化模型服务商，目前支持讯飞星火、灵积、文心千帆、商汤日日新")
 	ins.AddStringFlag("cnlocal-model", "generalv2", "国产化模型名称，讯飞星火支持 generalv2, 灵积支持 qwen-v1, 商汤日日新支持 nova-ptc-xl-v1，文心千帆支持 model_ernie_bot_turbo、model_badiu_llama2_70b、model_baidu_llama2_7b_cn、model_baidu_chatglm2_6b_32k、model_baidu_aquila_chat7b、model_baidu_bloomz_7b")
+
+	ins.AddStringFlag("default-img2img-model", "lb-realistic-versionv4.0", "默认的图生图模型，值取自数据表 image_model.model_id")
+	ins.AddStringFlag("default-txt2img-model", "sb-stable-diffusion-xl-1024-v1-0", "默认的文生图模型，值取自数据表 image_model.model_id")
+
+	ins.AddStringFlag("virtual-model-implementation", "openai", "虚拟模型实现厂商")
+	ins.AddStringFlag("virtual-model-nanxian-rel", "gpt-3.5-turbo", "南贤大模型实现")
+	ins.AddStringFlag("virtual-model-nanxian-prompt", "", "南贤大模型内置提示语")
+	ins.AddStringFlag("virtual-model-beichou-rel", "gpt-4", "北丑大模型实现")
+	ins.AddStringFlag("virtual-model-beichou-prompt", "", "北丑大模型内置提示语")
 
 	// 配置文件
 	config.Register(ins)

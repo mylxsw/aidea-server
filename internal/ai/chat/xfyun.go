@@ -123,3 +123,15 @@ func (chat *XFYunChat) ChatStream(ctx context.Context, req Request) (<-chan Resp
 
 	return res, nil
 }
+
+func (chat *XFYunChat) MaxContextLength(model string) int {
+	// https://www.xfyun.cn/doc/spark/Web.html#_1-%E6%8E%A5%E5%8F%A3%E8%AF%B4%E6%98%8E
+	switch xfyun.Model(model) {
+	case xfyun.ModelGeneralV2:
+		return 8000
+	case xfyun.ModelGeneralV1_5:
+		return 4000
+	}
+
+	return 4000
+}

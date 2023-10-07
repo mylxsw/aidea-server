@@ -50,6 +50,8 @@ const (
 	CreativeStatusProcessing CreativeStatus = 2
 	CreativeStatusSuccess    CreativeStatus = 3
 	CreativeStatusFailed     CreativeStatus = 4
+	// CreativeStatusForbid  资源封禁
+	CreativeStatusForbid CreativeStatus = 5
 )
 
 type CreativeRepo struct {
@@ -301,6 +303,15 @@ func (r *CreativeRepo) UpdateRecordByID(ctx context.Context, userId, id int64, a
 	return err
 }
 
+func (r *CreativeRepo) UpdateRecordStatusByID(ctx context.Context, id int64, answer string, status CreativeStatus) error {
+	q := query.Builder().Where(model.FieldCreativeHistoryId, id)
+	_, err := model.NewCreativeHistoryModel(r.db).Update(ctx, q, model.CreativeHistoryN{
+		Status: null.IntFrom(int64(status)),
+		Answer: null.StringFrom(answer),
+	})
+	return err
+}
+
 func (r *CreativeRepo) UpdateRecordAnswerByTaskID(ctx context.Context, userId int64, taskID string, answer string) error {
 	q := query.Builder().Where(model.FieldCreativeHistoryTaskId, taskID).
 		Where(model.FieldCreativeHistoryUserId, userId)
@@ -441,6 +452,7 @@ func (r *CreativeRepo) FindHistoryRecord(ctx context.Context, userId, id int64) 
 
 	return &CreativeHistoryItem{
 		Id:         item.Id.ValueOrZero(),
+		UserID:     item.UserId.ValueOrZero(),
 		IslandId:   item.IslandId.ValueOrZero(),
 		IslandType: item.IslandType.ValueOrZero(),
 		Arguments:  item.Arguments.ValueOrZero(),
@@ -562,7 +574,7 @@ func (r *CreativeRepo) DeleteHistoryRecord(ctx context.Context, userId, id int64
 
 func (r *CreativeRepo) UserGallery(ctx context.Context, userID int64, islandModel string, limit int64) ([]CreativeHistoryItem, error) {
 	q := query.Builder().
-		Where(model.FieldCreativeHistoryStatus, int64(CreativeStatusSuccess)).
+		// Where(model.FieldCreativeHistoryStatus, int64(CreativeStatusSuccess)).
 		Where(model.FieldCreativeHistoryIslandType, int64(IslandTypeImage)).
 		Select(
 			model.FieldCreativeHistoryId,
@@ -894,7 +906,8 @@ func (r *CreativeRepo) Model(ctx context.Context, vendor, realModel string) (*Im
 func (r *CreativeRepo) Models(ctx context.Context) ([]ImageModel, error) {
 	q := query.Builder().
 		Where(model.FieldImageModelStatus, 1).
-		OrderBy(model.FieldImageModelId, "DESC")
+		OrderBy(model.FieldImageModelVendor, "ASC").
+		OrderBy(model.FieldImageModelModelName, "ASC")
 
 	items, err := model.NewImageModelModel(r.db).Get(ctx, q)
 	if err != nil {
@@ -918,6 +931,7 @@ func (r *CreativeRepo) Models(ctx context.Context) ([]ImageModel, error) {
 
 type ImageFilter struct {
 	model.ImageFilter
+	Vendor    string          `json:"-"`
 	ImageMeta ImageFilterMeta `json:"meta"`
 }
 
@@ -928,6 +942,9 @@ type ImageFilterMeta struct {
 	// UseTemplateWhenNotContain 当 prompt 不包含 UseTemplateWhenNotContain 时，自动应用提示语模板
 	UseTemplateWhenNotContain []string `json:"use_template_when_not_contain,omitempty"`
 	Template                  string   `json:"template,omitempty"`
+	// Mode 用于图生图（ControlNet）
+	// 可选值："canny", "mlsd", "pose", "scribble"
+	Mode string `json:"mode,omitempty"`
 }
 
 func (meta ImageFilterMeta) ApplyTemplate(prompt string) string {
@@ -954,6 +971,25 @@ func (meta ImageFilterMeta) ShouldUseTemplate(prompt string) bool {
 	return len(containsWords) == 0
 }
 
+// modelVendors 查询所有的模型（模型 id->模型服务商）
+func (r *CreativeRepo) modelVendors(ctx context.Context) (map[string]string, error) {
+	q := query.Builder().
+		Where(model.FieldImageModelStatus, 1).
+		Select(model.FieldImageModelModelId, model.FieldImageModelVendor)
+
+	items, err := model.NewImageModelModel(r.db).Get(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make(map[string]string)
+	for _, item := range items {
+		ret[item.ModelId.ValueOrZero()] = item.Vendor.ValueOrZero()
+	}
+
+	return ret, nil
+}
+
 func (r *CreativeRepo) Filters(ctx context.Context) ([]ImageFilter, error) {
 	q := query.Builder().
 		Where(model.FieldImageFilterStatus, 1).
@@ -962,6 +998,16 @@ func (r *CreativeRepo) Filters(ctx context.Context) ([]ImageFilter, error) {
 	items, err := model.NewImageFilterModel(r.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
+	}
+
+	modelVenders, err := r.modelVendors(ctx)
+	if err == nil {
+		// 过滤掉模型不存在的风格
+		items = array.Filter(items, func(item model.ImageFilterN, _ int) bool {
+			return modelVenders[item.ModelId.ValueOrZero()] != ""
+		})
+	} else {
+		log.Errorf("get model venders failed: %v", err)
 	}
 
 	return array.Map(items, func(item model.ImageFilterN, _ int) ImageFilter {
@@ -975,6 +1021,7 @@ func (r *CreativeRepo) Filters(ctx context.Context) ([]ImageFilter, error) {
 
 		return ImageFilter{
 			ImageFilter: m,
+			Vendor:      modelVenders[item.ModelId.ValueOrZero()],
 			ImageMeta:   meta,
 		}
 	}), nil
@@ -993,6 +1040,8 @@ func (r *CreativeRepo) Filter(ctx context.Context, id int64) (*ImageFilter, erro
 
 		return nil, err
 	}
+
+	// TODO 暂时无用，但是为了接口完整性，这里应该查询模型服务商
 
 	m := item.ToImageFilter()
 	var meta ImageFilterMeta

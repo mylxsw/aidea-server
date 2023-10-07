@@ -23,7 +23,7 @@ func NewAlipay(conf *config.Config) (*AlipayImpl, error) {
 			return nil, err
 		}
 
-		client, err := alipay.NewClient("2021004101661425", string(privateKeyBytes), prod)
+		client, err := alipay.NewClient(conf.AliPayAppID, string(privateKeyBytes), prod)
 		if err != nil {
 			return nil, err
 		}
@@ -31,8 +31,8 @@ func NewAlipay(conf *config.Config) (*AlipayImpl, error) {
 		client.SetLocation(alipay.LocationShanghai).
 			SetCharset(alipay.UTF8).
 			SetSignType(alipay.RSA2).
-			SetNotifyUrl("https://ai-api.aicode.cc/v1/payment/callback/alipay-notify").
-			SetReturnUrl("https://ai-api.aicode.cc/public/payment/alipay-return")
+			SetNotifyUrl(conf.AliPayNotifyURL).
+			SetReturnUrl(conf.AliPayReturnURL)
 
 		alipayPublicKeyBytes, err := os.ReadFile(conf.AliPayPublicKeyPath)
 		if err != nil {

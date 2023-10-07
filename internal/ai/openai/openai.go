@@ -81,7 +81,7 @@ func WordCountForChatCompletionMessages(messages []openai.ChatCompletionMessage)
 }
 
 // NumTokensFromMessages 计算对话上下文的 token 数量
-func NumTokensFromMessages(messages []openai.ChatCompletionMessage, model string) (num_tokens int, err error) {
+func NumTokensFromMessages(messages []openai.ChatCompletionMessage, model string) (numTokens int, err error) {
 	// 所有非 gpt-3.5-turbo/gpt-4 的模型，都按照 gpt-3.5 的方式处理
 	if !array.In(model, []string{"gpt-3.5-turbo", "gpt-4"}) {
 		model = "gpt-3.5-turbo"
@@ -92,30 +92,30 @@ func NumTokensFromMessages(messages []openai.ChatCompletionMessage, model string
 		return 0, fmt.Errorf("EncodingForModel: %v", err)
 	}
 
-	var tokens_per_message int
-	var tokens_per_name int
+	var tokensPerMessage int
+	var tokensPerName int
 	if strings.HasPrefix(model, "gpt-3.5-turbo") {
-		tokens_per_message = 4
-		tokens_per_name = -1
+		tokensPerMessage = 4
+		tokensPerName = -1
 	} else if strings.HasPrefix(model, "gpt-4") {
-		tokens_per_message = 3
-		tokens_per_name = 1
+		tokensPerMessage = 3
+		tokensPerName = 1
 	} else {
-		tokens_per_message = 3
-		tokens_per_name = 1
+		tokensPerMessage = 3
+		tokensPerName = 1
 	}
 
 	for _, message := range messages {
-		num_tokens += tokens_per_message
-		num_tokens += len(tkm.Encode(message.Content, nil, nil))
-		num_tokens += len(tkm.Encode(message.Role, nil, nil))
-		num_tokens += len(tkm.Encode(message.Name, nil, nil))
+		numTokens += tokensPerMessage
+		numTokens += len(tkm.Encode(message.Content, nil, nil))
+		numTokens += len(tkm.Encode(message.Role, nil, nil))
+		numTokens += len(tkm.Encode(message.Name, nil, nil))
 		if message.Name != "" {
-			num_tokens += tokens_per_name
+			numTokens += tokensPerName
 		}
 	}
-	num_tokens += 3
-	return num_tokens, nil
+	numTokens += 3
+	return numTokens, nil
 }
 
 type OpenAI struct {
@@ -191,7 +191,7 @@ func (client *OpenAI) QuickAsk(ctx context.Context, prompt string, question stri
 		return question, nil
 	}
 
-	messages := []openai.ChatCompletionMessage{}
+	var messages []openai.ChatCompletionMessage
 	if prompt != "" {
 		messages = append(messages, openai.ChatCompletionMessage{Content: prompt, Role: openai.ChatMessageRoleSystem})
 	}
