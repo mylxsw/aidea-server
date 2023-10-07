@@ -103,15 +103,15 @@ func (ctl *InfoController) Capabilities(webCtx web.Context, client *auth.ClientI
 	enableOpenAI := ctl.conf.EnableOpenAI
 	homeModels := []HomeModel{
 		{
-			Name:     "南贤",
-			ModelID:  "nanxian",
+			Name:     "GPT-3.5",
+			ModelID:  "gpt-3.5-turbo",
 			Desc:     "速度快，成本低",
 			Color:    "FF67AC5C",
 			Powerful: false,
 		},
 		{
-			Name:     "北丑",
-			ModelID:  "beichou",
+			Name:     "GPT-4",
+			ModelID:  "gpt-4",
 			Desc:     "能力强，更精准",
 			Color:    "FF714BD7",
 			Powerful: true,
