@@ -96,12 +96,6 @@ go build -o build/debug/aidea-server cmd/main.go
 
 如果你不想使用托管的云服务，可以自己部署服务端，[部署请看这里](./docs/deploy.md)。
 
-## 如果对你有帮助，请我喝杯酒吧
-
-微信 | 支付宝
-:----------:|:---------:
- ![image](https://github.com/mylxsw/aidea/assets/2330911/46e2242b-17bc-41ff-bebe-b5cc466b7f17) | ![image](https://github.com/mylxsw/aidea/assets/2330911/f3c85d4a-bea8-4a76-b582-c673613f76cb)
-
 ## Star History
 
 <a href="https://star-history.com/#mylxsw/aidea-server">
