@@ -52,6 +52,11 @@ func (chat *AnthropicChat) initRequest(req Request) anthropic.Request {
 		contextMessages = append(finalSystemMessages, contextMessages...)
 	}
 
+	// Bugfix: prompt must start with "\n\nHuman:" turn
+	if len(contextMessages) > 0 && contextMessages[0].Role != "user" {
+		contextMessages = contextMessages[1:]
+	}
+
 	return anthropic.NewRequest(anthropic.Model(req.Model), contextMessages)
 }
 
@@ -97,4 +102,10 @@ func (chat *AnthropicChat) ChatStream(ctx context.Context, req Request) (<-chan 
 	}()
 
 	return res, nil
+}
+
+func (chat *AnthropicChat) MaxContextLength(model string) int {
+	// https://docs.anthropic.com/claude/reference/selecting-a-model
+	// 这里减掉 4000 用于输出
+	return 100000 - 4000
 }

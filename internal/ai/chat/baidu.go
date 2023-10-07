@@ -105,3 +105,31 @@ func (chat *BaiduAIChat) ChatStream(ctx context.Context, req Request) (<-chan Re
 
 	return res, nil
 }
+
+func (chat *BaiduAIChat) MaxContextLength(model string) int {
+	switch baidu.Model(model) {
+	case baidu.ModelErnieBot:
+		// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/jlil56u11
+		return 3000
+	case baidu.ModelErnieBotTurbo:
+		// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/4lilb2lpf
+		return 7000
+	case baidu.ModelLlama2_70b:
+		// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/8lkjfhiyt
+		return 3000
+	case baidu.ModelLlama2_7b_CN:
+		// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Sllyztytp
+		return 3000
+	case baidu.ModelChatGLM2_6B_32K:
+		// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Bllz001ff
+		return 3000
+	case baidu.ModelAquilaChat7B:
+		// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/ollz02e7i
+		return 3000
+	case baidu.ModelBloomz7B:
+		// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/Jljcadglj
+		return 3000
+	}
+
+	return 3000
+}

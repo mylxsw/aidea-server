@@ -2,8 +2,10 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"strings"
 
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
@@ -11,6 +13,10 @@ import (
 	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
 	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
 	"github.com/mylxsw/go-utils/array"
+)
+
+var (
+	ErrContextExceedLimit = errors.New("上下文长度超过最大限制")
 )
 
 type Message struct {
@@ -21,24 +27,27 @@ type Message struct {
 type Messages []Message
 
 func (ms Messages) Fix() Messages {
-	last := ms[len(ms)-1]
+	msgs := ms
+	// 如果最后一条消息不是用户消息，则补充一条用户消息
+	last := msgs[len(msgs)-1]
 	if last.Role != "user" {
 		last = Message{
 			Role:    "user",
 			Content: "继续",
 		}
-		ms = append(ms, last)
+		msgs = append(msgs, last)
 	}
 
-	systemMsgs := array.Filter(ms, func(m Message, _ int) bool { return m.Role == "system" })
+	// 过滤掉 system 消息，因为 system 消息需要在每次对话中保留，不受上下文长度限制
+	systemMsgs := array.Filter(msgs, func(m Message, _ int) bool { return m.Role == "system" })
 	if len(systemMsgs) > 0 {
-		ms = array.Filter(ms, func(m Message, _ int) bool { return m.Role != "system" })
+		msgs = array.Filter(msgs, func(m Message, _ int) bool { return m.Role != "system" })
 	}
 
 	finalMessages := make([]Message, 0)
 	var lastRole string
 
-	for _, m := range array.Reverse(ms) {
+	for _, m := range array.Reverse(msgs) {
 		if m.Role == lastRole {
 			continue
 		}
@@ -60,6 +69,64 @@ type Request struct {
 	Messages  Messages `json:"messages"`
 	MaxTokens int      `json:"max_tokens,omitempty"`
 	N         int      `json:"n,omitempty"` // 复用作为 room_id
+
+	// 业务定制字段
+	RoomID int64 `json:"-"`
+}
+
+type FixResult struct {
+	Request     Request
+	InputTokens int
+}
+
+func (req Request) Fix(chat Chat) (*FixResult, error) {
+	// 去掉模型名称前缀
+	modelSegs := strings.Split(req.Model, ":")
+	if len(modelSegs) > 1 {
+		modelSegs = modelSegs[1:]
+	}
+
+	model := strings.Join(modelSegs, ":")
+	req.Model = model
+
+	// 获取 room id
+	// 这里复用了参数 N
+	req.RoomID = int64(req.N)
+	if req.N != 0 {
+		req.N = 0
+	}
+
+	// 过滤掉内容为空的 message
+	req.Messages = array.Filter(req.Messages, func(item Message, _ int) bool { return strings.TrimSpace(item.Content) != "" })
+
+	// 自动缩减上下文长度至满足模型要求的最大长度，尽可能避免出现超过模型上下文长度的问题
+	messages, inputTokens, err := ReduceMessageContext(
+		req.Messages,
+		req.Model,
+		chat.MaxContextLength(req.Model),
+	)
+	if err != nil {
+		return nil, errors.New("超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度")
+	}
+
+	req.Messages = messages
+
+	return &FixResult{
+		Request:     req,
+		InputTokens: inputTokens,
+	}, nil
+}
+
+func (req Request) ResolveCalFeeModel(conf *config.Config) string {
+	if req.Model == "nanxian" {
+		return conf.VirtualModel.NanxianRel
+	}
+
+	if req.Model == "beichou" {
+		return conf.VirtualModel.BeichouRel
+	}
+
+	return req.Model
 }
 
 type Response struct {
@@ -72,11 +139,15 @@ type Response struct {
 }
 
 type Chat interface {
+	// Chat 以请求-响应的方式进行对话
 	Chat(ctx context.Context, req Request) (*Response, error)
+	// ChatStream 以流的方式进行对话
 	ChatStream(ctx context.Context, req Request) (<-chan Response, error)
+	// MaxContextLength 获取模型的最大上下文长度
+	MaxContextLength(model string) int
 }
 
-type ChatImp struct {
+type Imp struct {
 	openAI      *OpenAIChat
 	baiduAI     *BaiduAIChat
 	dashScope   *DashScopeChat
@@ -84,13 +155,52 @@ type ChatImp struct {
 	snAI        *SenseNovaChat
 	tencentAI   *TencentAIChat
 	anthropicAI *AnthropicChat
+	virtual     *VirtualChat
 }
 
-func NewChat(openAI *OpenAIChat, baiduAI *BaiduAIChat, dashScope *DashScopeChat, xfyunAI *XFYunChat, sn *SenseNovaChat, tencentAI *TencentAIChat, anthropicAI *AnthropicChat) Chat {
-	return &ChatImp{openAI: openAI, baiduAI: baiduAI, dashScope: dashScope, xfyunAI: xfyunAI, snAI: sn, tencentAI: tencentAI, anthropicAI: anthropicAI}
+func NewChat(
+	conf *config.Config,
+	openAI *OpenAIChat,
+	baiduAI *BaiduAIChat,
+	dashScope *DashScopeChat,
+	xfyunAI *XFYunChat,
+	sn *SenseNovaChat,
+	tencentAI *TencentAIChat,
+	anthropicAI *AnthropicChat,
+) Chat {
+	var virtualImpl Chat
+	switch strings.ToLower(conf.VirtualModel.Implementation) {
+	case "openai":
+		virtualImpl = openAI
+	case "baidu", "文心千帆":
+		virtualImpl = baiduAI
+	case "dashscope", "灵积":
+		virtualImpl = dashScope
+	case "xfyun", "讯飞星火":
+		virtualImpl = xfyunAI
+	case "sense_nova", "商汤日日新":
+		virtualImpl = sn
+	case "tencent", "腾讯":
+		virtualImpl = tencentAI
+	case "anthropic":
+		virtualImpl = anthropicAI
+	default:
+		virtualImpl = openAI
+	}
+
+	return &Imp{
+		openAI:      openAI,
+		baiduAI:     baiduAI,
+		dashScope:   dashScope,
+		xfyunAI:     xfyunAI,
+		snAI:        sn,
+		tencentAI:   tencentAI,
+		anthropicAI: anthropicAI,
+		virtual:     NewVirtualChat(virtualImpl, conf.VirtualModel),
+	}
 }
 
-func (ai *ChatImp) selectImp(model string) Chat {
+func (ai *Imp) selectImp(model string) Chat {
 	if strings.HasPrefix(model, "灵积:") {
 		return ai.dashScope
 	}
@@ -113,6 +223,10 @@ func (ai *ChatImp) selectImp(model string) Chat {
 
 	if strings.HasPrefix(model, "Anthropic:") {
 		return ai.anthropicAI
+	}
+
+	if strings.HasPrefix(model, "virtual:") {
+		return ai.virtual
 	}
 
 	// TODO 根据模型名称判断使用哪个 AI
@@ -143,15 +257,22 @@ func (ai *ChatImp) selectImp(model string) Chat {
 	case string(anthropic.ModelClaude2), string(anthropic.ModelClaudeInstant):
 		// Anthropic
 		return ai.anthropicAI
+	case ModelNanXian, ModelBeiChou:
+		// 虚拟模型
+		return ai.virtual
 	}
 
 	return ai.openAI
 }
 
-func (ai *ChatImp) Chat(ctx context.Context, req Request) (*Response, error) {
+func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
 	return ai.selectImp(req.Model).Chat(ctx, req)
 }
 
-func (ai *ChatImp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
+func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	return ai.selectImp(req.Model).ChatStream(ctx, req)
+}
+
+func (ai *Imp) MaxContextLength(model string) int {
+	return ai.selectImp(model).MaxContextLength(model)
 }

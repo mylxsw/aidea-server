@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
@@ -15,6 +16,7 @@ type Provider struct{}
 
 func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(func(
+		conf *config.Config,
 		oai *openai.OpenAI,
 		bai baidu.BaiduAI,
 		ds *dashscope.DashScope,
@@ -24,6 +26,7 @@ func (Provider) Register(binder infra.Binder) {
 		anthai *anthropic.Anthropic,
 	) Chat {
 		return NewChat(
+			conf,
 			NewOpenAIChat(oai),
 			NewBaiduAIChat(bai),
 			NewDashScopeChat(ds),

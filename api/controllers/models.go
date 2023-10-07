@@ -245,6 +245,7 @@ func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web
 	models = append(models, anthropicModels(ctl.conf)...)
 	models = append(models, googleModels()...)
 	models = append(models, chinaModels(ctl.conf)...)
+	models = append(models, aideaModels()...)
 
 	models = array.Filter(models, func(item Model, _ int) bool {
 		//if item.Disabled && client.Platform == "ios" {
@@ -701,6 +702,29 @@ func anthropicModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.5",
+		},
+	}
+}
+
+func aideaModels() []Model {
+	return []Model{
+		{
+			ID:          "virtual:nanxian",
+			Name:        "南贤大模型",
+			Description: "速度快，成本低",
+			Category:    "virtual",
+			IsChat:      true,
+			VersionMin:  "1.0.5",
+		},
+		{
+			ID:          "virtual:beichou",
+			Name:        "北丑大模型",
+			Description: "能力强，更精准",
+			Category:    "virtual",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.5",
+			// Tag:         "实验性功能",
 		},
 	}
 }

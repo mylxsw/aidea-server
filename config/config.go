@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/starter/app"
@@ -165,6 +166,9 @@ type Config struct {
 	// 文生图、图生图控制
 	DefaultImageToImageModel string `json:"default_image_to_image_model" yaml:"default_image_to_image_model"`
 	DefaultTextToImageModel  string `json:"default_text_to_image_model" yaml:"default_text_to_image_model"`
+
+	// 虚拟模型
+	VirtualModel VirtualModel `json:"virtual_model" yaml:"virtual_model"`
 }
 
 type Mail struct {
@@ -184,6 +188,14 @@ type AppleSignIn struct {
 
 func (conf *Config) RedisAddr() string {
 	return fmt.Sprintf("%s:%d", conf.RedisHost, conf.RedisPort)
+}
+
+type VirtualModel struct {
+	Implementation string `json:"implementation"`
+	NanxianRel     string `json:"nanxian_rel"`
+	NanxianPrompt  string `json:"nanxian_prompt"`
+	BeichouRel     string `json:"beichou_rel"`
+	BeichouPrompt  string `json:"beichou_prompt"`
 }
 
 func Register(ins *app.App) {
@@ -334,6 +346,14 @@ func Register(ins *app.App) {
 
 			DefaultImageToImageModel: ctx.String("default-img2img-model"),
 			DefaultTextToImageModel:  ctx.String("default-txt2img-model"),
+
+			VirtualModel: VirtualModel{
+				Implementation: ctx.String("virtual-model-implementation"),
+				NanxianRel:     ctx.String("virtual-model-nanxian-rel"),
+				NanxianPrompt:  strings.TrimSpace(ctx.String("virtual-model-nanxian-prompt")),
+				BeichouRel:     ctx.String("virtual-model-beichou-rel"),
+				BeichouPrompt:  strings.TrimSpace(ctx.String("virtual-model-beichou-prompt")),
+			},
 		}
 	})
 }
