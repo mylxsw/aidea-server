@@ -273,7 +273,7 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		ShowNegativeText:         true,
 		ShowSeed:                 user.InternalUser() && user.WithLab,
 		ShowImageCount:           user.InternalUser() && user.WithLab,
-		ShowPromptForImage2Image: user.InternalUser() && user.WithLab,
+		ShowPromptForImage2Image: true,
 		Filters:                  filters,
 		VendorModels:             models,
 		AllowUpscaleBy:           []string{"x1", "x2", "x4"},

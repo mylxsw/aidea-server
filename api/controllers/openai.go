@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
@@ -24,7 +23,6 @@ import (
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
-	"github.com/mylxsw/go-utils/array"
 	"github.com/mylxsw/go-utils/ternary"
 	"github.com/sashabaranov/go-openai"
 )
@@ -161,19 +159,13 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
-	// 过滤掉内容为空的 message
-	req.Messages = array.Filter(req.Messages, func(item chat.Message, _ int) bool { return strings.TrimSpace(item.Content) != "" })
-	// 自动缩减上下文长度至满足模型要求的最大长度，尽可能避免出现超过模型上下文长度的问题
-	var inputTokens int
-	var err error
-	if req.Messages, inputTokens, err = chat.ReduceMessageContext(
-		req.Messages,
-		req.Model,
-		ctl.chat.MaxContextLength(req.Model),
-	); err != nil {
-		webCtx.JSONError(common.Text(webCtx, ctl.translater, "超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度"), http.StatusBadRequest).CreateResponse()
+	fixRes, err := req.Fix(ctl.chat)
+	if err != nil {
+		webCtx.JSONError(err.Error(), http.StatusBadRequest).CreateResponse()
 		return
 	}
+
+	req = fixRes.Request
 
 	// 免费模型
 	leftCount, maxFreeCount := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, req.Model)
@@ -189,7 +181,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 		// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
 		// 假设当前响应消耗 2 个智慧果
-		restQuota := quota.Quota - quota.Used - coins.GetOpenAITextCoins(req.Model, int64(inputTokens)) - 2
+		restQuota := quota.Quota - quota.Used - coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(fixRes.InputTokens)) - 2
 		if restQuota <= 0 {
 			if maxFreeCount > 0 {
 				webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已用完，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
@@ -207,13 +199,6 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
-	// 获取 room id
-	// 这里复用了参数 N
-	roomID := int64(req.N)
-	if req.N != 0 {
-		req.N = 0
-	}
-
 	// 写入用户消息
 	var questionID int64
 	if ctl.conf.EnableRecordChat {
@@ -221,7 +206,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			UserID:  user.ID,
 			Message: req.Messages[len(req.Messages)-1].Content,
 			Role:    repo.MessageRoleUser,
-			RoomID:  roomID,
+			RoomID:  req.RoomID,
 			Model:   req.Model,
 		})
 		if err != nil {
@@ -246,13 +231,6 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	modelSegs := strings.Split(req.Model, ":")
-	if len(modelSegs) > 1 {
-		modelSegs = modelSegs[1:]
-	}
-
-	model := strings.Join(modelSegs, ":")
-
 	defer func() {
 		messages := append(req.Messages, chat.Message{
 			Role:    "assistant",
@@ -260,7 +238,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		})
 
 		realWordCount, _ := chat.MessageTokenCount(messages, req.Model)
-		quotaConsumed := coins.GetOpenAITextCoins(model, int64(realWordCount))
+		quotaConsumed := coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(realWordCount))
 
 		// 返回自定义控制信息，告诉客户端当前消耗情况
 		if isFreeRequest {
@@ -277,7 +255,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 				Role:          repo.MessageRoleAssistant,
 				QuotaConsumed: quotaConsumed,
 				TokenConsumed: int64(realWordCount),
-				RoomID:        roomID,
+				RoomID:        req.RoomID,
 				Model:         req.Model,
 				PID:           questionID,
 			})
@@ -292,6 +270,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			finalMsg.Token = int64(realWordCount)
 		}
 
+		// final 消息为定制消息，用于告诉 AIdea 客户端当前回话的资源消耗情况以及服务端信息
 		finalWord := openai.ChatCompletionStreamResponse{
 			ID: "final",
 			Choices: []openai.ChatCompletionStreamChoice{
@@ -304,7 +283,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 					},
 				},
 			},
-			Model: model,
+			Model: req.Model,
 		}
 
 		data, _ := json.Marshal(finalWord)
@@ -312,12 +291,14 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			log.Warningf("write response failed: %v", err)
 		}
 
+		// 写入结束标志
 		_, _ = w.Write([]byte("data: [DONE]\n\n"))
 
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()
 		}
 
+		// 更新用户免费聊天次数
 		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
@@ -328,13 +309,15 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			}).Errorf("update free chat count failed: %s", err)
 		}
 
+		// 扣除智慧果
 		if !isFreeRequest {
-			if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo.NewQuotaUsedMeta("chat", model)); err != nil {
+			if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo.NewQuotaUsedMeta("chat", req.Model)); err != nil {
 				log.Errorf("used quota add failed: %s", err)
 			}
 		}
 	}()
 
+	// 生成 SSE 流
 	id := 0
 	for res := range stream {
 		id++
@@ -347,7 +330,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		resp := openai.ChatCompletionStreamResponse{
 			ID:      strconv.Itoa(id),
 			Created: time.Now().Unix(),
-			Model:   model,
+			Model:   req.Model,
 			Choices: []openai.ChatCompletionStreamChoice{
 				{
 					Delta: openai.ChatCompletionStreamChoiceDelta{
