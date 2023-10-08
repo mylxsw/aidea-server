@@ -47,7 +47,7 @@ func NewSMSVerifyCodeTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeSMSVerifyCodeSend, data)
 }
 
-func BuildSMSVerifyCodeSendHandler(sender *sms.Client, queueRepo *repo.QueueRepo) TaskHandler {
+func BuildSMSVerifyCodeSendHandler(sender *sms.Client, rep *repo.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload SMSVerifyCodePayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -66,7 +66,7 @@ func BuildSMSVerifyCodeSendHandler(sender *sms.Client, queueRepo *repo.QueueRepo
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -84,7 +84,7 @@ func BuildSMSVerifyCodeSendHandler(sender *sms.Client, queueRepo *repo.QueueRepo
 			return err
 		}
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,

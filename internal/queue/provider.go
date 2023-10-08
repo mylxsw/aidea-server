@@ -35,14 +35,12 @@ func (Provider) Boot(app infra.Resolver) {
 		leapClient *leap.LeapAI,
 		fromstonClient *fromston.Fromston,
 		up *uploader.Uploader,
-		quotaRepo *repo.QuotaRepo,
-		queueRepo *repo.QueueRepo,
-		creativeRepo *repo.CreativeRepo,
 		queue *Queue,
+		rep *repo.Repository,
 	) {
 		// 注册异步 PendingTask 任务处理器
-		manager.Register(TypeLeapAICompletion, leapAsyncJobProcesser(leapClient, up, quotaRepo, queueRepo, creativeRepo))
-		manager.Register(TypeFromStonCompletion, fromStonAsyncJobProcesser(queue, fromstonClient, up, quotaRepo, queueRepo, creativeRepo))
+		manager.Register(TypeLeapAICompletion, leapAsyncJobProcesser(leapClient, up, rep))
+		manager.Register(TypeFromStonCompletion, fromStonAsyncJobProcesser(queue, fromstonClient, up, rep))
 	})
 }
 
@@ -62,6 +60,7 @@ const (
 	TypePayment               = "payment"
 	TypeSignup                = "signup"
 	TypeBindPhone             = "bind_phone"
+	TypeGroupChat             = "group_chat"
 )
 
 func ResolveTaskType(category, model string) string {

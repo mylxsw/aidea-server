@@ -66,7 +66,7 @@ func NewStabilityAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeStabilityAICompletion, data)
 }
 
-func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translator youdao.Translater, up *uploader.Uploader, quotaRepo *repo.QuotaRepo, queueRepo *repo.QueueRepo, creativeRepo *repo.CreativeRepo, oai *openai.OpenAI) TaskHandler {
+func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload StabilityAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -74,7 +74,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			queueRepo.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -85,7 +85,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
 					Status: repo.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
@@ -94,7 +94,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -135,7 +135,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 				Vendor:         "stabilityai",
 				Model:          payload.Model,
 			},
-			creativeRepo,
+			rep.Creative,
 			oai, translator,
 		)
 
@@ -220,12 +220,12 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 			updateReq.ExtArguments = &ext
 		}
 
-		if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
+		if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 			return err
 		}
 
-		if err := quotaRepo.QuotaConsume(
+		if err := rep.Quota.QuotaConsume(
 			ctx,
 			payload.GetUID(),
 			payload.GetQuota(),
@@ -234,7 +234,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 			log.Errorf("used quota add failed: %s", err)
 		}
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,

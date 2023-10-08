@@ -53,7 +53,7 @@ func NewSignupTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeSignup, data)
 }
 
-func BuildSignupHandler(userRepo *repo.UserRepo, quotaRepo *repo.QuotaRepo, eventRepo *repo.EventRepo, queueRepo *repo.QueueRepo, roomRepo *repo.RoomRepo, mailer *mail.Sender, ding *dingding.Dingding) TaskHandler {
+func BuildSignupHandler(rep *repo.Repository, mailer *mail.Sender, ding *dingding.Dingding) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload SignupPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -72,7 +72,7 @@ func BuildSignupHandler(userRepo *repo.UserRepo, quotaRepo *repo.QuotaRepo, even
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -83,14 +83,14 @@ func BuildSignupHandler(userRepo *repo.UserRepo, quotaRepo *repo.QuotaRepo, even
 					log.With(task).Errorf("update queue status failed: %s", err)
 				}
 
-				if err := eventRepo.UpdateEvent(ctx, payload.EventID, repo.EventStatusFailed); err != nil {
+				if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo.EventStatusFailed); err != nil {
 					log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("update event status failed: %s", err)
 				}
 			}
 		}()
 
 		// 查询事件记录
-		event, err := eventRepo.GetEvent(ctx, payload.EventID)
+		event, err := rep.Event.GetEvent(ctx, payload.EventID)
 		if err != nil {
 			if err == repo.ErrNotFound {
 				log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("event not found")
@@ -122,35 +122,35 @@ func BuildSignupHandler(userRepo *repo.UserRepo, quotaRepo *repo.QuotaRepo, even
 		// 2. 如果是手机注册，直接赠送智慧果
 		if eventPayload.From == repo.UserCreatedEventSourceEmail {
 			if coins.SignupGiftCoins > 0 {
-				if _, err := quotaRepo.AddUserQuota(ctx, eventPayload.UserID, coins.SignupGiftCoins, time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
+				if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, coins.SignupGiftCoins, time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
 					log.WithFields(log.Fields{"user_id": eventPayload.UserID}).Errorf("create user quota failed: %s", err)
 				}
 			}
 		} else if eventPayload.From == repo.UserCreatedEventSourcePhone {
-			if _, err := quotaRepo.AddUserQuota(ctx, eventPayload.UserID, coins.BindPhoneGiftCoins, time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
+			if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, coins.BindPhoneGiftCoins, time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
 				log.WithFields(log.Fields{"user_id": eventPayload.UserID}).Errorf("create user quota failed: %s", err)
 			}
 		}
 
 		// 为用户生成自己的邀请码
-		if err := userRepo.GenerateInviteCode(ctx, payload.UserID); err != nil {
+		if err := rep.User.GenerateInviteCode(ctx, payload.UserID); err != nil {
 			log.WithFields(log.Fields{"user_id": payload.UserID}).Errorf("生成邀请码失败: %s", err)
 		}
 
 		// 更新用户的邀请信息
 		if payload.InviteCode != "" {
-			inviteByUser, err := userRepo.GetUserByInviteCode(ctx, payload.InviteCode)
+			inviteByUser, err := rep.User.GetUserByInviteCode(ctx, payload.InviteCode)
 			if err != nil {
 				if err != repo.ErrNotFound {
 					log.With(payload).Errorf("通过邀请码查询用户失败: %s", err)
 				}
 			} else {
-				if err := userRepo.UpdateUserInviteBy(ctx, eventPayload.UserID, inviteByUser.Id); err != nil {
+				if err := rep.User.UpdateUserInviteBy(ctx, eventPayload.UserID, inviteByUser.Id); err != nil {
 					log.WithFields(log.Fields{"user_id": eventPayload.UserID, "invited_by": inviteByUser.Id}).Errorf("更新用户邀请信息失败: %s", err)
 				} else {
 					if eventPayload.From == repo.UserCreatedEventSourcePhone {
 						// 为邀请人和被邀请人分配智慧果
-						inviteGiftHandler(ctx, quotaRepo, eventPayload.UserID, inviteByUser.Id)
+						inviteGiftHandler(ctx, rep.Quota, eventPayload.UserID, inviteByUser.Id)
 					}
 				}
 			}
@@ -160,7 +160,7 @@ func BuildSignupHandler(userRepo *repo.UserRepo, quotaRepo *repo.QuotaRepo, even
 		//createInitialRooms(ctx, roomRepo, eventPayload.UserID)
 
 		// 更新事件状态
-		if err := eventRepo.UpdateEvent(ctx, payload.EventID, repo.EventStatusSucceed); err != nil {
+		if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo.EventStatusSucceed); err != nil {
 			log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("update event status failed: %s", err)
 		}
 
@@ -176,7 +176,7 @@ func BuildSignupHandler(userRepo *repo.UserRepo, quotaRepo *repo.QuotaRepo, even
 		//	}
 		//}()
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,
