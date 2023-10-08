@@ -52,6 +52,9 @@ var coinTables = map[string]CoinTable{
 
 		// 腾讯
 		"hyllm": 15, // valid 腾讯混元大模型 ¥0.10/1K tokens
+
+		// 百川 https://platform.baichuan-ai.com/price
+		"Baichuan2-53B": 3, // valid 百川 53b ¥0.02/1K tokens
 	},
 	"deepai": {
 		"default": 30, // valid

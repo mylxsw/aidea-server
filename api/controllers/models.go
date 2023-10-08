@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
 
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
@@ -660,6 +661,18 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.5",
+		})
+	}
+
+	if conf.EnableBaichuan {
+		models = append(models, Model{
+			ID:          "百川:" + baichuan.ModelBaichuan2_53B,
+			Name:        "百川大模型",
+			Description: "由百川智能研发的大语言模型，融合了意图理解、信息检索以及强化学习技术，结合有监督微调与人类意图对齐，在知识问答、文本创作领域表现突出",
+			Category:    "百川",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.6",
 		})
 	}
 

@@ -96,6 +96,13 @@ enable-sensenovaai: false
 sensenova-keyid: ""
 sensenova-keysecret: ""
 
+# ######## 百川大模型 ########
+
+# API 申请 https://platform.baichuan-ai.com/
+enable-baichuan: false
+baichuan-apikey: ""
+baichuan-secret: ""
+
 ######## DeepAI 配置 ########
 
 # 用于图片超分辨率、图片上色

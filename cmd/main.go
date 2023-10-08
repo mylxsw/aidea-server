@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
 	"math/rand"
 	"path/filepath"
 	"time"
@@ -105,6 +106,10 @@ func main() {
 	ins.AddBoolFlag("enable-sensenovaai", "是否启用商汤日日新 AI")
 	ins.AddStringFlag("sensenova-keyid", "", "商汤日日新 Key ID")
 	ins.AddStringFlag("sensenova-keysecret", "", "商汤日日新 Key Secret")
+
+	ins.AddBoolFlag("enable-baichuan", "是否启用百川大模型")
+	ins.AddStringFlag("baichuan-apikey", "", "百川大模型 API Key")
+	ins.AddStringFlag("baichuan-secret", "", "百川大模型 API Secret")
 
 	ins.AddBoolFlag("enable-stabilityai", "是否启用 StabilityAI 文生图、图生图服务")
 	ins.AddBoolFlag("stabilityai-autoproxy", "使用 socks5 代理访问 StabilityAI 服务")
@@ -264,6 +269,7 @@ func main() {
 		sensenova.Provider{},
 		tencentai.Provider{},
 		anthropic.Provider{},
+		baichuan.Provider{},
 	)
 
 	app.MustRun(ins)

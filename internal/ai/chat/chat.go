@@ -7,6 +7,7 @@ import (
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
+	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
 	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
@@ -155,7 +156,9 @@ type Imp struct {
 	snAI        *SenseNovaChat
 	tencentAI   *TencentAIChat
 	anthropicAI *AnthropicChat
-	virtual     *VirtualChat
+	baichuanAI  *BaichuanAIChat
+
+	virtual *VirtualChat
 }
 
 func NewChat(
@@ -167,6 +170,7 @@ func NewChat(
 	sn *SenseNovaChat,
 	tencentAI *TencentAIChat,
 	anthropicAI *AnthropicChat,
+	baichuanAI *BaichuanAIChat,
 ) Chat {
 	var virtualImpl Chat
 	switch strings.ToLower(conf.VirtualModel.Implementation) {
@@ -184,6 +188,8 @@ func NewChat(
 		virtualImpl = tencentAI
 	case "anthropic":
 		virtualImpl = anthropicAI
+	case "baichuan", "百川":
+		virtualImpl = baichuanAI
 	default:
 		virtualImpl = openAI
 	}
@@ -225,6 +231,10 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.anthropicAI
 	}
 
+	if strings.HasPrefix(model, "百川:") {
+		return ai.baichuanAI
+	}
+
 	if strings.HasPrefix(model, "virtual:") {
 		return ai.virtual
 	}
@@ -257,6 +267,8 @@ func (ai *Imp) selectImp(model string) Chat {
 	case string(anthropic.ModelClaude2), string(anthropic.ModelClaudeInstant):
 		// Anthropic
 		return ai.anthropicAI
+	case baichuan.ModelBaichuan2_53B:
+		return ai.baichuanAI
 	case ModelNanXian, ModelBeiChou:
 		// 虚拟模型
 		return ai.virtual

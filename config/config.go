@@ -54,6 +54,11 @@ type Config struct {
 	SenseNovaKeyID     string `json:"sensenova_keyid" yaml:"sensenova_keyid"`
 	SenseNovaKeySecret string `json:"-" yaml:"-"`
 
+	// 百川大模型
+	EnableBaichuan bool   `json:"enable_baichuan" yaml:"enable_baichuan"`
+	BaichuanAPIKey string `json:"baichuan_api_key" yaml:"baichuan_api_key"`
+	BaichuanSecret string `json:"-" yaml:"-"`
+
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
 
@@ -253,6 +258,10 @@ func Register(ins *app.App) {
 			EnableSenseNovaAI:  ctx.Bool("enable-sensenovaai"),
 			SenseNovaKeyID:     ctx.String("sensenova-keyid"),
 			SenseNovaKeySecret: ctx.String("sensenova-keysecret"),
+
+			EnableBaichuan: ctx.Bool("enable-baichuan"),
+			BaichuanAPIKey: ctx.String("baichuan-apikey"),
+			BaichuanSecret: ctx.String("baichuan-secret"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
 
