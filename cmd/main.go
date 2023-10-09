@@ -228,6 +228,10 @@ func main() {
 		return nil
 	})
 
+	//ins.Async(func(conf *config.Config) {
+	//	log.With(conf).Debugf("configuration loaded")
+	//})
+
 	// 配置要加载的服务模块
 	ins.Provider(
 		api.Provider{},
