@@ -67,7 +67,7 @@ func (chat *AnthropicChat) Chat(ctx context.Context, req Request) (*Response, er
 	}
 
 	if res.Error != nil && res.Error.Type != "" {
-		return nil, fmt.Errorf("anthropic ai chat error: [%d] %s", res.Error.Type, res.Error.Message)
+		return nil, fmt.Errorf("anthropic ai chat error: [%s] %s", res.Error.Type, res.Error.Message)
 	}
 
 	return &Response{

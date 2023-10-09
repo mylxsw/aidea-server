@@ -136,10 +136,6 @@ func (ai *BaichuanAI) ChatStream(ctx context.Context, req Request) (<-chan Respo
 		httpReq.Header.Set(k, v)
 	}
 
-	//httpReq.Header.Set("Accept", "text/event-stream")
-	//httpReq.Header.Set("Cache-Control", "no-cache")
-	//httpReq.Header.Set("Connection", "keep-alive")
-
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return nil, err

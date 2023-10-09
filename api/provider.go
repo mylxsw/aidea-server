@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -60,7 +61,9 @@ func exceptionHandler(ctx web.Context, err interface{}) web.Response {
 		return ctx.JSONError("账号不可用：用户账号已注销", http.StatusForbidden)
 	}
 
-	log.Errorf("request %s failed: %v", ctx.Request().Raw().URL.Path, err)
+	debug.PrintStack()
+
+	log.Errorf("request %s failed: %v, stack is %s", ctx.Request().Raw().URL.Path, err, string(debug.Stack()))
 	return ctx.JSONWithCode(web.M{"error": fmt.Sprintf("%v", err)}, http.StatusInternalServerError)
 }
 
@@ -186,7 +189,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 						// 查询用户信息
 						u, err := userSrv.GetUserByID(context.TODO(), claims.Int64Value("id"), false)
 						if err != nil {
-							if err == repo.ErrNotFound {
+							if errors.Is(err, repo.ErrNotFound) {
 								return errors.New("invalid auth credential, user not found")
 							}
 

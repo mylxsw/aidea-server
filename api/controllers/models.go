@@ -672,7 +672,7 @@ func chinaModels(conf *config.Config) []Model {
 			Category:    "百川",
 			IsChat:      true,
 			Disabled:    false,
-			VersionMin:  "1.0.6",
+			VersionMin:  "1.0.5",
 		})
 	}
 

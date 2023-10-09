@@ -202,6 +202,7 @@ func NewChat(
 		snAI:        sn,
 		tencentAI:   tencentAI,
 		anthropicAI: anthropicAI,
+		baichuanAI:  baichuanAI,
 		virtual:     NewVirtualChat(virtualImpl, conf.VirtualModel),
 	}
 }
