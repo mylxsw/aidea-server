@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -44,15 +45,15 @@ type GroupChatMember struct {
 	Messages []GroupChatMessage `json:"messages"`
 }
 
-func (req GroupChatRequest) AvaiableMembers(supportMembers []int64) []GroupChatMember {
+func (req GroupChatRequest) AvailableMembers(supportMembers []int64) []GroupChatMember {
 	messagesPerMember := req.MessagesPerMembers()
-	avaiableIds := array.Filter(array.Intersect(req.MemberIDs, supportMembers), func(id int64, _ int) bool {
+	availableIds := array.Filter(array.Intersect(req.MemberIDs, supportMembers), func(id int64, _ int) bool {
 		return len(messagesPerMember[id]) > 0
 	})
 
 	res := make([]GroupChatMember, 0)
 	for memberId, msgs := range messagesPerMember {
-		if array.In(memberId, avaiableIds) && len(msgs) > 0 {
+		if array.In(memberId, availableIds) && len(msgs) > 0 {
 			res = append(res, GroupChatMember{
 				ID:       memberId,
 				Messages: msgs,
@@ -105,7 +106,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	// 查询群组信息
 	grp, err := ctl.repo.ChatGroup.GetGroup(ctx, int64(groupID), user.ID)
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError("group not found", http.StatusNotFound)
 		}
 
@@ -116,14 +117,14 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		return m.Id
 	})
 
-	avaiableMembers := req.AvaiableMembers(array.Map(grp.Members, func(m model.ChatGroupMember, _ int) int64 { return m.Id }))
-	if len(avaiableMembers) == 0 {
+	availableMembers := req.AvailableMembers(array.Map(grp.Members, func(m model.ChatGroupMember, _ int) int64 { return m.Id }))
+	if len(availableMembers) == 0 {
 		return webCtx.JSONError("no avaiable members", http.StatusBadRequest)
 	}
 
 	// 检查用户当前是否有足够的费用发起本次对话
 	membersMap := array.ToMap(grp.Members, func(mem model.ChatGroupMember, _ int) int64 { return mem.Id })
-	array.Map(avaiableMembers, func(mem GroupChatMember, _ int) int {
+	array.Map(availableMembers, func(mem GroupChatMember, _ int) int {
 		leftCount, _ := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, membersMap[mem.ID].ModelId)
 		if leftCount > 0 {
 			// 免费额度内
