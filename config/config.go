@@ -169,7 +169,8 @@ type Config struct {
 	DefaultTextToImageModel  string `json:"default_text_to_image_model" yaml:"default_text_to_image_model"`
 
 	// 虚拟模型
-	VirtualModel VirtualModel `json:"virtual_model" yaml:"virtual_model"`
+	EnableVirtualModel bool         `json:"enable_virtual_model" yaml:"enable_virtual_model"`
+	VirtualModel       VirtualModel `json:"virtual_model" yaml:"virtual_model"`
 }
 
 type Mail struct {
@@ -349,6 +350,7 @@ func Register(ins *app.App) {
 			DefaultImageToImageModel: ctx.String("default-img2img-model"),
 			DefaultTextToImageModel:  ctx.String("default-txt2img-model"),
 
+			EnableVirtualModel: ctx.Bool("enable-virtual-model"),
 			VirtualModel: VirtualModel{
 				Implementation: ctx.String("virtual-model-implementation"),
 				NanxianRel:     ctx.String("virtual-model-nanxian-rel"),

@@ -196,6 +196,7 @@ func main() {
 	ins.AddStringFlag("default-img2img-model", "lb-realistic-versionv4.0", "默认的图生图模型，值取自数据表 image_model.model_id")
 	ins.AddStringFlag("default-txt2img-model", "sb-stable-diffusion-xl-1024-v1-0", "默认的文生图模型，值取自数据表 image_model.model_id")
 
+	ins.AddBoolFlag("enable-virtual-model", "是否启用虚拟模型")
 	ins.AddStringFlag("virtual-model-implementation", "openai", "虚拟模型实现厂商")
 	ins.AddStringFlag("virtual-model-nanxian-rel", "gpt-3.5-turbo", "南贤大模型实现")
 	ins.AddStringFlag("virtual-model-nanxian-prompt", "", "南贤大模型内置提示语")

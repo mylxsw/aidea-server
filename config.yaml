@@ -286,6 +286,7 @@ default-img2img-model: lb-realistic-versionv4.0
 default-txt2img-model: sb-stable-diffusion-xl-1024-v1-0
 
 ######## 虚拟模型配置 ########
+enable-virtual-model: false
 virtual-model-implementation: "openai"
 virtual-model-nanxian-rel: "gpt-3.5-turbo"
 virtual-model-nanxian-prompt: ""
