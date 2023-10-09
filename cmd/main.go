@@ -146,6 +146,7 @@ func main() {
 	ins.AddStringFlag("storage-bucket", "aicode", "七牛云存储 Bucket 名称")
 	ins.AddStringFlag("storage-callback", "https://YOUR_SERVER_HOST/v1/callback/storage/qiniu", "七牛云存储上传回调接口")
 	ins.AddStringFlag("storage-domain", "", "七牛云存储资源访问域名（也可以用 CDN 域名），例如 https://cdn.example.com")
+	ins.AddStringFlag("storage-region", "z0", "七牛云存储区域，可选值：z0, z1, z2, na0, as0, cn-east-2, ap-northeast-1")
 
 	ins.AddStringFlag("apple-keyid", "", "apple sign in key id")
 	ins.AddStringFlag("apple-teamid", "", "apple sign in team id")
@@ -200,6 +201,7 @@ func main() {
 	ins.AddStringFlag("default-img2img-model", "lb-realistic-versionv4.0", "默认的图生图模型，值取自数据表 image_model.model_id")
 	ins.AddStringFlag("default-txt2img-model", "sb-stable-diffusion-xl-1024-v1-0", "默认的文生图模型，值取自数据表 image_model.model_id")
 
+	ins.AddBoolFlag("enable-virtual-model", "是否启用虚拟模型")
 	ins.AddStringFlag("virtual-model-implementation", "openai", "虚拟模型实现厂商")
 	ins.AddStringFlag("virtual-model-nanxian-rel", "gpt-3.5-turbo", "南贤大模型实现")
 	ins.AddStringFlag("virtual-model-nanxian-prompt", "", "南贤大模型内置提示语")

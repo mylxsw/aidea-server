@@ -173,6 +173,15 @@ storage-appkey: ""
 storage-secret: ""
 storage-bucket: "aicode"
 storage-callback: "https://ai-api.example.com/v1/callback/storage/qiniu"
+# 七牛云存储区域，可选值：
+# 华东 - z0
+# 华北 - z1
+# 华南 - z2
+# 南美 - na0, 
+# 新加坡 - as0
+# 华东浙江 2 区 - cn-east-2
+# 亚太首尔 1 区 - ap-northeast-1
+storage-region: "z0"
 
 ######## Apple 配置 ########
 
@@ -284,6 +293,7 @@ default-img2img-model: lb-realistic-versionv4.0
 default-txt2img-model: sb-stable-diffusion-xl-1024-v1-0
 
 ######## 虚拟模型配置 ########
+enable-virtual-model: false
 virtual-model-implementation: "openai"
 virtual-model-nanxian-rel: "gpt-3.5-turbo"
 virtual-model-nanxian-prompt: ""

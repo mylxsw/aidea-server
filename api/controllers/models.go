@@ -246,7 +246,7 @@ func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web
 	models = append(models, anthropicModels(ctl.conf)...)
 	models = append(models, googleModels()...)
 	models = append(models, chinaModels(ctl.conf)...)
-	models = append(models, aideaModels()...)
+	models = append(models, aideaModels(ctl.conf)...)
 
 	models = array.Filter(models, func(item Model, _ int) bool {
 		//if item.Disabled && client.Platform == "ios" {
@@ -719,7 +719,11 @@ func anthropicModels(conf *config.Config) []Model {
 	}
 }
 
-func aideaModels() []Model {
+func aideaModels(conf *config.Config) []Model {
+	if !conf.EnableVirtualModel {
+		return []Model{}
+	}
+
 	return []Model{
 		{
 			ID:          "virtual:nanxian",

@@ -117,6 +117,7 @@ type Config struct {
 	StorageBucket    string `json:"storage_bucket" yaml:"storage_bucket"`
 	StorageCallback  string `json:"storage_callback" yaml:"storage_callback"`
 	StorageDomain    string `json:"storage_domain" yaml:"storage_domain"`
+	StorageRegion    string `json:"storage_region" yaml:"storage_region"`
 
 	// Apple Sign In
 	AppleSignIn AppleSignIn `json:"apple_sign_in" yaml:"apple_sign_in"`
@@ -173,7 +174,8 @@ type Config struct {
 	DefaultTextToImageModel  string `json:"default_text_to_image_model" yaml:"default_text_to_image_model"`
 
 	// 虚拟模型
-	VirtualModel VirtualModel `json:"virtual_model" yaml:"virtual_model"`
+	EnableVirtualModel bool         `json:"enable_virtual_model" yaml:"enable_virtual_model"`
+	VirtualModel       VirtualModel `json:"virtual_model" yaml:"virtual_model"`
 }
 
 type Mail struct {
@@ -300,6 +302,7 @@ func Register(ins *app.App) {
 			StorageBucket:    ctx.String("storage-bucket"),
 			StorageCallback:  ctx.String("storage-callback"),
 			StorageDomain:    ctx.String("storage-domain"),
+			StorageRegion:    ctx.String("storage-region"),
 
 			AppleSignIn: AppleSignIn{
 				TeamID: ctx.String("apple-teamid"),
@@ -356,6 +359,7 @@ func Register(ins *app.App) {
 			DefaultImageToImageModel: ctx.String("default-img2img-model"),
 			DefaultTextToImageModel:  ctx.String("default-txt2img-model"),
 
+			EnableVirtualModel: ctx.Bool("enable-virtual-model"),
 			VirtualModel: VirtualModel{
 				Implementation: ctx.String("virtual-model-implementation"),
 				NanxianRel:     ctx.String("virtual-model-nanxian-rel"),

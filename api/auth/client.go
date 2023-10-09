@@ -20,6 +20,10 @@ func (inf ClientInfo) IsIOS() bool {
 
 // IsCNLocalMode 是否启用国产化模式
 func (inf ClientInfo) IsCNLocalMode(conf *config.Config) bool {
+	return inf.isCNLocalMode(conf) && conf.EnableVirtualModel
+}
+
+func (inf ClientInfo) isCNLocalMode(conf *config.Config) bool {
 	if !conf.CNLocalMode {
 		return false
 	}
