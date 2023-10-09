@@ -26,7 +26,7 @@ type User struct {
 }
 
 func (u User) InternalUser() bool {
-	return u.UserType == repo.UserTypeInternal
+	return u.UserType == repo.UserTypeInternal || u.WithLab
 }
 
 // UserOptional 用户信息，可选，如果用户未登录，则为 User 为 nil
