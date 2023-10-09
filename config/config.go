@@ -112,6 +112,7 @@ type Config struct {
 	StorageBucket    string `json:"storage_bucket" yaml:"storage_bucket"`
 	StorageCallback  string `json:"storage_callback" yaml:"storage_callback"`
 	StorageDomain    string `json:"storage_domain" yaml:"storage_domain"`
+	StorageRegion    string `json:"storage_region" yaml:"storage_region"`
 
 	// Apple Sign In
 	AppleSignIn AppleSignIn `json:"apple_sign_in" yaml:"apple_sign_in"`
@@ -291,6 +292,7 @@ func Register(ins *app.App) {
 			StorageBucket:    ctx.String("storage-bucket"),
 			StorageCallback:  ctx.String("storage-callback"),
 			StorageDomain:    ctx.String("storage-domain"),
+			StorageRegion:    ctx.String("storage-region"),
 
 			AppleSignIn: AppleSignIn{
 				TeamID: ctx.String("apple-teamid"),

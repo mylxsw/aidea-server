@@ -141,6 +141,7 @@ func main() {
 	ins.AddStringFlag("storage-bucket", "aicode", "七牛云存储 Bucket 名称")
 	ins.AddStringFlag("storage-callback", "https://YOUR_SERVER_HOST/v1/callback/storage/qiniu", "七牛云存储上传回调接口")
 	ins.AddStringFlag("storage-domain", "", "七牛云存储资源访问域名（也可以用 CDN 域名），例如 https://cdn.example.com")
+	ins.AddStringFlag("storage-region", "z0", "七牛云存储区域，可选值：z0, z1, z2, na0, as0, cn-east-2, ap-northeast-1")
 
 	ins.AddStringFlag("apple-keyid", "", "apple sign in key id")
 	ins.AddStringFlag("apple-teamid", "", "apple sign in team id")
