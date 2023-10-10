@@ -4,7 +4,7 @@ package coins
 var SignupGiftCoins = 0
 
 // BindPhoneGiftCoins 绑定手机赠币数量
-var BindPhoneGiftCoins = 25
+var BindPhoneGiftCoins = 30
 
 // InviteGiftCoins 邀请赠币数量
 var InviteGiftCoins = 100

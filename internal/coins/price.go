@@ -8,7 +8,7 @@ import (
 var coinTables = map[string]CoinTable{
 	// 统一图片价格
 	"image": {
-		"default": 15,
+		"default": 20,
 	},
 
 	"openai": {
