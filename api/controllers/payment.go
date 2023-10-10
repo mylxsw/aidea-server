@@ -88,7 +88,7 @@ func (ctl *PaymentController) CreateAlipay(ctx context.Context, webCtx web.Conte
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	product := coins.GetAppleProduct(productId)
+	product := coins.GetProduct(productId)
 	if product == nil {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
@@ -317,7 +317,7 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 		}
 	}
 
-	product := coins.GetAppleProduct(productId)
+	product := coins.GetProduct(productId)
 
 	aliPay := repo.AlipayPayment{
 		ProductID:      productId,
@@ -374,7 +374,7 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 
 // AppleProducts 支付产品清单
 func (ctl *PaymentController) AppleProducts(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
-	products := array.Map(coins.AppleProducts, func(product coins.AppleProduct, _ int) coins.AppleProduct {
+	products := array.Map(coins.Products, func(product coins.Product, _ int) coins.Product {
 		product.ExpirePolicyText = product.GetExpirePolicyText()
 		if product.RetailPrice == 0 {
 			product.RetailPrice = product.Quota
@@ -382,7 +382,7 @@ func (ctl *PaymentController) AppleProducts(ctx context.Context, webCtx web.Cont
 		return product
 	})
 
-	products = array.Filter(products, func(prod coins.AppleProduct, _ int) bool {
+	products = array.Filter(products, func(prod coins.Product, _ int) bool {
 		if prod.PlatformLimit == "" {
 			return true
 		}
@@ -419,7 +419,7 @@ func (ctl *PaymentController) CreateApplePayment(ctx context.Context, webCtx web
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	if !coins.IsAppleProduct(productId) {
+	if !coins.IsProduct(productId) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
@@ -551,7 +551,7 @@ func (ctl *PaymentController) VerifyApplePayment(ctx context.Context, webCtx web
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	product := coins.GetAppleProduct(receiptProductId)
+	product := coins.GetProduct(receiptProductId)
 	payload := queue.PaymentPayload{
 		UserID:    user.ID,
 		Email:     user.Email,

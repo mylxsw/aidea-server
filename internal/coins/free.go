@@ -40,9 +40,9 @@ type ModelWithName struct {
 	Model     string    `json:"model" yaml:"model"`
 	Name      string    `json:"name,omitempty" yaml:"name,omitempty"`
 	Info      string    `json:"info,omitempty" yaml:"info,omitempty"`
-	FreeCount int       `json:"-" yaml:"free_count"`
-	EndAt     time.Time `json:"-" yaml:"end_at,omitempty"`
-	NonCN     bool      `json:"-" yaml:"non_cn,omitempty"`
+	FreeCount int       `json:"free_count,omitempty" yaml:"free_count"`
+	EndAt     time.Time `json:"end_at,omitempty" yaml:"end_at,omitempty"`
+	NonCN     bool      `json:"non_cn,omitempty" yaml:"non_cn,omitempty"`
 }
 
 // FreeModels returns all free models

@@ -1,6 +1,7 @@
 package coins
 
 import (
+	"github.com/mylxsw/asteria/log"
 	"os"
 
 	"github.com/mylxsw/go-utils/array"
@@ -11,7 +12,7 @@ type PriceInfo struct {
 	// CoinTable 价格表
 	CoinTables map[string]CoinTable `json:"coin_tables" yaml:"coin_tables"`
 	// Products 在线支付产品列表
-	Products []AppleProduct `json:"products,omitempty" yaml:"products,omitempty"`
+	Products []Product `json:"products,omitempty" yaml:"products,omitempty"`
 	// FreeModels 免费模型列表
 	FreeModels []ModelWithName `json:"free_models,omitempty" yaml:"free_models,omitempty"`
 
@@ -56,7 +57,7 @@ func LoadPriceInfo(tableFile string) error {
 	// 加载在线支付产品
 	// 如果配置了产品列表，则使用配置文件为主，否则使用默认产品列表
 	if len(priceInfo.Products) > 0 {
-		AppleProducts = array.Map(priceInfo.Products, func(item AppleProduct, _ int) AppleProduct {
+		Products = array.Map(priceInfo.Products, func(item Product, _ int) Product {
 			if item.Description == "" {
 				item.Description = buildDescription(item.Quota)
 			}
@@ -76,4 +77,17 @@ func LoadPriceInfo(tableFile string) error {
 	InvitePaymentGiftRate = priceInfo.InvitePaymentGiftRate
 
 	return nil
+}
+
+func DebugPrintPriceInfo() {
+	log.WithFields(log.Fields{
+		"products":                 Products,
+		"free":                     freeModels,
+		"coins":                    coinTables,
+		"signup_gift_coins":        SignupGiftCoins,
+		"bind_phone_gift_coins":    BindPhoneGiftCoins,
+		"invite_gift_coins":        InviteGiftCoins,
+		"invited_gift_coins":       InvitedGiftCoins,
+		"invite_payment_gift_rate": InvitePaymentGiftRate,
+	}).Debug("coins table loaded")
 }

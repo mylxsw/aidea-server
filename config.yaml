@@ -302,5 +302,8 @@ virtual-model-beichou-rel: "gpt-4"
 virtual-model-beichou-prompt: ""
 
 ######## 价格相关 ########
-# 所有模型的使用价格表文件，格式 yaml，参考 coins-table.yaml 文件，单位为智慧果
+# 智慧果收费标准、充值、赠送相关配置
+# 系统内置默认规则，在 internal/coins 中定义，不指定该选项使用默认配置
+# 指定该选项后，将以配置文件中的数据为准
+#price-table-file: /data/webroot/aidea-server/etc/coins-table.yaml
 price-table-file: ""

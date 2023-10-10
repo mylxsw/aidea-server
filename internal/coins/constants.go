@@ -14,6 +14,3 @@ var InvitedGiftCoins = 100
 
 // InvitePaymentGiftRate 被引荐人充值，引荐人获得的奖励比例
 var InvitePaymentGiftRate = 0.05
-
-// ServiceFeeRate 服务费系数（目前已经没有多大用处，现在通过 coinTables 指定固定收费价格）
-var ServiceFeeRate = 1.0

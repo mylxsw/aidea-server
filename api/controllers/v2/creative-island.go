@@ -517,7 +517,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 		return nil, webCtx.JSONError("invalid image count", http.StatusBadRequest)
 	}
 
-	steps := webCtx.IntInput("steps", 50)
+	steps := webCtx.IntInput("steps", 30)
 	if !array.In(steps, []int{30, 50, 100, 150}) {
 		return nil, webCtx.JSONError("invalid steps", http.StatusBadRequest)
 	}

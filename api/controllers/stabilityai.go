@@ -85,7 +85,7 @@ func (ctl *StabilityAIController) textToImage(ctx context.Context, webCtx web.Co
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	quotaConsumed := coins.GetStabilityAIImageCoins(model, int64(r.Steps), int64(r.Width), int64(r.Height))
+	quotaConsumed := int64(coins.GetUnifiedImageGenCoins())
 	if quota.Quota < quota.Used+quotaConsumed {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
@@ -142,7 +142,7 @@ func (ctl *StabilityAIController) textToImageAsync(ctx context.Context, webCtx w
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	quotaConsumed := coins.GetStabilityAIImageCoins(model, int64(r.Steps), int64(r.Width), int64(r.Height))
+	quotaConsumed := int64(coins.GetUnifiedImageGenCoins())
 	if quota.Quota < quota.Used+quotaConsumed {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}

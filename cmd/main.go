@@ -235,6 +235,8 @@ func main() {
 			if err := coins.LoadPriceInfo(priceTableFile); err != nil {
 				return fmt.Errorf("价格表加载失败: %w", err)
 			}
+
+			coins.DebugPrintPriceInfo()
 		}
 
 		return nil

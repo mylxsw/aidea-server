@@ -115,7 +115,7 @@ func BuildPaymentHandler(
 		}
 
 		// 用户充值
-		product := coins.GetAppleProduct(payload.ProductID)
+		product := coins.GetProduct(payload.ProductID)
 		if product == nil {
 			log.With(payload).Errorf("product not found")
 			return nil

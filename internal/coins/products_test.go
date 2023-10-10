@@ -16,8 +16,8 @@ func TestBuildDescription(t *testing.T) {
 	fmt.Println(buildDescription(10000))
 }
 
-func TestAppleProducts(t *testing.T) {
-	data, err := yaml.Marshal(AppleProducts)
+func TestProducts(t *testing.T) {
+	data, err := yaml.Marshal(Products)
 	assert.NoError(t, err)
 
 	fmt.Println(string(data))

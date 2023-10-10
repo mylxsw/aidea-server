@@ -2,7 +2,7 @@
 # 注册账号赠币数量
 signup_gift_coins: 0
 # 绑定手机赠币数量
-bind_phone_gift_coins: 25
+bind_phone_gift_coins: 30
 # 邀请赠币数量
 invite_gift_coins: 100
 # 被邀请赠币数量
@@ -37,14 +37,14 @@ free_models:
 
   - model: gpt-4
     name: GPT 4
-    info: 活动截止至北京时间 2023-11-01 08:00:00
+    info: 活动截止至北京时间 2023-11-01
     free_count: 3
     end_at: 2023-11-01T00:00:00Z
     non_cn: true
 
   - model: gpt-4
     name: 北丑
-    info: 活动截止至北京时间 2023-11-01 08:00:00
+    info: 活动截止至北京时间 2023-11-01
     free_count: 3
     end_at: 2023-11-01T00:00:00Z
 
@@ -68,7 +68,7 @@ free_models:
     name: 讯飞星火 v2
     free_count: 5
 
-# 在线充值产品列表
+# 在线充值产品列表，这里为空时，将使用 internal/coins/ 中的 products 数据
 # 字段说明：
 #   - id: 产品 ID，唯一标识，不能重复
 #   - name: 产品名称
@@ -113,7 +113,7 @@ products:
 coin_tables:
     # 图片生成价格：文生图、图生图、超分辨率、上色
     image:
-        default: 15
+        default: 20
     # 所有聊天模型都在这里配置，因为历史遗留原因，都归类到了 openai 下
     openai:
         Baichuan2-53B: 3

@@ -416,7 +416,7 @@ func (ctl *OpenAIController) Images(ctx context.Context, webCtx web.Context, use
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	if quota.Quota < quota.Used+coins.GetOpenAIImageCoins("DALL·E") {
+	if quota.Quota < quota.Used+int64(coins.GetUnifiedImageGenCoins()) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
@@ -432,7 +432,7 @@ func (ctl *OpenAIController) Images(ctx context.Context, webCtx web.Context, use
 	}
 
 	defer func() {
-		if err := quotaRepo.QuotaConsume(ctx, user.ID, coins.GetOpenAIImageCoins("DALL·E"), repo.NewQuotaUsedMeta("openai-image", "DALL·E")); err != nil {
+		if err := quotaRepo.QuotaConsume(ctx, user.ID, int64(coins.GetUnifiedImageGenCoins()), repo.NewQuotaUsedMeta("openai-image", "DALL·E")); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
 	}()

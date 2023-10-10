@@ -83,7 +83,7 @@ func (ctl *DeepAIController) imageGenerator(ctx context.Context, webCtx web.Cont
 
 	negativePrompt := webCtx.InputWithDefault("negative_prompt", "")
 
-	if quota.Quota < quota.Used+coins.GetDeepAIImageCoins(model) {
+	if quota.Quota < quota.Used+int64(coins.GetUnifiedImageGenCoins()) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
@@ -99,7 +99,7 @@ func (ctl *DeepAIController) imageGenerator(ctx context.Context, webCtx web.Cont
 	}
 
 	defer func() {
-		if err := quotaRepo.QuotaConsume(ctx, user.ID, coins.GetDeepAIImageCoins(model), repo.NewQuotaUsedMeta("deepai-chat", model)); err != nil {
+		if err := quotaRepo.QuotaConsume(ctx, user.ID, int64(coins.GetUnifiedImageGenCoins()), repo.NewQuotaUsedMeta("deepai-chat", model)); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
 	}()
@@ -142,7 +142,7 @@ func (ctl *DeepAIController) imageGeneratorAsync(ctx context.Context, webCtx web
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, err.Error()), http.StatusInternalServerError)
 	}
 
-	if quota.Quota < quota.Used+coins.GetDeepAIImageCoins(model) {
+	if quota.Quota < quota.Used+int64(coins.GetUnifiedImageGenCoins()) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
@@ -150,7 +150,7 @@ func (ctl *DeepAIController) imageGeneratorAsync(ctx context.Context, webCtx web
 	taskID, err := ctl.queue.Enqueue(
 		&queue.DeepAICompletionPayload{
 			Model:          model,
-			Quota:          coins.GetDeepAIImageCoins(model),
+			Quota:          int64(coins.GetUnifiedImageGenCoins()),
 			UID:            user.ID,
 			Prompt:         text,
 			NegativePrompt: negativePrompt,
