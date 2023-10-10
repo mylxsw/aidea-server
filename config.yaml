@@ -4,6 +4,8 @@
 listen: 0.0.0.0:8080
 # 日志文件存储目录，留空则写入到标准输出
 log-path: /data/logs/ai-server
+# 是否启用跨域支持
+enable-cors: false
 
 # 数据库配置
 db-uri: "root:123456@tcp(mysql-server.host:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local"

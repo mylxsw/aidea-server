@@ -18,6 +18,8 @@ type Config struct {
 	PrometheusToken string `json:"-" yaml:"prometheus_token"`
 	// 记录聊天历史记录（可方便后期支持聊天消息多端同步，目前仅仅是做了记录，同步功能暂未实现）
 	EnableRecordChat bool `json:"enable_record_chat" yaml:"enable_record_chat"`
+	// 是否启用跨域支持
+	EnableCORS bool `json:"enable_cors" yaml:"enable_cors"`
 
 	// OpenAIKey 配置
 	EnableOpenAI       bool     `json:"enable_openai" yaml:"enable_openai"`
@@ -219,6 +221,7 @@ func Register(ins *app.App) {
 			SessionSecret:    ctx.String("session-secret"),
 			PrometheusToken:  ctx.String("prometheus-token"),
 			EnableRecordChat: ctx.Bool("enable-recordchat"),
+			EnableCORS:       ctx.Bool("enable-cors"),
 
 			RedisHost:     ctx.String("redis-host"),
 			RedisPort:     ctx.Int("redis-port"),
