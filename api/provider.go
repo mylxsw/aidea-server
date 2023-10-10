@@ -246,6 +246,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 					return true
 				},
 			),
+			mw.CORS("*"),
 		)
 	})
 
