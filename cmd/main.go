@@ -72,6 +72,7 @@ func main() {
 	ins.AddStringFlag("db-uri", "root:12345@tcp(127.0.0.1:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local", "database url")
 	ins.AddStringFlag("session-secret", "aidea-secret", "用户会话加密密钥")
 	ins.AddBoolFlag("enable-recordchat", "是否记录聊天历史记录（目前只做记录，没有实际作用，只是为后期增加多端聊天记录同步做准备）")
+	ins.AddBoolFlag("enable-cors", "是否启用跨域请求支持")
 
 	ins.AddStringFlag("redis-host", "127.0.0.1", "redis host")
 	ins.AddIntFlag("redis-port", 6379, "redis port")

@@ -69,7 +69,13 @@ func exceptionHandler(ctx web.Context, err interface{}) web.Response {
 
 // routes 注册路由规则
 func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware) {
+	conf := resolver.MustGet((*config.Config)(nil)).(*config.Config)
+
 	mws := make([]web.HandlerDecorator, 0)
+	// 跨域请求处理
+	if conf.EnableCORS {
+		mws = append(mws, mw.CORS("*"))
+	}
 
 	// 需要鉴权的 URLs
 	needAuthPrefix := []string{
@@ -107,6 +113,11 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 	// 添加 web 中间件
 	resolver.MustResolve(func(tk *token.Token, userSrv *service.UserService, limiter *redis_rate.Limiter, translater youdao.Translater) {
 		mws = append(mws, mw.BeforeInterceptor(func(webCtx web.Context) web.Response {
+			// 跨域请求处理，OPTIONS 请求直接返回
+			if webCtx.Method() == http.MethodOptions {
+				return webCtx.JSON(web.M{})
+			}
+
 			// 基于客户端 IP 的限流
 			clientIP := webCtx.Header("X-Real-IP")
 			if clientIP == "" {
@@ -124,11 +135,6 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 			if m.Remaining <= 0 {
 				log.WithFields(log.Fields{"ip": clientIP}).Warningf("client request too frequently")
 				return webCtx.JSONError(common.Text(webCtx, translater, "请求频率过高，请稍后再试"), http.StatusTooManyRequests)
-			}
-
-			// 跨域请求处理
-			if webCtx.Method() == http.MethodOptions {
-				return webCtx.JSON(web.M{})
 			}
 
 			return nil
@@ -251,8 +257,6 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 			),
 		)
 	})
-
-	conf := resolver.MustGet((*config.Config)(nil)).(*config.Config)
 
 	// 注册控制器，所有的控制器 API 都以 `/api` 作为接口前缀
 	r := router.WithMiddleware(mws...)

@@ -150,18 +150,33 @@ func (m FinalMessage) ToJSON() string {
 	return string(data)
 }
 
+func (ctl *OpenAIController) wrapRawResponse(w http.ResponseWriter, cb func()) {
+	// 允许跨域
+	if ctl.conf.EnableCORS {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,OPTIONS,HEAD,PUT,PATCH,DELETE")
+	}
+
+	cb()
+}
+
 // Chat 聊天接口，接口参数参考 https://platform.openai.com/docs/api-reference/chat/create
 // 该接口会返回一个 SSE 流，接口参数 stream 总是为 true（忽略客户端设置）
 func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo, w http.ResponseWriter) {
 	var req chat.Request
 	if err := webCtx.Unmarshal(&req); err != nil {
-		webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest).CreateResponse()
+		ctl.wrapRawResponse(w, func() {
+			webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest).CreateResponse()
+		})
 		return
 	}
 
 	fixRes, err := req.Fix(ctl.chat)
 	if err != nil {
-		webCtx.JSONError(err.Error(), http.StatusBadRequest).CreateResponse()
+		ctl.wrapRawResponse(w, func() {
+			webCtx.JSONError(err.Error(), http.StatusBadRequest).CreateResponse()
+		})
 		return
 	}
 
@@ -175,7 +190,9 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
 		if err != nil {
 			log.Errorf("get user quota failed: %s", err)
-			webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError).CreateResponse()
+			ctl.wrapRawResponse(w, func() {
+				webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError).CreateResponse()
+			})
 			return
 		}
 
@@ -184,11 +201,15 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		restQuota := quota.Quota - quota.Used - coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(fixRes.InputTokens)) - 2
 		if restQuota <= 0 {
 			if maxFreeCount > 0 {
-				webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已用完，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
+				ctl.wrapRawResponse(w, func() {
+					webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已用完，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
+				})
 				return
 			}
 
-			webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse()
+			ctl.wrapRawResponse(w, func() {
+				webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse()
+			})
 			return
 		}
 	}
@@ -223,13 +244,17 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	stream, err := ctl.chat.ChatStream(ctx, req)
 	if err != nil {
 		log.Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
-		webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse()
+		ctl.wrapRawResponse(w, func() {
+			webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse()
+		})
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
+	ctl.wrapRawResponse(w, func() {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+	})
 
 	defer func() {
 		messages := append(req.Messages, chat.Message{
@@ -372,9 +397,11 @@ func (ctl *OpenAIController) securityCheck(req chat.Request, user *auth.User, w 
 				"content": content,
 			}).Warningf("用户 %d 违规，违规内容：%s", user.ID, checkRes.Reason)
 
-			w.Header().Set("Content-Type", "text/event-stream")
-			w.Header().Set("Cache-Control", "no-cache")
-			w.Header().Set("Connection", "keep-alive")
+			ctl.wrapRawResponse(w, func() {
+				w.Header().Set("Content-Type", "text/event-stream")
+				w.Header().Set("Cache-Control", "no-cache")
+				w.Header().Set("Connection", "keep-alive")
+			})
 
 			w.Write([]byte(fmt.Sprintf(
 				`data: {"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
