@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
 	"math/rand"
 	"path/filepath"
 	"time"
+
+	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
+	"github.com/mylxsw/aidea-server/internal/coins"
 
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
@@ -208,6 +210,8 @@ func main() {
 	ins.AddStringFlag("virtual-model-beichou-rel", "gpt-4", "北丑大模型实现")
 	ins.AddStringFlag("virtual-model-beichou-prompt", "", "北丑大模型内置提示语")
 
+	ins.AddStringFlag("price-table-file", "", "价格表文件路径，留空则使用默认价格表")
+
 	// 配置文件
 	config.Register(ins)
 
@@ -223,6 +227,14 @@ func main() {
 			log.All().LogWriter(writer.NewDefaultRotatingFileWriter(context.TODO(), func(le level.Level, module string) string {
 				return filepath.Join(f.String("log-path"), fmt.Sprintf("%s.%s.log", le.GetLevelName(), time.Now().Format("20060102")))
 			}))
+		}
+
+		// 加载价格表
+		priceTableFile := f.String("price-table-file")
+		if priceTableFile != "" {
+			if err := coins.LoadPriceInfo(priceTableFile); err != nil {
+				return fmt.Errorf("价格表加载失败: %w", err)
+			}
 		}
 
 		return nil

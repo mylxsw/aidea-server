@@ -18,15 +18,15 @@ const (
 )
 
 type AppleProduct struct {
-	ID               string       `json:"id"`
-	Name             string       `json:"name"`
-	Quota            int64        `json:"quota"`
-	RetailPrice      int64        `json:"retail_price"`
-	ExpirePolicy     ExpirePolicy `json:"expire_policy"`
-	ExpirePolicyText string       `json:"expire_policy_text"`
-	Recommend        bool         `json:"recommend"`
-	Description      string       `json:"description"`
-	PlatformLimit    Platform     `json:"platform_limits"`
+	ID               string       `json:"id" yaml:"id"`
+	Name             string       `json:"name" yaml:"name"`
+	Quota            int64        `json:"quota" yaml:"quota"`
+	RetailPrice      int64        `json:"retail_price" yaml:"retail_price"`
+	ExpirePolicy     ExpirePolicy `json:"expire_policy" yaml:"expire_policy"`
+	ExpirePolicyText string       `json:"expire_policy_text" yaml:"expire_policy_text"`
+	Recommend        bool         `json:"recommend" yaml:"recommend"`
+	Description      string       `json:"description" yaml:"description"`
+	PlatformLimit    Platform     `json:"platform_limits" yaml:"platform_limits"`
 }
 
 type Platform string
@@ -82,7 +82,7 @@ func (ap AppleProduct) ExpiredAt() time.Time {
 
 func buildDescription(quota int64) string {
 	multiple := float64(quota) / 100.0
-	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4 约 %.0f 次），或创作 %d 张图片", 30*multiple, 2*multiple, quota/15)
+	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4 约 %.0f 次），或创作 %d 张图片", 30*multiple, 2*multiple, quota/int64(GetUnifiedImageGenCoins()))
 }
 
 func GetAppleProduct(productId string) *AppleProduct {

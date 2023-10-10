@@ -6,6 +6,7 @@ import (
 
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/go-utils/assert"
+	"gopkg.in/yaml.v3"
 )
 
 func TestGetTokensForCoins(t *testing.T) {
@@ -104,4 +105,13 @@ func TestTokenUsage(t *testing.T) {
 	for _, tu := range testcases {
 		fmt.Printf("%30s => %10d\n", tu.Product, tokenCount/tu.Count)
 	}
+}
+
+func TestLoadCoinsTable(t *testing.T) {
+	assert.NoError(t, coins.LoadPriceInfo("../../coins-table.yaml"))
+
+	res, err := yaml.Marshal(coins.GetCoinsTable())
+	assert.NoError(t, err)
+
+	fmt.Println(string(res))
 }

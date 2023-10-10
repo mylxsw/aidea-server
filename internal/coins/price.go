@@ -6,9 +6,12 @@ import (
 	"time"
 )
 
-type CoinTable map[string]int64
-
 var coinTables = map[string]CoinTable{
+	// 统一图片价格
+	"image": {
+		"default": 15,
+	},
+
 	"openai": {
 		// 1000 Token 计费
 		"gpt-3.5-turbo":          3,  // valid $0.002/1K tokens -> ¥0.014/1K tokens
@@ -100,6 +103,10 @@ var coinTables = map[string]CoinTable{
 	"upload": {
 		"qiniu": 1,
 	},
+}
+
+func GetCoinsTable() map[string]CoinTable {
+	return coinTables
 }
 
 // PriceTable 价格表  @deprecated
@@ -374,7 +381,7 @@ func GetUploadCoins() int64 {
 
 // GetUnifiedImageGenCoins 统一的图片生成计费
 func GetUnifiedImageGenCoins() int {
-	return 15
+	return int(coinTables["image"]["default"])
 }
 
 func GetTextToVoiceCoins() int64 {

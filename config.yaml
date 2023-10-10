@@ -300,3 +300,7 @@ virtual-model-nanxian-rel: "gpt-3.5-turbo"
 virtual-model-nanxian-prompt: ""
 virtual-model-beichou-rel: "gpt-4"
 virtual-model-beichou-prompt: ""
+
+######## 价格相关 ########
+# 所有模型的使用价格表文件，格式 yaml，参考 coins-table.yaml 文件，单位为智慧果
+price-table-file: ""

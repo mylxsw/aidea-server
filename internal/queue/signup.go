@@ -122,12 +122,12 @@ func BuildSignupHandler(rep *repo.Repository, mailer *mail.Sender, ding *dingdin
 		// 2. 如果是手机注册，直接赠送智慧果
 		if eventPayload.From == repo.UserCreatedEventSourceEmail {
 			if coins.SignupGiftCoins > 0 {
-				if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, coins.SignupGiftCoins, time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
+				if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, int64(coins.SignupGiftCoins), time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
 					log.WithFields(log.Fields{"user_id": eventPayload.UserID}).Errorf("create user quota failed: %s", err)
 				}
 			}
 		} else if eventPayload.From == repo.UserCreatedEventSourcePhone {
-			if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, coins.BindPhoneGiftCoins, time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
+			if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, int64(coins.BindPhoneGiftCoins), time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
 				log.WithFields(log.Fields{"user_id": eventPayload.UserID}).Errorf("create user quota failed: %s", err)
 			}
 		}
@@ -225,14 +225,14 @@ func createInitialRooms(ctx context.Context, roomRepo *repo.RoomRepo, userID int
 func inviteGiftHandler(ctx context.Context, quotaRepo *repo.QuotaRepo, userId, invitedByUserId int64) {
 	// 引荐人奖励
 	if coins.InviteGiftCoins > 0 {
-		if _, err := quotaRepo.AddUserQuota(ctx, invitedByUserId, coins.InviteGiftCoins, time.Now().AddDate(0, 1, 0), "引荐奖励", ""); err != nil {
+		if _, err := quotaRepo.AddUserQuota(ctx, invitedByUserId, int64(coins.InviteGiftCoins), time.Now().AddDate(0, 1, 0), "引荐奖励", ""); err != nil {
 			log.WithFields(log.Fields{"user_id": invitedByUserId}).Errorf("create user quota failed: %s", err)
 		}
 	}
 
 	// 被引荐人奖励
 	if coins.InvitedGiftCoins > 0 {
-		if _, err := quotaRepo.AddUserQuota(ctx, userId, coins.InvitedGiftCoins, time.Now().AddDate(0, 1, 0), "引荐注册奖励", ""); err != nil {
+		if _, err := quotaRepo.AddUserQuota(ctx, userId, int64(coins.InvitedGiftCoins), time.Now().AddDate(0, 1, 0), "引荐注册奖励", ""); err != nil {
 			log.WithFields(log.Fields{"user_id": userId}).Errorf("create user quota failed: %s", err)
 		}
 	}

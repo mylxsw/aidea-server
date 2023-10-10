@@ -116,7 +116,7 @@ func BuildBindPhoneHandler(rep *repo.Repository, mailer *mail.Sender) TaskHandle
 
 		// 为用户分配默认配额
 		if coins.BindPhoneGiftCoins > 0 {
-			if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, coins.BindPhoneGiftCoins, time.Now().AddDate(0, 1, 0), "绑定手机赠送", ""); err != nil {
+			if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, int64(coins.BindPhoneGiftCoins), time.Now().AddDate(0, 1, 0), "绑定手机赠送", ""); err != nil {
 				log.WithFields(log.Fields{"user_id": eventPayload.UserID}).Errorf("create user quota failed: %s", err)
 			}
 		}
