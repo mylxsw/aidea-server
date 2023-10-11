@@ -1,6 +1,7 @@
 package dashscope_test
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -40,4 +41,13 @@ func TestDashScope_ChatStream(t *testing.T) {
 
 		log.With(res).Debug("res")
 	}
+}
+
+func TestImageTaskStatus(t *testing.T) {
+	client := dashscope.New(os.Getenv("ALI_LINGJI_API_KEY"))
+
+	resp, err := client.ImageTaskStatus(context.TODO(), "9dece3cc-d7e0-47c2-a587-f2c0d966ee69")
+	assert.NoError(t, err)
+
+	log.With(resp).Debug("resp")
 }

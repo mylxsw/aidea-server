@@ -3,6 +3,7 @@ package dashscope
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -229,4 +230,75 @@ func (ds *DashScope) ChatStream(req ChatRequest) (<-chan ChatResponse, error) {
 	}()
 
 	return res, nil
+}
+
+type ImageTaskResponse struct {
+	// RequestID 本次请求的系统唯一码
+	RequestID string `json:"request_id,omitempty"`
+	// Output 本次请求的输出内容
+	Output ImageTaskOutput `json:"output,omitempty"`
+	// Usage 本次请求的计量信息
+	Usage ImageTaskUsage `json:"usage,omitempty"`
+}
+
+type ImageTaskOutput struct {
+	// TaskID 本次请求的异步任务的作业 id，实际作业结果需要通过异步任务查询接口获取
+	TaskID string `json:"task_id,omitempty"`
+	// TaskStatus 被查询作业的作业状态
+	//   PENDING    排队中
+	//   RUNNING    处理中
+	//   SUCCEEDED  成功
+	//   FAILED     失败
+	//   UNKNOWN    作业不存在或状态未知
+	TaskStatus string `json:"task_status,omitempty"`
+	// Results 如果作业成功，包含模型生成的结果图像的 URL，可以在 24 小时之内随时下载。
+	// 输出图像分辨率说明：
+	// 对于输入分辨率小于2048*1024（以像素点总数计算）的图像，返回和输入分辨率相同大小的图像。对于超过该阈值的图像，按照输入长宽比返回不超过2048*1024的图像
+	Results []ImageTaskOutputImage `json:"results,omitempty"`
+}
+
+const (
+	TaskStatusPending   = "PENDING"
+	TaskStatusRunning   = "RUNNING"
+	TaskStatusSucceeded = "SUCCEEDED"
+	TaskStatusFailed    = "FAILED"
+	TaskStatusUnknown   = "UNKNOWN"
+)
+
+type ImageTaskOutputImage struct {
+	URL string `json:"url,omitempty"`
+}
+
+type ImageTaskUsage struct {
+	// ImageCount 本次请求生成图像计量
+	ImageCount int `json:"image_count,omitempty"`
+}
+
+// ImageTaskStatus 查询异步任务的状态
+func (ds *DashScope) ImageTaskStatus(ctx context.Context, taskID string) (*ImageTaskResponse, error) {
+	httpReq, err := http.NewRequest("GET", ds.serviceURL+"/api/v1/tasks/"+taskID, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq.Header.Set("Authorization", "Bearer "+ds.apiKey)
+
+	httpResp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+
+	defer httpResp.Body.Close()
+
+	if httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusBadRequest {
+		data, _ := io.ReadAll(httpResp.Body)
+		return nil, fmt.Errorf("query failed [%d]: %s", httpResp.StatusCode, string(data))
+	}
+
+	var chatResp ImageTaskResponse
+	if err := json.NewDecoder(httpResp.Body).Decode(&chatResp); err != nil {
+		return nil, err
+	}
+
+	return &chatResp, nil
 }
