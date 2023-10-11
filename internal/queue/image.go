@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
+	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
 	"github.com/mylxsw/aidea-server/internal/ai/deepai"
 	"github.com/mylxsw/aidea-server/internal/ai/fromston"
 	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
@@ -96,6 +97,7 @@ func BuildImageCompletionHandler(
 	stabaiClient *stabilityai.StabilityAI,
 	deepaiClient *deepai.DeepAI,
 	fromstonClient *fromston.Fromston,
+	dashscopeClient *dashscope.DashScope,
 	getimgaiClient *getimgai.GetimgAI,
 	translator youdao.Translater,
 	up *uploader.Uploader,
@@ -125,6 +127,8 @@ func BuildImageCompletionHandler(
 			return BuildFromStonCompletionHandler(fromstonClient, up, rep)(ctx, task)
 		case "getimgai":
 			return BuildGetimgAICompletionHandler(getimgaiClient, translator, up, rep, oai)(ctx, task)
+		case "dashscope":
+			return BuildDashscopeImageCompletionHandler(dashscopeClient, up, rep)(ctx, task)
 		default:
 			return nil
 		}

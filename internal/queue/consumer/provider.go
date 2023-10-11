@@ -7,6 +7,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
+	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
 	"github.com/mylxsw/aidea-server/internal/ai/deepai"
 	"github.com/mylxsw/aidea-server/internal/ai/fromston"
 	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
@@ -85,6 +86,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		smsClient *sms.Client,
 		ding *dingding.Dingding,
 		fromstonClient *fromston.Fromston,
+		dashscopeClient *dashscope.DashScope,
 		rep *repo.Repository,
 		ct chat.Chat,
 		conf *config.Config,
@@ -100,8 +102,9 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		mux.HandleFunc(queue.TypeSignup, queue.BuildSignupHandler(rep, mailer, ding))
 		mux.HandleFunc(queue.TypePayment, queue.BuildPaymentHandler(rep, mailer, que, ding))
 		mux.HandleFunc(queue.TypeBindPhone, queue.BuildBindPhoneHandler(rep, mailer))
-		mux.HandleFunc(queue.TypeImageGenCompletion, queue.BuildImageCompletionHandler(leapClient, stabaiClient, deepaiClient, fromstonClient, getimgaiClient, translater, uploader, rep, openaiClient))
+		mux.HandleFunc(queue.TypeImageGenCompletion, queue.BuildImageCompletionHandler(leapClient, stabaiClient, deepaiClient, fromstonClient, dashscopeClient, getimgaiClient, translater, uploader, rep, openaiClient))
 		mux.HandleFunc(queue.TypeFromStonCompletion, queue.BuildFromStonCompletionHandler(fromstonClient, uploader, rep))
+		mux.HandleFunc(queue.TypeDashscopeImageCompletion, queue.BuildDashscopeImageCompletionHandler(dashscopeClient, uploader, rep))
 		mux.HandleFunc(queue.TypeGetimgAICompletion, queue.BuildGetimgAICompletionHandler(getimgaiClient, translater, uploader, rep, openaiClient))
 		mux.HandleFunc(queue.TypeImageDownloader, queue.BuildImageDownloaderHandler(uploader, rep))
 		mux.HandleFunc(queue.TypeImageUpscale, queue.BuildImageUpscaleHandler(deepaiClient, stabaiClient, uploader, rep))
