@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -31,6 +30,8 @@ type DashscopeImageCompletionPayload struct {
 	ImageCount     int64  `json:"image_count,omitempty"`
 	Width          int64  `json:"width,omitempty"`
 	Height         int64  `json:"height,omitempty"`
+	Steps          int64  `json:"steps,omitempty"`
+	Seed           int64  `json:"seed,omitempty"`
 
 	Image         string  `json:"image,omitempty"`
 	AIRewrite     bool    `json:"ai_rewrite,omitempty"`
@@ -72,7 +73,6 @@ func NewDashscopeImageCompletionTask(payload any) *asynq.Task {
 type DashscopeImagePendingTaskPayload struct {
 	DashscopeImageTaskID string                          `json:"dashscope_image_task_id,omitempty"`
 	Payload              DashscopeImageCompletionPayload `json:"payload,omitempty"`
-	ModelType            string                          `json:"model_type,omitempty"`
 }
 
 func (p DashscopeImagePendingTaskPayload) GetImage() string {
@@ -163,30 +163,44 @@ func BuildDashscopeImageCompletionHandler(client *dashscope.DashScope, up *uploa
 			nil,
 		)
 
-		ms := strings.SplitN(payload.GetModel(), ":", 2)
-		if len(ms) != 2 {
-			panic(fmt.Errorf("invalid model: %s", payload.Model))
-		}
-
-		modelType, modelIdStr := ms[0], ms[1]
-
 		var resp *dashscope.ImageGenerationResponse
-		req := dashscope.StableDiffusionRequest{
-			Model: modelIdStr,
-			Input: dashscope.StableDiffusionInput{
-				Prompt:         prompt,
-				NegativePrompt: negativePrompt,
-			},
-			Parameters: dashscope.StableDiffusionParameters{
-				Size: fmt.Sprintf("%dx%d", payload.Width, payload.Height),
-				N:    int(payload.ImageCount),
-			},
-		}
+		if payload.Image != "" {
+			// 图生图模式，调用人像风格重绘接口
+			req := dashscope.ImageGenerationRequest{
+				Model: payload.GetModel(),
+				Input: dashscope.ImageGenerationRequestInput{
+					ImageURL:   payload.Image,
+					StyleIndex: dashscope.ImageStyleComic,
+				},
+			}
 
-		resp, err = client.StableDiffusion(ctx, req)
-		if err != nil {
-			log.With(payload).Errorf("create completion failed: %v", err)
-			panic(err)
+			resp, err = client.ImageGeneration(ctx, req)
+			if err != nil {
+				log.With(payload).Errorf("create completion failed: %v", err)
+				panic(err)
+			}
+
+		} else {
+			// 文生图模式，调用 Stable Diffusion 接口
+			req := dashscope.StableDiffusionRequest{
+				Model: payload.GetModel(),
+				Input: dashscope.StableDiffusionInput{
+					Prompt:         prompt,
+					NegativePrompt: negativePrompt,
+				},
+				Parameters: dashscope.StableDiffusionParameters{
+					Size:  fmt.Sprintf("%d*%d", payload.Width, payload.Height),
+					N:     int(payload.ImageCount),
+					Steps: int(payload.Steps),
+					Seed:  int(payload.Seed),
+				},
+			}
+
+			resp, err = client.StableDiffusion(ctx, req)
+			if err != nil {
+				log.With(payload).Errorf("create completion failed: %v", err)
+				panic(err)
+			}
 		}
 
 		if prompt != payload.Prompt || negativePrompt != payload.NegativePrompt {
@@ -210,7 +224,7 @@ func BuildDashscopeImageCompletionHandler(client *dashscope.DashScope, up *uploa
 			NextExecuteAt: time.Now().Add(time.Duration(5) * time.Second),
 			DeadlineAt:    time.Now().Add(30 * time.Minute),
 			Status:        repo.PendingTaskStatusProcessing,
-			Payload:       DashscopeImagePendingTaskPayload{DashscopeImageTaskID: resp.Output.TaskID, Payload: payload, ModelType: modelType},
+			Payload:       DashscopeImagePendingTaskPayload{DashscopeImageTaskID: resp.Output.TaskID, Payload: payload},
 		}); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("create pending task failed: %s", err)
 			panic(err)

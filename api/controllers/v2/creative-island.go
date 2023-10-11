@@ -182,6 +182,10 @@ func (ctl *CreativeIslandController) loadAllModels(ctx context.Context) []repo.I
 			return ctl.conf.EnableGetimgAI
 		}
 
+		if m.Vendor == "dashscope" {
+			return ctl.conf.EnableDashScopeAI
+		}
+
 		return true
 	})
 }
