@@ -590,13 +590,18 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 		return nil, webCtx.JSONError("invalid width or height", http.StatusBadRequest)
 	}
 
-	imageStrength := webCtx.Float64Input("image_strength", 0.5)
+	imageStrength := webCtx.Float64Input("image_strength", 0.65)
 	if imageStrength < 0 || imageStrength > 1 {
 		return nil, webCtx.JSONError("invalid image_strength", http.StatusBadRequest)
 	}
 
 	if imageStrength == 0 {
 		imageStrength = 0.5
+	}
+
+	// TODO 临时处理：0.5 效果不明显，但是客户端默认为 0.5，需要客户端同步调整
+	if imageStrength == 0.5 {
+		imageStrength = 0.65
 	}
 
 	seed := webCtx.Int64Input("seed", int64(rand.Intn(2147483647)))
