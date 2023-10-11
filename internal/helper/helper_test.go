@@ -43,6 +43,7 @@ func TestVersionCompare(t *testing.T) {
 
 	assert.True(t, helper.VersionOlder("1.0.0", "2.0.0"))
 	assert.True(t, helper.VersionOlder("1.0.0", "1.0.1"))
+	assert.False(t, helper.VersionOlder("1.0.6", "1.0.6"))
 }
 
 func TestResolveAspectRadio(t *testing.T) {
