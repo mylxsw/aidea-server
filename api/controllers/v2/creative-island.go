@@ -596,7 +596,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 	}
 
 	if imageStrength == 0 {
-		imageStrength = 0.5
+		imageStrength = 0.65
 	}
 
 	// TODO 临时处理：0.5 效果不明显，但是客户端默认为 0.5，需要客户端同步调整
