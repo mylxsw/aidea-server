@@ -2,7 +2,6 @@ package dashscope_test
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func TestImageGeneration(t *testing.T) {
-	client := dashscope.New(os.Getenv("ALI_LINGJI_API_KEY"))
+	client := createClient()
 
 	resp, err := client.ImageGeneration(context.TODO(), dashscope.ImageGenerationRequest{
 		Model: dashscope.ImageModelPersonRepaint,

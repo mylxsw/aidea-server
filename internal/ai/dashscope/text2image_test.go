@@ -2,7 +2,6 @@ package dashscope_test
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -12,7 +11,7 @@ import (
 )
 
 func TestText2Image(t *testing.T) {
-	client := dashscope.New(os.Getenv("ALI_LINGJI_API_KEY"))
+	client := createClient()
 
 	resp, err := client.Text2Image(context.TODO(), dashscope.Text2ImageRequest{
 		Model: dashscope.ImageModelText2Image,

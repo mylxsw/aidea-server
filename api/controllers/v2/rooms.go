@@ -89,6 +89,14 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 				return false
 			}
 
+			if !ctl.conf.EnableBaichuan && item.Vendor == "百川" {
+				return false
+			}
+
+			if !ctl.conf.EnableGPT360 && item.Vendor == "360智脑" {
+				return false
+			}
+
 			if item.VersionMax == "" && item.VersionMin == "" {
 				return true
 			}

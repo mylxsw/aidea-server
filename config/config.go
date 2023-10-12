@@ -42,8 +42,9 @@ type Config struct {
 	BaiduWXSecret   string `json:"baidu_ai_secret" yaml:"baidu_ai_secret"`
 
 	// 阿里灵积平台配置
-	EnableDashScopeAI bool   `json:"enable_dashscope_ai" yaml:"enable_dashscope_ai"`
-	DashScopeKey      string `json:"dashscope_key" yaml:"dashscope_key"`
+	EnableDashScopeAI bool     `json:"enable_dashscope_ai" yaml:"enable_dashscope_ai"`
+	DashScopeKey      string   `json:"dashscope_key" yaml:"dashscope_key"`
+	DashScopeKeys     []string `json:"dashscope_keys" yaml:"dashscope_keys"`
 
 	// 讯飞星火大模型配置
 	EnableXFYunAI  bool   `json:"enable_xfyun_ai" yaml:"enable_xfyun_ai"`
@@ -60,6 +61,10 @@ type Config struct {
 	EnableBaichuan bool   `json:"enable_baichuan" yaml:"enable_baichuan"`
 	BaichuanAPIKey string `json:"baichuan_api_key" yaml:"baichuan_api_key"`
 	BaichuanSecret string `json:"-" yaml:"-"`
+
+	// 360 智脑
+	EnableGPT360 bool   `json:"enable_gpt360" yaml:"enable_gpt360"`
+	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
 
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
@@ -255,6 +260,7 @@ func Register(ins *app.App) {
 
 			EnableDashScopeAI: ctx.Bool("enable-dashscopeai"),
 			DashScopeKey:      ctx.String("dashscope-key"),
+			DashScopeKeys:     ctx.StringSlice("dashscope-keys"),
 
 			EnableXFYunAI:  ctx.Bool("enable-xfyunai"),
 			XFYunAppID:     ctx.String("xfyun-appid"),
@@ -268,6 +274,9 @@ func Register(ins *app.App) {
 			EnableBaichuan: ctx.Bool("enable-baichuan"),
 			BaichuanAPIKey: ctx.String("baichuan-apikey"),
 			BaichuanSecret: ctx.String("baichuan-secret"),
+
+			EnableGPT360: ctx.Bool("enable-gpt360"),
+			GPT360APIKey: ctx.String("gpt360-apikey"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
 
