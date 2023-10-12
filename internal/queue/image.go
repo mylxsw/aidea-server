@@ -128,7 +128,7 @@ func BuildImageCompletionHandler(
 		case "getimgai":
 			return BuildGetimgAICompletionHandler(getimgaiClient, translator, up, rep, oai)(ctx, task)
 		case "dashscope":
-			return BuildDashscopeImageCompletionHandler(dashscopeClient, up, rep)(ctx, task)
+			return BuildDashscopeImageCompletionHandler(dashscopeClient, up, rep, translator, oai)(ctx, task)
 		default:
 			return nil
 		}

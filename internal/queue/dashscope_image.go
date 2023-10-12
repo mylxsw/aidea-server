@@ -9,10 +9,12 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
+	"github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/aidea-server/internal/uploader"
+	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
 )
@@ -104,7 +106,14 @@ type DashscopeImageResponse interface {
 	GetImages() []string
 }
 
-func BuildDashscopeImageCompletionHandler(client *dashscope.DashScope, up *uploader.Uploader, rep *repo.Repository) TaskHandler {
+func BuildDashscopeImageCompletionHandler(
+	client *dashscope.DashScope,
+	up *uploader.Uploader,
+	rep *repo.Repository,
+	translator youdao.Translater,
+	oai *openai.OpenAI,
+) TaskHandler {
+
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload DashscopeImageCompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -159,8 +168,8 @@ func BuildDashscopeImageCompletionHandler(client *dashscope.DashScope, up *uploa
 				Model:          payload.Model,
 			},
 			rep.Creative,
-			nil,
-			nil,
+			oai,
+			translator,
 		)
 
 		var resp *dashscope.ImageGenerationResponse

@@ -95,6 +95,7 @@ type AlipayPayment struct {
 	BuyerLogonID   string    `json:"buyer_logon_id"`
 	PurchaseAt     time.Time `json:"purchase_at"`
 	Status         int64     `json:"status"`
+	Environment    string    `json:"environment"`
 	Note           string    `json:"note"`
 }
 
@@ -114,7 +115,7 @@ func (repo *PaymentRepo) CompleteAliPayment(ctx context.Context, userId int64, p
 
 		if _, err := model.NewPaymentHistoryModel(tx).Update(ctx, q, model.PaymentHistoryN{
 			Status:      null.IntFrom(pay.Status),
-			Environment: null.StringFrom("Production"),
+			Environment: null.StringFrom(pay.Environment),
 			PurchaseAt:  null.TimeFrom(pay.PurchaseAt),
 		}); err != nil {
 			return fmt.Errorf("update payment history failed: %w", err)

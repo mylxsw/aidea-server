@@ -149,6 +149,7 @@ type Config struct {
 	EnableApplePay bool `json:"enable_apple_pay" yaml:"enable_apple_pay"`
 
 	// 支付宝
+	AlipaySandbox           bool   `json:"alipay_sandbox" yaml:"alipay_sandbox"`
 	EnableAlipay            bool   `json:"enable_alipay" yaml:"enable_alipay"`
 	AliPayAppID             string `json:"alipay_appid" yaml:"alipay_appid"`
 	AliPayAppPrivateKeyPath string `json:"alipay_app_private_key_path" yaml:"alipay_app_private_key_path"`
@@ -348,6 +349,7 @@ func Register(ins *app.App) {
 			AliPayPublicKeyPath:     ctx.String("alipay-public-key"),
 			AliPayNotifyURL:         ctx.String("alipay-notify-url"),
 			AliPayReturnURL:         ctx.String("alipay-return-url"),
+			AlipaySandbox:           ctx.Bool("alipay-sandbox"),
 
 			SMSChannels: ctx.StringSlice("sms-channels"),
 

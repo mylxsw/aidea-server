@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/payment/applepay"
 
 	"github.com/mylxsw/aidea-server/api/auth"
@@ -22,6 +23,7 @@ import (
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
 	"github.com/mylxsw/go-utils/array"
+	"github.com/mylxsw/go-utils/ternary"
 )
 
 type PaymentController struct {
@@ -30,6 +32,7 @@ type PaymentController struct {
 	payRepo    *repo.PaymentRepo `autowire:"@"`
 	alipay     alipay.Alipay     `autowire:"@"`
 	applepay   applepay.ApplePay `autowire:"@"`
+	conf       *config.Config    `autowire:"@"`
 }
 
 func NewPaymentController(resolver infra.Resolver) web.Controller {
@@ -123,13 +126,13 @@ func (ctl *PaymentController) CreateAlipay(ctx context.Context, webCtx web.Conte
 
 	log.With(trade).Debugf("create alipay payment")
 
-	payParams, err := ctl.alipay.TradePay(ctx, source, trade, true)
+	payParams, err := ctl.alipay.TradePay(ctx, source, trade, !ctl.conf.AlipaySandbox)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("create alipay payment failed")
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(web.M{"params": payParams, "payment_id": paymentID})
+	return webCtx.JSON(web.M{"params": payParams, "payment_id": paymentID, "sandbox": ctl.conf.AlipaySandbox})
 }
 
 type AlipayClientConfirm struct {
@@ -331,6 +334,7 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 		BuyerLogonID:   buyerLogonId,
 		PurchaseAt:     time.Now(),
 		Status:         status,
+		Environment:    ternary.If(ctl.conf.AlipaySandbox, "Sandbox", "Production"),
 		Note:           note,
 	}
 	eventID, err := ctl.payRepo.CompleteAliPayment(ctx, int64(userId), paymentId, aliPay)

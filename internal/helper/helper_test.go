@@ -15,6 +15,7 @@ func TestIsChinese(t *testing.T) {
 	assert.True(t, helper.IsChinese("中文数据量大English"))
 	assert.False(t, helper.IsChinese("中English"))
 	assert.False(t, helper.IsChinese(""))
+	assert.True(t, helper.IsChinese("钢铁侠"))
 }
 
 func TestParseAppleDateTime(t *testing.T) {
