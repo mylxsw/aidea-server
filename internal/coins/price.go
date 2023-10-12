@@ -57,6 +57,9 @@ var coinTables = map[string]CoinTable{
 
 		// 百川 https://platform.baichuan-ai.com/price
 		"Baichuan2-53B": 3, // valid 百川 53b ¥0.02/1K tokens
+
+		// 360 智脑
+		"360GPT_S2_V9": 2, // valid 360 智脑 ¥0.012/1K tokens
 	},
 
 	"voice-recognition": {

@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"context"
+
 	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
+	"github.com/mylxsw/aidea-server/internal/ai/gpt360"
 
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
@@ -670,6 +672,18 @@ func chinaModels(conf *config.Config) []Model {
 			Name:        "百川大模型",
 			Description: "由百川智能研发的大语言模型，融合了意图理解、信息检索以及强化学习技术，结合有监督微调与人类意图对齐，在知识问答、文本创作领域表现突出",
 			Category:    "百川",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.5",
+		})
+	}
+
+	if conf.EnableGPT360 {
+		models = append(models, Model{
+			ID:          "360智脑:" + gpt360.Model360GPT_S2_V9,
+			Name:        "360智脑",
+			Description: "由 360 研发的大语言模型，拥有独特的语言理解能力，通过实时对话，解答疑惑、探索灵感，用AI技术帮人类打开智慧的大门",
+			Category:    "360",
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.5",

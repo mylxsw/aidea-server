@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
+	"github.com/mylxsw/aidea-server/internal/ai/gpt360"
 	"github.com/mylxsw/aidea-server/internal/coins"
 
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
@@ -113,6 +114,9 @@ func main() {
 	ins.AddBoolFlag("enable-baichuan", "是否启用百川大模型")
 	ins.AddStringFlag("baichuan-apikey", "", "百川大模型 API Key")
 	ins.AddStringFlag("baichuan-secret", "", "百川大模型 API Secret")
+
+	ins.AddBoolFlag("enable-gpt360", "是否启用 360 智脑大模型")
+	ins.AddStringFlag("gpt360-apikey", "", "360 智脑大模型 API Key")
 
 	ins.AddBoolFlag("enable-stabilityai", "是否启用 StabilityAI 文生图、图生图服务")
 	ins.AddBoolFlag("stabilityai-autoproxy", "使用 socks5 代理访问 StabilityAI 服务")
@@ -292,6 +296,7 @@ func main() {
 		tencentai.Provider{},
 		anthropic.Provider{},
 		baichuan.Provider{},
+		gpt360.Provider{},
 	)
 
 	app.MustRun(ins)

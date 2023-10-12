@@ -101,6 +101,14 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 			return false
 		}
 
+		if !ctl.conf.EnableBaichuan && item.Vendor == "百川" {
+			return false
+		}
+
+		if !ctl.conf.EnableGPT360 && item.Vendor == "360智脑" {
+			return false
+		}
+
 		// 检查版本是否满足条件
 		if item.VersionMax == "" && item.VersionMin == "" {
 			return true

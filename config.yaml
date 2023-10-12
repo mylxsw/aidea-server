@@ -100,12 +100,18 @@ enable-sensenovaai: false
 sensenova-keyid: ""
 sensenova-keysecret: ""
 
-# ######## 百川大模型 ########
+######### 百川大模型 ########
 
 # API 申请 https://platform.baichuan-ai.com/
 enable-baichuan: false
 baichuan-apikey: ""
 baichuan-secret: ""
+
+######## 360 智脑 ########
+
+# API 申请 https://ai.360.com
+enable-gpt360: false
+gpt360-apikey: ""
 
 ######## DeepAI 配置 ########
 

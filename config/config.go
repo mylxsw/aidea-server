@@ -61,6 +61,10 @@ type Config struct {
 	BaichuanAPIKey string `json:"baichuan_api_key" yaml:"baichuan_api_key"`
 	BaichuanSecret string `json:"-" yaml:"-"`
 
+	// 360 智脑
+	EnableGPT360 bool   `json:"enable_gpt360" yaml:"enable_gpt360"`
+	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
+
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
 
@@ -268,6 +272,9 @@ func Register(ins *app.App) {
 			EnableBaichuan: ctx.Bool("enable-baichuan"),
 			BaichuanAPIKey: ctx.String("baichuan-apikey"),
 			BaichuanSecret: ctx.String("baichuan-secret"),
+
+			EnableGPT360: ctx.Bool("enable-gpt360"),
+			GPT360APIKey: ctx.String("gpt360-apikey"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
 

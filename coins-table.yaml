@@ -11,6 +11,7 @@ invited_gift_coins: 100
 invite_payment_gift_rate: 0.05
 
 # 每日免费模型额度配置
+# 模型标识参考 internal/coins/price.go 中的 coinTables
 # 字段说明：
 #   - model: 模型标识
 #   - name: 模型名称

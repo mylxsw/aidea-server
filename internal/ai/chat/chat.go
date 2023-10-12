@@ -10,6 +10,7 @@ import (
 	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
+	"github.com/mylxsw/aidea-server/internal/ai/gpt360"
 	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
 	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
 	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
@@ -157,8 +158,8 @@ type Imp struct {
 	tencentAI   *TencentAIChat
 	anthropicAI *AnthropicChat
 	baichuanAI  *BaichuanAIChat
-
-	virtual *VirtualChat
+	g360        *GPT360Chat
+	virtual     *VirtualChat
 }
 
 func NewChat(
@@ -171,6 +172,7 @@ func NewChat(
 	tencentAI *TencentAIChat,
 	anthropicAI *AnthropicChat,
 	baichuanAI *BaichuanAIChat,
+	g360 *GPT360Chat,
 ) Chat {
 	var virtualImpl Chat
 	switch strings.ToLower(conf.VirtualModel.Implementation) {
@@ -190,6 +192,8 @@ func NewChat(
 		virtualImpl = anthropicAI
 	case "baichuan", "百川":
 		virtualImpl = baichuanAI
+	case "gpt360", "360智脑":
+		virtualImpl = g360
 	default:
 		virtualImpl = openAI
 	}
@@ -203,6 +207,7 @@ func NewChat(
 		tencentAI:   tencentAI,
 		anthropicAI: anthropicAI,
 		baichuanAI:  baichuanAI,
+		g360:        g360,
 		virtual:     NewVirtualChat(virtualImpl, conf.VirtualModel),
 	}
 }
@@ -240,6 +245,10 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.virtual
 	}
 
+	if strings.HasPrefix(model, "360智脑:") {
+		return ai.g360
+	}
+
 	// TODO 根据模型名称判断使用哪个 AI
 	switch model {
 	case string(baidu.ModelErnieBot),
@@ -269,7 +278,11 @@ func (ai *Imp) selectImp(model string) Chat {
 		// Anthropic
 		return ai.anthropicAI
 	case baichuan.ModelBaichuan2_53B:
+		// 百川
 		return ai.baichuanAI
+	case gpt360.Model360GPT_S2_V9:
+		// 360智脑
+		return ai.g360
 	case ModelNanXian, ModelBeiChou:
 		// 虚拟模型
 		return ai.virtual
