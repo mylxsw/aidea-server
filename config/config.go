@@ -42,8 +42,9 @@ type Config struct {
 	BaiduWXSecret   string `json:"baidu_ai_secret" yaml:"baidu_ai_secret"`
 
 	// 阿里灵积平台配置
-	EnableDashScopeAI bool   `json:"enable_dashscope_ai" yaml:"enable_dashscope_ai"`
-	DashScopeKey      string `json:"dashscope_key" yaml:"dashscope_key"`
+	EnableDashScopeAI bool     `json:"enable_dashscope_ai" yaml:"enable_dashscope_ai"`
+	DashScopeKey      string   `json:"dashscope_key" yaml:"dashscope_key"`
+	DashScopeKeys     []string `json:"dashscope_keys" yaml:"dashscope_keys"`
 
 	// 讯飞星火大模型配置
 	EnableXFYunAI  bool   `json:"enable_xfyun_ai" yaml:"enable_xfyun_ai"`
@@ -259,6 +260,7 @@ func Register(ins *app.App) {
 
 			EnableDashScopeAI: ctx.Bool("enable-dashscopeai"),
 			DashScopeKey:      ctx.String("dashscope-key"),
+			DashScopeKeys:     ctx.StringSlice("dashscope-keys"),
 
 			EnableXFYunAI:  ctx.Bool("enable-xfyunai"),
 			XFYunAppID:     ctx.String("xfyun-appid"),

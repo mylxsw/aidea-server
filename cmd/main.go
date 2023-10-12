@@ -101,6 +101,7 @@ func main() {
 
 	ins.AddBoolFlag("enable-dashscopeai", "是否启用阿里灵积平台(通义千问)")
 	ins.AddStringFlag("dashscope-key", "", "阿里灵积平台密钥")
+	ins.AddStringSliceFlag("dashscope-keys", []string{}, "阿里灵积平台密钥，这里所有的 Keys 会和 dashscope-key 合并到一起，随机均摊请求负载")
 
 	ins.AddBoolFlag("enable-xfyunai", "是否启用讯飞 星火 AI")
 	ins.AddStringFlag("xfyun-appid", "", "讯飞星火 APP ID")

@@ -7,18 +7,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"strings"
 )
 
 type DashScope struct {
-	apiKey     string
+	apiKeys    []string
 	serviceURL string
 }
 
-func New(apiKey string) *DashScope {
+func New(apiKeys ...string) *DashScope {
 	return &DashScope{
-		apiKey:     apiKey,
+		apiKeys:    apiKeys,
 		serviceURL: "https://dashscope.aliyuncs.com",
 	}
 }
@@ -133,7 +134,7 @@ func (ds *DashScope) Chat(req ChatRequest) (*ChatResponse, error) {
 		return nil, err
 	}
 
-	httpReq.Header.Set("Authorization", "Bearer "+ds.apiKey)
+	httpReq.Header.Set("Authorization", "Bearer "+ds.apiKeyLoadBalanced())
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-DashScope-DataInspection", "enable")
 
@@ -167,7 +168,7 @@ func (ds *DashScope) ChatStream(req ChatRequest) (<-chan ChatResponse, error) {
 		return nil, err
 	}
 
-	httpReq.Header.Set("Authorization", "Bearer "+ds.apiKey)
+	httpReq.Header.Set("Authorization", "Bearer "+ds.apiKeyLoadBalanced())
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "text/event-stream")
 	httpReq.Header.Set("Cache-Control", "no-cache")
@@ -281,7 +282,7 @@ func (ds *DashScope) ImageTaskStatus(ctx context.Context, taskID string) (*Image
 		return nil, err
 	}
 
-	httpReq.Header.Set("Authorization", "Bearer "+ds.apiKey)
+	httpReq.Header.Set("Authorization", "Bearer "+ds.apiKeyLoadBalanced())
 
 	httpResp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
@@ -301,4 +302,8 @@ func (ds *DashScope) ImageTaskStatus(ctx context.Context, taskID string) (*Image
 	}
 
 	return &chatResp, nil
+}
+
+func (ds *DashScope) apiKeyLoadBalanced() string {
+	return ds.apiKeys[rand.Intn(len(ds.apiKeys))]
 }

@@ -57,7 +57,7 @@ func (ds *DashScope) StableDiffusion(ctx context.Context, req StableDiffusionReq
 		return nil, err
 	}
 
-	httpReq.Header.Set("Authorization", "Bearer "+ds.apiKey)
+	httpReq.Header.Set("Authorization", "Bearer "+ds.apiKeyLoadBalanced())
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("X-DashScope-Async", "enable")
 

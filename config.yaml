@@ -81,6 +81,7 @@ enable-baiduwxai: false
 # 是否启用阿里云灵积模型平台
 enable-dashscopeai: false
 #dashscope-key: ""
+#dashscope-keys: []
 
 ######### 讯飞星火大语言模型 ########
 
