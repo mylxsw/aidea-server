@@ -56,6 +56,11 @@ type Config struct {
 	SenseNovaKeyID     string `json:"sensenova_keyid" yaml:"sensenova_keyid"`
 	SenseNovaKeySecret string `json:"-" yaml:"-"`
 
+	// 百川大模型
+	EnableBaichuan bool   `json:"enable_baichuan" yaml:"enable_baichuan"`
+	BaichuanAPIKey string `json:"baichuan_api_key" yaml:"baichuan_api_key"`
+	BaichuanSecret string `json:"-" yaml:"-"`
+
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
 
@@ -144,6 +149,7 @@ type Config struct {
 	EnableApplePay bool `json:"enable_apple_pay" yaml:"enable_apple_pay"`
 
 	// 支付宝
+	AlipaySandbox           bool   `json:"alipay_sandbox" yaml:"alipay_sandbox"`
 	EnableAlipay            bool   `json:"enable_alipay" yaml:"enable_alipay"`
 	AliPayAppID             string `json:"alipay_appid" yaml:"alipay_appid"`
 	AliPayAppPrivateKeyPath string `json:"alipay_app_private_key_path" yaml:"alipay_app_private_key_path"`
@@ -259,6 +265,10 @@ func Register(ins *app.App) {
 			SenseNovaKeyID:     ctx.String("sensenova-keyid"),
 			SenseNovaKeySecret: ctx.String("sensenova-keysecret"),
 
+			EnableBaichuan: ctx.Bool("enable-baichuan"),
+			BaichuanAPIKey: ctx.String("baichuan-apikey"),
+			BaichuanSecret: ctx.String("baichuan-secret"),
+
 			Socks5Proxy: ctx.String("socks5-proxy"),
 
 			EnableDeepAI:    ctx.Bool("enable-deepai"),
@@ -339,6 +349,7 @@ func Register(ins *app.App) {
 			AliPayPublicKeyPath:     ctx.String("alipay-public-key"),
 			AliPayNotifyURL:         ctx.String("alipay-notify-url"),
 			AliPayReturnURL:         ctx.String("alipay-return-url"),
+			AlipaySandbox:           ctx.Bool("alipay-sandbox"),
 
 			SMSChannels: ctx.StringSlice("sms-channels"),
 

@@ -8,6 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
+	"github.com/mylxsw/aidea-server/internal/coins"
+
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
@@ -107,6 +110,10 @@ func main() {
 	ins.AddStringFlag("sensenova-keyid", "", "商汤日日新 Key ID")
 	ins.AddStringFlag("sensenova-keysecret", "", "商汤日日新 Key Secret")
 
+	ins.AddBoolFlag("enable-baichuan", "是否启用百川大模型")
+	ins.AddStringFlag("baichuan-apikey", "", "百川大模型 API Key")
+	ins.AddStringFlag("baichuan-secret", "", "百川大模型 API Secret")
+
 	ins.AddBoolFlag("enable-stabilityai", "是否启用 StabilityAI 文生图、图生图服务")
 	ins.AddBoolFlag("stabilityai-autoproxy", "使用 socks5 代理访问 StabilityAI 服务")
 	ins.AddStringFlag("stabilityai-organization", "", "stabilityai organization")
@@ -181,6 +188,7 @@ func main() {
 	ins.AddStringFlag("alipay-public-key", "path/to/alipayCertPublicKey_RSA2.crt", "支付宝公钥证书路径")
 	ins.AddStringFlag("alipay-notify-url", "https://ai-api.aicode.cc/v1/payment/callback/alipay-notify", "支付宝支付回调地址")
 	ins.AddStringFlag("alipay-return-url", "https://ai-api.aicode.cc/public/payment/alipay-return", "支付宝支付 return url")
+	ins.AddBoolFlag("alipay-sandbox", "是否使用支付宝沙箱环境")
 
 	ins.AddStringSliceFlag("sms-channels", []string{}, "启用的短信通道，支持腾讯云和阿里云: tencent, aliyun，多个值时随机每次发送随机选择")
 
@@ -204,6 +212,8 @@ func main() {
 	ins.AddStringFlag("virtual-model-beichou-rel", "gpt-4", "北丑大模型实现")
 	ins.AddStringFlag("virtual-model-beichou-prompt", "", "北丑大模型内置提示语")
 
+	ins.AddStringFlag("price-table-file", "", "价格表文件路径，留空则使用默认价格表")
+
 	// 配置文件
 	config.Register(ins)
 
@@ -221,8 +231,22 @@ func main() {
 			}))
 		}
 
+		// 加载价格表
+		priceTableFile := f.String("price-table-file")
+		if priceTableFile != "" {
+			if err := coins.LoadPriceInfo(priceTableFile); err != nil {
+				return fmt.Errorf("价格表加载失败: %w", err)
+			}
+
+			coins.DebugPrintPriceInfo()
+		}
+
 		return nil
 	})
+
+	//ins.Async(func(conf *config.Config) {
+	//	log.With(conf).Debugf("configuration loaded")
+	//})
 
 	// 配置要加载的服务模块
 	ins.Provider(
@@ -267,6 +291,7 @@ func main() {
 		sensenova.Provider{},
 		tencentai.Provider{},
 		anthropic.Provider{},
+		baichuan.Provider{},
 	)
 
 	app.MustRun(ins)

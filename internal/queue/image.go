@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
+	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
 	"github.com/mylxsw/aidea-server/internal/ai/deepai"
 	"github.com/mylxsw/aidea-server/internal/ai/fromston"
 	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
@@ -96,12 +97,11 @@ func BuildImageCompletionHandler(
 	stabaiClient *stabilityai.StabilityAI,
 	deepaiClient *deepai.DeepAI,
 	fromstonClient *fromston.Fromston,
+	dashscopeClient *dashscope.DashScope,
 	getimgaiClient *getimgai.GetimgAI,
 	translator youdao.Translater,
 	up *uploader.Uploader,
-	quotaRepo *repo.QuotaRepo,
-	queueRepo *repo.QueueRepo,
-	creativeRepo *repo.CreativeRepo,
+	rep *repo.Repository,
 	oai *openai.OpenAI,
 ) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
@@ -111,22 +111,24 @@ func BuildImageCompletionHandler(
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			queueRepo.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
 
 		switch payload.Vendor {
 		case "leapai":
-			return BuildLeapAICompletionHandler(leapClient, translator, up, quotaRepo, queueRepo, creativeRepo, oai)(ctx, task)
+			return BuildLeapAICompletionHandler(leapClient, translator, up, rep, oai)(ctx, task)
 		case "deepai":
-			return BuildDeepAICompletionHandler(deepaiClient, translator, up, quotaRepo, queueRepo, creativeRepo, oai)(ctx, task)
+			return BuildDeepAICompletionHandler(deepaiClient, translator, up, rep, oai)(ctx, task)
 		case "stabilityai":
-			return BuildStabilityAICompletionHandler(stabaiClient, translator, up, quotaRepo, queueRepo, creativeRepo, oai)(ctx, task)
+			return BuildStabilityAICompletionHandler(stabaiClient, translator, up, rep, oai)(ctx, task)
 		case "fromston":
-			return BuildFromStonCompletionHandler(fromstonClient, up, quotaRepo, queueRepo, creativeRepo)(ctx, task)
+			return BuildFromStonCompletionHandler(fromstonClient, up, rep)(ctx, task)
 		case "getimgai":
-			return BuildGetimgAICompletionHandler(getimgaiClient, translator, up, quotaRepo, queueRepo, creativeRepo, oai)(ctx, task)
+			return BuildGetimgAICompletionHandler(getimgaiClient, translator, up, rep, oai)(ctx, task)
+		case "dashscope":
+			return BuildDashscopeImageCompletionHandler(dashscopeClient, up, rep, translator, oai)(ctx, task)
 		default:
 			return nil
 		}

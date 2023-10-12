@@ -48,7 +48,7 @@ func NewImageDownloaderTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeImageDownloader, data)
 }
 
-func BuildImageDownloaderHandler(up *uploader.Uploader, creativeRepo *repo.CreativeRepo, queueRepo *repo.QueueRepo) TaskHandler {
+func BuildImageDownloaderHandler(up *uploader.Uploader, rep *repo.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageDownloaderPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -69,7 +69,7 @@ func BuildImageDownloaderHandler(up *uploader.Uploader, creativeRepo *repo.Creat
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -82,7 +82,7 @@ func BuildImageDownloaderHandler(up *uploader.Uploader, creativeRepo *repo.Creat
 			}
 		}()
 
-		item, err := creativeRepo.FindHistoryRecordByTaskId(ctx, payload.UserID, payload.CreativeHistoryTaskID)
+		item, err := rep.Creative.FindHistoryRecordByTaskId(ctx, payload.UserID, payload.CreativeHistoryTaskID)
 		if err != nil {
 			panic(fmt.Errorf("创作岛历史记录查询失败: %w", err))
 		}
@@ -114,14 +114,14 @@ func BuildImageDownloaderHandler(up *uploader.Uploader, creativeRepo *repo.Creat
 		}
 
 		answer, _ := json.Marshal(resources)
-		if err := creativeRepo.UpdateRecordAnswerByTaskID(ctx, payload.UserID, payload.CreativeHistoryTaskID, string(answer)); err != nil {
+		if err := rep.Creative.UpdateRecordAnswerByTaskID(ctx, payload.UserID, payload.CreativeHistoryTaskID, string(answer)); err != nil {
 			log.WithFields(log.Fields{
 				"payload": payload,
 			}).Errorf("创作岛历史记录更新失败: %s", err)
 			panic(fmt.Errorf("创作岛历史记录更新失败: %w", err))
 		}
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	oai "github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
 	"github.com/mylxsw/go-utils/array"
 	"github.com/sashabaranov/go-openai"
@@ -38,15 +37,6 @@ func (chat *XFYunChat) initRequest(req Request) (string, []xfyun.Message, error)
 		}
 	}
 
-	msgs, _, err := oai.ReduceChatCompletionMessages(
-		contextMessages,
-		req.Model,
-		8000,
-	)
-	if err != nil {
-		return req.Model, nil, err
-	}
-
 	if len(systemMessages) == 1 {
 		systemMessages = append(systemMessages, openai.ChatCompletionMessage{
 			Role:    "assistant",
@@ -54,7 +44,7 @@ func (chat *XFYunChat) initRequest(req Request) (string, []xfyun.Message, error)
 		})
 	}
 
-	messages := append(systemMessages, msgs...)
+	messages := append(systemMessages, contextMessages...)
 
 	return req.Model, array.Map(messages, func(item openai.ChatCompletionMessage, _ int) xfyun.Message {
 		if item.Role == "system" {

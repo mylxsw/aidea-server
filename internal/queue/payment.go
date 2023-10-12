@@ -57,10 +57,7 @@ func NewPaymentTask(payload any) *asynq.Task {
 }
 
 func BuildPaymentHandler(
-	userRepo *repo.UserRepo,
-	quotaRepo *repo.QuotaRepo,
-	eventRepo *repo.EventRepo,
-	queueRepo *repo.QueueRepo,
+	rep *repo.Repository,
 	mailer *mail.Sender,
 	que *Queue,
 	ding *dingding.Dingding,
@@ -78,7 +75,7 @@ func BuildPaymentHandler(
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -89,14 +86,14 @@ func BuildPaymentHandler(
 					log.With(task).Errorf("update queue status failed: %s", err)
 				}
 
-				if err := eventRepo.UpdateEvent(ctx, payload.EventID, repo.EventStatusFailed); err != nil {
+				if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo.EventStatusFailed); err != nil {
 					log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("update event status failed: %s", err)
 				}
 			}
 		}()
 
 		// 查询事件记录
-		event, err := eventRepo.GetEvent(ctx, payload.EventID)
+		event, err := rep.Event.GetEvent(ctx, payload.EventID)
 		if err != nil {
 			if err == repo.ErrNotFound {
 				log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("event not found")
@@ -118,19 +115,19 @@ func BuildPaymentHandler(
 		}
 
 		// 用户充值
-		product := coins.GetAppleProduct(payload.ProductID)
+		product := coins.GetProduct(payload.ProductID)
 		if product == nil {
 			log.With(payload).Errorf("product not found")
 			return nil
 		}
 
 		expiredAt := product.ExpiredAt()
-		if _, err := quotaRepo.AddUserQuota(ctx, payload.UserID, product.Quota, expiredAt, payload.Note, payload.PaymentID); err != nil {
+		if _, err := rep.Quota.AddUserQuota(ctx, payload.UserID, product.Quota, expiredAt, payload.Note, payload.PaymentID); err != nil {
 			log.With(payload).Errorf("用户充值增加配额失败: %s", err)
 			return err
 		}
 
-		if err := eventRepo.UpdateEvent(ctx, payload.EventID, repo.EventStatusSucceed); err != nil {
+		if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo.EventStatusSucceed); err != nil {
 			log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("update event status failed: %s", err)
 		}
 
@@ -149,7 +146,7 @@ func BuildPaymentHandler(
 		}
 
 		// 邀请人奖励
-		user, err := userRepo.GetUserByID(ctx, payload.UserID)
+		user, err := rep.User.GetUserByID(ctx, payload.UserID)
 		if err != nil {
 			if err != repo.ErrUserAccountDisabled {
 				log.WithFields(log.Fields{"user_id": payload.UserID}).Errorf("引荐人奖励，查询用户信息失败: %s", err)
@@ -159,7 +156,7 @@ func BuildPaymentHandler(
 			// 有效期为一年内
 			if user.InvitedBy > 0 && user.CreatedAt.After(time.Now().AddDate(-1, 0, 0)) {
 				// 为邀请人增加奖励
-				if _, err := quotaRepo.AddUserQuota(ctx, user.InvitedBy, int64(coins.InvitePaymentGiftRate*float64(product.Quota)), time.Now().AddDate(0, 1, 0), "引荐人充值分红", payload.PaymentID); err != nil {
+				if _, err := rep.Quota.AddUserQuota(ctx, user.InvitedBy, int64(coins.InvitePaymentGiftRate*float64(product.Quota)), time.Now().AddDate(0, 1, 0), "引荐人充值分红", payload.PaymentID); err != nil {
 					log.WithFields(log.Fields{"user_id": user.InvitedBy}).Errorf("引荐人充值分红失败: %s", err)
 				}
 			}
@@ -180,7 +177,7 @@ func BuildPaymentHandler(
 			}
 		}()
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,

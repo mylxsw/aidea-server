@@ -62,7 +62,7 @@ func (ctl *InfoController) shareInfo(ctx web.Context, user *auth.UserOptional) w
 	return ctx.JSON(res)
 }
 
-const CurrentVersion = "1.0.5"
+const CurrentVersion = "1.0.6"
 
 func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 	clientVersion := ctx.Input("version")

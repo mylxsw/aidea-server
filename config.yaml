@@ -2,12 +2,14 @@
 
 # Web 服务监听地址
 listen: 0.0.0.0:8080
+
 # 日志文件存储目录，留空则写入到标准输出
-log-path: /data/logs/ai-server
+#log-path: /data/logs/ai-server
+
 # 是否启用跨域支持
 enable-cors: false
 
-# 数据库配置
+# 数据库配置 (账号:密码@tcp(数据库地址:端口)/数据库名?charset=utf8mb4&parseTime=True&loc=Local)
 db-uri: "root:123456@tcp(mysql-server.host:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local"
 
 # Redis 配置
@@ -98,6 +100,13 @@ enable-sensenovaai: false
 sensenova-keyid: ""
 sensenova-keysecret: ""
 
+# ######## 百川大模型 ########
+
+# API 申请 https://platform.baichuan-ai.com/
+enable-baichuan: false
+baichuan-apikey: ""
+baichuan-secret: ""
+
 ######## DeepAI 配置 ########
 
 # 用于图片超分辨率、图片上色
@@ -114,7 +123,7 @@ deepai-key: ""
 # 官方提供的 Stable Diffusion 托管服务，用于文生图、图生图
 # API 申请：https://stability.ai/
 
-enable-stabilityai: true
+enable-stabilityai: false
 # 是否启用 StabilityAI 代理，依赖于 socks5-proxy 配置
 stabilityai-autoproxy: true
 stabilityai-servers: [ "https://api.stability.ai" ]
@@ -126,7 +135,7 @@ stabilityai-key: ""
 # Leap 提供的 Stable Diffusion 托管服务，用于文生图、图生图
 # API 申请：https://tryleap.ai/
 
-enable-leapai: true
+enable-leapai: false
 # 是否启用 LeapAI 代理，依赖于 socks5-proxy 配置
 leapai-autoproxy: false
 leapai-servers: [ "https://api.tryleap.ai" ]
@@ -137,7 +146,7 @@ leapai-key: ""
 # 国内厂商 6pen 提供的 Stable Diffusion 托管服务，用于文生图、图生图
 # API 申请：https://fromston.6pen.art/
 
-enable-fromstonai: true
+enable-fromstonai: false
 fromston-server: https://ston.6pen.art
 fromston-key: ""
 
@@ -184,7 +193,8 @@ storage-region: "z0"
 
 apple-keyid: ""
 apple-teamid: ""
-apple-secret: /data/webroot/ai-server/etc/apple-key.p8
+#apple-secret: /data/webroot/ai-server/etc/apple-key.p8
+apple-secret: ""
 
 ######## 邮件服务器配置 ########
 
@@ -202,7 +212,7 @@ mail-ssl: true
 # 腾讯云云服务配置，提供语音合成、短信验证码服务
 
 # 是否启用腾讯语音转文本服务（不启用则默认使用 OpenAI 的 Whisper 模型）
-tencent-voice: true
+tencent-voice: false
 
 tencent-id: ""
 tencent-key: ""
@@ -229,7 +239,7 @@ aliyun-key: ""
 aliyun-secret: ""
 
 # 是否启用内容安全检测（提示语敏感内容检测）
-enable-contentdetect: true
+enable-contentdetect: false
 
 # 短信配置
 # 短信验证码模板 ID
@@ -252,6 +262,8 @@ alipay-public-key: ""
 # 支付宝通知地址
 alipay-notify-url: https://your_domain/v1/payment/callback/alipay-notify
 alipay-return-url: https://your_domain/public/payment/alipay-return
+# 支付宝沙盒模式
+#alipay-sandbox: true
 
 ######## 钉钉通知配置 ########
 
@@ -262,9 +274,9 @@ dingding-secret: ""
 ######## 支付配置 ########
 
 # 启用支付宝支付功能
-enable-alipay: true
+enable-alipay: false
 # 启用 Apple 应用内支付功能
-enable-applepay: true
+enable-applepay: false
 
 ######## 国产化配置 ########
 
@@ -294,3 +306,10 @@ virtual-model-nanxian-rel: "gpt-3.5-turbo"
 virtual-model-nanxian-prompt: ""
 virtual-model-beichou-rel: "gpt-4"
 virtual-model-beichou-prompt: ""
+
+######## 价格相关 ########
+# 智慧果收费标准、充值、赠送相关配置
+# 系统内置默认规则，在 internal/coins 中定义，不指定该选项使用默认配置
+# 指定该选项后，将以配置文件中的数据为准
+#price-table-file: /data/webroot/aidea-server/etc/coins-table.yaml
+price-table-file: ""

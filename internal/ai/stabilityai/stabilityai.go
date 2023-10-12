@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/internal/helper"
 	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
@@ -257,49 +258,26 @@ func (ai *StabilityAI) TextToImage(model string, param TextToImageRequest) (*Tex
 
 	log.Debugf("request data: %s", string(reqData))
 
-	req, err := http.NewRequest(
-		"POST",
-		fmt.Sprintf("%s/v1/generation/%s/text-to-image", ai.conf.StabilityAIServer[0], model),
-		bytes.NewBuffer(reqData),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %v", err)
-	}
+	client := helper.RestyClient(2).R().
+		SetHeader("Authorization", "Bearer "+ai.conf.StabilityAIKey).
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json")
 
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Authorization", "Bearer "+ai.conf.StabilityAIKey)
 	if ai.conf.StabilityAIOrganization != "" {
-		req.Header.Add("Organization", ai.conf.StabilityAIOrganization)
+		client.SetHeader("Organization", ai.conf.StabilityAIOrganization)
 	}
 
-	resp, err := ai.client.Do(req)
+	resp, err := client.SetBody(reqData).Post(fmt.Sprintf("%s/v1/generation/%s/text-to-image", ai.conf.StabilityAIServer[0], model))
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %v", err)
 	}
 
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		respBody := must.Must(io.ReadAll(resp.Body))
-		log.F(log.M{
-			"status_code": resp.StatusCode,
-			"status":      resp.Status,
-			"req":         param,
-			"body":        string(respBody),
-		}).Errorf("failed to decode response body: %v", err)
-
-		var body map[string]interface{}
-		if err := json.Unmarshal(respBody, &body); err != nil {
-			log.Errorf("failed to decode response body: %v", err)
-			return nil, errors.New(string(respBody))
-		}
-
-		return nil, fmt.Errorf("request failed: %s", body["message"])
+	if resp.IsError() {
+		return nil, fmt.Errorf("request failed: %s", string(resp.Body()))
 	}
 
 	var body TextToImageResponse
-	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+	if err := json.Unmarshal(resp.Body(), &body); err != nil {
 		return nil, fmt.Errorf("failed to decode response body: %v", err)
 	}
 

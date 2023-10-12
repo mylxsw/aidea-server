@@ -182,6 +182,10 @@ func (ctl *CreativeIslandController) loadAllModels(ctx context.Context) []repo.I
 			return ctl.conf.EnableGetimgAI
 		}
 
+		if m.Vendor == "dashscope" {
+			return ctl.conf.EnableDashScopeAI
+		}
+
 		return true
 	})
 }
@@ -465,11 +469,11 @@ func (ctl *CreativeIslandController) DeleteHistoryItem(ctx context.Context, webC
 }
 
 // CompletionsEvaluate 创作岛项目文本生成 价格评估
-func (ctl *CreativeIslandController) CompletionsEvaluate(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+func (ctl *CreativeIslandController) CompletionsEvaluate(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
 
-	req, errResp := ctl.resolveImageCompletionRequest(ctx, webCtx, user)
+	req, errResp := ctl.resolveImageCompletionRequest(ctx, webCtx, user, client)
 	if errResp != nil {
 		return errResp
 	}
@@ -489,7 +493,7 @@ func (ctl *CreativeIslandController) CompletionsEvaluate(ctx context.Context, we
 }
 
 // resolveImageCompletionRequest 解析创作岛项目图片生成请求参数
-func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.Context, webCtx web.Context, user *auth.User) (*queue.ImageCompletionPayload, web.Response) {
+func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) (*queue.ImageCompletionPayload, web.Response) {
 	image := webCtx.Input("image")
 	if image != "" && !str.HasPrefixes(image, []string{"http://", "https://"}) {
 		return nil, webCtx.JSONError("invalid image", http.StatusBadRequest)
@@ -517,7 +521,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 		return nil, webCtx.JSONError("invalid image count", http.StatusBadRequest)
 	}
 
-	steps := webCtx.IntInput("steps", 50)
+	steps := webCtx.IntInput("steps", 30)
 	if !array.In(steps, []int{30, 50, 100, 150}) {
 		return nil, webCtx.JSONError("invalid steps", http.StatusBadRequest)
 	}
@@ -590,13 +594,18 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 		return nil, webCtx.JSONError("invalid width or height", http.StatusBadRequest)
 	}
 
-	imageStrength := webCtx.Float64Input("image_strength", 0.5)
+	imageStrength := webCtx.Float64Input("image_strength", 0.65)
 	if imageStrength < 0 || imageStrength > 1 {
 		return nil, webCtx.JSONError("invalid image_strength", http.StatusBadRequest)
 	}
 
 	if imageStrength == 0 {
-		imageStrength = 0.5
+		imageStrength = 0.65
+	}
+
+	// TODO 临时处理：0.5 效果不明显，但是客户端默认为 0.5，需要客户端同步调整
+	if imageStrength == 0.5 && helper.VersionOlder(client.Version, "1.0.7") {
+		imageStrength = 0.65
 	}
 
 	seed := webCtx.Int64Input("seed", int64(rand.Intn(2147483647)))
@@ -917,8 +926,8 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 }
 
 // Completions 创作岛项目文本生成
-func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
-	req, errResp := ctl.resolveImageCompletionRequest(ctx, webCtx, user)
+func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
+	req, errResp := ctl.resolveImageCompletionRequest(ctx, webCtx, user, client)
 	if errResp != nil {
 		return errResp
 	}
