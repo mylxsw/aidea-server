@@ -13,6 +13,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/internal/ai/fromston"
 	"github.com/mylxsw/aidea-server/internal/coins"
+	"github.com/mylxsw/aidea-server/internal/helper"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/aidea-server/internal/uploader"
@@ -190,6 +191,9 @@ func BuildFromStonCompletionHandler(client *fromston.Fromston, up *uploader.Uplo
 			nil,
 			nil,
 		)
+
+		prompt = helper.WordTruncate(prompt, 500)
+		negativePrompt = helper.WordTruncate(negativePrompt, 500)
 
 		ms := strings.SplitN(payload.GetModel(), ":", 2)
 		if len(ms) != 2 {

@@ -110,3 +110,17 @@ func TestSplitText(t *testing.T) {
 func TestTodayRemainTimeSeconds(t *testing.T) {
 	fmt.Println(helper.TodayRemainTimeSeconds())
 }
+
+func TestWordCount(t *testing.T) {
+	assert.EqualValues(t, 5, helper.WordCount("hello"))
+	assert.EqualValues(t, 4, helper.WordCount("逍遥神剑"))
+	assert.EqualValues(t, 12, len("逍遥神剑"))
+}
+
+func TestWordTruncate(t *testing.T) {
+	assert.EqualValues(t, "逍遥神剑", helper.WordTruncate("逍遥神剑", 4))
+	assert.EqualValues(t, "逍遥神", helper.WordTruncate("逍遥神剑", 3))
+	assert.EqualValues(t, "逍", helper.WordTruncate("逍遥神剑", 1))
+	assert.EqualValues(t, "", helper.WordTruncate("逍遥神剑", 0))
+	assert.EqualValues(t, "逍遥神剑", helper.WordTruncate("逍遥神剑", 5))
+}
