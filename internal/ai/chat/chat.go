@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"errors"
+	"github.com/mylxsw/asteria/log"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -116,6 +117,12 @@ func (req Request) Fix(chat Chat, maxContextLength int64) (*FixResult, error) {
 	if err != nil {
 		return nil, errors.New("超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度")
 	}
+
+	log.WithFields(log.Fields{
+		"raw":    req.Messages,
+		"fixed":  messages,
+		"system": systemMessages,
+	}).Debugf("chat request messages")
 
 	req.Messages = append(systemMessages, messages...)
 

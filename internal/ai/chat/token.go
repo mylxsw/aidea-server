@@ -27,6 +27,11 @@ func ReduceMessageContext(messages Messages, model string, maxTokens int) (reduc
 	}
 
 	if num <= maxTokens {
+		// 第一个消息应该是 user 消息
+		if len(messages) > 1 && messages[0].Role == "assistant" {
+			return messages[1:], num, nil
+		}
+
 		return messages, num, nil
 	}
 
