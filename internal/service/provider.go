@@ -8,4 +8,5 @@ func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(NewUserService)
 	binder.MustSingleton(NewSecurityService)
 	binder.MustSingleton(NewGalleryService)
+	binder.MustSingleton(NewChatService)
 }

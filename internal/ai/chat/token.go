@@ -8,6 +8,17 @@ import (
 	"strings"
 )
 
+// ReduceMessageContextUpToContextWindow 减少对话上下文到指定的上下文窗口大小
+func ReduceMessageContextUpToContextWindow(messages Messages, maxContext int) Messages {
+	// q+a q+a ... q+a q
+	// max = 2 , total = 3 => total[total - max:]
+	if len(messages)-1 > maxContext*2 {
+		messages = messages[len(messages)-maxContext*2-1:]
+	}
+
+	return messages
+}
+
 // ReduceMessageContext 递归减少对话上下文
 func ReduceMessageContext(messages Messages, model string, maxTokens int) (reducedMessages Messages, tokenCount int, err error) {
 	num, err := MessageTokenCount(messages, model)

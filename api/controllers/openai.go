@@ -37,6 +37,7 @@ type OpenAIController struct {
 	messageRepo *repo.MessageRepo        `autowire:"@"`
 	securitySrv *service.SecurityService `autowire:"@"`
 	userSrv     *service.UserService     `autowire:"@"`
+	chatSrv     *service.ChatService     `autowire:"@"`
 }
 
 // NewOpenAIController 创建 OpenAI 控制器
@@ -172,7 +173,25 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
-	fixRes, err := req.Fix(ctl.chat)
+	// 查询 room 信息，修正最大上下文消息数量
+	var maxContextLength int64 = 5
+	if req.RoomID > 0 {
+		func() {
+			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+
+			room, err := ctl.chatSrv.Room(ctx, user.ID, req.RoomID)
+			if err != nil {
+				log.With(req).Errorf("get room info failed: %s", err)
+			}
+
+			if room.MaxContext > 0 {
+				maxContextLength = room.MaxContext
+			}
+		}()
+	}
+
+	fixRes, err := req.Fix(ctl.chat, maxContextLength)
 	if err != nil {
 		ctl.wrapRawResponse(w, func() {
 			webCtx.JSONError(err.Error(), http.StatusBadRequest).CreateResponse()
