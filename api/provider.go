@@ -179,7 +179,33 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 						return errors.New("invalid auth credential")
 					}
 
+					// 查询用户信息
+					var user *auth.User
+					if u, err := userSrv.GetUserByID(context.TODO(), claims.Int64Value("id"), false); err != nil {
+						if needAuth {
+							if errors.Is(err, repo.ErrNotFound) {
+								return errors.New("invalid auth credential, user not found")
+							}
+
+							return err
+						}
+					} else {
+						if u.Status == repo.UserStatusDeleted {
+							if needAuth {
+								return ErrUserDestroyed
+							}
+
+							u = nil
+						}
+
+						user = auth.CreateAuthUserFromModel(u)
+					}
+
 					if needAuth {
+						if user == nil {
+							return errors.New("invalid auth credential, user not found")
+						}
+
 						// // 请求限流(基于用户 ID)
 						// ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 						// defer cancel()
@@ -193,26 +219,6 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 						// 	return errors.New("request frequency is too high, please try again later")
 						// }
 
-						// 查询用户信息
-						u, err := userSrv.GetUserByID(context.TODO(), claims.Int64Value("id"), false)
-						if err != nil {
-							if errors.Is(err, repo.ErrNotFound) {
-								return errors.New("invalid auth credential, user not found")
-							}
-
-							return err
-						}
-
-						// log.WithFields(log.Fields{
-						// 	"token": credential,
-						// }).Debugf("auth token for %d", u.Id)
-
-						if u.Status == repo.UserStatusDeleted {
-							return ErrUserDestroyed
-						}
-
-						user := auth.CreateAuthUserFromModel(u)
-
 						// 管理员接口，只对内部用户开放
 						if strings.HasPrefix(urlPath, "/v1/admin/") && !user.InternalUser() {
 							return errors.New("permission denied")
@@ -223,7 +229,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 							return &auth.UserOptional{User: user}
 						})
 					} else {
-						webCtx.Provide(func() *auth.UserOptional { return &auth.UserOptional{User: nil} })
+						webCtx.Provide(func() *auth.UserOptional { return &auth.UserOptional{User: user} })
 					}
 
 					return nil
