@@ -39,10 +39,10 @@ var coinTables = map[string]CoinTable{
 		"model_baidu_bloomz_7b":       2, // valid bloomz 7b ¥0.006/1K tokens
 
 		// 阿里 https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing
-		"qwen-v1":      3,  // valid 通义千问 v1    ¥0.012/1K tokens
-		"qwen-plus-v1": 20, // valid 通义千问 plus v1 ¥0.14/1K tokens
-		"qwen-turbo":   3,  // valid 通义千问 turbo ¥0.012/1K tokens
-		"qwen-plus":    20, // valid 通义千问 plus ¥0.14/1K tokens
+		"qwen-v1":      1, // valid 通义千问 v1    ¥0.008/1K tokens
+		"qwen-plus-v1": 3, // valid 通义千问 plus v1 ¥0.02/1K tokens
+		"qwen-turbo":   1, // valid 通义千问 turbo ¥0.008/1K tokens
+		"qwen-plus":    3, // valid 通义千问 plus ¥0.02/1K tokens
 
 		// 讯飞星火 https://xinghuo.xfyun.cn/sparkapi
 		"generalv2": 5, // valid 讯飞星火 v2    ¥0.036/1K tokens
