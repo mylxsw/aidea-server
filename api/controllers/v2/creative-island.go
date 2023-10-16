@@ -251,7 +251,7 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 	)
 
 	var models []VendorModel
-	if user.InternalUser() && user.WithLab {
+	if user.InternalUser() {
 		models = array.Sort(array.Filter(ctl.getAllModels(ctx), func(v VendorModel, _ int) bool { return v.Enabled }), func(v1, v2 VendorModel) bool {
 			if v1.Vendor == v2.Vendor {
 				return sortorder.NaturalLess(v1.Name, v2.Name)
@@ -261,7 +261,7 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		})
 
 		models = array.Map(models, func(item VendorModel, _ int) VendorModel {
-			if !user.InternalUser() || !user.WithLab {
+			if !user.InternalUser() {
 				item.Vendor = ""
 			}
 
@@ -275,13 +275,13 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		AllowRatios:              []string{"1:1" /*"4:3", "3:4",*/, "3:2", "2:3" /*"16:9"*/},
 		ShowStyle:                true,
 		ShowNegativeText:         true,
-		ShowSeed:                 user.InternalUser() && user.WithLab,
-		ShowImageCount:           user.InternalUser() && user.WithLab,
+		ShowSeed:                 user.InternalUser(),
+		ShowImageCount:           user.InternalUser(),
 		ShowPromptForImage2Image: true,
 		Filters:                  filters,
 		VendorModels:             models,
 		AllowUpscaleBy:           []string{"x1", "x2", "x4"},
-		ShowImageStrength:        user.InternalUser() && user.WithLab,
+		ShowImageStrength:        user.InternalUser(),
 	})
 }
 
@@ -423,7 +423,7 @@ func (ctl *CreativeIslandController) HistoryItem(ctx context.Context, webCtx web
 	}
 
 	userId := user.ID
-	if user.InternalUser() && user.WithLab {
+	if user.InternalUser() {
 		userId = 0
 	}
 
@@ -444,7 +444,7 @@ func (ctl *CreativeIslandController) HistoryItem(ctx context.Context, webCtx web
 
 	return webCtx.JSON(CreativeHistoryItemResp{
 		CreativeHistoryItem: *item,
-		ShowBetaFeature:     user.InternalUser() && user.WithLab,
+		ShowBetaFeature:     user.InternalUser(),
 	})
 }
 

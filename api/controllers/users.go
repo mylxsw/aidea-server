@@ -423,7 +423,7 @@ func (ctl *UserController) CurrentUser(ctx context.Context, webCtx web.Context, 
 			"invite_card_bg":     "https://ssl.aicode.cc/ai-server/assets/invite-card-bg.webp-thumb1000",
 			"invite_card_color":  "FF000000",
 			"invite_card_slogan": fmt.Sprintf("你与好友均可获得 %d 个智慧果\n好友充值享佣金\n成功邀请多人奖励可累积", coins.InvitedGiftCoins),
-			"with_lab":           user.WithLab,
+			"with_lab":           user.InternalUser(),
 		},
 	})
 }

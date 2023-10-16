@@ -7,6 +7,7 @@ import (
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/helper"
 	"github.com/mylxsw/glacier/infra"
+	"github.com/mylxsw/go-utils/ternary"
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/glacier/web"
@@ -99,7 +100,7 @@ type HomeModel struct {
 }
 
 // Capabilities 获取 AI 平台的能力列表
-func (ctl *InfoController) Capabilities(webCtx web.Context, client *auth.ClientInfo) web.Response {
+func (ctl *InfoController) Capabilities(webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
 	enableOpenAI := ctl.conf.EnableOpenAI
 	homeModels := []HomeModel{
 		{
@@ -119,7 +120,7 @@ func (ctl *InfoController) Capabilities(webCtx web.Context, client *auth.ClientI
 	}
 
 	if client.IsCNLocalMode(ctl.conf) {
-		enableOpenAI = false
+		enableOpenAI = ternary.If(user.User != nil && user.User.ExtraPermissionUser(), true, false)
 		homeModels = []HomeModel{
 			{
 				Name:     "南贤",

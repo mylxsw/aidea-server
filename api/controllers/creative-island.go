@@ -71,7 +71,7 @@ func (ctl *CreativeIslandController) gallery(ctx context.Context, webCtx web.Con
 
 	userId := user.ID
 	limit := int64(100)
-	if mode == "all" && user.WithLab {
+	if mode == "all" && user.InternalUser() {
 		userId = 0
 		limit = 500
 	}

@@ -38,6 +38,8 @@ const (
 	UserTypeInternal = 1
 	// 测试用户
 	UserTypeTester = 2
+	// 例外用户
+	UserTypeExtraPermission = 3
 )
 
 type UserRepo struct {
