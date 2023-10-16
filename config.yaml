@@ -9,6 +9,9 @@ listen: 0.0.0.0:8080
 # 是否启用跨域支持
 enable-cors: false
 
+# 是否启用模型请求频率限制，当前限制只支持每分钟 5 次/用户
+enable-model-rate-limit: false
+
 # 数据库配置 (账号:密码@tcp(数据库地址:端口)/数据库名?charset=utf8mb4&parseTime=True&loc=Local)
 db-uri: "root:123456@tcp(mysql-server.host:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local"
 

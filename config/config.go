@@ -21,6 +21,10 @@ type Config struct {
 	// 是否启用跨域支持
 	EnableCORS bool `json:"enable_cors" yaml:"enable_cors"`
 
+	// EnableModelRateLimit 是否启用模型访问限流
+	// 当前流控策略为：每个模型每分钟最多访问 5 次
+	EnableModelRateLimit bool `json:"enable_model_rate_limit" yaml:"enable_model_rate_limit"`
+
 	// OpenAIKey 配置
 	EnableOpenAI       bool     `json:"enable_openai" yaml:"enable_openai"`
 	OpenAIAzure        bool     `json:"openai_azure" yaml:"openai_azure"`
@@ -233,6 +237,8 @@ func Register(ins *app.App) {
 			PrometheusToken:  ctx.String("prometheus-token"),
 			EnableRecordChat: ctx.Bool("enable-recordchat"),
 			EnableCORS:       ctx.Bool("enable-cors"),
+
+			EnableModelRateLimit: ctx.Bool("enable-model-rate-limit"),
 
 			RedisHost:     ctx.String("redis-host"),
 			RedisPort:     ctx.Int("redis-port"),

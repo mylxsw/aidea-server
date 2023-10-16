@@ -3,7 +3,10 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/go-redis/redis_rate/v10"
+	"github.com/mylxsw/aidea-server/internal/rate"
 	"net/http"
 	"os"
 	"strconv"
@@ -38,6 +41,7 @@ type OpenAIController struct {
 	securitySrv *service.SecurityService `autowire:"@"`
 	userSrv     *service.UserService     `autowire:"@"`
 	chatSrv     *service.ChatService     `autowire:"@"`
+	limiter     *rate.RateLimiter        `autowire:"@"`
 }
 
 // NewOpenAIController 创建 OpenAI 控制器
@@ -200,6 +204,20 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 
 	req = fixRes.Request
+
+	// 基于模型的流控，避免单一模型用户过度使用
+	if ctl.conf.EnableModelRateLimit {
+		if err := ctl.limiter.Allow(ctx, fmt.Sprintf("chat-limit:u:%d:m:%s:minute", user.ID, req.Model), redis_rate.PerMinute(5)); err != nil {
+			if errors.Is(err, rate.ErrRateLimitExceeded) {
+				ctl.wrapRawResponse(w, func() {
+					webCtx.JSONError(common.Text(webCtx, ctl.translater, "操作频率过高，请稍后再试"), http.StatusBadRequest).CreateResponse()
+				})
+				return
+			}
+
+			log.WithFields(log.Fields{"user_id": user.ID, "req": req}).Errorf("check rate limit failed: %s", err)
+		}
+	}
 
 	// 免费模型
 	leftCount, maxFreeCount := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, req.Model)

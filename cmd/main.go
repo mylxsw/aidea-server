@@ -74,6 +74,7 @@ func main() {
 	ins.AddStringFlag("session-secret", "aidea-secret", "用户会话加密密钥")
 	ins.AddBoolFlag("enable-recordchat", "是否记录聊天历史记录（目前只做记录，没有实际作用，只是为后期增加多端聊天记录同步做准备）")
 	ins.AddBoolFlag("enable-cors", "是否启用跨域请求支持")
+	ins.AddBoolFlag("enable-model-rate-limit", "是否启用模型请求频率限制，当前限制只支持每分钟 5 次/用户")
 
 	ins.AddStringFlag("redis-host", "127.0.0.1", "redis host")
 	ins.AddIntFlag("redis-port", 6379, "redis port")
