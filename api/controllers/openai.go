@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/go-redis/redis_rate/v10"
-	"github.com/mylxsw/aidea-server/internal/rate"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/go-redis/redis_rate/v10"
+	"github.com/mylxsw/aidea-server/internal/rate"
 
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
 

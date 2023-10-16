@@ -7,7 +7,6 @@ import (
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/helper"
 	"github.com/mylxsw/glacier/infra"
-	"github.com/mylxsw/go-utils/ternary"
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/glacier/web"
@@ -120,23 +119,26 @@ func (ctl *InfoController) Capabilities(webCtx web.Context, user *auth.UserOptio
 	}
 
 	if client.IsCNLocalMode(ctl.conf) {
-		enableOpenAI = ternary.If(user.User != nil && user.User.ExtraPermissionUser(), true, false)
-		homeModels = []HomeModel{
-			{
-				Name:     "南贤",
-				ModelID:  "nanxian",
-				Desc:     "速度快，成本低",
-				Color:    "FF67AC5C",
-				Powerful: false,
-			},
-			{
-				Name:     "北丑",
-				ModelID:  "beichou",
-				Desc:     "能力强，更精准",
-				Color:    "FF714BD7",
-				Powerful: true,
-			},
+		if user.User == nil || !user.User.ExtraPermissionUser() {
+			enableOpenAI = false
+			homeModels = []HomeModel{
+				{
+					Name:     "南贤",
+					ModelID:  "nanxian",
+					Desc:     "速度快，成本低",
+					Color:    "FF67AC5C",
+					Powerful: false,
+				},
+				{
+					Name:     "北丑",
+					ModelID:  "beichou",
+					Desc:     "能力强，更精准",
+					Color:    "FF714BD7",
+					Powerful: true,
+				},
+			}
 		}
+
 	}
 
 	return webCtx.JSON(web.M{
