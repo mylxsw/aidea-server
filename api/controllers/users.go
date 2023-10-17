@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"github.com/mylxsw/aidea-server/internal/service"
 
 	"github.com/Timothylock/go-signin-with-apple/apple"
@@ -67,6 +68,9 @@ func (ctl *UserController) Register(router web.Router) {
 		// 用户免费聊天次数统计
 		router.Get("/stat/free-chat-counts", ctl.UserFreeChatCounts)
 		router.Get("/stat/free-chat-counts/{model}", ctl.UserFreeChatCountsForModel)
+
+		// 自定义首页模型
+		router.Post("/custom/home-models", ctl.CustomHomeModels)
 
 		// 重置密码
 		router.Post("/reset-password/sms-code", ctl.SendResetPasswordSMSCode)
@@ -532,4 +536,40 @@ func (ctl *UserController) UserFreeChatCountsForModel(ctx context.Context, webCt
 	}
 
 	return webCtx.JSON(res)
+}
+
+// CustomHomeModels 自定义首页模型
+func (ctl *UserController) CustomHomeModels(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	models := array.Filter(strings.Split(webCtx.Input("models"), ","), func(item string, index int) bool {
+		return item != ""
+	})
+
+	if len(models) == 0 {
+		return webCtx.JSON(web.M{})
+	}
+
+	if len(models) != 2 {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	supportModels := array.ToMap(chat.Models(ctl.conf), func(item chat.Model, _ int) string { return item.RealID() })
+	for _, model := range models {
+		if _, ok := supportModels[model]; !ok {
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+		}
+	}
+
+	cus, err := ctl.userRepo.CustomConfig(ctx, user.ID)
+	if err != nil {
+		log.WithFields(log.Fields{"user_id": user.ID}).Errorf("get user custom config failed: %v", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	cus.HomeModels = models
+	if err := ctl.userRepo.UpdateCustomConfig(ctx, user.ID, *cus); err != nil {
+		log.WithFields(log.Fields{"user_id": user.ID}).Errorf("update user custom config failed: %v", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(web.M{})
 }

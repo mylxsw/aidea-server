@@ -55,20 +55,24 @@ var (
 
 // FreeChatStatisticsForModel 用户免费聊天次数统计
 func (srv *UserService) FreeChatStatisticsForModel(ctx context.Context, userID int64, model string) (*FreeChatState, error) {
-	if srv.conf.VirtualModel.NanxianRel != "" && model == chat.ModelNanXian {
-		model = srv.conf.VirtualModel.NanxianRel
+	realModel := model
+	if srv.conf.VirtualModel.NanxianRel != "" && realModel == chat.ModelNanXian {
+		realModel = srv.conf.VirtualModel.NanxianRel
 	}
 
-	if srv.conf.VirtualModel.BeichouRel != "" && model == chat.ModelBeiChou {
-		model = srv.conf.VirtualModel.BeichouRel
+	if srv.conf.VirtualModel.BeichouRel != "" && realModel == chat.ModelBeiChou {
+		realModel = srv.conf.VirtualModel.BeichouRel
 	}
 
-	freeModel := coins.GetFreeModel(model)
+	freeModel := coins.GetFreeModel(realModel)
 	if freeModel == nil || freeModel.FreeCount <= 0 {
 		return nil, ErrorModelNotFree
 	}
 
-	leftCount, maxCount := srv.FreeChatRequestCounts(ctx, userID, model)
+	// 填充免费模型名称
+	freeModel.Model = model
+
+	leftCount, maxCount := srv.FreeChatRequestCounts(ctx, userID, realModel)
 	return &FreeChatState{
 		ModelWithName: *freeModel,
 		LeftCount:     leftCount,
@@ -173,4 +177,14 @@ func (srv *UserService) GetUserByID(ctx context.Context, id int64, forceUpdate b
 	}
 
 	return user, nil
+}
+
+// CustomConfig 获取用户自定义配置
+func (srv *UserService) CustomConfig(ctx context.Context, userID int64) (*repo.UserCustomConfig, error) {
+	return srv.userRepo.CustomConfig(ctx, userID)
+}
+
+// UpdateCustomConfig 更新用户自定义配置
+func (srv *UserService) UpdateCustomConfig(ctx context.Context, userID int64, config repo.UserCustomConfig) error {
+	return srv.userRepo.UpdateCustomConfig(ctx, userID, config)
 }

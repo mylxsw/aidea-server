@@ -83,6 +83,8 @@ func main() {
 	ins.AddIntFlag("queue-workers", 0, "任务队列工作线程（Goroutine）数量，设置为 0 则不启用任务队列")
 	ins.AddBoolFlag("enable-scheduler", "是否启用定时任务")
 
+	ins.AddBoolFlag("enable-custom-home-models", "是否启用自定义首页模型，启用后注意执行 2023101701-ddl.sql 数据迁移")
+
 	ins.AddBoolFlag("enable-openai", "是否启用 OpenAI")
 	ins.AddBoolFlag("openai-azure", "使用 Azure 的 OpenAI 服务")
 	ins.AddStringFlag("openai-apiversion", "2023-05-15", "required when openai-azure is true")

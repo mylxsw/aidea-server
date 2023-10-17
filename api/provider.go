@@ -82,8 +82,6 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v1/chat",            // OpenAI chat
 		"/v1/audio",           // OpenAI audio to text
 		"/v1/users",           // 用户管理
-		"/v1/deepai",          // DeepAI
-		"/v1/stabilityai",     // StabilityAI
 		"/v1/translate",       // 翻译 API
 		"/v1/storage",         // 存储 API
 		"/v1/creative-island", // 创作岛
@@ -280,10 +278,6 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 
 		controllers.NewTranslateController(resolver, conf),
 		controllers.NewOpenAIController(resolver, conf),
-
-		// deepai 和 stabilityai 全部使用创作岛接口
-		// controllers.NewDeepAIController(resolver, conf),
-		// controllers.NewStabilityAIController(resolver, conf),
 
 		controllers.NewAuthController(resolver, conf),
 		controllers.NewUserController(resolver),
