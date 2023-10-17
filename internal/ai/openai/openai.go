@@ -44,7 +44,7 @@ func ModelMaxContextSize(model string) int {
 	case "gpt-3.5-turbo-16k-0613":
 		return 4000 * 4
 	case "gpt-4":
-		return 4000
+		return 8000
 	case "gpt-4-32k":
 		return 4000 * 8
 	}
