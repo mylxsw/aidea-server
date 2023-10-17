@@ -25,6 +25,9 @@ type Config struct {
 	// 当前流控策略为：每个模型每分钟最多访问 5 次
 	EnableModelRateLimit bool `json:"enable_model_rate_limit" yaml:"enable_model_rate_limit"`
 
+	// EnableCustomHomeModels 是否启用自定义首页模型
+	EnableCustomHomeModels bool `json:"enable_custom_home_models" yaml:"enable_custom_home_models"`
+
 	// OpenAIKey 配置
 	EnableOpenAI       bool     `json:"enable_openai" yaml:"enable_openai"`
 	OpenAIAzure        bool     `json:"openai_azure" yaml:"openai_azure"`
@@ -238,7 +241,8 @@ func Register(ins *app.App) {
 			EnableRecordChat: ctx.Bool("enable-recordchat"),
 			EnableCORS:       ctx.Bool("enable-cors"),
 
-			EnableModelRateLimit: ctx.Bool("enable-model-rate-limit"),
+			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),
+			EnableCustomHomeModels: ctx.Bool("enable-custom-home-models"),
 
 			RedisHost:     ctx.String("redis-host"),
 			RedisPort:     ctx.Int("redis-port"),

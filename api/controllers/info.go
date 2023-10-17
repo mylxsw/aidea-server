@@ -1,12 +1,17 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 
 	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/service"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
+	"github.com/mylxsw/go-utils/array"
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/glacier/web"
@@ -14,7 +19,8 @@ import (
 
 // InfoController 信息控制器
 type InfoController struct {
-	conf *config.Config `autowire:"@"`
+	conf    *config.Config       `autowire:"@"`
+	userSvc *service.UserService `autowire:"@"`
 }
 
 // NewInfoController 创建信息控制器
@@ -99,48 +105,8 @@ type HomeModel struct {
 }
 
 // Capabilities 获取 AI 平台的能力列表
-func (ctl *InfoController) Capabilities(webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
-	enableOpenAI := ctl.conf.EnableOpenAI
-	homeModels := []HomeModel{
-		{
-			Name:     "GPT-3.5",
-			ModelID:  "gpt-3.5-turbo",
-			Desc:     "速度快，成本低",
-			Color:    "FF67AC5C",
-			Powerful: false,
-		},
-		{
-			Name:     "GPT-4",
-			ModelID:  "gpt-4",
-			Desc:     "能力强，更精准",
-			Color:    "FF714BD7",
-			Powerful: true,
-		},
-	}
-
-	if client.IsCNLocalMode(ctl.conf) {
-		if user.User == nil || !user.User.ExtraPermissionUser() {
-			enableOpenAI = false
-			homeModels = []HomeModel{
-				{
-					Name:     "南贤",
-					ModelID:  "nanxian",
-					Desc:     "速度快，成本低",
-					Color:    "FF67AC5C",
-					Powerful: false,
-				},
-				{
-					Name:     "北丑",
-					ModelID:  "beichou",
-					Desc:     "能力强，更精准",
-					Color:    "FF714BD7",
-					Powerful: true,
-				},
-			}
-		}
-
-	}
-
+func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
+	enableOpenAI, homeModels := ctl.loadHomeModels(ctx, ctl.conf, client, user)
 	return webCtx.JSON(web.M{
 		// 是否启用苹果 App 支付
 		"applepay_enabled": ctl.conf.EnableApplePay,
@@ -164,7 +130,68 @@ func (ctl *InfoController) Capabilities(webCtx web.Context, user *auth.UserOptio
 		"enable_creation_island": true,
 		// 首页模型
 		"home_models": homeModels,
+		// 是否显示首页模型描述
+		"show_home_model_description": true,
 	})
+}
+
+func (ctl *InfoController) loadHomeModels(ctx context.Context, conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []HomeModel) {
+	enableOpenAI, homeModels = ctl.loadDefaultHomeModels(ctl.conf, client, user)
+
+	if user.User != nil && conf.EnableCustomHomeModels {
+		cus, err := ctl.userSvc.CustomConfig(ctx, user.User.ID)
+		if err != nil {
+			log.F(log.M{"user": user, "client": client}).Errorf("get user custom config failed: %s", err)
+		} else if cus != nil && len(cus.HomeModels) > 0 {
+			supportModels := array.ToMap(chat.Models(ctl.conf), func(item chat.Model, _ int) string { return item.RealID() })
+			for i, m := range cus.HomeModels[:2] {
+				if matched, ok := supportModels[m]; ok {
+					homeModels[i].ModelID = matched.RealID()
+					homeModels[i].Name = matched.ShortName
+				}
+			}
+		}
+	}
+
+	return enableOpenAI, homeModels
+}
+
+func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []HomeModel) {
+	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
+		return false, []HomeModel{
+			{
+				Name:     "南贤",
+				ModelID:  "nanxian",
+				Desc:     "速度快，成本低",
+				Color:    "FF67AC5C",
+				Powerful: false,
+			},
+			{
+				Name:     "北丑",
+				ModelID:  "beichou",
+				Desc:     "能力强，更精准",
+				Color:    "FF714BD7",
+				Powerful: true,
+			},
+		}
+	}
+
+	return conf.EnableOpenAI, []HomeModel{
+		{
+			Name:     "GPT-3.5",
+			ModelID:  "gpt-3.5-turbo",
+			Desc:     "速度快，成本低",
+			Color:    "FF67AC5C",
+			Powerful: false,
+		},
+		{
+			Name:     "GPT-4",
+			ModelID:  "gpt-4",
+			Desc:     "能力强，更精准",
+			Color:    "FF714BD7",
+			Powerful: true,
+		},
+	}
 }
 
 // PrivacyPolicy 隐私条款

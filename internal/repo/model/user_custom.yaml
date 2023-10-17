@@ -1,0 +1,15 @@
+package: model
+
+models:
+- name: user_custom
+  definition:
+    fields:
+    - name: id
+      type: int64
+      tag: json:"id"
+    - name: user_id
+      type: int64
+      tag: json:"user_id"
+    - name: config
+      type: string
+      tag: json:"config"
