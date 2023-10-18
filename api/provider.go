@@ -81,6 +81,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 	needAuthPrefix := []string{
 		"/v1/chat",            // OpenAI chat
 		"/v1/audio",           // OpenAI audio to text
+		"/v1/group-chat",      // 群聊
 		"/v1/users",           // 用户管理
 		"/v1/translate",       // 翻译 API
 		"/v1/storage",         // 存储 API
@@ -278,6 +279,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 
 		controllers.NewTranslateController(resolver, conf),
 		controllers.NewOpenAIController(resolver, conf),
+		controllers.NewGroupChatController(resolver),
 
 		controllers.NewAuthController(resolver, conf),
 		controllers.NewUserController(resolver),

@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/mylxsw/aidea-server/internal/repo/model"
@@ -77,7 +78,7 @@ func (repo *ChatGroupRepo) UpdateGroup(ctx context.Context, groupID int64, userI
 		q := query.Builder().Where(model.FieldChatGroupId, groupID).Where(model.FieldChatGroupUserId, userID)
 		grp, err := model.NewChatGroupModel(tx).First(ctx, q)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if errors.Is(err, sql.ErrNoRows) {
 				return ErrNotFound
 			}
 
@@ -192,7 +193,7 @@ func (repo *ChatGroupRepo) GetGroup(ctx context.Context, groupID int64, userID i
 		Where(model.FieldChatGroupId, groupID).
 		Where(model.FieldChatGroupUserId, userID))
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 
@@ -301,18 +302,22 @@ func (repo *ChatGroupRepo) GetChatMessage(ctx context.Context, groupID, userID, 
 }
 
 // GetChatMessages 获取聊天消息列表
-func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID int64, limit int64) ([]model.ChatGroupMessage, error) {
-	messages, err := model.NewChatGroupMessageModel(repo.db).Get(ctx, query.Builder().
-		Where(model.FieldChatGroupMessageGroupId, groupID).
-		OrderBy(model.FieldChatGroupMessageId, "DESC").
-		Limit(limit))
+func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID, userID int64, page, perPage int64) ([]model.ChatGroupMessage, query.PaginateMeta, error) {
+	messages, meta, err := model.NewChatGroupMessageModel(repo.db).Paginate(
+		ctx,
+		page,
+		perPage,
+		query.Builder().
+			Where(model.FieldChatGroupMessageGroupId, groupID).
+			Where(model.FieldChatGroupUserId, userID).
+			OrderBy(model.FieldChatGroupMessageId, "DESC"))
 	if err != nil {
-		return nil, fmt.Errorf("query chat messages failed: %w", err)
+		return nil, query.PaginateMeta{}, fmt.Errorf("query chat messages failed: %w", err)
 	}
 
 	return array.Map(messages, func(message model.ChatGroupMessageN, _ int) model.ChatGroupMessage {
 		return message.ToChatGroupMessage()
-	}), nil
+	}), meta, nil
 }
 
 // DeleteChatMessage 删除聊天消息
@@ -326,6 +331,21 @@ func (repo *ChatGroupRepo) DeleteChatMessage(ctx context.Context, groupID, userI
 		_, err := model.NewChatGroupMessageModel(tx).Delete(ctx, q)
 		return err
 	})
+}
+
+// GetChatMessagesStatus 获取聊天消息状态
+func (repo *ChatGroupRepo) GetChatMessagesStatus(ctx context.Context, groupID, userID int64, messageIDs []int64) ([]model.ChatGroupMessage, error) {
+	messages, err := model.NewChatGroupMessageModel(repo.db).Get(ctx, query.Builder().
+		Where(model.FieldChatGroupMessageGroupId, groupID).
+		Where(model.FieldChatGroupMessageUserId, userID).
+		WhereIn(model.FieldChatGroupMessageId, messageIDs))
+	if err != nil {
+		return nil, fmt.Errorf("query chat messages failed: %w", err)
+	}
+
+	return array.Map(messages, func(message model.ChatGroupMessageN, _ int) model.ChatGroupMessage {
+		return message.ToChatGroupMessage()
+	}), nil
 }
 
 type ChatGroupMessageUpdate struct {
@@ -351,5 +371,36 @@ func (repo *ChatGroupRepo) UpdateChatMessage(ctx context.Context, groupID, userI
 		}, q)
 
 		return err
+	})
+}
+
+// DeleteGroup 删除群组
+func (repo *ChatGroupRepo) DeleteGroup(ctx context.Context, groupID, userID int64, deleteMessages bool) error {
+	return eloquent.Transaction(repo.db, func(tx query.Database) error {
+		// 删除历史记录
+		if deleteMessages {
+			_, err := model.NewChatGroupMessageModel(tx).Delete(ctx, query.Builder().
+				Where(model.FieldChatGroupMessageGroupId, groupID).
+				Where(model.FieldChatGroupMessageUserId, userID))
+			if err != nil {
+				return fmt.Errorf("delete chat messages failed: %w", err)
+			}
+		}
+
+		// 删除成员
+		if _, err := model.NewChatGroupMemberModel(tx).Delete(ctx, query.Builder().
+			Where(model.FieldChatGroupMemberGroupId, groupID).
+			Where(model.FieldChatGroupMemberUserId, userID)); err != nil {
+			return fmt.Errorf("delete chat group members failed: %w", err)
+		}
+
+		// 删除组
+		if _, err := model.NewChatGroupModel(tx).Delete(ctx, query.Builder().
+			Where(model.FieldChatGroupId, groupID).
+			Where(model.FieldChatGroupUserId, userID)); err != nil {
+			return fmt.Errorf("delete chat group failed: %w", err)
+		}
+
+		return nil
 	})
 }
