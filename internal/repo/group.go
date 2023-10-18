@@ -45,9 +45,10 @@ const (
 func (repo *ChatGroupRepo) CreateGroup(ctx context.Context, userID int64, name string, members []Member) (int64, error) {
 	var groupID int64
 	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
-		gid, err := model.NewChatGroupModel(tx).Create(ctx, query.KV{
-			model.FieldChatGroupUserId: userID,
-			model.FieldChatGroupName:   name,
+		gid, err := model.NewRoomsModel(tx).Create(ctx, query.KV{
+			model.FieldRoomsUserId:   userID,
+			model.FieldRoomsName:     name,
+			model.FieldRoomsRoomType: null.IntFrom(RoomTypeGroupChat),
 		})
 		if err != nil {
 			return fmt.Errorf("create group failed: %w", err)
@@ -76,10 +77,10 @@ func (repo *ChatGroupRepo) CreateGroup(ctx context.Context, userID int64, name s
 // UpdateGroup 更新群组信息
 func (repo *ChatGroupRepo) UpdateGroup(ctx context.Context, groupID int64, userID int64, name string) error {
 	return eloquent.Transaction(repo.db, func(tx query.Database) error {
-		q := query.Builder().Where(model.FieldChatGroupId, groupID).Where(model.FieldChatGroupUserId, userID)
-		grp, err := model.NewChatGroupModel(tx).First(ctx, q)
+		q := query.Builder().Where(model.FieldRoomsId, groupID).Where(model.FieldRoomsUserId, userID)
+		grp, err := model.NewRoomsModel(tx).First(ctx, q)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
+			if errors.Is(err, query.ErrNoResult) {
 				return ErrNotFound
 			}
 
@@ -183,18 +184,18 @@ func (repo *ChatGroupRepo) RemoveMembersFromGroup(ctx context.Context, groupID, 
 }
 
 type Group struct {
-	Group   model.ChatGroup         `json:"group"`
+	Group   model.Rooms             `json:"group"`
 	Members []model.ChatGroupMember `json:"members"`
 }
 
 // GetGroup 获取群组信息
 func (repo *ChatGroupRepo) GetGroup(ctx context.Context, groupID int64, userID int64) (*Group, error) {
 	// 1. 获取群组信息
-	grp, err := model.NewChatGroupModel(repo.db).First(ctx, query.Builder().
-		Where(model.FieldChatGroupId, groupID).
-		Where(model.FieldChatGroupUserId, userID))
+	grp, err := model.NewRoomsModel(repo.db).First(ctx, query.Builder().
+		Where(model.FieldRoomsId, groupID).
+		Where(model.FieldRoomsUserId, userID))
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
@@ -210,7 +211,7 @@ func (repo *ChatGroupRepo) GetGroup(ctx context.Context, groupID int64, userID i
 	}
 
 	return &Group{
-		Group: grp.ToChatGroup(),
+		Group: grp.ToRooms(),
 		Members: array.Map(members, func(member model.ChatGroupMemberN, _ int) model.ChatGroupMember {
 			return member.ToChatGroupMember()
 		}),
@@ -218,17 +219,18 @@ func (repo *ChatGroupRepo) GetGroup(ctx context.Context, groupID int64, userID i
 }
 
 // Groups 获取用户的群组列表
-func (repo *ChatGroupRepo) Groups(ctx context.Context, userID int64, limit int64) ([]model.ChatGroup, error) {
-	groups, err := model.NewChatGroupModel(repo.db).Get(ctx, query.Builder().
-		Where(model.FieldChatGroupUserId, userID).
-		OrderBy(model.FieldChatGroupId, "DESC").
+func (repo *ChatGroupRepo) Groups(ctx context.Context, userID int64, limit int64) ([]model.Rooms, error) {
+	groups, err := model.NewRoomsModel(repo.db).Get(ctx, query.Builder().
+		Where(model.FieldRoomsUserId, userID).
+		WhereIn(model.FieldRoomsRoomType, []int64{RoomTypeGroupChat}).
+		OrderBy(model.FieldRoomsUpdatedAt, "DESC").
 		Limit(limit))
 	if err != nil {
 		return nil, fmt.Errorf("query groups failed: %w", err)
 	}
 
-	return array.Map(groups, func(group model.ChatGroupN, _ int) model.ChatGroup {
-		return group.ToChatGroup()
+	return array.Map(groups, func(group model.RoomsN, _ int) model.Rooms {
+		return group.ToRooms()
 	}), nil
 }
 
@@ -290,7 +292,7 @@ func (repo *ChatGroupRepo) GetChatMessage(ctx context.Context, groupID, userID, 
 		Where(model.FieldChatGroupMessageId, messageID)
 	msg, err := model.NewChatGroupMessageModel(repo.db).First(ctx, q)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == query.ErrNoResult {
 			return nil, ErrNotFound
 		}
 
@@ -310,7 +312,7 @@ func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID, userID 
 		perPage,
 		query.Builder().
 			Where(model.FieldChatGroupMessageGroupId, groupID).
-			Where(model.FieldChatGroupUserId, userID).
+			Where(model.FieldChatGroupMessageUserId, userID).
 			OrderBy(model.FieldChatGroupMessageId, "DESC"))
 	if err != nil {
 		return nil, query.PaginateMeta{}, fmt.Errorf("query chat messages failed: %w", err)
@@ -396,9 +398,9 @@ func (repo *ChatGroupRepo) DeleteGroup(ctx context.Context, groupID, userID int6
 		}
 
 		// 删除组
-		if _, err := model.NewChatGroupModel(tx).Delete(ctx, query.Builder().
-			Where(model.FieldChatGroupId, groupID).
-			Where(model.FieldChatGroupUserId, userID)); err != nil {
+		if _, err := model.NewRoomsModel(tx).Delete(ctx, query.Builder().
+			Where(model.FieldRoomsId, groupID).
+			Where(model.FieldRoomsUserId, userID)); err != nil {
 			return fmt.Errorf("delete chat group failed: %w", err)
 		}
 

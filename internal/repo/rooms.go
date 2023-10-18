@@ -26,6 +26,8 @@ const (
 	RoomTypeCustom = 2
 	// RoomTypePresetCustom 预设被用户修改过
 	RoomTypePresetCustom = 3
+	// RoomTypeGroupChat 群聊
+	RoomTypeGroupChat = 4
 )
 
 type RoomRepo struct {
@@ -39,6 +41,7 @@ func NewRoomRepo(db *sql.DB) *RoomRepo {
 func (r *RoomRepo) Rooms(ctx context.Context, userID int64, limit int64) ([]model.Rooms, error) {
 	q := query.Builder().
 		Where(model.FieldRoomsUserId, userID).
+		WhereNotIn(model.FieldRoomsRoomType, []int{RoomTypeGroupChat}).
 		OrderBy(model.FieldRoomsPriority, "DESC").
 		OrderBy(model.FieldRoomsLastActiveTime, "DESC").
 		Limit(limit)

@@ -2,19 +2,6 @@
 package: model
 
 models:
-- name: chat_group
-  definition:
-    fields:
-    - name: id
-      type: int64
-      tag: json:"id"
-    - name: user_id
-      type: int64
-      tag: json:"user_id,omitempty"
-    - name: name
-      type: string
-      tag: json:"name,omitempty"
-
 - name: chat_group_member
   definition:
     fields:
