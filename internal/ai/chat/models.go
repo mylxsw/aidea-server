@@ -19,6 +19,7 @@ type Model struct {
 	Name        string `json:"name"`
 	ShortName   string `json:"short_name"`
 	Description string `json:"description"`
+	AvatarURL   string `json:"avatar_url,omitempty"`
 	Category    string `json:"category"`
 	IsChat      bool   `json:"is_chat"`
 	IsImage     bool   `json:"is_image"`
@@ -71,6 +72,7 @@ func openAIModels(conf *config.Config) []Model {
 			Description: "速度快，成本低",
 			Category:    "openai",
 			IsChat:      true,
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gpt35.png",
 		},
 		{
 			ID:          "openai:gpt-3.5-turbo-16k",
@@ -78,6 +80,7 @@ func openAIModels(conf *config.Config) []Model {
 			Description: "3.5 升级版，支持 16K 长文本",
 			Category:    "openai",
 			IsChat:      true,
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gpt35.png",
 		},
 		{
 			ID:          "openai:gpt-4",
@@ -86,6 +89,7 @@ func openAIModels(conf *config.Config) []Model {
 			Category:    "openai",
 			IsChat:      true,
 			Disabled:    false,
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gpt4.png",
 		},
 		{
 			ID:          "openai:gpt-4-32k",
@@ -94,6 +98,7 @@ func openAIModels(conf *config.Config) []Model {
 			Category:    "openai",
 			IsChat:      true,
 			Disabled:    true,
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gpt4.png",
 		},
 	}
 }
@@ -111,6 +116,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/xfyun.png",
 		})
 	}
 
@@ -124,6 +130,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/wenxinyiyan.png",
 		})
 		models = append(models, Model{
 			ID:          "文心千帆:" + string(baidu.ModelErnieBot),
@@ -133,6 +140,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/wenxinyiyan.png",
 		})
 		models = append(models, Model{
 			ID:          "文心千帆:" + baidu.ModelLlama2_70b,
@@ -143,6 +151,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/llama2.png",
 		})
 		models = append(models, Model{
 			ID:          "文心千帆:" + baidu.ModelLlama2_7b_CN,
@@ -153,6 +162,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/llama2-cn.png",
 		})
 		models = append(models, Model{
 			ID:          "文心千帆:" + baidu.ModelChatGLM2_6B_32K,
@@ -163,6 +173,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/chatglm.png",
 		})
 		models = append(models, Model{
 			ID:          "文心千帆:" + baidu.ModelAquilaChat7B,
@@ -173,6 +184,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/aquila.png",
 		})
 		models = append(models, Model{
 			ID:          "文心千帆:" + baidu.ModelBloomz7B,
@@ -183,6 +195,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/BLOOMZ.png",
 		})
 	}
 
@@ -196,6 +209,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
 		})
 		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelQWenPlus,
@@ -206,6 +220,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
 		})
 	}
 
@@ -219,6 +234,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/sensenova.png",
 		})
 	}
 
@@ -232,6 +248,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/hunyuan.png",
 		})
 	}
 
@@ -245,6 +262,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/baichuan.jpg",
 		})
 	}
 
@@ -257,6 +275,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gpt360.jpg",
 		})
 	}
 
@@ -291,6 +310,7 @@ func anthropicModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-instant.png",
 		},
 		{
 			ID:          "Anthropic:" + string(anthropic.ModelClaude2),
@@ -301,6 +321,7 @@ func anthropicModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-2.png",
 		},
 	}
 }
@@ -319,6 +340,7 @@ func aideaModels(conf *config.Config) []Model {
 			Category:    "virtual",
 			IsChat:      true,
 			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/nanxian.png",
 		},
 		{
 			ID:          "virtual:beichou",
@@ -329,6 +351,7 @@ func aideaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    false,
 			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/beichou.png",
 		},
 	}
 }

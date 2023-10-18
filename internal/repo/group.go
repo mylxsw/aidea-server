@@ -58,6 +58,7 @@ func (repo *ChatGroupRepo) CreateGroup(ctx context.Context, userID int64, name s
 		for _, member := range members {
 			if _, err := model.NewChatGroupMemberModel(tx).Create(ctx, query.KV{
 				model.FieldChatGroupMemberGroupId:   gid,
+				model.FieldChatGroupMemberUserId:    userID,
 				model.FieldChatGroupMemberModelId:   member.ModelID,
 				model.FieldChatGroupMemberModelName: member.ModelName,
 				model.FieldChatGroupMemberStatus:    ChatGroupMemberStatusNormal,

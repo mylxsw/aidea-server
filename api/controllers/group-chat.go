@@ -3,14 +3,16 @@ package controllers
 import (
 	"context"
 	"errors"
-	"github.com/mylxsw/aidea-server/api/controllers/common"
-	"github.com/mylxsw/aidea-server/internal/ai/chat"
-	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/asteria/log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mylxsw/aidea-server/api/controllers/common"
+	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
+	"github.com/mylxsw/aidea-server/internal/coins"
+	"github.com/mylxsw/asteria/log"
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/internal/queue"
@@ -23,10 +25,10 @@ import (
 )
 
 type GroupChatController struct {
-	repo        *repo.Repository         `autowire:"@"`
-	queue       *queue.Queue             `autowire:"@"`
-	securitySrv *service.SecurityService `autowire:"@"`
-	userSrv     *service.UserService     `autowire:"@"`
+	conf    *config.Config       `autowire:"@"`
+	repo    *repo.Repository     `autowire:"@"`
+	queue   *queue.Queue         `autowire:"@"`
+	userSrv *service.UserService `autowire:"@"`
 }
 
 func NewGroupChatController(resolver infra.Resolver) web.Controller {
@@ -98,6 +100,13 @@ func (ctl *GroupChatController) Groups(ctx context.Context, webCtx web.Context, 
 	})
 }
 
+type GroupMember struct {
+	ID        int64  `json:"id"`
+	ModelId   string `json:"model_id,omitempty"`
+	ModelName string `json:"model_name,omitempty"`
+	AvatarURL string `json:"avatar_url,omitempty"`
+}
+
 // Group 获取群组信息
 func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	groupID, err := strconv.Atoi(webCtx.PathVar("group_id"))
@@ -114,7 +123,21 @@ func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, u
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(grp)
+	models := array.ToMap(chat.Models(ctl.conf), func(item chat.Model, _ int) string {
+		return item.RealID()
+	})
+
+	return webCtx.JSON(web.M{
+		"group": grp.Group,
+		"members": array.Map(grp.Members, func(mem model.ChatGroupMember, _ int) GroupMember {
+			return GroupMember{
+				ID:        mem.Id,
+				ModelId:   mem.ModelId,
+				ModelName: mem.ModelName,
+				AvatarURL: models[mem.ModelId].AvatarURL,
+			}
+		}),
+	})
 }
 
 // DeleteGroup 删除群组
@@ -271,10 +294,10 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 			return coins.GetOpenAITextCoins(membersMap[mem.ID].ModelId, 1000)
 		}
 
-		return coins.GetOpenAITextCoins(membersMap[mem.ID].ModelId, int64(count))
+		return coins.GetOpenAITextCoins(membersMap[mem.ID].ModelId, int64(count)) + 2
 	})
 
-	needCoins := array.Reduce(coinCounts, func(carry, item int64) int64 { return carry + item }, int64(len(coinCounts)*10))
+	needCoins := array.Reduce(coinCounts, func(carry, item int64) int64 { return carry + item }, 0)
 	quota, err := ctl.repo.Quota.GetUserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
@@ -282,9 +305,14 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	}
 
 	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
-	// 假设当前响应消耗 2 个智慧果
 	restQuota := quota.Quota - quota.Used - needCoins
-	if restQuota <= 0 {
+
+	log.F(log.M{
+		"need_coins": needCoins,
+		"rest_quota": quota.Quota - quota.Used,
+	}).Debugf("group chat consume estimate")
+
+	if restQuota < 0 {
 		return webCtx.JSONError(common.ErrQuotaNotEnough, http.StatusPaymentRequired)
 	}
 

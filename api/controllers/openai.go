@@ -237,10 +237,10 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
 		// 假设当前响应消耗 2 个智慧果
 		restQuota := quota.Quota - quota.Used - coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(fixRes.InputTokens)) - 2
-		if restQuota <= 0 {
+		if restQuota < 0 {
 			if maxFreeCount > 0 {
 				ctl.wrapRawResponse(w, func() {
-					webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已用完，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
+					webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
 				})
 				return
 			}
