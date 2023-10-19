@@ -38,6 +38,10 @@ func (m Model) IsSenstiveModel() bool {
 	return m.Category == "openai" || m.Category == "Anthropic"
 }
 
+func (m Model) IsVirtualModel() bool {
+	return m.Category == "virtual"
+}
+
 func Models(conf *config.Config) []Model {
 	var models []Model
 	models = append(models, openAIModels(conf)...)

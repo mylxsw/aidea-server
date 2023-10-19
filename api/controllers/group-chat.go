@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -45,7 +46,9 @@ func (ctl *GroupChatController) Register(router web.Router) {
 		router.Delete("/{group_id}", ctl.DeleteGroup)
 		router.Get("/{group_id}/messages", ctl.GroupMessages)
 		router.Post("/{group_id}/chat", ctl.Chat)
+		router.Post("/{group_id}/chat-system", ctl.ChatSystem)
 		router.Delete("/{group_id}/chat/{message_id}", ctl.DeleteMessage)
+		router.Delete("/{group_id}/all-chat", ctl.DeleteAllMessages)
 
 		router.Get("/{group_id}/chat-messages", ctl.ChatMessageStatus)
 	})
@@ -65,7 +68,17 @@ func (ctl *GroupChatController) CreateGroup(ctx context.Context, webCtx web.Cont
 	req.Name = strings.TrimSpace(req.Name)
 
 	if len(req.Members) == 0 {
-		return webCtx.JSONError("empty members", http.StatusBadRequest)
+		req.Members = array.Map(
+			array.Filter(chat.Models(ctl.conf), func(m chat.Model, _ int) bool {
+				return true
+			}),
+			func(m chat.Model, _ int) repo.Member {
+				return repo.Member{
+					ModelID:   m.RealID(),
+					ModelName: m.ShortName,
+				}
+			},
+		)
 	}
 
 	if req.Name == "" {
@@ -108,7 +121,7 @@ type GroupMember struct {
 }
 
 // Group 获取群组信息
-func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	groupID, err := strconv.Atoi(webCtx.PathVar("group_id"))
 	if err != nil {
 		return webCtx.JSONError("invalid group id", http.StatusBadRequest)
@@ -129,14 +142,27 @@ func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, u
 
 	return webCtx.JSON(web.M{
 		"group": grp.Group,
-		"members": array.Map(grp.Members, func(mem model.ChatGroupMember, _ int) GroupMember {
-			return GroupMember{
-				ID:        mem.Id,
-				ModelId:   mem.ModelId,
-				ModelName: mem.ModelName,
-				AvatarURL: models[mem.ModelId].AvatarURL,
-			}
-		}),
+		"members": array.Map(
+			array.Filter(grp.Members, func(mem model.ChatGroupMember, _ int) bool {
+				if !client.IsCNLocalMode(ctl.conf) {
+					return !models[mem.ModelId].IsVirtualModel()
+				}
+
+				if models[mem.ModelId].IsSenstiveModel() {
+					return false
+				}
+
+				return true
+			}),
+			func(mem model.ChatGroupMember, _ int) GroupMember {
+				return GroupMember{
+					ID:        mem.Id,
+					ModelId:   mem.ModelId,
+					ModelName: mem.ModelName,
+					AvatarURL: models[mem.ModelId].AvatarURL,
+				}
+			},
+		),
 	})
 }
 
@@ -166,7 +192,7 @@ func (ctl *GroupChatController) GroupMessages(ctx context.Context, webCtx web.Co
 		page = 1
 	}
 
-	perPage := webCtx.Int64Input("per_page", 100)
+	perPage := webCtx.Int64Input("per_page", 300)
 	if perPage < 1 || perPage > 300 {
 		perPage = 100
 	}
@@ -186,8 +212,8 @@ func (ctl *GroupChatController) GroupMessages(ctx context.Context, webCtx web.Co
 }
 
 type GroupChatRequest struct {
-	Messages  []GroupChatMessage `json:"messages,omitempty"`
-	MemberIDs []int64            `json:"member_ids,omitempty"`
+	Message   string  `json:"message,omitempty"`
+	MemberIDs []int64 `json:"member_ids,omitempty"`
 }
 
 type GroupChatMember struct {
@@ -195,43 +221,8 @@ type GroupChatMember struct {
 	Messages chat.Messages `json:"messages"`
 }
 
-func (req GroupChatRequest) AvailableMembers(supportMembers []int64) []GroupChatMember {
-	messagesPerMember := req.MessagesPerMembers()
-	availableIds := array.Filter(array.Intersect(req.MemberIDs, supportMembers), func(id int64, _ int) bool {
-		return len(messagesPerMember[id]) > 0
-	})
-
-	res := make([]GroupChatMember, 0)
-	for memberId, msgs := range messagesPerMember {
-		if array.In(memberId, availableIds) && len(msgs) > 0 {
-			res = append(res, GroupChatMember{
-				ID:       memberId,
-				Messages: msgs,
-			})
-		}
-	}
-
-	return res
-}
-
-func (req GroupChatRequest) MessagesPerMembers() map[int64]chat.Messages {
-	messagesPerMembers := make(map[int64]chat.Messages)
-
-	for _, memberID := range req.MemberIDs {
-		messages := make(chat.Messages, 0)
-		for _, msg := range req.Messages {
-			if (msg.Role == "user" || msg.MemberID == memberID) && msg.Content != "" {
-				messages = append(messages, chat.Message{
-					Role:    msg.Role,
-					Content: msg.Content,
-				})
-			}
-		}
-
-		messagesPerMembers[memberID] = messages
-	}
-
-	return messagesPerMembers
+func (req GroupChatRequest) AvailableMembers(supportMembers []int64) []int64 {
+	return array.Intersect(req.MemberIDs, supportMembers)
 }
 
 type GroupChatMessage struct {
@@ -246,6 +237,11 @@ type GroupChatTask struct {
 	AnswerID int64  `json:"answer_id"`
 }
 
+type Question struct {
+	Question string                     `json:"question"`
+	Answers  []repo.ChatGroupMessageRes `json:"answers"`
+}
+
 // Chat 发起聊天
 func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	groupID, err := strconv.Atoi(webCtx.PathVar("group_id"))
@@ -258,7 +254,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		return webCtx.JSONError(err.Error(), http.StatusBadRequest)
 	}
 
-	if len(req.Messages) == 0 {
+	if req.Message == "" {
 		return webCtx.JSONError("empty messages", http.StatusBadRequest)
 	}
 
@@ -272,35 +268,95 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
+	failedMessageWriter := func() int64 {
+		questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
+			Message: req.Message,
+			Role:    int64(repo.MessageRoleUser),
+			Status:  repo.ChatGroupMessageStatusFailed,
+		})
+		if err != nil {
+			log.With(req).Errorf("add chat message failed: %s", err)
+			return 0
+		}
+
+		return questionID
+	}
+
+	// 如果没有指定对话的成员，则随机选择一个
+	if len(req.MemberIDs) == 0 {
+		req.MemberIDs = []int64{grp.Members[rand.Intn(len(grp.Members))].Id}
+	}
+
 	availableMembers := req.AvailableMembers(array.Map(grp.Members, func(m model.ChatGroupMember, _ int) int64 { return m.Id }))
 	if len(availableMembers) == 0 {
+		failedMessageWriter()
 		return webCtx.JSONError("no available members", http.StatusBadRequest)
 	}
 
-	messagesPerMembers := req.MessagesPerMembers()
+	// 每个成员的聊天上下文
+	contextMessages, _, err := ctl.repo.ChatGroup.GetChatMessages(ctx, grp.Group.Id, user.ID, 1, 100)
+	if err != nil {
+		questionID := failedMessageWriter()
+		log.F(log.M{
+			"req":         req,
+			"question_id": questionID,
+		}).Errorf("query chat context failed: %s", err)
+		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
+	}
+
+	qas := buildQuestionFromChatGroupMessages(contextMessages)
+	messagesPerMembers := make(map[int64]chat.Messages)
+	for _, memberID := range availableMembers {
+		memberMessages := make(chat.Messages, 0)
+		for _, qa := range qas {
+			memberMessages = append(memberMessages, chat.Message{Role: "user", Content: qa.Question})
+			// 从多个回复中选择一个，选择策略如下
+			// 1. 如果有当前 member_id 的回复，优先选择
+			// 2. 没有当前 member_id 的回复，则随便选择一个
+			selectedAnswer := array.Filter(qa.Answers, func(ans repo.ChatGroupMessageRes, _ int) bool { return ans.MemberId == memberID })
+			if len(selectedAnswer) == 0 {
+				selectedAnswer = qa.Answers
+			}
+
+			if len(selectedAnswer) == 0 {
+				continue
+			}
+
+			memberMessages = append(memberMessages, chat.Message{Role: "assistant", Content: selectedAnswer[0].Message})
+		}
+
+		memberMessages = append(memberMessages, chat.Message{Role: "user", Content: req.Message})
+		messagesPerMembers[memberID] = memberMessages
+	}
+
+	log.With(messagesPerMembers).Debugf("group chat messages per members")
 
 	// 检查用户当前是否有足够的费用发起本次对话
 	membersMap := array.ToMap(grp.Members, func(mem model.ChatGroupMember, _ int) int64 { return mem.Id })
-	coinCounts := array.Map(availableMembers, func(mem GroupChatMember, _ int) int64 {
-		leftCount, _ := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, membersMap[mem.ID].ModelId)
+	coinCounts := array.Map(availableMembers, func(memID int64, _ int) int64 {
+		leftCount, _ := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, membersMap[memID].ModelId)
 		if leftCount > 0 {
 			// 免费额度内
 			return 0
 		}
 
-		count, err := chat.MessageTokenCount(messagesPerMembers[mem.ID], membersMap[mem.ID].ModelId)
+		count, err := chat.MessageTokenCount(messagesPerMembers[memID], membersMap[memID].ModelId)
 		if err != nil {
-			log.With(mem).Errorf("calc message token count failed: %v", err)
-			return coins.GetOpenAITextCoins(membersMap[mem.ID].ModelId, 1000)
+			log.F(log.M{"member_id": memID, "req": req}).Errorf("calc message token count failed: %v", err)
+			return coins.GetOpenAITextCoins(membersMap[memID].ModelId, 1000)
 		}
 
-		return coins.GetOpenAITextCoins(membersMap[mem.ID].ModelId, int64(count)) + 2
+		return coins.GetOpenAITextCoins(membersMap[memID].ModelId, int64(count)) + 2
 	})
 
 	needCoins := array.Reduce(coinCounts, func(carry, item int64) int64 { return carry + item }, 0)
 	quota, err := ctl.repo.Quota.GetUserQuota(ctx, user.ID)
 	if err != nil {
-		log.Errorf("get user quota failed: %s", err)
+		questionID := failedMessageWriter()
+		log.F(log.M{
+			"req":         req,
+			"question_id": questionID,
+		}).Errorf("get user quota failed: %s", err)
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
@@ -313,11 +369,13 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	}).Debugf("group chat consume estimate")
 
 	if restQuota < 0 {
+		failedMessageWriter()
 		return webCtx.JSONError(common.ErrQuotaNotEnough, http.StatusPaymentRequired)
 	}
 
+	// 记录用户提问问题
 	questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
-		Message: req.Messages[len(req.Messages)-1].Content,
+		Message: req.Message,
 		Role:    int64(repo.MessageRoleUser),
 		Status:  repo.ChatGroupMessageStatusSucceed,
 	})
@@ -326,6 +384,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
+	// 为每一个成员创建聊天记录（待处理任务）
 	tasks := make([]GroupChatTask, 0)
 	for memberID, msg := range messagesPerMembers {
 		answerID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
@@ -371,6 +430,49 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	})
 }
 
+// ChatSystem 发起系统消息
+func (ctl *GroupChatController) ChatSystem(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	groupID, err := strconv.Atoi(webCtx.PathVar("group_id"))
+	if err != nil {
+		return webCtx.JSONError("invalid group id", http.StatusBadRequest)
+	}
+
+	messageType := repo.ResolveGroupMessageTypeToRole(webCtx.Input("message_type"))
+	message := webCtx.Input("message")
+
+	if messageType == 0 {
+		return webCtx.JSONError("invalid message type", http.StatusBadRequest)
+	}
+
+	questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, int64(groupID), user.ID, repo.ChatGroupMessage{
+		Message: message,
+		Role:    messageType,
+		Status:  repo.ChatGroupMessageStatusSucceed,
+	})
+	if err != nil {
+		log.F(log.M{
+			"group_id":     groupID,
+			"message_type": messageType,
+			"message":      message,
+		}).Errorf("add chat system message failed: %s", err)
+		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(web.M{"data": repo.ChatGroupMessageRes{
+		ChatGroupMessage: model.ChatGroupMessage{
+			Id:        questionID,
+			Message:   message,
+			Role:      1,
+			Status:    repo.ChatGroupMessageStatusSucceed,
+			UserId:    user.ID,
+			GroupId:   int64(groupID),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		},
+		Type: repo.ResolveGroupMessageType(messageType),
+	}})
+}
+
 // DeleteMessage 删除消息
 func (ctl *GroupChatController) DeleteMessage(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	groupID, err := strconv.Atoi(webCtx.PathVar("group_id"))
@@ -384,6 +486,20 @@ func (ctl *GroupChatController) DeleteMessage(ctx context.Context, webCtx web.Co
 	}
 
 	if err := ctl.repo.ChatGroup.DeleteChatMessage(ctx, int64(groupID), user.ID, int64(messageID)); err != nil {
+		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(web.M{})
+}
+
+// DeleteAllMessages 删除所有消息
+func (ctl *GroupChatController) DeleteAllMessages(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	groupID, err := strconv.Atoi(webCtx.PathVar("group_id"))
+	if err != nil {
+		return webCtx.JSONError("invalid group id", http.StatusBadRequest)
+	}
+
+	if err := ctl.repo.ChatGroup.DeleteAllChatMessage(ctx, int64(groupID), user.ID); err != nil {
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
@@ -410,4 +526,45 @@ func (ctl *GroupChatController) ChatMessageStatus(ctx context.Context, webCtx we
 	return webCtx.JSON(web.M{
 		"data": messages,
 	})
+}
+
+func buildQuestionFromChatGroupMessages(contextMessages []repo.ChatGroupMessageRes) []Question {
+	cutoffIndex := -1
+	for i := 0; i < len(contextMessages); i++ {
+		if repo.ResolveGroupMessageType(contextMessages[i].Role) == "contextBreak" {
+			cutoffIndex = i
+			break
+		}
+	}
+
+	if cutoffIndex >= 0 {
+		contextMessages = contextMessages[:cutoffIndex]
+	}
+
+	questions := array.Reverse(array.Filter(contextMessages, func(msg repo.ChatGroupMessageRes, _ int) bool { return msg.Role == int64(repo.MessageRoleUser) }))
+	answers := array.GroupBy(
+		array.Reverse(array.Filter(contextMessages, func(msg repo.ChatGroupMessageRes, _ int) bool {
+			return msg.Role == int64(repo.MessageRoleAssistant) && msg.Status == int64(repo.ChatGroupMessageStatusSucceed)
+		})),
+		func(msg repo.ChatGroupMessageRes) int64 { return msg.Pid },
+	)
+
+	qas := make([]Question, 0)
+	for _, q := range questions {
+		qa := Question{Question: q.Message}
+		if ans, ok := answers[q.Id]; ok {
+			qa.Answers = ans
+		}
+
+		if len(qa.Answers) > 0 {
+			qas = append(qas, qa)
+		}
+	}
+
+	// 只保留最后的 5 条聊天记录
+	if len(qas) > 5 {
+		qas = qas[len(qas)-5:]
+	}
+
+	return qas
 }

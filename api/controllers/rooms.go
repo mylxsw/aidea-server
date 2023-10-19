@@ -283,8 +283,13 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 }
 
 // Rooms 获取用户的数字人列表
-func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
-	rooms, err := ctl.roomRepo.Rooms(ctx, user.ID, RoomsQueryLimit)
+func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
+	roomTypes := []int{repo.RoomTypePreset, repo.RoomTypePresetCustom, repo.RoomTypeCustom}
+	if helper.VersionNewer(client.Version, "1.0.6") {
+		roomTypes = append(roomTypes, repo.RoomTypeGroupChat)
+	}
+
+	rooms, err := ctl.roomRepo.Rooms(ctx, user.ID, roomTypes, RoomsQueryLimit)
 	if err != nil {
 		log.F(log.M{"user_id": user.ID}).Errorf("查询用户房间列表失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/eloquent"
@@ -46,9 +47,11 @@ func (repo *ChatGroupRepo) CreateGroup(ctx context.Context, userID int64, name s
 	var groupID int64
 	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
 		gid, err := model.NewRoomsModel(tx).Create(ctx, query.KV{
-			model.FieldRoomsUserId:   userID,
-			model.FieldRoomsName:     name,
-			model.FieldRoomsRoomType: null.IntFrom(RoomTypeGroupChat),
+			model.FieldRoomsUserId:    userID,
+			model.FieldRoomsName:      name,
+			model.FieldRoomsRoomType:  null.IntFrom(RoomTypeGroupChat),
+			model.FieldRoomsCreatedAt: null.TimeFrom(time.Now()),
+			model.FieldRoomsUpdatedAt: null.TimeFrom(time.Now()),
 		})
 		if err != nil {
 			return fmt.Errorf("create group failed: %w", err)
@@ -304,8 +307,13 @@ func (repo *ChatGroupRepo) GetChatMessage(ctx context.Context, groupID, userID, 
 	return &ret, err
 }
 
+type ChatGroupMessageRes struct {
+	model.ChatGroupMessage
+	Type string `json:"type"`
+}
+
 // GetChatMessages 获取聊天消息列表
-func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID, userID int64, page, perPage int64) ([]model.ChatGroupMessage, query.PaginateMeta, error) {
+func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID, userID int64, page, perPage int64) ([]ChatGroupMessageRes, query.PaginateMeta, error) {
 	messages, meta, err := model.NewChatGroupMessageModel(repo.db).Paginate(
 		ctx,
 		page,
@@ -318,9 +326,41 @@ func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID, userID 
 		return nil, query.PaginateMeta{}, fmt.Errorf("query chat messages failed: %w", err)
 	}
 
-	return array.Map(messages, func(message model.ChatGroupMessageN, _ int) model.ChatGroupMessage {
-		return message.ToChatGroupMessage()
+	return array.Map(messages, func(message model.ChatGroupMessageN, _ int) ChatGroupMessageRes {
+		ret := message.ToChatGroupMessage()
+		if ret.Status == ChatGroupMessageStatusWaiting && ret.CreatedAt.Add(3*time.Minute).Before(time.Now()) {
+			// 3 分钟未完成的消息，标记为失败
+			ret.Status = ChatGroupMessageStatusFailed
+		}
+		return ChatGroupMessageRes{
+			ChatGroupMessage: ret,
+			Type:             ResolveGroupMessageType(ret.Role),
+		}
 	}), meta, nil
+}
+
+func ResolveGroupMessageType(role int64) string {
+	switch role {
+	case 1, 2:
+		return "text"
+	case 3:
+		return "contextBreak"
+	case 4:
+		return "timeline"
+	}
+
+	return "text"
+}
+
+func ResolveGroupMessageTypeToRole(messageType string) int64 {
+	switch messageType {
+	case "contextBreak":
+		return 3
+	case "timeline":
+		return 4
+	}
+
+	return 0
 }
 
 // DeleteChatMessage 删除聊天消息
@@ -336,8 +376,20 @@ func (repo *ChatGroupRepo) DeleteChatMessage(ctx context.Context, groupID, userI
 	})
 }
 
+// DeleteAllChatMessage 清空聊天消息
+func (repo *ChatGroupRepo) DeleteAllChatMessage(ctx context.Context, groupID, userID int64) error {
+	return eloquent.Transaction(repo.db, func(tx query.Database) error {
+		q := query.Builder().
+			Where(model.FieldChatGroupMessageGroupId, groupID).
+			Where(model.FieldChatGroupMessageUserId, userID)
+
+		_, err := model.NewChatGroupMessageModel(tx).Delete(ctx, q)
+		return err
+	})
+}
+
 // GetChatMessagesStatus 获取聊天消息状态
-func (repo *ChatGroupRepo) GetChatMessagesStatus(ctx context.Context, groupID, userID int64, messageIDs []int64) ([]model.ChatGroupMessage, error) {
+func (repo *ChatGroupRepo) GetChatMessagesStatus(ctx context.Context, groupID, userID int64, messageIDs []int64) ([]ChatGroupMessageRes, error) {
 	messages, err := model.NewChatGroupMessageModel(repo.db).Get(ctx, query.Builder().
 		Where(model.FieldChatGroupMessageGroupId, groupID).
 		Where(model.FieldChatGroupMessageUserId, userID).
@@ -346,8 +398,16 @@ func (repo *ChatGroupRepo) GetChatMessagesStatus(ctx context.Context, groupID, u
 		return nil, fmt.Errorf("query chat messages failed: %w", err)
 	}
 
-	return array.Map(messages, func(message model.ChatGroupMessageN, _ int) model.ChatGroupMessage {
-		return message.ToChatGroupMessage()
+	return array.Map(messages, func(message model.ChatGroupMessageN, _ int) ChatGroupMessageRes {
+		ret := message.ToChatGroupMessage()
+		if ret.Status == ChatGroupMessageStatusWaiting && ret.CreatedAt.Add(3*time.Minute).Before(time.Now()) {
+			// 3 分钟未完成的消息，标记为失败
+			ret.Status = ChatGroupMessageStatusFailed
+		}
+		return ChatGroupMessageRes{
+			ChatGroupMessage: ret,
+			Type:             ResolveGroupMessageType(ret.Role),
+		}
 	}), nil
 }
 

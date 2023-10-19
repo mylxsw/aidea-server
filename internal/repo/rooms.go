@@ -38,10 +38,10 @@ func NewRoomRepo(db *sql.DB) *RoomRepo {
 	return &RoomRepo{db: db}
 }
 
-func (r *RoomRepo) Rooms(ctx context.Context, userID int64, limit int64) ([]model.Rooms, error) {
+func (r *RoomRepo) Rooms(ctx context.Context, userID int64, roomTypes []int, limit int64) ([]model.Rooms, error) {
 	q := query.Builder().
 		Where(model.FieldRoomsUserId, userID).
-		WhereNotIn(model.FieldRoomsRoomType, []int{RoomTypeGroupChat}).
+		WhereIn(model.FieldRoomsRoomType, roomTypes).
 		OrderBy(model.FieldRoomsPriority, "DESC").
 		OrderBy(model.FieldRoomsLastActiveTime, "DESC").
 		Limit(limit)
