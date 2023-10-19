@@ -325,6 +325,17 @@ func muxRoutes(resolver infra.Resolver, router *mux.Router) {
 		router.PathPrefix("/metrics").Handler(PrometheusHandler{token: conf.PrometheusToken})
 		// 添加健康检查接口支持
 		router.PathPrefix("/health").Handler(HealthCheck{})
+		// Universal Links
+		router.PathPrefix("/.well-known/apple-app-site-association").HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			writer.Header().Add("Content-Type", "application/json")
+
+			data := `{"applinks":{"apps":[],"details":[{"appID":"N95437SZ2A.cc.aicode.flutter.askaide.askaide","paths":["/wechat-login/*","/wechat-links/*"]}]}}`
+			if conf.UniversalLinkConfig != "" {
+				data = conf.UniversalLinkConfig
+			}
+
+			writer.Write([]byte(data))
+		})
 	})
 }
 

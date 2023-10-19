@@ -9,6 +9,10 @@ listen: 0.0.0.0:8080
 # 是否启用跨域支持
 enable-cors: false
 
+# Universal Link 配置，留空则使用以下默认值
+# universal-link-config: |
+#   {"applinks":{"apps":[],"details":[{"appID":"N95437SZ2A.cc.aicode.flutter.askaide.askaide","paths":["/wechat-login/*","/wechat-links/*"]}]}}
+
 # 是否启用模型请求频率限制，当前限制只支持每分钟 5 次/用户
 enable-model-rate-limit: false
 
