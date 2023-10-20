@@ -43,15 +43,18 @@ const (
 )
 
 // CreateGroup 创建一个聊天群组
-func (repo *ChatGroupRepo) CreateGroup(ctx context.Context, userID int64, name string, members []Member) (int64, error) {
+func (repo *ChatGroupRepo) CreateGroup(ctx context.Context, userID int64, name string, avatarURL string, members []Member) (int64, error) {
 	var groupID int64
 	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
 		gid, err := model.NewRoomsModel(tx).Create(ctx, query.KV{
-			model.FieldRoomsUserId:    userID,
-			model.FieldRoomsName:      name,
-			model.FieldRoomsRoomType:  null.IntFrom(RoomTypeGroupChat),
-			model.FieldRoomsCreatedAt: null.TimeFrom(time.Now()),
-			model.FieldRoomsUpdatedAt: null.TimeFrom(time.Now()),
+			model.FieldRoomsUserId:         userID,
+			model.FieldRoomsName:           name,
+			model.FieldRoomsAvatarUrl:      avatarURL,
+			model.FieldRoomsPriority:       null.IntFrom(0),
+			model.FieldRoomsRoomType:       null.IntFrom(RoomTypeGroupChat),
+			model.FieldRoomsCreatedAt:      null.TimeFrom(time.Now()),
+			model.FieldRoomsUpdatedAt:      null.TimeFrom(time.Now()),
+			model.FieldRoomsLastActiveTime: null.TimeFrom(time.Now()),
 		})
 		if err != nil {
 			return fmt.Errorf("create group failed: %w", err)
@@ -208,7 +211,7 @@ func (repo *ChatGroupRepo) GetGroup(ctx context.Context, groupID int64, userID i
 	// 2. 获取群组成员信息
 	members, err := model.NewChatGroupMemberModel(repo.db).Get(ctx, query.Builder().
 		Where(model.FieldChatGroupMemberGroupId, groupID).
-		Where(model.FieldChatGroupMemberStatus, ChatGroupMemberStatusNormal))
+		Where(model.FieldChatGroupMemberUserId, userID))
 	if err != nil {
 		return nil, fmt.Errorf("query group members failed: %w", err)
 	}
@@ -251,6 +254,15 @@ type ChatGroupMessage struct {
 func (repo *ChatGroupRepo) AddChatMessage(ctx context.Context, groupID, userID int64, msg ChatGroupMessage) (int64, error) {
 	var messageID int64
 	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
+		if _, err := model.NewRoomsModel(tx).UpdateFields(
+			ctx,
+			query.KV{
+				model.FieldRoomsLastActiveTime: null.TimeFrom(time.Now()),
+			},
+			query.Builder().Where(model.FieldRoomsId, groupID),
+		); err != nil {
+			return fmt.Errorf("update group last active time failed: %w", err)
+		}
 
 		chatMsg := model.ChatGroupMessage{
 			GroupId:       groupID,

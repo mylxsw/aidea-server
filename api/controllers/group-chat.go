@@ -55,8 +55,9 @@ func (ctl *GroupChatController) Register(router web.Router) {
 }
 
 type GroupCreateRequest struct {
-	Name    string        `json:"name"`
-	Members []repo.Member `json:"members"`
+	Name      string        `json:"name"`
+	AvatarURL string        `json:"avatar_url,omitempty"`
+	Members   []repo.Member `json:"members,omitempty"`
 }
 
 // CreateGroup 创建群组
@@ -81,11 +82,20 @@ func (ctl *GroupChatController) CreateGroup(ctx context.Context, webCtx web.Cont
 		)
 	}
 
+	req.Members = array.Map(req.Members, func(mem repo.Member, _ int) repo.Member {
+		segs := strings.Split(mem.ModelID, ":")
+		if len(segs) == 2 {
+			mem.ModelID = segs[1]
+		}
+
+		return mem
+	})
+
 	if req.Name == "" {
 		return webCtx.JSONError("empty group name", http.StatusBadRequest)
 	}
 
-	groupID, err := ctl.repo.ChatGroup.CreateGroup(ctx, user.ID, req.Name, req.Members)
+	groupID, err := ctl.repo.ChatGroup.CreateGroup(ctx, user.ID, req.Name, req.AvatarURL, req.Members)
 	if err != nil {
 		log.F(log.M{
 			"name":    req.Name,

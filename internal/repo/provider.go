@@ -44,13 +44,13 @@ func (Provider) Boot(resolver infra.Resolver) {
 	eventManager := event.NewEventManager(event.NewMemoryEventStore())
 	event.SetDispatcher(eventManager)
 
-	//eventManager.Listen(func(evt event.QueryExecutedEvent) {
-	//	log.WithFields(log.Fields{
-	//		"sql":      evt.SQL,
-	//		"bindings": evt.Bindings,
-	//		"elapse":   evt.Time.String(),
-	//	}).Debugf("database query executed")
-	//})
+	// eventManager.Listen(func(evt event.QueryExecutedEvent) {
+	// 	log.WithFields(log.Fields{
+	// 		"sql":      evt.SQL,
+	// 		"bindings": evt.Bindings,
+	// 		"elapse":   evt.Time.String(),
+	// 	}).Debugf("database query executed")
+	// })
 }
 
 type Repository struct {
