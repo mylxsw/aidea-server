@@ -58,6 +58,18 @@ func createOpenAIClient(isAzure bool, apiVersion string, server, organization, k
 		openaiConf.APIType = openai.APITypeAzure
 		openaiConf.APIVersion = apiVersion
 		openaiConf.AzureModelMapperFunc = func(model string) string {
+			// TODO 应该使用配置文件配置，注意，这里返回的应该是 Azure 部署名称
+			switch model {
+			case "gpt-3.5-turbo", "gpt-3.5-turbo-0613":
+				return "gpt35-turbo"
+			case "gpt-3.5-turbo-16k", "gpt-3.5-turbo-16k-0613":
+				return "gpt35-turbo-16k"
+			case "gpt-4", "gpt-4-0613":
+				return "gpt4"
+			case "gpt-4-32k", "gpt-4-32k-0613":
+				return "gpt4-32k"
+			}
+
 			return regexp.MustCompile(`[.:]`).ReplaceAllString(model, "")
 		}
 	}
