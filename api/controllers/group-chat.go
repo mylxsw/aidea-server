@@ -43,6 +43,7 @@ func (ctl *GroupChatController) Register(router web.Router) {
 		router.Get("/", ctl.Groups)
 		router.Post("/", ctl.CreateGroup)
 		router.Get("/{group_id}", ctl.Group)
+		router.Put("/{group_id}", ctl.UpdateGroup)
 		router.Delete("/{group_id}", ctl.DeleteGroup)
 		router.Get("/{group_id}/messages", ctl.GroupMessages)
 		router.Post("/{group_id}/chat", ctl.Chat)
@@ -128,6 +129,7 @@ type GroupMember struct {
 	ModelId   string `json:"model_id,omitempty"`
 	ModelName string `json:"model_name,omitempty"`
 	AvatarURL string `json:"avatar_url,omitempty"`
+	Status    int64  `json:"status,omitempty"`
 }
 
 // Group 获取群组信息
@@ -170,10 +172,42 @@ func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, u
 					ModelId:   mem.ModelId,
 					ModelName: mem.ModelName,
 					AvatarURL: models[mem.ModelId].AvatarURL,
+					Status:    mem.Status,
 				}
 			},
 		),
 	})
+}
+
+// UpdateGroup 更新群组
+func (ctl *GroupChatController) UpdateGroup(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	groupID, err := strconv.Atoi(webCtx.PathVar("group_id"))
+	if err != nil {
+		return webCtx.JSONError("invalid group id", http.StatusBadRequest)
+	}
+
+	var req GroupCreateRequest
+	if err := webCtx.Unmarshal(&req); err != nil {
+		return webCtx.JSONError(err.Error(), http.StatusBadRequest)
+	}
+
+	if req.Name == "" {
+		return webCtx.JSONError("empty group name", http.StatusBadRequest)
+	}
+
+	if err := ctl.repo.ChatGroup.UpdateGroup(ctx, int64(groupID), user.ID, req.Name, req.AvatarURL); err != nil {
+		log.With(req).Errorf("update group %d failed: %s", groupID, err)
+		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
+	}
+
+	if len(req.Members) > 0 {
+		if err := ctl.repo.ChatGroup.UpdateGroupMembers(ctx, int64(groupID), user.ID, req.Members); err != nil {
+			log.With(req).Errorf("update group %d members failed: %s", groupID, err)
+			return webCtx.JSONError("internal server error", http.StatusInternalServerError)
+		}
+	}
+
+	return webCtx.JSON(web.M{})
 }
 
 // DeleteGroup 删除群组

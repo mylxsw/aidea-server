@@ -9,6 +9,9 @@ listen: 0.0.0.0:8080
 # 是否启用跨域支持
 enable-cors: false
 
+# 是否在日志中输出 SQL 语句
+debug-with-sql: false
+
 # Universal Link 配置，留空则使用以下默认值
 # universal-link-config: |
 #   {"applinks":{"apps":[],"details":[{"appID":"N95437SZ2A.cc.aicode.flutter.askaide.askaide","paths":["/wechat-login/*","/wechat-links/*"]}]}}

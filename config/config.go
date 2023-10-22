@@ -20,6 +20,8 @@ type Config struct {
 	EnableRecordChat bool `json:"enable_record_chat" yaml:"enable_record_chat"`
 	// 是否启用跨域支持
 	EnableCORS bool `json:"enable_cors" yaml:"enable_cors"`
+	// 是否启用 SQL 调试
+	DebugWithSQL bool `json:"debug_with_sql" yaml:"debug_with_sql"`
 
 	// UniversalLinkConfig 通用链接配置
 	UniversalLinkConfig string `json:"universal_link_config" yaml:"universal_link_config"`
@@ -243,6 +245,7 @@ func Register(ins *app.App) {
 			PrometheusToken:     ctx.String("prometheus-token"),
 			EnableRecordChat:    ctx.Bool("enable-recordchat"),
 			EnableCORS:          ctx.Bool("enable-cors"),
+			DebugWithSQL:        ctx.Bool("debug-with-sql"),
 			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
 
 			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),

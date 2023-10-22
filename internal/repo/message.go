@@ -64,13 +64,14 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error)
 		}
 
 		// 更新房间最后一次操作时间
-		if req.RoomID > 1 {
+		if req.RoomID > 1 && req.Role == MessageRoleUser {
 			q := query.Builder().
 				Where(model.FieldRoomsUserId, req.UserID).
 				Where(model.FieldRoomsId, req.RoomID)
 
 			_, err = model.NewRoomsModel(r.db).Update(ctx, q, model.RoomsN{
 				LastActiveTime: null.TimeFrom(time.Now()),
+				Description:    null.StringFrom(req.Message),
 			})
 		}
 

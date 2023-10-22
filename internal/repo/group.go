@@ -81,7 +81,7 @@ func (repo *ChatGroupRepo) CreateGroup(ctx context.Context, userID int64, name s
 }
 
 // UpdateGroup 更新群组信息
-func (repo *ChatGroupRepo) UpdateGroup(ctx context.Context, groupID int64, userID int64, name string) error {
+func (repo *ChatGroupRepo) UpdateGroup(ctx context.Context, groupID int64, userID int64, name, avatarURL string) error {
 	return eloquent.Transaction(repo.db, func(tx query.Database) error {
 		q := query.Builder().Where(model.FieldRoomsId, groupID).Where(model.FieldRoomsUserId, userID)
 		grp, err := model.NewRoomsModel(tx).First(ctx, q)
@@ -93,11 +93,11 @@ func (repo *ChatGroupRepo) UpdateGroup(ctx context.Context, groupID int64, userI
 			return fmt.Errorf("query group failed: %w", err)
 		}
 
-		if name != grp.Name.ValueOrZero() {
-			grp.Name = null.StringFrom(name)
-			if err := grp.Save(ctx); err != nil {
-				return fmt.Errorf("save group failed: %w", err)
-			}
+		grp.Name = null.StringFrom(name)
+		grp.AvatarUrl = null.StringFrom(avatarURL)
+
+		if err := grp.Save(ctx); err != nil {
+			return fmt.Errorf("save group failed: %w", err)
 		}
 
 		return nil
@@ -108,38 +108,41 @@ func (repo *ChatGroupRepo) UpdateGroup(ctx context.Context, groupID int64, userI
 func (repo *ChatGroupRepo) UpdateGroupMembers(ctx context.Context, groupID int64, userID int64, members []Member) error {
 	return eloquent.Transaction(repo.db, func(tx query.Database) error {
 		q := query.Builder().Where(model.FieldChatGroupMemberGroupId, groupID).
-			Where(model.FieldChatGroupMemberStatus, ChatGroupMemberStatusNormal).
 			Where(model.FieldChatGroupMemberUserId, userID)
 		currentMembers, err := model.NewChatGroupMemberModel(tx).Get(ctx, q)
 		if err != nil {
 			return fmt.Errorf("query group members failed: %w", err)
 		}
 
-		membersMap := array.ToMap(members, func(member Member, _ int) int64 { return int64(member.ID) })
-		currentMembersMap := array.ToMap(currentMembers, func(member model.ChatGroupMemberN, _ int) int64 { return member.Id.ValueOrZero() })
+		membersMap := array.ToMap(members, func(member Member, _ int) string { return member.ModelID })
+		currentMembersMap := array.ToMap(currentMembers, func(member model.ChatGroupMemberN, _ int) string { return member.ModelId.ValueOrZero() })
 
 		for i, member := range currentMembers {
-			if modifyMember, ok := membersMap[member.Id.ValueOrZero()]; !ok {
+			if modifyMember, ok := membersMap[member.ModelId.ValueOrZero()]; !ok {
 				// 1. 删除已经不存在的成员
 				currentMembers[i].Status = null.IntFrom(ChatGroupMemberStatusDeleted)
 			} else {
 				// 2. 更新已经存在的成员
 				member.ModelId = null.StringFrom(modifyMember.ModelID)
 				member.ModelName = null.StringFrom(modifyMember.ModelName)
+				member.Status = null.IntFrom(ChatGroupMemberStatusNormal)
 				currentMembers[i] = member
 			}
 		}
 
 		// 3. 添加新成员
 		for _, member := range members {
-			if _, ok := currentMembersMap[int64(member.ID)]; !ok {
-				currentMembers = append(currentMembers, model.ChatGroupMemberN{
+			if _, ok := currentMembersMap[member.ModelID]; !ok {
+				mem := model.ChatGroupMemberN{
 					GroupId:   null.IntFrom(groupID),
 					UserId:    null.IntFrom(userID),
 					ModelId:   null.StringFrom(member.ModelID),
 					ModelName: null.StringFrom(member.ModelName),
 					Status:    null.IntFrom(ChatGroupMemberStatusNormal),
-				})
+				}
+
+				mem.SetModel(model.NewChatGroupMemberModel(tx))
+				currentMembers = append(currentMembers, mem)
 			}
 		}
 
@@ -254,14 +257,17 @@ type ChatGroupMessage struct {
 func (repo *ChatGroupRepo) AddChatMessage(ctx context.Context, groupID, userID int64, msg ChatGroupMessage) (int64, error) {
 	var messageID int64
 	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
-		if _, err := model.NewRoomsModel(tx).UpdateFields(
-			ctx,
-			query.KV{
-				model.FieldRoomsLastActiveTime: null.TimeFrom(time.Now()),
-			},
-			query.Builder().Where(model.FieldRoomsId, groupID),
-		); err != nil {
-			return fmt.Errorf("update group last active time failed: %w", err)
+		if MessageRole(msg.Role) == MessageRoleUser {
+			if _, err := model.NewRoomsModel(tx).UpdateFields(
+				ctx,
+				query.KV{
+					model.FieldRoomsLastActiveTime: null.TimeFrom(time.Now()),
+					model.FieldRoomsDescription:    null.StringFrom(msg.Message),
+				},
+				query.Builder().Where(model.FieldRoomsId, groupID),
+			); err != nil {
+				return fmt.Errorf("update group last active time failed: %w", err)
+			}
 		}
 
 		chatMsg := model.ChatGroupMessage{
