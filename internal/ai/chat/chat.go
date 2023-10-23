@@ -259,6 +259,7 @@ func (ai *Imp) selectImp(model string) Chat {
 	switch model {
 	case string(baidu.ModelErnieBot),
 		baidu.ModelErnieBotTurbo,
+		baidu.ModelErnieBot4,
 		baidu.ModelAquilaChat7B,
 		baidu.ModelChatGLM2_6B_32K,
 		baidu.ModelBloomz7B,
