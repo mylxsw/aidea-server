@@ -35,25 +35,35 @@ func (chat *BaiduAIChat) initRequest(req Request) baidu.ChatRequest {
 		}
 	}
 
+	res := baidu.ChatRequest{}
+
 	contextMessages = contextMessages.Fix()
 	if len(systemMessages) > 0 {
 		systemMessage := systemMessages[0]
-		finalSystemMessages := make(baidu.ChatMessages, 0)
+		if baidu.SupportSystemMessage(baidu.Model(req.Model)) {
+			res.System = systemMessage.Content
+			if len(res.System) > 1024 {
+				res.System = res.System[:1024]
+			}
+		} else {
+			finalSystemMessages := make(baidu.ChatMessages, 0)
 
-		systemMessage.Role = "user"
-		finalSystemMessages = append(
-			finalSystemMessages,
-			systemMessage,
-			baidu.ChatMessage{
-				Role:    "assistant",
-				Content: "好的",
-			},
-		)
+			systemMessage.Role = "user"
+			finalSystemMessages = append(
+				finalSystemMessages,
+				systemMessage,
+				baidu.ChatMessage{
+					Role:    "assistant",
+					Content: "好的",
+				},
+			)
 
-		contextMessages = append(finalSystemMessages, contextMessages...)
+			contextMessages = append(finalSystemMessages, contextMessages...)
+		}
 	}
 
-	return baidu.ChatRequest{Messages: contextMessages}
+	res.Messages = contextMessages
+	return res
 }
 
 func (chat *BaiduAIChat) Chat(ctx context.Context, req Request) (*Response, error) {

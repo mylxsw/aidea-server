@@ -5,13 +5,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/asteria/log"
-	"github.com/mylxsw/go-utils/array"
-	"gopkg.in/resty.v1"
 	"io"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/go-utils/array"
+	"gopkg.in/resty.v1"
 )
 
 type BaiduAI interface {
@@ -110,9 +111,13 @@ type ChatRequest struct {
 	Stream bool `json:"stream,omitempty"`
 	// UserID 表示最终用户的唯一标识符，可以监视和检测滥用行为，防止接口恶意调用
 	UserID string `json:"user_id,omitempty"`
+	// System 模型人设，主要用于人设设定，例如，你是xxx公司制作的AI助手，说明：
+	// （1）长度限制1024个字符
+	// （2）如果使用functions参数，不支持设定人设system
+	System string `json:"system,omitempty"`
 }
 
-func (req ChatRequest) Fix() ChatRequest {
+func (req ChatRequest) Fix(model Model) ChatRequest {
 	req.Messages = req.Messages.Fix()
 	return req
 }
@@ -198,6 +203,11 @@ type Usage struct {
 	TotalTokens int `json:"total_tokens,omitempty"`
 }
 
+// SupportSystemMessage 是否支持系统消息
+func SupportSystemMessage(model Model) bool {
+	return model == ModelErnieBot || model == ModelErnieBotTurbo || model == ModelErnieBot4
+}
+
 type Model string
 
 const (
@@ -207,6 +217,9 @@ const (
 	// ModelErnieBotTurbo ERNIE-Bot-turbo是百度自行研发的大语言模型，覆盖海量中文数据，具有更强的对话问答、内容创作生成等能力，响应速度更快。
 	// ¥0.008元/千tokens
 	ModelErnieBotTurbo = "model_ernie_bot_turbo"
+	// ModelErnieBot4 文心一言 4.0
+	// ¥0.12元/千tokens
+	ModelErnieBot4 = "model_ernie_bot_4"
 	// ModelLlama2_70b Llama-2-70b-chat由Meta AI研发并开源，在编码、推理及知识应用等场景表现优秀
 	// ¥0.044元/千tokens
 	ModelLlama2_70b = "model_badiu_llama2_70b"
@@ -226,7 +239,7 @@ const (
 
 func (ai *BaiduAIImpl) Chat(model Model, req ChatRequest) (*ChatResponse, error) {
 	req.Stream = false
-	body, err := json.Marshal(req.Fix())
+	body, err := json.Marshal(req.Fix(model))
 	if err != nil {
 		return nil, err
 	}
@@ -260,6 +273,8 @@ func (ai *BaiduAIImpl) modelURL(model Model) string {
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions"
 	case ModelErnieBotTurbo:
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/eb-instant"
+	case ModelErnieBot4:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions_pro"
 	case ModelLlama2_70b:
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/llama_2_70b"
 	case ModelLlama2_7b_CN:
@@ -279,7 +294,7 @@ func (ai *BaiduAIImpl) modelURL(model Model) string {
 
 func (ai *BaiduAIImpl) ChatStream(model Model, req ChatRequest) (<-chan ChatResponse, error) {
 	req.Stream = true
-	body, err := json.Marshal(req.Fix())
+	body, err := json.Marshal(req.Fix(model))
 	if err != nil {
 		return nil, err
 	}

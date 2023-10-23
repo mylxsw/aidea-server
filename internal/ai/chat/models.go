@@ -147,6 +147,17 @@ func chinaModels(conf *config.Config) []Model {
 			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/wenxinyiyan.png",
 		})
 		models = append(models, Model{
+			ID:          "文心千帆:" + string(baidu.ModelErnieBot4),
+			Name:        "文心一言 4.0",
+			ShortName:   "文心 4.0",
+			Description: "ERNIE-Bot-4 是百度自行研发的大语言模型，覆盖海量中文数据，具有更强的对话问答、内容创作生成等能力",
+			Category:    "文心千帆",
+			IsChat:      true,
+			Disabled:    false,
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/wenxinyiyan.png",
+		})
+		models = append(models, Model{
 			ID:          "文心千帆:" + baidu.ModelLlama2_70b,
 			Name:        "Llama 2 70B",
 			ShortName:   "Llama2",

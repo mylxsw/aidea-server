@@ -88,6 +88,7 @@ coin_tables:
     model_baidu_llama2_7b_cn: 2
     model_ernie_bot: 4
     model_ernie_bot_turbo: 2
+    model_ernie_bot_4: 15
     # 商汤日日新
     nova-ptc-xl-v1: 3
     nova-ptc-xs-v1: 2
