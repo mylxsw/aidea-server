@@ -190,7 +190,7 @@ func upscaleByDeepAI(ctx context.Context, deepClient *deepai.DeepAI, up *uploade
 		return "", fmt.Errorf("图片超分辨率失败: %w", err)
 	}
 
-	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), true)
+	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), false)
 	if err != nil {
 		return "", fmt.Errorf("图片上传失败: %w", err)
 	}
