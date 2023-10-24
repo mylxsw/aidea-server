@@ -313,7 +313,7 @@ func (repo *ChatGroupRepo) GetChatMessage(ctx context.Context, groupID, userID, 
 		Where(model.FieldChatGroupMessageId, messageID)
 	msg, err := model.NewChatGroupMessageModel(repo.db).First(ctx, q)
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
@@ -331,17 +331,24 @@ type ChatGroupMessageRes struct {
 }
 
 // GetChatMessages 获取聊天消息列表
-func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID, userID int64, page, perPage int64) ([]ChatGroupMessageRes, query.PaginateMeta, error) {
-	messages, meta, err := model.NewChatGroupMessageModel(repo.db).Paginate(
-		ctx,
-		page,
-		perPage,
-		query.Builder().
-			Where(model.FieldChatGroupMessageGroupId, groupID).
-			Where(model.FieldChatGroupMessageUserId, userID).
-			OrderBy(model.FieldChatGroupMessageId, "DESC"))
+func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID, userID int64, startID, perPage int64) ([]ChatGroupMessageRes, int64, error) {
+	q := query.Builder().
+		Where(model.FieldChatGroupMessageGroupId, groupID).
+		Where(model.FieldChatGroupMessageUserId, userID).
+		OrderBy(model.FieldChatGroupMessageId, "DESC").
+		Limit(perPage)
+
+	if startID > 0 {
+		q = q.Where(model.FieldChatGroupMessageId, "<", startID)
+	}
+
+	messages, err := model.NewChatGroupMessageModel(repo.db).Get(ctx, q)
 	if err != nil {
-		return nil, query.PaginateMeta{}, fmt.Errorf("query chat messages failed: %w", err)
+		return nil, 0, fmt.Errorf("query chat messages failed: %w", err)
+	}
+
+	if len(messages) == 0 {
+		return []ChatGroupMessageRes{}, startID, nil
 	}
 
 	return array.Map(messages, func(message model.ChatGroupMessageN, _ int) ChatGroupMessageRes {
@@ -354,7 +361,7 @@ func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID, userID 
 			ChatGroupMessage: ret,
 			Type:             ResolveGroupMessageType(ret.Role),
 		}
-	}), meta, nil
+	}), messages[len(messages)-1].Id.ValueOrZero(), nil
 }
 
 func ResolveGroupMessageType(role int64) string {

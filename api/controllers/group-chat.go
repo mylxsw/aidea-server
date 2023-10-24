@@ -71,7 +71,7 @@ func (ctl *GroupChatController) CreateGroup(ctx context.Context, webCtx web.Cont
 
 	if len(req.Members) == 0 {
 		req.Members = array.Map(
-			array.Filter(chat.Models(ctl.conf), func(m chat.Model, _ int) bool {
+			array.Filter(chat.Models(ctl.conf, false), func(m chat.Model, _ int) bool {
 				return true
 			}),
 			func(m chat.Model, _ int) repo.Member {
@@ -148,25 +148,19 @@ func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, u
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
-	models := array.ToMap(chat.Models(ctl.conf), func(item chat.Model, _ int) string {
+	models := array.ToMap(chat.Models(ctl.conf, true), func(item chat.Model, _ int) string {
 		return item.RealID()
 	})
 
 	return webCtx.JSON(web.M{
 		"group": grp.Group,
 		"members": array.Map(
-			array.Filter(grp.Members, func(mem model.ChatGroupMember, _ int) bool {
-				if !client.IsCNLocalMode(ctl.conf) {
-					return !models[mem.ModelId].IsVirtualModel()
-				}
-
-				if models[mem.ModelId].IsSenstiveModel() {
-					return false
-				}
-
-				return true
-			}),
+			grp.Members,
 			func(mem model.ChatGroupMember, _ int) GroupMember {
+				if client.IsCNLocalMode(ctl.conf) && models[mem.ModelId].IsSenstiveModel() {
+					mem.Status = int64(repo.ChatGroupMemberStatusDeleted)
+				}
+
 				return GroupMember{
 					ID:        mem.Id,
 					ModelId:   mem.ModelId,
@@ -231,27 +225,22 @@ func (ctl *GroupChatController) GroupMessages(ctx context.Context, webCtx web.Co
 		return webCtx.JSONError("invalid group id", http.StatusBadRequest)
 	}
 
-	page := webCtx.Int64Input("page", 1)
-	if page < 1 || page > 1000 {
-		page = 1
-	}
-
-	perPage := webCtx.Int64Input("per_page", 300)
+	startID := webCtx.Int64Input("start_id", 0)
+	perPage := webCtx.Int64Input("per_page", 100)
 	if perPage < 1 || perPage > 300 {
 		perPage = 100
 	}
 
-	messages, meta, err := ctl.repo.ChatGroup.GetChatMessages(ctx, int64(groupID), user.ID, page, perPage)
+	messages, lastID, err := ctl.repo.ChatGroup.GetChatMessages(ctx, int64(groupID), user.ID, startID, perPage)
 	if err != nil {
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
 	return webCtx.JSON(web.M{
-		"data":      messages,
-		"page":      meta.Page,
-		"per_page":  meta.PerPage,
-		"total":     meta.Total,
-		"last_page": meta.LastPage,
+		"data":     messages,
+		"start_id": startID,
+		"last_id":  lastID,
+		"per_page": perPage,
 	})
 }
 
@@ -338,7 +327,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	}
 
 	// 每个成员的聊天上下文
-	contextMessages, _, err := ctl.repo.ChatGroup.GetChatMessages(ctx, grp.Group.Id, user.ID, 1, 100)
+	contextMessages, _, err := ctl.repo.ChatGroup.GetChatMessages(ctx, grp.Group.Id, user.ID, 0, 100)
 	if err != nil {
 		questionID := failedMessageWriter()
 		log.F(log.M{

@@ -143,7 +143,7 @@ func (ctl *InfoController) loadHomeModels(ctx context.Context, conf *config.Conf
 		if err != nil {
 			log.F(log.M{"user": user, "client": client}).Errorf("get user custom config failed: %s", err)
 		} else if cus != nil && len(cus.HomeModels) > 0 {
-			supportModels := array.ToMap(chat.Models(ctl.conf), func(item chat.Model, _ int) string { return item.RealID() })
+			supportModels := array.ToMap(chat.Models(ctl.conf, false), func(item chat.Model, _ int) string { return item.RealID() })
 			for i, m := range cus.HomeModels[:2] {
 				if matched, ok := supportModels[m]; ok {
 					homeModels[i].ModelID = matched.RealID()

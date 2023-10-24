@@ -28,7 +28,7 @@ func (ctl *ModelController) Register(router web.Router) {
 
 // Models 获取模型列表
 func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web.Response {
-	models := array.Filter(chat.Models(ctl.conf), func(item chat.Model, _ int) bool {
+	models := array.Filter(chat.Models(ctl.conf, false), func(item chat.Model, _ int) bool {
 		if item.VersionMin != "" && helper.VersionOlder(client.Version, item.VersionMin) {
 			return false
 		}

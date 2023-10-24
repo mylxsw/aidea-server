@@ -552,7 +552,7 @@ func (ctl *UserController) CustomHomeModels(ctx context.Context, webCtx web.Cont
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	supportModels := array.ToMap(chat.Models(ctl.conf), func(item chat.Model, _ int) string { return item.RealID() })
+	supportModels := array.ToMap(chat.Models(ctl.conf, true), func(item chat.Model, _ int) string { return item.RealID() })
 	for _, model := range models {
 		if _, ok := supportModels[model]; !ok {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
