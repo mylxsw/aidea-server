@@ -9,6 +9,10 @@ listen: 0.0.0.0:8080
 # 是否启用跨域支持
 enable-cors: false
 
+# 是否启用 Websocket 支持
+# 启用后，当客户端版本 >= 1.0.7 时，聊天协议使用 Websocket 代替 OpenAI 兼容的 SSE 协议
+enable-websocket: false
+
 # 是否在日志中输出 SQL 语句
 debug-with-sql: false
 

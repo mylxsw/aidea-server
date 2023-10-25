@@ -141,7 +141,7 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 		// 是否显示首页模型描述
 		"show_home_model_description": true,
 		// 是否支持 WebSocket
-		"support_websocket": true,
+		"support_websocket": ctl.conf.EnableWebsocket,
 	})
 }
 
