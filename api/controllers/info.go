@@ -124,12 +124,20 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 		"translate_enabled": ctl.conf.EnableTranslate,
 		// 是否启用邮件发送功能
 		"mail_enabled": ctl.conf.EnableMail,
-		// 是否显示绘玩
-		"enable_gallery": true,
-		// 是否启用创作岛
-		"enable_creation_island": true,
 		// 首页模型
 		"home_models": homeModels,
+
+		// 首页路由地址
+		"home_route": "/chat-chat",
+		// 是否禁用聊一聊
+		"disable_chat": false,
+		// 是否禁用数字人
+		"disable_digital_human": false,
+		// 是否禁用绘玩
+		"disable_gallery": false,
+		// 是否禁用创作岛
+		"disable_creation_island": false,
+
 		// 是否显示首页模型描述
 		"show_home_model_description": true,
 		// 是否支持 WebSocket
