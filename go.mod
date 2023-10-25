@@ -12,7 +12,7 @@ require (
 	github.com/fvbommel/sortorder v1.1.0
 	github.com/go-pay/gopay v1.5.94
 	github.com/go-redis/redis_rate/v10 v10.0.1
-	github.com/gorilla/websocket v1.4.2
+	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/mylxsw/asteria v1.0.1
