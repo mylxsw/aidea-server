@@ -73,7 +73,8 @@ type Request struct {
 	N         int      `json:"n,omitempty"` // 复用作为 room_id
 
 	// 业务定制字段
-	RoomID int64 `json:"-"`
+	RoomID    int64 `json:"-"`
+	WebSocket bool  `json:"-"`
 }
 
 type FixResult struct {
