@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"net/http"
 
 	"github.com/mylxsw/aidea-server/api/auth"
@@ -118,8 +119,27 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 		})
 	}
 
+	models := array.ToMap(
+		chat.Models(ctl.conf, true),
+		func(item chat.Model, _ int) string { return item.RealID() },
+	)
+
 	return webCtx.JSON(web.M{
-		"data":     rooms,
+		"data": array.Map(rooms, func(item repo.Room, _ int) repo.Room {
+			// 替换成员列表为头像列表
+			members := make([]string, 0)
+			if len(item.Members) > 0 {
+				for _, member := range item.Members {
+					if mod, ok := models[member]; ok && mod.AvatarURL != "" {
+						members = append(members, mod.AvatarURL)
+					}
+				}
+
+				item.Members = members
+			}
+
+			return item
+		}),
 		"suggests": suggests,
 	})
 }

@@ -439,7 +439,7 @@ func (ctl *RoomController) UpdateRoom(ctx context.Context, webCtx web.Context, u
 
 	room, err := ctl.roomRepo.Room(ctx, user.ID, int64(req.RoomID))
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人不存在"), http.StatusNotFound)
 		}
 
@@ -466,9 +466,8 @@ func (ctl *RoomController) UpdateRoom(ctx context.Context, webCtx web.Context, u
 		changed = true
 	}
 
-	if req.AvatarURL != room.AvatarUrl && req.AvatarURL != "" {
+	if req.AvatarURL != room.AvatarUrl {
 		room.AvatarUrl = req.AvatarURL
-		room.AvatarId = 0
 		changed = true
 	}
 
