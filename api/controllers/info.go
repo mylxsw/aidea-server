@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
@@ -139,7 +140,7 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 		"disable_creation_island": false,
 
 		// 是否显示首页模型描述
-		"show_home_model_description": true,
+		"show_home_model_description": strings.Contains(client.Language, "zh"),
 		// 是否支持 WebSocket
 		"support_websocket": ctl.conf.EnableWebsocket,
 	})
