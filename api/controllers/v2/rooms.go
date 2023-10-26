@@ -138,6 +138,12 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 				item.Members = members
 			}
 
+			if item.AvatarUrl == "" {
+				if mod, ok := models[item.Model]; ok && mod.AvatarURL != "" {
+					item.AvatarUrl = mod.AvatarURL
+				}
+			}
+
 			return item
 		}),
 		"suggests": suggests,

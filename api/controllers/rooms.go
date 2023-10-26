@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"net/http"
 	"strconv"
 	"strings"
@@ -321,12 +322,21 @@ func (ctl *RoomController) Room(ctx context.Context, webCtx web.Context, user *a
 
 	room, err := ctl.roomRepo.Room(ctx, user.ID, int64(roomID))
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人不存在"), http.StatusNotFound)
 		}
 
 		log.F(log.M{"user_id": user.ID, "room_id": roomID}).Errorf("查询用户房间失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	if room.AvatarUrl == "" {
+		for _, mod := range chat.Models(ctl.conf, true) {
+			if mod.RealID() == room.Model {
+				room.AvatarUrl = mod.AvatarURL
+				break
+			}
+		}
 	}
 
 	return webCtx.JSON(room)
