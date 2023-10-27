@@ -35,9 +35,14 @@ type MessageAddReq struct {
 	TokenConsumed int64
 	PID           int64
 	Model         string
+	Status        int64
 }
 
 func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error) {
+	if req.Status == 0 {
+		req.Status = MessageStatusSucceed
+	}
+
 	var id int64
 	kvs := query.KV{
 		model.FieldChatMessagesUserId:        req.UserID,
@@ -46,6 +51,7 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error)
 		model.FieldChatMessagesMessage:       req.Message,
 		model.FieldChatMessagesQuotaConsumed: req.QuotaConsumed,
 		model.FieldChatMessagesTokenConsumed: req.TokenConsumed,
+		model.FieldChatMessagesStatus:        req.Status,
 	}
 
 	if req.PID > 0 {

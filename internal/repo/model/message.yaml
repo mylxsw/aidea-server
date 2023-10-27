@@ -31,3 +31,6 @@ models:
     - name: model
       type: string
       tag: json:"model,omitempty"
+    - name: status
+      type: int64
+      tag: json:"status,omitempty"

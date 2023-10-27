@@ -157,10 +157,6 @@ func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, u
 		"members": array.Map(
 			grp.Members,
 			func(mem model.ChatGroupMember, _ int) GroupMember {
-				if client.IsCNLocalMode(ctl.conf) && models[mem.ModelId].IsSenstiveModel() {
-					mem.Status = int64(repo.ChatGroupMemberStatusDeleted)
-				}
-
 				return GroupMember{
 					ID:        mem.Id,
 					ModelId:   mem.ModelId,
@@ -305,7 +301,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
 			Message: req.Message,
 			Role:    int64(repo.MessageRoleUser),
-			Status:  repo.ChatGroupMessageStatusFailed,
+			Status:  repo.MessageStatusFailed,
 		})
 		if err != nil {
 			log.With(req).Errorf("add chat message failed: %s", err)
@@ -410,7 +406,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
 		Message: req.Message,
 		Role:    int64(repo.MessageRoleUser),
-		Status:  repo.ChatGroupMessageStatusSucceed,
+		Status:  repo.MessageStatusSucceed,
 	})
 	if err != nil {
 		log.With(req).Errorf("add chat message failed: %s", err)
@@ -424,7 +420,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 			Role:     int64(repo.MessageRoleAssistant),
 			Pid:      questionID,
 			MemberId: memberID,
-			Status:   repo.ChatGroupMessageStatusWaiting,
+			Status:   repo.MessageStatusWaiting,
 		})
 		if err != nil {
 			log.With(req).Errorf("add chat message failed: %s", err)
@@ -480,7 +476,7 @@ func (ctl *GroupChatController) ChatSystem(ctx context.Context, webCtx web.Conte
 	questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, int64(groupID), user.ID, repo.ChatGroupMessage{
 		Message: message,
 		Role:    messageType,
-		Status:  repo.ChatGroupMessageStatusSucceed,
+		Status:  repo.MessageStatusSucceed,
 	})
 	if err != nil {
 		log.F(log.M{
@@ -496,7 +492,7 @@ func (ctl *GroupChatController) ChatSystem(ctx context.Context, webCtx web.Conte
 			Id:        questionID,
 			Message:   message,
 			Role:      1,
-			Status:    repo.ChatGroupMessageStatusSucceed,
+			Status:    repo.MessageStatusSucceed,
 			UserId:    user.ID,
 			GroupId:   int64(groupID),
 			CreatedAt: time.Now(),
@@ -577,7 +573,7 @@ func buildQuestionFromChatGroupMessages(contextMessages []repo.ChatGroupMessageR
 	questions := array.Reverse(array.Filter(contextMessages, func(msg repo.ChatGroupMessageRes, _ int) bool { return msg.Role == int64(repo.MessageRoleUser) }))
 	answers := array.GroupBy(
 		array.Reverse(array.Filter(contextMessages, func(msg repo.ChatGroupMessageRes, _ int) bool {
-			return msg.Role == int64(repo.MessageRoleAssistant) && msg.Status == int64(repo.ChatGroupMessageStatusSucceed)
+			return msg.Role == int64(repo.MessageRoleAssistant) && msg.Status == int64(repo.MessageStatusSucceed)
 		})),
 		func(msg repo.ChatGroupMessageRes) int64 { return msg.Pid },
 	)

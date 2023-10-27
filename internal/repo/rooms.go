@@ -69,7 +69,7 @@ func (r *RoomRepo) Rooms(ctx context.Context, userID int64, roomTypes []int, lim
 		q := query.Builder().
 			WhereIn(model.FieldChatGroupMemberGroupId, groupIDs).
 			Where(model.FieldChatGroupMemberUserId, userID).
-			Where(model.FieldChatGroupMemberStatus, ChatGroupMessageStatusSucceed)
+			Where(model.FieldChatGroupMemberStatus, MessageStatusSucceed)
 
 		members, err := model.NewChatGroupMemberModel(r.db).Get(ctx, q)
 		if err != nil {

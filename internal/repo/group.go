@@ -34,12 +34,12 @@ const (
 	// ChatGroupMemberStatusDeleted 组成员状态：已删除
 	ChatGroupMemberStatusDeleted = 2
 
-	// ChatGroupMessageStatusWaiting 消息状态：待处理
-	ChatGroupMessageStatusWaiting = 0
-	// ChatGroupMessageStatusSucceed 消息状态：成功
-	ChatGroupMessageStatusSucceed = 1
-	// ChatGroupMessageStatusFailed 消息状态：失败
-	ChatGroupMessageStatusFailed = 2
+	// MessageStatusWaiting 消息状态：待处理
+	MessageStatusWaiting = 0
+	// MessageStatusSucceed 消息状态：成功
+	MessageStatusSucceed = 1
+	// MessageStatusFailed 消息状态：失败
+	MessageStatusFailed = 2
 )
 
 // CreateGroup 创建一个聊天群组
@@ -353,9 +353,9 @@ func (repo *ChatGroupRepo) GetChatMessages(ctx context.Context, groupID, userID 
 
 	return array.Map(messages, func(message model.ChatGroupMessageN, _ int) ChatGroupMessageRes {
 		ret := message.ToChatGroupMessage()
-		if ret.Status == ChatGroupMessageStatusWaiting && ret.CreatedAt.Add(3*time.Minute).Before(time.Now()) {
+		if ret.Status == MessageStatusWaiting && ret.CreatedAt.Add(3*time.Minute).Before(time.Now()) {
 			// 3 分钟未完成的消息，标记为失败
-			ret.Status = ChatGroupMessageStatusFailed
+			ret.Status = MessageStatusFailed
 		}
 		return ChatGroupMessageRes{
 			ChatGroupMessage: ret,
@@ -425,9 +425,9 @@ func (repo *ChatGroupRepo) GetChatMessagesStatus(ctx context.Context, groupID, u
 
 	return array.Map(messages, func(message model.ChatGroupMessageN, _ int) ChatGroupMessageRes {
 		ret := message.ToChatGroupMessage()
-		if ret.Status == ChatGroupMessageStatusWaiting && ret.CreatedAt.Add(3*time.Minute).Before(time.Now()) {
+		if ret.Status == MessageStatusWaiting && ret.CreatedAt.Add(3*time.Minute).Before(time.Now()) {
 			// 3 分钟未完成的消息，标记为失败
-			ret.Status = ChatGroupMessageStatusFailed
+			ret.Status = MessageStatusFailed
 		}
 		return ChatGroupMessageRes{
 			ChatGroupMessage: ret,

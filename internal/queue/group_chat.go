@@ -79,7 +79,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 				// 更新消息状态为失败
 				msg := repo.ChatGroupMessageUpdate{
 					Message: err.Error(),
-					Status:  repo.ChatGroupMessageStatusFailed,
+					Status:  repo.MessageStatusFailed,
 				}
 				if err := rep.ChatGroup.UpdateChatMessage(ctx, payload.GroupID, payload.UserID, payload.MessageID, msg); err != nil {
 					log.With(task).Errorf("update chat message failed: %s", err)
@@ -131,7 +131,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 			Message:       resp.Text,
 			TokenConsumed: tokenConsumed,
 			QuotaConsumed: quotaConsumed,
-			Status:        repo.ChatGroupMessageStatusSucceed,
+			Status:        repo.MessageStatusSucceed,
 		}
 		if err := rep.ChatGroup.UpdateChatMessage(ctx, payload.GroupID, payload.UserID, payload.MessageID, msg); err != nil {
 			panic(fmt.Errorf("update chat message failed: %w", err))

@@ -46,7 +46,7 @@ func TestOpenAIChat_Chat(t *testing.T) {
 func TestOpenAIChat_ChatStream(t *testing.T) {
 	chatClient := createOpenAIChatClient()
 	response, err := chatClient.ChatStream(context.TODO(), chat.Request{
-		Model: "gpt-3.5-turbo",
+		Model: "gpt-4",
 		Messages: []chat.Message{
 			{
 				Role:    "system",

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis_rate/v10"
@@ -347,6 +348,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			Role:    repo.MessageRoleUser,
 			RoomID:  req.RoomID,
 			Model:   req.Model,
+			Status:  repo.MessageStatusSucceed,
 		})
 		if err != nil {
 			log.With(req).Errorf("add message failed: %s", err)
@@ -381,6 +383,12 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 
 	defer func() {
+		var chatErrorMessage string
+		if chatError := recover(); chatError != nil {
+			chatErrorMessage = fmt.Sprintf("%v", chatError)
+		}
+
+		replyText = strings.TrimSpace(replyText)
 		messages := append(req.Messages, chat.Message{
 			Role:    "assistant",
 			Content: replyText,
@@ -392,6 +400,19 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		// 返回自定义控制信息，告诉客户端当前消耗情况
 		if isFreeRequest {
 			// 免费请求，不扣除智慧果
+			quotaConsumed = 0
+		}
+
+		// 响应内容为空，报错给客户端
+		if replyText == "" && chatErrorMessage == "" {
+			chatErrorMessage = "响应内容为空"
+		}
+
+		if chatErrorMessage != "" && replyText == "" {
+			replyText = chatErrorMessage
+		}
+
+		if chatErrorMessage != "" {
 			quotaConsumed = 0
 		}
 
@@ -407,6 +428,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 				RoomID:        req.RoomID,
 				Model:         req.Model,
 				PID:           questionID,
+				Status:        int64(ternary.If(chatErrorMessage != "", repo.MessageStatusFailed, repo.MessageStatusSucceed)),
 			})
 			if err != nil {
 				log.With(req).Errorf("add message failed: %s", err)
@@ -436,8 +458,14 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 
 		if req.WebSocket {
-			if err := wsConn.WriteJSON(finalWord); err != nil {
-				log.Warningf("write response failed: %v", err)
+			if chatErrorMessage == "" {
+				if err := wsConn.WriteJSON(finalWord); err != nil {
+					log.Warningf("write response failed: %v", err)
+				}
+			} else {
+				if err := wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: chatErrorMessage}); err != nil {
+					log.Warningf("write response failed: %v", err)
+				}
 			}
 		} else {
 			data, _ := json.Marshal(finalWord)
@@ -454,18 +482,20 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 
 		// 更新用户免费聊天次数
-		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
+		if chatErrorMessage == "" {
+			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
 
-		if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
-			log.WithFields(log.Fields{
-				"user_id": user.ID,
-				"model":   req.Model,
-			}).Errorf("update free chat count failed: %s", err)
+			if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
+				log.WithFields(log.Fields{
+					"user_id": user.ID,
+					"model":   req.Model,
+				}).Errorf("update free chat count failed: %s", err)
+			}
 		}
 
 		// 扣除智慧果
-		if !isFreeRequest {
+		if !isFreeRequest && quotaConsumed > 0 {
 			if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo.NewQuotaUsedMeta("chat", req.Model)); err != nil {
 				log.Errorf("used quota add failed: %s", err)
 			}
