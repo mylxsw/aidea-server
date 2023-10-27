@@ -508,12 +508,12 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}()
 
 	// 生成 SSE 流
-	timer := time.NewTimer(5 * time.Second)
+	timer := time.NewTimer(15 * time.Second)
 	defer timer.Stop()
 
 	id := 0
 	for {
-		timer.Reset(5 * time.Second)
+		timer.Reset(15 * time.Second)
 
 		select {
 		case <-timer.C:

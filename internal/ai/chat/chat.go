@@ -273,7 +273,7 @@ func (ai *Imp) selectImp(model string) Chat {
 		dashscope.ModelQWenTurbo, dashscope.ModelQWenPlus:
 		// 阿里灵积平台
 		return ai.dashScope
-	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2):
+	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2), string(xfyun.ModelGeneralV3):
 		// 讯飞星火
 		return ai.xfyunAI
 	case string(sensenova.ModelNovaPtcXLV1), string(sensenova.ModelNovaPtcXSV1):

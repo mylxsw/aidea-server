@@ -46,6 +46,7 @@ var coinTables = map[string]CoinTable{
 		"qwen-plus":    3, // valid 通义千问 plus ¥0.02/1K tokens
 
 		// 讯飞星火 https://xinghuo.xfyun.cn/sparkapi
+		"generalv3": 5, // valid 讯飞星火 v3    ¥0.036/1K tokens
 		"generalv2": 5, // valid 讯飞星火 v2    ¥0.036/1K tokens
 		"general":   3, // valid 讯飞星火 v1.5  ¥0.018/1K tokens
 

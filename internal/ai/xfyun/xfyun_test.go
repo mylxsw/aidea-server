@@ -1,6 +1,7 @@
 package xfyun_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -16,7 +17,7 @@ func TestXFYunAI_ChatStream(t *testing.T) {
 		{Role: xfyun.RoleUser, Content: "蓝牙耳机坏了去看牙科还是耳科呢？"},
 	}
 
-	resp, err := client.ChatStream(xfyun.ModelGeneralV2, messages)
+	resp, err := client.ChatStream(context.TODO(), xfyun.ModelGeneralV3, messages)
 	assert.NoError(t, err)
 
 	for r := range resp {

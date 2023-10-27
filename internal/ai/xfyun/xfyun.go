@@ -20,6 +20,7 @@ type Model string
 const (
 	ModelGeneralV1_5 Model = "general"
 	ModelGeneralV2   Model = "generalv2"
+	ModelGeneralV3   Model = "generalv3"
 )
 
 type XFYunAI struct {
@@ -242,6 +243,10 @@ func (ai *XFYunAI) resolveResponse(resp *http.Response) (string, error) {
 func (ai *XFYunAI) resolveHostForModel(model Model) string {
 	if model == ModelGeneralV1_5 {
 		return "wss://spark-api.xf-yun.com/v1.1/chat"
+	}
+
+	if model == ModelGeneralV3 {
+		return "wss://spark-api.xf-yun.com/v3.1/chat"
 	}
 
 	return "wss://spark-api.xf-yun.com/v2.1/chat"

@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -113,15 +114,39 @@ func chinaModels(conf *config.Config) []Model {
 	models := make([]Model, 0)
 
 	models = append(models, Model{
-		ID:          "讯飞星火:generalv2",
-		Name:        "星火大模型V2.0",
-		ShortName:   "星火 2.0",
-		Description: "科大讯飞研发的认知大模型，拥有跨领域的知识和语言理解能力，完成问答对话和文学创作等任务",
+		ID:          "讯飞星火:" + string(xfyun.ModelGeneralV1_5),
+		Name:        "星火大模型V1.5",
+		ShortName:   "星火 1.5",
+		Description: "科大讯飞研发的认知大模型，支持语言理解、知识问答、代码编写、逻辑推理、数学解题等多元能力，服务已内嵌联网搜索功能",
 		Category:    "讯飞星火",
 		IsChat:      true,
 		Disabled:    !conf.EnableXFYunAI,
 		VersionMin:  "1.0.3",
-		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/xfyun.png",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/xfyun-v1.5.png",
+	})
+
+	models = append(models, Model{
+		ID:          "讯飞星火:" + string(xfyun.ModelGeneralV2),
+		Name:        "星火大模型V2.0",
+		ShortName:   "星火 2.0",
+		Description: "科大讯飞研发的认知大模型，V2.0 在 V1.5 基础上全面升级，并在代码、数学场景进行专项升级，服务已内嵌联网搜索、日期查询、天气查询、股票查询、诗词查询、字词理解等功能",
+		Category:    "讯飞星火",
+		IsChat:      true,
+		Disabled:    !conf.EnableXFYunAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/xfyun-v2.png",
+	})
+
+	models = append(models, Model{
+		ID:          "讯飞星火:" + string(xfyun.ModelGeneralV3),
+		Name:        "星火大模型V3.0",
+		ShortName:   "星火 3.0",
+		Description: "科大讯飞研发的认知大模型，V3.0 能力全面升级，在数学、代码、医疗、教育等场景进行了专项优化，让大模型更懂你所需",
+		Category:    "讯飞星火",
+		IsChat:      true,
+		Disabled:    !conf.EnableXFYunAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/xfyun-v3.png",
 	})
 
 	models = append(models, Model{
