@@ -199,8 +199,8 @@ func (e WSError) JSON() []byte {
 // 该接口会返回一个 SSE 流，接口参数 stream 总是为 true（忽略客户端设置）
 func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo, w http.ResponseWriter) {
 	var req chat.Request
-
 	wsMode := webCtx.Input("ws") == "true"
+
 	var wsConn *websocket.Conn
 	if wsMode {
 		var err error
@@ -361,7 +361,10 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 	var replyText string
 
-	stream, err := ctl.chat.ChatStream(ctx, req)
+	chatCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	stream, err := ctl.chat.ChatStream(chatCtx, req)
 	if err != nil {
 		log.Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
 		if req.WebSocket {
@@ -414,7 +417,12 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 		if chatErrorMessage != "" {
 			quotaConsumed = 0
+
+			log.F(log.M{"req": req, "user": user}).Errorf("聊天失败：%s", chatErrorMessage)
 		}
+
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
 
 		var answerID int64
 		if ctl.conf.EnableRecordChat {
@@ -483,9 +491,6 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 		// 更新用户免费聊天次数
 		if chatErrorMessage == "" {
-			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-			defer cancel()
-
 			if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
 				log.WithFields(log.Fields{
 					"user_id": user.ID,
@@ -503,51 +508,67 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}()
 
 	// 生成 SSE 流
+	timer := time.NewTimer(5 * time.Second)
+	defer timer.Stop()
+
 	id := 0
-	for res := range stream {
-		id++
+	for {
+		timer.Reset(5 * time.Second)
 
-		if res.ErrorCode != "" {
-			log.With(req).Errorf("chat error: %v", res)
+		select {
+		case <-timer.C:
+			panic("两次响应之间等待时间过长，强制中断")
+		case <-ctx.Done():
 			return
-		}
+		case res, ok := <-stream:
+			if !ok {
+				return
+			}
 
-		resp := openai.ChatCompletionStreamResponse{
-			ID:      strconv.Itoa(id),
-			Created: time.Now().Unix(),
-			Model:   req.Model,
-			Choices: []openai.ChatCompletionStreamChoice{
-				{
-					Delta: openai.ChatCompletionStreamChoiceDelta{
-						Role:    "assistant",
-						Content: res.Text,
+			id++
+
+			if res.ErrorCode != "" {
+				log.With(req).Errorf("chat error: %v", res)
+				return
+			}
+
+			resp := openai.ChatCompletionStreamResponse{
+				ID:      strconv.Itoa(id),
+				Created: time.Now().Unix(),
+				Model:   req.Model,
+				Choices: []openai.ChatCompletionStreamChoice{
+					{
+						Delta: openai.ChatCompletionStreamChoiceDelta{
+							Role:    "assistant",
+							Content: res.Text,
+						},
 					},
 				},
-			},
-		}
-
-		replyText += res.Text
-
-		if req.WebSocket {
-			err := wsConn.WriteJSON(resp)
-			if err != nil {
-				log.Errorf("write response failed: %v", err)
-				return
-			}
-		} else {
-			data, err := json.Marshal(resp)
-			if err != nil {
-				log.Errorf("marshal response failed: %v", err)
-				return
 			}
 
-			if _, err := w.Write([]byte("data: " + string(data) + "\n\n")); err != nil {
-				log.Errorf("write response failed: %v", err)
-				return
-			}
+			replyText += res.Text
 
-			if f, ok := w.(http.Flusher); ok {
-				f.Flush()
+			if req.WebSocket {
+				err := wsConn.WriteJSON(resp)
+				if err != nil {
+					log.Errorf("write response failed: %v", err)
+					return
+				}
+			} else {
+				data, err := json.Marshal(resp)
+				if err != nil {
+					log.Errorf("marshal response failed: %v", err)
+					return
+				}
+
+				if _, err := w.Write([]byte("data: " + string(data) + "\n\n")); err != nil {
+					log.Errorf("write response failed: %v", err)
+					return
+				}
+
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
 			}
 		}
 	}

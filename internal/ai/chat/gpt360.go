@@ -69,27 +69,40 @@ func (ds *GPT360Chat) ChatStream(ctx context.Context, req Request) (<-chan Respo
 	go func() {
 		defer close(res)
 
-		for data := range stream {
-			if data.Error.Code != "" {
-				res <- Response{
-					Error:     data.Error.Message,
-					ErrorCode: fmt.Sprintf("ERR%s", data.Error.Code),
-				}
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
+			case data, ok := <-stream:
+				if !ok {
+					return
+				}
 
-			var content string
-			var finishReason string
-			for _, c := range data.Choices {
-				content += c.Delta.Content
-				finishReason = c.FinishReason
-			}
+				if data.Error.Code != "" {
+					select {
+					case <-ctx.Done():
+					case res <- Response{Error: data.Error.Message, ErrorCode: fmt.Sprintf("ERR%s", data.Error.Code)}:
+					}
+					return
+				}
 
-			res <- Response{
-				Text:         content,
-				FinishReason: finishReason,
-				InputTokens:  data.Usage.PromptTokens,
-				OutputTokens: data.Usage.CompletionTokens,
+				var content string
+				var finishReason string
+				for _, c := range data.Choices {
+					content += c.Delta.Content
+					finishReason = c.FinishReason
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				case res <- Response{
+					Text:         content,
+					FinishReason: finishReason,
+					InputTokens:  data.Usage.PromptTokens,
+					OutputTokens: data.Usage.CompletionTokens,
+				}:
+				}
 			}
 		}
 	}()

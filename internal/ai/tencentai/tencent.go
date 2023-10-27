@@ -79,7 +79,7 @@ func (ai *TencentAI) Chat(ctx context.Context, req Request) (*Response, error) {
 	return &chatResp, nil
 }
 
-func (ai *TencentAI) ChatStream(req Request) (<-chan Response, error) {
+func (ai *TencentAI) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	req.Stream = 1
 	req.AppID = ai.appID
 	req.SecretID = ai.secretID
@@ -90,7 +90,7 @@ func (ai *TencentAI) ChatStream(req Request) (<-chan Response, error) {
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequest("POST", "https://hunyuan.cloud.tencent.com/hyllm/v1/chat/completions", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", "https://hunyuan.cloud.tencent.com/hyllm/v1/chat/completions", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,10 @@ func (ai *TencentAI) ChatStream(req Request) (<-chan Response, error) {
 					return
 				}
 
-				res <- Response{Error: ResponseError{Message: fmt.Sprintf("read stream data failed: %v", err), Code: 500}}
+				select {
+				case <-ctx.Done():
+				case res <- Response{Error: ResponseError{Message: fmt.Sprintf("read stream data failed: %v", err), Code: 500}}:
+				}
 				return
 			}
 
@@ -146,13 +149,20 @@ func (ai *TencentAI) ChatStream(req Request) (<-chan Response, error) {
 
 			var chatResponse Response
 			if err := json.Unmarshal([]byte(dataStr[6:]), &chatResponse); err != nil {
-				res <- Response{Error: ResponseError{Message: fmt.Sprintf("decode response failed: %v", err), Code: 500}}
+				select {
+				case <-ctx.Done():
+				case res <- Response{Error: ResponseError{Message: fmt.Sprintf("decode response failed: %v", err), Code: 500}}:
+				}
 				return
 			}
 
-			res <- chatResponse
-			if chatResponse.Choices[0].FinishReason == "stop" {
+			select {
+			case <-ctx.Done():
 				return
+			case res <- chatResponse:
+				if chatResponse.Choices[0].FinishReason == "stop" {
+					return
+				}
 			}
 		}
 	}()

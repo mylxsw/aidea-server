@@ -75,7 +75,7 @@ func (chat *TencentAIChat) Chat(ctx context.Context, req Request) (*Response, er
 
 func (chat *TencentAIChat) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	tencentReq := chat.initRequest(req)
-	stream, err := chat.ai.ChatStream(tencentReq)
+	stream, err := chat.ai.ChatStream(ctx, tencentReq)
 	if err != nil {
 		return nil, err
 	}
@@ -84,19 +84,34 @@ func (chat *TencentAIChat) ChatStream(ctx context.Context, req Request) (<-chan 
 	go func() {
 		defer close(res)
 
-		for data := range stream {
-			if data.Error.Code != 0 {
-				res <- Response{
-					Error:     data.Error.Message,
-					ErrorCode: fmt.Sprintf("ERR%d", data.Error.Code),
-				}
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
+			case data, ok := <-stream:
+				if !ok {
+					return
+				}
 
-			res <- Response{
-				Text:         data.Choices[0].Delta.Content,
-				InputTokens:  int(data.Usage.PromptTokens),
-				OutputTokens: int(data.Usage.CompletionTokens),
+				if data.Error.Code != 0 {
+					select {
+					case <-ctx.Done():
+					case res <- Response{
+						Error:     data.Error.Message,
+						ErrorCode: fmt.Sprintf("ERR%d", data.Error.Code),
+					}:
+					}
+					return
+				}
+
+				select {
+				case <-ctx.Done():
+				case res <- Response{
+					Text:         data.Choices[0].Delta.Content,
+					InputTokens:  int(data.Usage.PromptTokens),
+					OutputTokens: int(data.Usage.CompletionTokens),
+				}:
+				}
 			}
 		}
 	}()

@@ -3,6 +3,7 @@ package baidu
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,8 +17,8 @@ import (
 )
 
 type BaiduAI interface {
-	Chat(model Model, req ChatRequest) (*ChatResponse, error)
-	ChatStream(model Model, req ChatRequest) (<-chan ChatResponse, error)
+	Chat(ctx context.Context, model Model, req ChatRequest) (*ChatResponse, error)
+	ChatStream(ctx context.Context, model Model, req ChatRequest) (<-chan ChatResponse, error)
 }
 
 type BaiduAIImpl struct {
@@ -237,7 +238,7 @@ const (
 	ModelBloomz7B = "model_baidu_bloomz_7b"
 )
 
-func (ai *BaiduAIImpl) Chat(model Model, req ChatRequest) (*ChatResponse, error) {
+func (ai *BaiduAIImpl) Chat(ctx context.Context, model Model, req ChatRequest) (*ChatResponse, error) {
 	req.Stream = false
 	body, err := json.Marshal(req.Fix(model))
 	if err != nil {
@@ -249,6 +250,7 @@ func (ai *BaiduAIImpl) Chat(model Model, req ChatRequest) (*ChatResponse, error)
 	resp, err := resty.R().SetQueryParam("access_token", ai.getAccessToken()).
 		SetHeader("Content-Type", "application/json").
 		SetBody(body).
+		SetContext(ctx).
 		Post(url)
 	if err != nil {
 		return nil, err
@@ -292,7 +294,7 @@ func (ai *BaiduAIImpl) modelURL(model Model) string {
 	return url
 }
 
-func (ai *BaiduAIImpl) ChatStream(model Model, req ChatRequest) (<-chan ChatResponse, error) {
+func (ai *BaiduAIImpl) ChatStream(ctx context.Context, model Model, req ChatRequest) (<-chan ChatResponse, error) {
 	req.Stream = true
 	body, err := json.Marshal(req.Fix(model))
 	if err != nil {
@@ -301,7 +303,7 @@ func (ai *BaiduAIImpl) ChatStream(model Model, req ChatRequest) (<-chan ChatResp
 
 	url := ai.modelURL(model)
 
-	httpReq, err := http.NewRequest("POST", url+"?access_token="+ai.getAccessToken(), bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", url+"?access_token="+ai.getAccessToken(), bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +337,10 @@ func (ai *BaiduAIImpl) ChatStream(model Model, req ChatRequest) (<-chan ChatResp
 					return
 				}
 
-				res <- ChatResponse{ErrorMessage: fmt.Sprintf("read stream failed: %s", err.Error()), ErrorCode: 10}
+				select {
+				case <-ctx.Done():
+				case res <- ChatResponse{ErrorMessage: fmt.Sprintf("read stream failed: %s", err.Error()), ErrorCode: 10}:
+				}
 				return
 			}
 
@@ -345,19 +350,28 @@ func (ai *BaiduAIImpl) ChatStream(model Model, req ChatRequest) (<-chan ChatResp
 			}
 
 			if !strings.HasPrefix(dataStr, "data:") {
-				res <- ChatResponse{ErrorMessage: fmt.Sprintf("invalid data: %s", dataStr), ErrorCode: 10}
+				select {
+				case <-ctx.Done():
+				case res <- ChatResponse{ErrorMessage: fmt.Sprintf("invalid data: %s", dataStr), ErrorCode: 10}:
+				}
 				return
 			}
 
 			var chatResponse ChatResponse
 			if err := json.Unmarshal([]byte(dataStr[5:]), &chatResponse); err != nil {
-				res <- ChatResponse{ErrorMessage: fmt.Sprintf("unmarshal stream data failed: %v", err), ErrorCode: 10}
+				select {
+				case <-ctx.Done():
+				case res <- ChatResponse{ErrorMessage: fmt.Sprintf("unmarshal stream data failed: %v", err), ErrorCode: 10}:
+				}
 				return
 			}
 
-			res <- chatResponse
-			if chatResponse.IsEND {
-				return
+			select {
+			case <-ctx.Done():
+			case res <- chatResponse:
+				if chatResponse.IsEND {
+					return
+				}
 			}
 		}
 	}()

@@ -67,7 +67,7 @@ func (chat *BaiduAIChat) initRequest(req Request) baidu.ChatRequest {
 }
 
 func (chat *BaiduAIChat) Chat(ctx context.Context, req Request) (*Response, error) {
-	res, err := chat.bai.Chat(baidu.Model(req.Model), chat.initRequest(req))
+	res, err := chat.bai.Chat(ctx, baidu.Model(req.Model), chat.initRequest(req))
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (chat *BaiduAIChat) ChatStream(ctx context.Context, req Request) (<-chan Re
 	baiduReq := chat.initRequest(req)
 	baiduReq.Stream = true
 
-	stream, err := chat.bai.ChatStream(baidu.Model(req.Model), baiduReq)
+	stream, err := chat.bai.ChatStream(ctx, baidu.Model(req.Model), baiduReq)
 	if err != nil {
 		return nil, err
 	}
@@ -96,19 +96,32 @@ func (chat *BaiduAIChat) ChatStream(ctx context.Context, req Request) (<-chan Re
 	go func() {
 		defer close(res)
 
-		for data := range stream {
-			if data.ErrorCode != 0 {
-				res <- Response{
-					Error:     data.ErrorMessage,
-					ErrorCode: fmt.Sprintf("ERR%d", data.ErrorCode),
-				}
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
+			case data, ok := <-stream:
+				if !ok {
+					return
+				}
 
-			res <- Response{
-				Text:         data.Result,
-				InputTokens:  data.Usage.PromptTokens,
-				OutputTokens: data.Usage.TotalTokens - data.Usage.PromptTokens,
+				if data.ErrorCode != 0 {
+					select {
+					case <-ctx.Done():
+					case res <- Response{Error: data.ErrorMessage, ErrorCode: fmt.Sprintf("ERR%d", data.ErrorCode)}:
+					}
+					return
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				case res <- Response{
+					Text:         data.Result,
+					InputTokens:  data.Usage.PromptTokens,
+					OutputTokens: data.Usage.TotalTokens - data.Usage.PromptTokens,
+				}:
+				}
 			}
 		}
 	}()

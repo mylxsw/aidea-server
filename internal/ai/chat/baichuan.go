@@ -70,27 +70,41 @@ func (ai *BaichuanAIChat) ChatStream(ctx context.Context, req Request) (<-chan R
 	go func() {
 		defer close(res)
 
-		for data := range stream {
-			if data.Code != 0 {
-				res <- Response{
-					Error:     data.Message,
-					ErrorCode: fmt.Sprintf("ERR%d", data.Code),
-				}
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
+			case data, ok := <-stream:
+				if !ok {
+					return
+				}
 
-			var content string
-			var finishReason string
-			for _, c := range data.Data.Messages {
-				content += c.Content
-				finishReason = c.FinishReason
-			}
+				if data.Code != 0 {
+					select {
+					case <-ctx.Done():
+						return
+					case res <- Response{Error: data.Message, ErrorCode: fmt.Sprintf("ERR%d", data.Code)}:
+					}
+					return
+				}
 
-			res <- Response{
-				Text:         content,
-				FinishReason: finishReason,
-				InputTokens:  data.Usage.PromptTokens,
-				OutputTokens: data.Usage.AnswerTokens,
+				var content string
+				var finishReason string
+				for _, c := range data.Data.Messages {
+					content += c.Content
+					finishReason = c.FinishReason
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				case res <- Response{
+					Text:         content,
+					FinishReason: finishReason,
+					InputTokens:  data.Usage.PromptTokens,
+					OutputTokens: data.Usage.AnswerTokens,
+				}:
+				}
 			}
 		}
 	}()

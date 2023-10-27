@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/asteria/log"
@@ -42,7 +43,10 @@ func TestAnthropic_Chat(t *testing.T) {
 func TestAnthropic_ChatStream(t *testing.T) {
 	client := anthropic.New("", os.Getenv("ANTHROPIC_API_KEY"), http.DefaultClient)
 
-	resp, err := client.ChatStream(anthropic.NewRequest(anthropic.ModelClaudeInstant, []anthropic.Message{
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	resp, err := client.ChatStream(ctx, anthropic.NewRequest(anthropic.ModelClaudeInstant, []anthropic.Message{
 		{
 			Role:    "user",
 			Content: "你是一名占卜师，我给你名字，你帮我占卜运势",

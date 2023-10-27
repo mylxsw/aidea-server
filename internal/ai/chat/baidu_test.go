@@ -2,8 +2,10 @@ package chat_test
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
@@ -19,8 +21,11 @@ func createBaiduClient() chat.Chat {
 func TestBaiduAIChat_Chat(t *testing.T) {
 	client := createBaiduClient()
 
-	response, err := client.Chat(context.TODO(), chat.Request{
-		Model: baidu.ModelErnieBotTurbo,
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	response, err := client.Chat(ctx, chat.Request{
+		Model: baidu.ModelErnieBot4,
 		Messages: []chat.Message{
 			{
 				Role:    "system",
@@ -40,7 +45,11 @@ func TestBaiduAIChat_Chat(t *testing.T) {
 
 func TestBaiduAIChat_ChatStream(t *testing.T) {
 	chatClient := createBaiduClient()
-	response, err := chatClient.ChatStream(context.TODO(), chat.Request{
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	response, err := chatClient.ChatStream(ctx, chat.Request{
 		Model: baidu.ModelLlama2_70b,
 		Messages: []chat.Message{
 			{
@@ -56,12 +65,24 @@ func TestBaiduAIChat_ChatStream(t *testing.T) {
 
 	assert.NoError(t, err)
 
-	for res := range response {
-		if res.ErrorCode != "" {
-			log.With(res).Error("error")
-			break
-		}
+	defer fmt.Println("------ END ------")
 
-		log.With(res).Debug("response")
+	for {
+		select {
+		case res, ok := <-response:
+			if !ok {
+				return
+			}
+
+			if res.ErrorCode != "" {
+				log.With(res).Error("error")
+				break
+			}
+
+			log.With(res).Debug("response")
+		case <-ctx.Done():
+			return
+		}
 	}
+
 }
