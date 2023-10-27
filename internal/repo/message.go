@@ -36,6 +36,7 @@ type MessageAddReq struct {
 	PID           int64
 	Model         string
 	Status        int64
+	Error         string
 }
 
 func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error) {
@@ -60,6 +61,10 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error)
 
 	if req.Model != "" {
 		kvs[model.FieldChatMessagesModel] = req.Model
+	}
+
+	if req.Error != "" {
+		kvs[model.FieldChatMessagesError] = req.Error
 	}
 
 	return id, eloquent.Transaction(r.db, func(tx query.Database) error {

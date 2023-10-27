@@ -437,6 +437,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 				Model:         req.Model,
 				PID:           questionID,
 				Status:        int64(ternary.If(chatErrorMessage != "", repo.MessageStatusFailed, repo.MessageStatusSucceed)),
+				Error:         chatErrorMessage,
 			})
 			if err != nil {
 				log.With(req).Errorf("add message failed: %s", err)
