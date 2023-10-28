@@ -720,12 +720,11 @@ func (r *CreativeRepo) Gallery(ctx context.Context, page, perPage int64) ([]mode
 
 func (r *CreativeRepo) GalleryByID(ctx context.Context, id int64) (*model.CreativeGallery, error) {
 	q := query.Builder().
-		Where(model.FieldCreativeGalleryId, id).
-		Where(model.FieldCreativeGalleryStatus, CreativeGalleryStatusOK)
+		Where(model.FieldCreativeGalleryId, id)
 
 	item, err := model.NewCreativeGalleryModel(r.db).First(ctx, q)
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
@@ -759,7 +758,7 @@ func (r *CreativeRepo) ShareCreativeHistoryToGallery(ctx context.Context, userID
 
 		item, err := model.NewCreativeHistoryModel(tx).First(ctx, q)
 		if err != nil {
-			if err == query.ErrNoResult {
+			if errors.Is(err, query.ErrNoResult) {
 				return ErrNotFound
 			}
 
@@ -771,11 +770,11 @@ func (r *CreativeRepo) ShareCreativeHistoryToGallery(ctx context.Context, userID
 			ctx,
 			query.Builder().Where(model.FieldCreativeGalleryCreativeHistoryId, id),
 		)
-		if err != nil && err != query.ErrNoResult {
+		if err != nil && !errors.Is(err, query.ErrNoResult) {
 			return err
 		}
 
-		if err != query.ErrNoResult {
+		if !errors.Is(err, query.ErrNoResult) {
 			// 已经存在，且已经删除，则恢复
 			if existItem.Status.ValueOrZero() == CreativeGalleryStatusDeleted {
 				item.Shared = null.IntFrom(int64(IslandHistorySharedStatusShared))
@@ -827,11 +826,14 @@ func (r *CreativeRepo) ShareCreativeHistoryToGallery(ctx context.Context, userID
 func (r *CreativeRepo) CancelCreativeHistoryShare(ctx context.Context, userID int64, historyID int64) error {
 	return eloquent.Transaction(r.db, func(tx query.Database) error {
 		q := query.Builder().
-			Where(model.FieldCreativeGalleryUserId, userID).
 			Where(model.FieldCreativeGalleryCreativeHistoryId, historyID)
+		if userID > 0 {
+			q = q.Where(model.FieldCreativeGalleryUserId, userID)
+		}
+
 		item, err := model.NewCreativeGalleryModel(tx).First(ctx, q)
 		if err != nil {
-			if err == query.ErrNoResult {
+			if errors.Is(err, query.ErrNoResult) {
 				return nil
 			}
 
@@ -842,9 +844,9 @@ func (r *CreativeRepo) CancelCreativeHistoryShare(ctx context.Context, userID in
 			ctx,
 			query.Builder().
 				Where(model.FieldCreativeHistoryId, historyID).
-				Where(model.FieldCreativeHistoryUserId, userID),
+				Where(model.FieldCreativeHistoryUserId, item.UserId),
 		)
-		if err != nil && err != query.ErrNoResult {
+		if err != nil && !errors.Is(err, query.ErrNoResult) {
 			return err
 		}
 

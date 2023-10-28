@@ -71,7 +71,7 @@ func (Provider) Jobs(cc infra.Resolver, creator scheduler.JobCreator) {
 	// 注册 Gallery 自动随机排序任务
 	if err := creator.Add(
 		"gallery-sort-task",
-		"@daily",
+		"0 */60 * * * *",
 		scheduler.WithoutOverlap(GallerySortJob),
 	); err != nil {
 		log.Errorf("注册定时任务 gallery-sort-task 失败: %v", err)

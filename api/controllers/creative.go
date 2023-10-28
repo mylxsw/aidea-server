@@ -2,6 +2,8 @@ package controllers
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/api/auth"
+	"github.com/mylxsw/aidea-server/internal/helper"
 	"net/http"
 	"strconv"
 
@@ -58,7 +60,7 @@ func (ctl *CreativeController) Gallery(ctx context.Context, webCtx web.Context) 
 }
 
 // GalleryItem 作品图库详情
-func (ctl *CreativeController) GalleryItem(ctx context.Context, webCtx web.Context) web.Response {
+func (ctl *CreativeController) GalleryItem(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
 	id, err := strconv.Atoi(webCtx.PathVar("id"))
 	if err != nil {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
@@ -67,6 +69,13 @@ func (ctl *CreativeController) GalleryItem(ctx context.Context, webCtx web.Conte
 	item, err := ctl.creativeRepo.GalleryByID(ctx, int64(id))
 	if err != nil {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	if helper.VersionNewer(client.Version, "1.0.6") {
+		return webCtx.JSON(web.M{
+			"data":             item,
+			"is_internal_user": user.User != nil && user.User.InternalUser(),
+		})
 	}
 
 	return webCtx.JSON(item)
