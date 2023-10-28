@@ -401,7 +401,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		quotaConsumed := coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(realWordCount))
 
 		// 返回自定义控制信息，告诉客户端当前消耗情况
-		if isFreeRequest {
+		if isFreeRequest || replyText == "" {
 			// 免费请求，不扣除智慧果
 			quotaConsumed = 0
 		}
@@ -411,13 +411,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			chatErrorMessage = "响应内容为空"
 		}
 
-		if chatErrorMessage != "" && replyText == "" {
-			replyText = chatErrorMessage
-		}
-
 		if chatErrorMessage != "" {
-			quotaConsumed = 0
-
 			log.F(log.M{"req": req, "user": user}).Errorf("聊天失败：%s", chatErrorMessage)
 		}
 
@@ -467,7 +461,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 
 		if req.WebSocket {
-			if chatErrorMessage == "" {
+			if chatErrorMessage == "" || replyText != "" {
 				if err := wsConn.WriteJSON(finalWord); err != nil {
 					log.Warningf("write response failed: %v", err)
 				}
@@ -491,7 +485,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 
 		// 更新用户免费聊天次数
-		if chatErrorMessage == "" {
+		if chatErrorMessage == "" || replyText != "" {
 			if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
 				log.WithFields(log.Fields{
 					"user_id": user.ID,
