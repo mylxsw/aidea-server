@@ -80,7 +80,7 @@ func (ctl *AuthController) Register(router web.Router) {
 
 // minEntropyBits is the minimum entropy bits required for a password to be considered strong enough.
 const minEntropyBits = 40
-const emailRegex = `^([\w\.\_\-]{2,10})@(\w{1,}).([a-z]{2,8})$`
+const emailRegex = `^([\w\.\_\-]{2,30})@(\w{1,}).([a-z]{2,8})$`
 const phoneRegex = `^1[3456789]\d{9}$`
 
 func isEmail(value string) bool {

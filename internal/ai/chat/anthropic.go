@@ -67,7 +67,7 @@ func (chat *AnthropicChat) Chat(ctx context.Context, req Request) (*Response, er
 	}
 
 	if res.Error != nil && res.Error.Type != "" {
-		return nil, fmt.Errorf("anthropic ai chat error: [%d] %s", res.Error.Type, res.Error.Message)
+		return nil, fmt.Errorf("anthropic ai chat error: [%s] %s", res.Error.Type, res.Error.Message)
 	}
 
 	return &Response{
@@ -76,8 +76,7 @@ func (chat *AnthropicChat) Chat(ctx context.Context, req Request) (*Response, er
 }
 
 func (chat *AnthropicChat) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
-	tencentReq := chat.initRequest(req)
-	stream, err := chat.ai.ChatStream(tencentReq)
+	stream, err := chat.ai.ChatStream(ctx, chat.initRequest(req))
 	if err != nil {
 		return nil, err
 	}
@@ -86,17 +85,27 @@ func (chat *AnthropicChat) ChatStream(ctx context.Context, req Request) (<-chan 
 	go func() {
 		defer close(res)
 
-		for data := range stream {
-			if data.Error != nil && data.Error.Type != "" {
-				res <- Response{
-					Error:     data.Error.Message,
-					ErrorCode: data.Error.Type,
-				}
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
+			case data, ok := <-stream:
+				if !ok {
+					return
+				}
+				if data.Error != nil && data.Error.Type != "" {
+					select {
+					case <-ctx.Done():
+					case res <- Response{Error: data.Error.Message, ErrorCode: data.Error.Type}:
+					}
+					return
+				}
 
-			res <- Response{
-				Text: data.Completion,
+				select {
+				case <-ctx.Done():
+					return
+				case res <- Response{Text: data.Completion}:
+				}
 			}
 		}
 	}()

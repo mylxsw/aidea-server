@@ -69,7 +69,7 @@ func NewGetimgAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeGetimgAICompletion, data)
 }
 
-func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao.Translater, up *uploader.Uploader, quotaRepo *repo.QuotaRepo, queueRepo *repo.QueueRepo, creativeRepo *repo.CreativeRepo, oai *openai.OpenAI) TaskHandler {
+func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload GetimgAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -77,7 +77,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			queueRepo.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -88,7 +88,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
 					Status: repo.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
@@ -97,7 +97,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -145,7 +145,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 				Vendor:         "getimgai",
 				Model:          payload.Model,
 			},
-			creativeRepo,
+			rep.Creative,
 			oai, translator,
 		)
 
@@ -238,12 +238,12 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 			updateReq.ExtArguments = &ext
 		}
 
-		if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
+		if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 			return err
 		}
 
-		if err := quotaRepo.QuotaConsume(
+		if err := rep.Quota.QuotaConsume(
 			ctx,
 			payload.GetUID(),
 			payload.GetQuota(),
@@ -252,7 +252,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 			log.Errorf("used quota add failed: %s", err)
 		}
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,
@@ -344,7 +344,11 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 		}
 	}
 
-	if negativePrompt == "" {
+	if strings.TrimSpace(prompt) == "" {
+		prompt = "best quality, animation effect"
+	}
+
+	if strings.TrimSpace(negativePrompt) == "" {
 		negativePrompt = "out of frame, lowres, text, error, cropped, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, username, watermark, signature"
 	}
 

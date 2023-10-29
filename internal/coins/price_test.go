@@ -6,6 +6,7 @@ import (
 
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/go-utils/assert"
+	"gopkg.in/yaml.v3"
 )
 
 func TestGetTokensForCoins(t *testing.T) {
@@ -75,23 +76,6 @@ func TestTokenUsage(t *testing.T) {
 		// {"gpt3.5-16k-4000", coins.GetOpenAITextCoins("gpt-3.5-turbo-16k", 4000)},
 		{"gpt-4-8k-1000", coins.GetOpenAITextCoins("gpt-4-8k", 1000)},
 		{"gpt-4-32k-1000", coins.GetOpenAITextCoins("gpt-4-32k", 1000)},
-		{"deepai-image", coins.GetDeepAIImageCoins("default")},
-		{"leapai-image", coins.GetLeapAIImageCoins("default")},
-		{"dalle-image", coins.GetOpenAIImageCoins("DALL·E")},
-		{"stabilityai-image-30-512", coins.GetStabilityAIImageCoins("text-to-image", 30, 512, 512)},
-		{"stabilityai-image-30-768", coins.GetStabilityAIImageCoins("text-to-image", 30, 768, 768)},
-		{"stabilityai-image-30-1024", coins.GetStabilityAIImageCoins("text-to-image", 30, 1024, 1024)},
-		{"stabilityai-image-50-512", coins.GetStabilityAIImageCoins("text-to-image", 50, 512, 512)},
-		{"stabilityai-image-50-768", coins.GetStabilityAIImageCoins("text-to-image", 50, 768, 768)},
-		{"stabilityai-image-50-1024", coins.GetStabilityAIImageCoins("text-to-image", 50, 1024, 1024)},
-		{"stabilityai-image-100-512", coins.GetStabilityAIImageCoins("text-to-image", 100, 512, 512)},
-		{"stabilityai-image-100-768", coins.GetStabilityAIImageCoins("text-to-image", 100, 768, 768)},
-		{"stabilityai-image-100-1024", coins.GetStabilityAIImageCoins("text-to-image", 100, 1024, 1024)},
-		{"stabilityai-image-150-512", coins.GetStabilityAIImageCoins("text-to-image", 150, 512, 512)},
-		{"stabilityai-image-150-768", coins.GetStabilityAIImageCoins("text-to-image", 150, 768, 768)},
-		{"stabilityai-image-150-1024", coins.GetStabilityAIImageCoins("text-to-image", 150, 1024, 1024)},
-		{"stabilityai-upscale-esrgan-v1-x2plus", coins.GetStabilityAIImageUpscaleCoins("esrgan-v1-x2plus")},
-		{"stabilityai-upscale-stable-diffusion-x4-latent-upscaler", coins.GetStabilityAIImageUpscaleCoins("stable-diffusion-x4-latent-upscaler")},
 		{"voice-tencent", coins.GetVoiceCoins("tencent")},
 		{"upload-qiniu", coins.GetUploadCoins()},
 	}
@@ -104,4 +88,13 @@ func TestTokenUsage(t *testing.T) {
 	for _, tu := range testcases {
 		fmt.Printf("%30s => %10d\n", tu.Product, tokenCount/tu.Count)
 	}
+}
+
+func TestLoadCoinsTable(t *testing.T) {
+	assert.NoError(t, coins.LoadPriceInfo("../../coins-table.yaml"))
+
+	res, err := yaml.Marshal(coins.GetCoinsTable())
+	assert.NoError(t, err)
+
+	fmt.Println(string(res))
 }

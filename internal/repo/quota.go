@@ -254,3 +254,31 @@ func (repo *QuotaRepo) GetQuotaStatisticsRecently(ctx context.Context, userId in
 		return item.ToQuotaStatistics()
 	}), nil
 }
+
+type QuotaUsage struct {
+	model.QuotaUsage
+	QuotaMeta QuotaUsedMeta `json:"quota_meta,omitempty"`
+}
+
+// GetQuotaDetails 获取配额使用详情
+func (repo *QuotaRepo) GetQuotaDetails(ctx context.Context, userId int64, startAt, endAt time.Time) ([]QuotaUsage, error) {
+	q := query.Builder().
+		Where(model.FieldQuotaUsageUserId, userId).
+		Where(model.FieldQuotaUsageCreatedAt, ">=", startAt.Format("2006-01-02 15:04:05")).
+		Where(model.FieldQuotaUsageCreatedAt, "<", endAt.Format("2006-01-02 15:04:05")).
+		OrderBy(model.FieldQuotaUsageId, "DESC")
+
+	res, err := model.NewQuotaUsageModel(repo.db).Get(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	return array.Map(res, func(item model.QuotaUsageN, _ int) QuotaUsage {
+		var quotaMeta QuotaUsedMeta
+		_ = json.Unmarshal([]byte(item.Meta.ValueOrZero()), &quotaMeta)
+		return QuotaUsage{
+			QuotaUsage: item.ToQuotaUsage(),
+			QuotaMeta:  quotaMeta,
+		}
+	}), nil
+}

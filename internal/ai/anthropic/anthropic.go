@@ -77,7 +77,7 @@ func (ai *Anthropic) Chat(ctx context.Context, req Request) (*Response, error) {
 	return &chatResp, nil
 }
 
-func (ai *Anthropic) ChatStream(req Request) (<-chan Response, error) {
+func (ai *Anthropic) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	req.Stream = true
 	if req.MaxTokensToSample <= 0 {
 		req.MaxTokensToSample = 4000
@@ -88,7 +88,7 @@ func (ai *Anthropic) ChatStream(req Request) (<-chan Response, error) {
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequest("POST", strings.TrimRight(ai.serverURL, "/")+"/v1/complete", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", strings.TrimRight(ai.serverURL, "/")+"/v1/complete", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,10 @@ func (ai *Anthropic) ChatStream(req Request) (<-chan Response, error) {
 					return
 				}
 
-				res <- Response{Error: &ResponseError{Type: "read_error", Message: fmt.Sprintf("read response failed: %v", err)}}
+				select {
+				case <-ctx.Done():
+				case res <- Response{Error: &ResponseError{Type: "read_error", Message: fmt.Sprintf("read response failed: %v", err)}}:
+				}
 				return
 			}
 
@@ -151,13 +154,20 @@ func (ai *Anthropic) ChatStream(req Request) (<-chan Response, error) {
 
 			var chatResponse Response
 			if err := json.Unmarshal([]byte(dataStr[6:]), &chatResponse); err != nil {
-				res <- Response{Error: &ResponseError{Type: "decode_error", Message: fmt.Sprintf("decode response failed: %v", err)}}
+				select {
+				case <-ctx.Done():
+				case res <- Response{Error: &ResponseError{Type: "decode_error", Message: fmt.Sprintf("decode response failed: %v", err)}}:
+				}
 				return
 			}
 
-			res <- chatResponse
-			if chatResponse.StopReason != "" {
+			select {
+			case <-ctx.Done():
 				return
+			case res <- chatResponse:
+				if chatResponse.StopReason != "" {
+					return
+				}
 			}
 		}
 	}()

@@ -57,7 +57,7 @@ func NewImageColorizationTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeImageColorization, data)
 }
 
-func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploader, creativeRepo *repo.CreativeRepo, quotaRepo *repo.QuotaRepo, queueRepo *repo.QueueRepo) TaskHandler {
+func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploader, rep *repo.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageColorizationPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -77,7 +77,7 @@ func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploa
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
 					Status: repo.CreativeStatusFailed,
 				}); err != nil {
@@ -86,7 +86,7 @@ func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploa
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -113,17 +113,17 @@ func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploa
 			QuotaUsed: payload.GetQuota(),
 		}
 
-		if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
+		if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 			return err
 		}
 
 		// 记录消耗
-		if err := quotaRepo.QuotaConsume(ctx, payload.GetUID(), payload.GetQuota(), repo.NewQuotaUsedMeta("upscale", "esrgan-v1-x2plus")); err != nil {
+		if err := rep.Quota.QuotaConsume(ctx, payload.GetUID(), payload.GetQuota(), repo.NewQuotaUsedMeta("upscale", "esrgan-v1-x2plus")); err != nil {
 			log.With(payload).Errorf("used quota add failed: %s", err)
 		}
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,
@@ -142,7 +142,7 @@ func imageColorization(ctx context.Context, deepClient *deepai.DeepAI, up *uploa
 		return "", fmt.Errorf("图片超分辨率失败: %w", err)
 	}
 
-	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), true)
+	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), false)
 	if err != nil {
 		return "", fmt.Errorf("图片上传失败: %w", err)
 	}

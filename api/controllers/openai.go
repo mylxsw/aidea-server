@@ -3,11 +3,17 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/go-redis/redis_rate/v10"
+	"github.com/mylxsw/aidea-server/internal/rate"
 
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
 
@@ -37,12 +43,22 @@ type OpenAIController struct {
 	messageRepo *repo.MessageRepo        `autowire:"@"`
 	securitySrv *service.SecurityService `autowire:"@"`
 	userSrv     *service.UserService     `autowire:"@"`
+	chatSrv     *service.ChatService     `autowire:"@"`
+	limiter     *rate.RateLimiter        `autowire:"@"`
+
+	upgrader websocket.Upgrader
 }
 
 // NewOpenAIController 创建 OpenAI 控制器
 func NewOpenAIController(resolver infra.Resolver, conf *config.Config) web.Controller {
 	ctl := &OpenAIController{conf: conf}
 	resolver.MustAutoWire(ctl)
+
+	ctl.upgrader = websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			return true
+		},
+	}
 	return ctl
 }
 
@@ -51,7 +67,7 @@ func NewOpenAIController(resolver infra.Resolver, conf *config.Config) web.Contr
 func (ctl *OpenAIController) Register(router web.Router) {
 	// chat 相关接口
 	router.Group("/chat", func(router web.Router) {
-		router.Post("/completions", ctl.Chat)
+		router.Any("/completions", ctl.Chat)
 	})
 
 	router.Group("/audio", func(router web.Router) {
@@ -150,22 +166,128 @@ func (m FinalMessage) ToJSON() string {
 	return string(data)
 }
 
+func (ctl *OpenAIController) wrapRawResponse(w http.ResponseWriter, cb func()) {
+	// 允许跨域
+	if ctl.conf.EnableCORS {
+		for k, v := range corsHeaders {
+			for _, v1 := range v {
+				w.Header().Set(k, v1)
+			}
+		}
+	}
+
+	cb()
+}
+
+var corsHeaders = http.Header{
+	"Access-Control-Allow-Origin":  []string{"*"},
+	"Access-Control-Allow-Headers": []string{"*"},
+	"Access-Control-Allow-Methods": []string{"GET,POST,OPTIONS,HEAD,PUT,PATCH,DELETE"},
+}
+
+type WSError struct {
+	Code  int    `json:"code,omitempty"`
+	Error string `json:"error,omitempty"`
+}
+
+func (e WSError) JSON() []byte {
+	data, _ := json.Marshal(e)
+	return data
+}
+
 // Chat 聊天接口，接口参数参考 https://platform.openai.com/docs/api-reference/chat/create
 // 该接口会返回一个 SSE 流，接口参数 stream 总是为 true（忽略客户端设置）
 func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo, w http.ResponseWriter) {
 	var req chat.Request
-	if err := webCtx.Unmarshal(&req); err != nil {
-		webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest).CreateResponse()
-		return
+	wsMode := webCtx.Input("ws") == "true"
+
+	var wsConn *websocket.Conn
+	if wsMode {
+		var err error
+		if wsConn, err = ctl.upgrader.Upgrade(w, webCtx.Request().Raw(), corsHeaders); err != nil {
+			log.Errorf("upgrade websocket failed: %v", err)
+			ctl.wrapRawResponse(w, func() {
+				webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse()
+			})
+
+			return
+		}
+		defer wsConn.Close()
+
+		// 读取第一条消息，用于获取用户输入
+		_, msg, err := wsConn.ReadMessage()
+		if err != nil {
+			log.Errorf("read websocket message failed: %v", err)
+			wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: err.Error()})
+			return
+		}
+
+		if err := json.Unmarshal(msg, &req); err != nil {
+			log.Errorf("unmarshal websocket message failed: %v", err)
+			wsConn.WriteJSON(WSError{Code: http.StatusBadRequest, Error: err.Error()})
+			return
+		}
+
+		req.WebSocket = true
+	} else {
+		if err := webCtx.Unmarshal(&req); err != nil {
+			ctl.wrapRawResponse(w, func() {
+				webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest).CreateResponse()
+			})
+			return
+		}
 	}
 
-	fixRes, err := req.Fix(ctl.chat)
+	// 查询 room 信息，修正最大上下文消息数量
+	var maxContextLength int64 = 5
+	if req.RoomID > 0 {
+		func() {
+			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+			defer cancel()
+
+			room, err := ctl.chatSrv.Room(ctx, user.ID, req.RoomID)
+			if err != nil {
+				log.With(req).Errorf("get room info failed: %s", err)
+			}
+
+			if room.MaxContext > 0 {
+				maxContextLength = room.MaxContext
+			}
+		}()
+	}
+
+	fixRes, err := req.Fix(ctl.chat, maxContextLength)
 	if err != nil {
-		webCtx.JSONError(err.Error(), http.StatusBadRequest).CreateResponse()
+		if req.WebSocket {
+			wsConn.WriteJSON(WSError{Code: http.StatusBadRequest, Error: err.Error()})
+		} else {
+			ctl.wrapRawResponse(w, func() {
+				webCtx.JSONError(err.Error(), http.StatusBadRequest).CreateResponse()
+			})
+		}
+
 		return
 	}
 
 	req = fixRes.Request
+
+	// 基于模型的流控，避免单一模型用户过度使用
+	if ctl.conf.EnableModelRateLimit {
+		if err := ctl.limiter.Allow(ctx, fmt.Sprintf("chat-limit:u:%d:m:%s:minute", user.ID, req.Model), redis_rate.PerMinute(5)); err != nil {
+			if errors.Is(err, rate.ErrRateLimitExceeded) {
+				if req.WebSocket {
+					wsConn.WriteJSON(WSError{Code: http.StatusBadRequest, Error: common.Text(webCtx, ctl.translater, "操作频率过高，请稍后再试")})
+				} else {
+					ctl.wrapRawResponse(w, func() {
+						webCtx.JSONError(common.Text(webCtx, ctl.translater, "操作频率过高，请稍后再试"), http.StatusBadRequest).CreateResponse()
+					})
+				}
+				return
+			}
+
+			log.WithFields(log.Fields{"user_id": user.ID, "req": req}).Errorf("check rate limit failed: %s", err)
+		}
+	}
 
 	// 免费模型
 	leftCount, maxFreeCount := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, req.Model)
@@ -175,26 +297,44 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
 		if err != nil {
 			log.Errorf("get user quota failed: %s", err)
-			webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError).CreateResponse()
+			if req.WebSocket {
+				wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: common.Text(webCtx, ctl.translater, common.ErrInternalError)})
+			} else {
+				ctl.wrapRawResponse(w, func() {
+					webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError).CreateResponse()
+				})
+			}
 			return
 		}
 
 		// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
 		// 假设当前响应消耗 2 个智慧果
 		restQuota := quota.Quota - quota.Used - coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(fixRes.InputTokens)) - 2
-		if restQuota <= 0 {
+		if restQuota < 0 {
 			if maxFreeCount > 0 {
-				webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已用完，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
+				if req.WebSocket {
+					wsConn.WriteJSON(WSError{Code: http.StatusPaymentRequired, Error: common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试")})
+				} else {
+					ctl.wrapRawResponse(w, func() {
+						webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
+					})
+				}
 				return
 			}
 
-			webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse()
+			if req.WebSocket {
+				wsConn.WriteJSON(WSError{Code: http.StatusPaymentRequired, Error: common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough)})
+			} else {
+				ctl.wrapRawResponse(w, func() {
+					webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse()
+				})
+			}
 			return
 		}
 	}
 
 	// 内容安全检测
-	shouldReturn := ctl.securityCheck(req, user, w)
+	shouldReturn := ctl.securityCheck(webCtx, req, user, w, wsConn)
 	if shouldReturn {
 		return
 	}
@@ -208,6 +348,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			Role:    repo.MessageRoleUser,
 			RoomID:  req.RoomID,
 			Model:   req.Model,
+			Status:  repo.MessageStatusSucceed,
 		})
 		if err != nil {
 			log.With(req).Errorf("add message failed: %s", err)
@@ -220,18 +361,37 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 	var replyText string
 
-	stream, err := ctl.chat.ChatStream(ctx, req)
+	chatCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	stream, err := ctl.chat.ChatStream(chatCtx, req)
 	if err != nil {
 		log.Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
-		webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse()
+		if req.WebSocket {
+			wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: common.Text(webCtx, ctl.translater, common.ErrInternalError)})
+		} else {
+			ctl.wrapRawResponse(w, func() {
+				webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse()
+			})
+		}
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
+	if !req.WebSocket {
+		ctl.wrapRawResponse(w, func() {
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Connection", "keep-alive")
+		})
+	}
 
 	defer func() {
+		var chatErrorMessage string
+		if chatError := recover(); chatError != nil {
+			chatErrorMessage = fmt.Sprintf("%v", chatError)
+		}
+
+		replyText = strings.TrimSpace(replyText)
 		messages := append(req.Messages, chat.Message{
 			Role:    "assistant",
 			Content: replyText,
@@ -241,10 +401,22 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		quotaConsumed := coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(realWordCount))
 
 		// 返回自定义控制信息，告诉客户端当前消耗情况
-		if isFreeRequest {
+		if isFreeRequest || replyText == "" {
 			// 免费请求，不扣除智慧果
 			quotaConsumed = 0
 		}
+
+		// 响应内容为空，报错给客户端
+		if replyText == "" && chatErrorMessage == "" {
+			chatErrorMessage = "响应内容为空"
+		}
+
+		if chatErrorMessage != "" {
+			log.F(log.M{"req": req, "user": user}).Errorf("聊天失败：%s", chatErrorMessage)
+		}
+
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
 
 		var answerID int64
 		if ctl.conf.EnableRecordChat {
@@ -258,6 +430,8 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 				RoomID:        req.RoomID,
 				Model:         req.Model,
 				PID:           questionID,
+				Status:        int64(ternary.If(chatErrorMessage != "", repo.MessageStatusFailed, repo.MessageStatusSucceed)),
+				Error:         chatErrorMessage,
 			})
 			if err != nil {
 				log.With(req).Errorf("add message failed: %s", err)
@@ -286,31 +460,42 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			Model: req.Model,
 		}
 
-		data, _ := json.Marshal(finalWord)
-		if _, err := w.Write([]byte("data: " + string(data) + "\n\n")); err != nil {
-			log.Warningf("write response failed: %v", err)
-		}
+		if req.WebSocket {
+			if chatErrorMessage == "" || replyText != "" {
+				if err := wsConn.WriteJSON(finalWord); err != nil {
+					log.Warningf("write response failed: %v", err)
+				}
+			} else {
+				if err := wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: chatErrorMessage}); err != nil {
+					log.Warningf("write response failed: %v", err)
+				}
+			}
+		} else {
+			data, _ := json.Marshal(finalWord)
+			if _, err := w.Write([]byte("data: " + string(data) + "\n\n")); err != nil {
+				log.Warningf("write response failed: %v", err)
+			}
 
-		// 写入结束标志
-		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+			// 写入结束标志
+			_, _ = w.Write([]byte("data: [DONE]\n\n"))
 
-		if f, ok := w.(http.Flusher); ok {
-			f.Flush()
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
 		}
 
 		// 更新用户免费聊天次数
-		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
-
-		if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
-			log.WithFields(log.Fields{
-				"user_id": user.ID,
-				"model":   req.Model,
-			}).Errorf("update free chat count failed: %s", err)
+		if chatErrorMessage == "" || replyText != "" {
+			if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
+				log.WithFields(log.Fields{
+					"user_id": user.ID,
+					"model":   req.Model,
+				}).Errorf("update free chat count failed: %s", err)
+			}
 		}
 
 		// 扣除智慧果
-		if !isFreeRequest {
+		if !isFreeRequest && quotaConsumed > 0 {
 			if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo.NewQuotaUsedMeta("chat", req.Model)); err != nil {
 				log.Errorf("used quota add failed: %s", err)
 			}
@@ -318,50 +503,74 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}()
 
 	// 生成 SSE 流
+	timer := time.NewTimer(15 * time.Second)
+	defer timer.Stop()
+
 	id := 0
-	for res := range stream {
-		id++
+	for {
+		timer.Reset(15 * time.Second)
 
-		if res.ErrorCode != "" {
-			log.With(req).Errorf("chat error: %v", res)
+		select {
+		case <-timer.C:
+			panic("两次响应之间等待时间过长，强制中断")
+		case <-ctx.Done():
 			return
-		}
+		case res, ok := <-stream:
+			if !ok {
+				return
+			}
 
-		resp := openai.ChatCompletionStreamResponse{
-			ID:      strconv.Itoa(id),
-			Created: time.Now().Unix(),
-			Model:   req.Model,
-			Choices: []openai.ChatCompletionStreamChoice{
-				{
-					Delta: openai.ChatCompletionStreamChoiceDelta{
-						Role:    "assistant",
-						Content: res.Text,
+			id++
+
+			if res.ErrorCode != "" {
+				log.With(req).Errorf("chat error: %v", res)
+				return
+			}
+
+			resp := openai.ChatCompletionStreamResponse{
+				ID:      strconv.Itoa(id),
+				Created: time.Now().Unix(),
+				Model:   req.Model,
+				Choices: []openai.ChatCompletionStreamChoice{
+					{
+						Delta: openai.ChatCompletionStreamChoiceDelta{
+							Role:    "assistant",
+							Content: res.Text,
+						},
 					},
 				},
-			},
-		}
+			}
 
-		data, err := json.Marshal(resp)
-		if err != nil {
-			log.Errorf("marshal response failed: %v", err)
-			return
-		}
+			replyText += res.Text
 
-		if _, err := w.Write([]byte("data: " + string(data) + "\n\n")); err != nil {
-			log.Errorf("write response failed: %v", err)
-			return
-		}
+			if req.WebSocket {
+				err := wsConn.WriteJSON(resp)
+				if err != nil {
+					log.Errorf("write response failed: %v", err)
+					return
+				}
+			} else {
+				data, err := json.Marshal(resp)
+				if err != nil {
+					log.Errorf("marshal response failed: %v", err)
+					return
+				}
 
-		replyText += res.Text
+				if _, err := w.Write([]byte("data: " + string(data) + "\n\n")); err != nil {
+					log.Errorf("write response failed: %v", err)
+					return
+				}
 
-		if f, ok := w.(http.Flusher); ok {
-			f.Flush()
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
+			}
 		}
 	}
 }
 
 // 内容安全检测
-func (ctl *OpenAIController) securityCheck(req chat.Request, user *auth.User, w http.ResponseWriter) bool {
+func (ctl *OpenAIController) securityCheck(webCtx web.Context, req chat.Request, user *auth.User, w http.ResponseWriter, wsConn *websocket.Conn) bool {
 	// content := strings.Join(array.Map(req.Messages, func(msg openai.ChatCompletionMessage, _ int) string { return msg.Content }), "\n")
 	content := req.Messages[len(req.Messages)-1].Content
 	if checkRes := ctl.securitySrv.ChatDetect(content); checkRes != nil {
@@ -372,33 +581,46 @@ func (ctl *OpenAIController) securityCheck(req chat.Request, user *auth.User, w 
 				"content": content,
 			}).Warningf("用户 %d 违规，违规内容：%s", user.ID, checkRes.Reason)
 
-			w.Header().Set("Content-Type", "text/event-stream")
-			w.Header().Set("Cache-Control", "no-cache")
-			w.Header().Set("Connection", "keep-alive")
+			if req.WebSocket {
+				if err := wsConn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
+					`{"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
+					time.Now().Unix(),
+					strconv.Quote("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc"),
+				))); err != nil {
+					log.Warningf("write response failed: %v", err)
+				}
 
-			w.Write([]byte(fmt.Sprintf(
-				`data: {"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
-				time.Now().Unix(),
-				strconv.Quote("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc"),
-			)))
+			} else {
+				ctl.wrapRawResponse(w, func() {
+					w.Header().Set("Content-Type", "text/event-stream")
+					w.Header().Set("Cache-Control", "no-cache")
+					w.Header().Set("Connection", "keep-alive")
+				})
 
-			if f, ok := w.(http.Flusher); ok {
-				f.Flush()
-			}
+				w.Write([]byte(fmt.Sprintf(
+					`data: {"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
+					time.Now().Unix(),
+					strconv.Quote("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc"),
+				)))
 
-			w.Write([]byte(fmt.Sprintf(
-				`data: {"id":"chatxxx2","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}`+"\n\n",
-				time.Now().Unix(),
-			)))
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
 
-			if f, ok := w.(http.Flusher); ok {
-				f.Flush()
-			}
+				w.Write([]byte(fmt.Sprintf(
+					`data: {"id":"chatxxx2","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}`+"\n\n",
+					time.Now().Unix(),
+				)))
 
-			w.Write([]byte("data: [DONE]\n\n"))
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
 
-			if f, ok := w.(http.Flusher); ok {
-				f.Flush()
+				w.Write([]byte("data: [DONE]\n\n"))
+
+				if f, ok := w.(http.Flusher); ok {
+					f.Flush()
+				}
 			}
 
 			return true
@@ -416,7 +638,7 @@ func (ctl *OpenAIController) Images(ctx context.Context, webCtx web.Context, use
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	if quota.Quota < quota.Used+coins.GetOpenAIImageCoins("DALL·E") {
+	if quota.Quota < quota.Used+int64(coins.GetUnifiedImageGenCoins()) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
@@ -432,7 +654,7 @@ func (ctl *OpenAIController) Images(ctx context.Context, webCtx web.Context, use
 	}
 
 	defer func() {
-		if err := quotaRepo.QuotaConsume(ctx, user.ID, coins.GetOpenAIImageCoins("DALL·E"), repo.NewQuotaUsedMeta("openai-image", "DALL·E")); err != nil {
+		if err := quotaRepo.QuotaConsume(ctx, user.ID, int64(coins.GetUnifiedImageGenCoins()), repo.NewQuotaUsedMeta("openai-image", "DALL·E")); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
 	}()

@@ -69,3 +69,27 @@ func TestImageToImage(t *testing.T) {
 
 	t.Log(res)
 }
+
+func TestTextToImage(t *testing.T) {
+	conf := config.Config{
+		StabilityAIServer: []string{"https://api.stability.ai"},
+		StabilityAIKey:    os.Getenv("STABILITY_API_KEY"),
+	}
+
+	st := stabilityai.NewStabilityAIWithClient(&conf, &http.Client{Timeout: 60 * time.Second})
+	resp, err := st.TextToImage("stable-diffusion-v1-5", stabilityai.TextToImageRequest{
+		TextPrompts: []stabilityai.TextPrompts{
+			{Text: "a small cat"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := resp.SaveToLocalFiles(context.TODO(), "/Users/mylxsw/Downloads")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Log(res)
+}

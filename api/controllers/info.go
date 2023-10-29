@@ -1,12 +1,18 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/service"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
+	"github.com/mylxsw/go-utils/array"
 
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/glacier/web"
@@ -14,7 +20,8 @@ import (
 
 // InfoController 信息控制器
 type InfoController struct {
-	conf *config.Config `autowire:"@"`
+	conf    *config.Config       `autowire:"@"`
+	userSvc *service.UserService `autowire:"@"`
 }
 
 // NewInfoController 创建信息控制器
@@ -62,7 +69,7 @@ func (ctl *InfoController) shareInfo(ctx web.Context, user *auth.UserOptional) w
 	return ctx.JSON(res)
 }
 
-const CurrentVersion = "1.0.5"
+const CurrentVersion = "1.0.6"
 
 func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 	clientVersion := ctx.Input("version")
@@ -85,7 +92,7 @@ func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 // Version 获取版本信息
 func (ctl *InfoController) Version(ctx web.Context) web.Response {
 	return ctx.JSON(web.M{
-		"version": "1.0.1",
+		"version": CurrentVersion,
 	})
 }
 
@@ -99,45 +106,8 @@ type HomeModel struct {
 }
 
 // Capabilities 获取 AI 平台的能力列表
-func (ctl *InfoController) Capabilities(webCtx web.Context, client *auth.ClientInfo) web.Response {
-	enableOpenAI := ctl.conf.EnableOpenAI
-	homeModels := []HomeModel{
-		{
-			Name:     "南贤",
-			ModelID:  "nanxian",
-			Desc:     "速度快，成本低",
-			Color:    "FF67AC5C",
-			Powerful: false,
-		},
-		{
-			Name:     "北丑",
-			ModelID:  "beichou",
-			Desc:     "能力强，更精准",
-			Color:    "FF714BD7",
-			Powerful: true,
-		},
-	}
-
-	if client.IsCNLocalMode(ctl.conf) {
-		enableOpenAI = false
-		homeModels = []HomeModel{
-			{
-				Name:     "南贤",
-				ModelID:  "nanxian",
-				Desc:     "速度快，成本低",
-				Color:    "FF67AC5C",
-				Powerful: false,
-			},
-			{
-				Name:     "北丑",
-				ModelID:  "beichou",
-				Desc:     "能力强，更精准",
-				Color:    "FF714BD7",
-				Powerful: true,
-			},
-		}
-	}
-
+func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
+	enableOpenAI, homeModels := ctl.loadHomeModels(ctx, ctl.conf, client, user)
 	return webCtx.JSON(web.M{
 		// 是否启用苹果 App 支付
 		"applepay_enabled": ctl.conf.EnableApplePay,
@@ -155,13 +125,84 @@ func (ctl *InfoController) Capabilities(webCtx web.Context, client *auth.ClientI
 		"translate_enabled": ctl.conf.EnableTranslate,
 		// 是否启用邮件发送功能
 		"mail_enabled": ctl.conf.EnableMail,
-		// 是否显示绘玩
-		"enable_gallery": true,
-		// 是否启用创作岛
-		"enable_creation_island": true,
 		// 首页模型
 		"home_models": homeModels,
+
+		// 首页路由地址
+		"home_route": "/chat-chat",
+		// 是否禁用聊一聊
+		"disable_chat": false,
+		// 是否禁用数字人
+		"disable_digital_human": false,
+		// 是否禁用绘玩
+		"disable_gallery": false,
+		// 是否禁用创作岛
+		"disable_creation_island": false,
+
+		// 是否显示首页模型描述
+		"show_home_model_description": strings.Contains(client.Language, "zh"),
+		// 是否支持 WebSocket
+		"support_websocket": ctl.conf.EnableWebsocket,
 	})
+}
+
+func (ctl *InfoController) loadHomeModels(ctx context.Context, conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []HomeModel) {
+	enableOpenAI, homeModels = ctl.loadDefaultHomeModels(ctl.conf, client, user)
+
+	if user.User != nil && conf.EnableCustomHomeModels {
+		cus, err := ctl.userSvc.CustomConfig(ctx, user.User.ID)
+		if err != nil {
+			log.F(log.M{"user": user, "client": client}).Errorf("get user custom config failed: %s", err)
+		} else if cus != nil && len(cus.HomeModels) > 0 {
+			supportModels := array.ToMap(chat.Models(ctl.conf, false), func(item chat.Model, _ int) string { return item.RealID() })
+			for i, m := range cus.HomeModels[:2] {
+				if matched, ok := supportModels[m]; ok {
+					homeModels[i].ModelID = matched.RealID()
+					homeModels[i].Name = matched.ShortName
+				}
+			}
+		}
+	}
+
+	return enableOpenAI, homeModels
+}
+
+func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []HomeModel) {
+	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
+		return false, []HomeModel{
+			{
+				Name:     "南贤",
+				ModelID:  "nanxian",
+				Desc:     "速度快，成本低",
+				Color:    "FF67AC5C",
+				Powerful: false,
+			},
+			{
+				Name:     "北丑",
+				ModelID:  "beichou",
+				Desc:     "能力强，更精准",
+				Color:    "FF714BD7",
+				Powerful: true,
+			},
+		}
+	}
+
+	return conf.EnableOpenAI, []HomeModel{
+		{
+			Name:     "GPT-3.5",
+			ModelID:  "gpt-3.5-turbo",
+			Desc:     "速度快，成本低",
+			Color:    "FF67AC5C",
+			Powerful: false,
+		},
+		{
+			Name:     "GPT-4",
+			ModelID:  "gpt-4",
+			Desc:     "能力强，更精准",
+			Color:    "FF714BD7",
+			Powerful: true,
+		},
+	}
 }
 
 // PrivacyPolicy 隐私条款

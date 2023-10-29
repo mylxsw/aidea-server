@@ -11,11 +11,11 @@ import (
 )
 
 func TestBaiduAI_Chat(t *testing.T) {
-	testBaiduAI_Chat(t, baidu.ModelLlama2_70b)
+	testBaiduAI_Chat(t, baidu.ModelErnieBot4)
 }
 
 func TestBaiduAI_ChatStream(t *testing.T) {
-	testBaiduAI_ChatStream(t, baidu.ModelLlama2_7b_CN)
+	testBaiduAI_ChatStream(t, baidu.ModelErnieBot4)
 }
 
 func testBaiduAI_Chat(t *testing.T, model baidu.Model) {
@@ -120,7 +120,7 @@ func TestChatMessageFix(t *testing.T) {
 
 	req := baidu.ChatRequest{Messages: messages}
 
-	for _, msg := range req.Fix().Messages {
+	for _, msg := range req.Fix(baidu.ModelErnieBot).Messages {
 		log.Debugf("%s: %s", msg.Role, msg.Content)
 	}
 }

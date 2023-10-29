@@ -70,8 +70,18 @@ func IsChinese(str string) bool {
 	return count/float64(utf8.RuneCountInString(str)) > 0.3
 }
 
+// WordCount 统计字符串中的字符数
 func WordCount(text string) int64 {
 	return int64(utf8.RuneCountInString(text))
+}
+
+// WordTruncate 截取字符串，如果字符串长度超过 length，则截取 length 个字符
+func WordTruncate(text string, length int64) string {
+	if WordCount(text) <= length {
+		return text
+	}
+
+	return string([]rune(text)[:length])
 }
 
 // ParseAppleDateTime 解析苹果返回的时间

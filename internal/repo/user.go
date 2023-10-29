@@ -38,6 +38,8 @@ const (
 	UserTypeInternal = 1
 	// 测试用户
 	UserTypeTester = 2
+	// 例外用户
+	UserTypeExtraPermission = 3
 )
 
 type UserRepo struct {
@@ -450,4 +452,66 @@ func (repo *UserRepo) BindPhone(ctx context.Context, userID int64, phone string,
 	})
 
 	return
+}
+
+// UserCustomConfig 用户自定义配置
+type UserCustomConfig struct {
+	// HomeModels 主页显示的模型
+	HomeModels []string `json:"home_models,omitempty"`
+}
+
+// CustomConfig 查询用户自定义配置
+func (repo *UserRepo) CustomConfig(ctx context.Context, userID int64) (*UserCustomConfig, error) {
+	user, err := model.NewUserCustomModel(repo.db).First(ctx, query.Builder().Where(model.FieldUserCustomUserId, userID))
+	if err != nil && err != query.ErrNoResult {
+		return nil, fmt.Errorf("查询用户自定义配置失败：%w", err)
+	}
+
+	var configData string
+	if err == query.ErrNoResult {
+		configData = "{}"
+	} else {
+		configData = user.Config.ValueOrZero()
+	}
+
+	var customConfig UserCustomConfig
+	if err := json.Unmarshal([]byte(configData), &customConfig); err != nil {
+		return nil, fmt.Errorf("解析用户 %d 自定义配置失败：%w", userID, err)
+	}
+
+	return &customConfig, nil
+}
+
+// UpdateCustomConfig 更新用户自定义配置
+func (repo *UserRepo) UpdateCustomConfig(ctx context.Context, userID int64, conf UserCustomConfig) error {
+	configData, err := json.Marshal(conf)
+	if err != nil {
+		return fmt.Errorf("序列化用户 %d 自定义配置失败：%w", userID, err)
+	}
+
+	return eloquent.Transaction(repo.db, func(tx query.Database) error {
+		q := query.Builder().Where(model.FieldUserCustomUserId, userID)
+
+		cus, err := model.NewUserCustomModel(tx).First(ctx, q)
+		if err != nil && err != query.ErrNoResult {
+			return fmt.Errorf("查询用户自定义配置失败：%w", err)
+		}
+
+		if err == query.ErrNoResult {
+			_, err = model.NewUserCustomModel(tx).Save(ctx, model.UserCustomN{
+				UserId: null.IntFrom(userID),
+				Config: null.StringFrom(string(configData)),
+			})
+			return err
+		}
+
+		_, err = model.NewUserCustomModel(tx).UpdateById(
+			ctx,
+			cus.Id.ValueOrZero(),
+			model.UserCustomN{Config: null.StringFrom(string(configData))},
+			model.FieldUserCustomConfig,
+		)
+
+		return err
+	})
 }

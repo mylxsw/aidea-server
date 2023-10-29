@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"net/http"
 
 	"github.com/mylxsw/aidea-server/api/auth"
@@ -39,7 +40,12 @@ const RoomsQueryLimit = 100
 
 // Rooms 获取房间列表
 func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
-	rooms, err := ctl.roomRepo.Rooms(ctx, user.ID, RoomsQueryLimit)
+	roomTypes := []int{repo.RoomTypePreset, repo.RoomTypePresetCustom, repo.RoomTypeCustom}
+	if helper.VersionNewer(client.Version, "1.0.6") {
+		roomTypes = append(roomTypes, repo.RoomTypeGroupChat)
+	}
+
+	rooms, err := ctl.roomRepo.Rooms(ctx, user.ID, roomTypes, RoomsQueryLimit)
 	if err != nil {
 		log.F(log.M{"user_id": user.ID}).Errorf("查询用户房间列表失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
@@ -89,6 +95,14 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 				return false
 			}
 
+			if !ctl.conf.EnableBaichuan && item.Vendor == "百川" {
+				return false
+			}
+
+			if !ctl.conf.EnableGPT360 && item.Vendor == "360智脑" {
+				return false
+			}
+
 			if item.VersionMax == "" && item.VersionMin == "" {
 				return true
 			}
@@ -105,8 +119,33 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 		})
 	}
 
+	models := array.ToMap(
+		chat.Models(ctl.conf, true),
+		func(item chat.Model, _ int) string { return item.RealID() },
+	)
+
 	return webCtx.JSON(web.M{
-		"data":     rooms,
+		"data": array.Map(rooms, func(item repo.Room, _ int) repo.Room {
+			// 替换成员列表为头像列表
+			members := make([]string, 0)
+			if len(item.Members) > 0 {
+				for _, member := range item.Members {
+					if mod, ok := models[member]; ok && mod.AvatarURL != "" {
+						members = append(members, mod.AvatarURL)
+					}
+				}
+
+				item.Members = members
+			}
+
+			if item.AvatarUrl == "" {
+				if mod, ok := models[item.Model]; ok && mod.AvatarURL != "" {
+					item.AvatarUrl = mod.AvatarURL
+				}
+			}
+
+			return item
+		}),
 		"suggests": suggests,
 	})
 }

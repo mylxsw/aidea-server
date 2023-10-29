@@ -96,7 +96,13 @@ func (u *Uploader) Init(filename string, uid int, usage string, maxSizeInMB int6
 // Upload 上传文件
 func (u *Uploader) Upload(ctx context.Context, init UploadInit) (string, error) {
 	cfg := storage.Config{}
-	cfg.Region = &storage.ZoneHuadong
+
+	region, ok := storage.GetRegionByID(storage.RegionID(u.conf.StorageRegion))
+	if !ok {
+		return "", fmt.Errorf("invalid storage region: %s", u.conf.StorageRegion)
+	}
+
+	cfg.Region = &region
 	cfg.UseHTTPS = true
 	cfg.UseCdnDomains = true
 
@@ -168,7 +174,12 @@ func (u *Uploader) uploadStream(ctx context.Context, uid int, expireAfterDays in
 	upToken := putPolicy.UploadToken(mac)
 
 	cfg := storage.Config{}
-	cfg.Region = &storage.ZoneHuadong
+	region, ok := storage.GetRegionByID(storage.RegionID(u.conf.StorageRegion))
+	if !ok {
+		return "", fmt.Errorf("invalid storage region: %s", u.conf.StorageRegion)
+	}
+
+	cfg.Region = &region
 	cfg.UseHTTPS = true
 	cfg.UseCdnDomains = true
 

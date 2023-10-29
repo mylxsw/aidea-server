@@ -303,7 +303,7 @@ func (getimg *GetimgAI) ImageToImage(ctx context.Context, req ImageToImageReques
 			return nil, err
 		}
 
-		return nil, fmt.Errorf("text to image failed: %s", errResp.Error.Message)
+		return nil, fmt.Errorf("image to image failed: %s", errResp.Error.Message)
 	}
 
 	var imageResp ImageResponse

@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"net/http"
 	"strconv"
 	"strings"
@@ -98,6 +99,14 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 		}
 
 		if !ctl.conf.EnableAnthropic && item.Vendor == "Anthropic" {
+			return false
+		}
+
+		if !ctl.conf.EnableBaichuan && item.Vendor == "百川" {
+			return false
+		}
+
+		if !ctl.conf.EnableGPT360 && item.Vendor == "360智脑" {
 			return false
 		}
 
@@ -275,8 +284,13 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 }
 
 // Rooms 获取用户的数字人列表
-func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
-	rooms, err := ctl.roomRepo.Rooms(ctx, user.ID, RoomsQueryLimit)
+func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
+	roomTypes := []int{repo.RoomTypePreset, repo.RoomTypePresetCustom, repo.RoomTypeCustom}
+	if helper.VersionNewer(client.Version, "1.0.6") {
+		roomTypes = append(roomTypes, repo.RoomTypeGroupChat)
+	}
+
+	rooms, err := ctl.roomRepo.Rooms(ctx, user.ID, roomTypes, RoomsQueryLimit)
 	if err != nil {
 		log.F(log.M{"user_id": user.ID}).Errorf("查询用户房间列表失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
@@ -308,12 +322,21 @@ func (ctl *RoomController) Room(ctx context.Context, webCtx web.Context, user *a
 
 	room, err := ctl.roomRepo.Room(ctx, user.ID, int64(roomID))
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人不存在"), http.StatusNotFound)
 		}
 
 		log.F(log.M{"user_id": user.ID, "room_id": roomID}).Errorf("查询用户房间失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	if room.AvatarUrl == "" {
+		for _, mod := range chat.Models(ctl.conf, true) {
+			if mod.RealID() == room.Model {
+				room.AvatarUrl = mod.AvatarURL
+				break
+			}
+		}
 	}
 
 	return webCtx.JSON(room)
@@ -426,7 +449,7 @@ func (ctl *RoomController) UpdateRoom(ctx context.Context, webCtx web.Context, u
 
 	room, err := ctl.roomRepo.Room(ctx, user.ID, int64(req.RoomID))
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人不存在"), http.StatusNotFound)
 		}
 
@@ -453,9 +476,8 @@ func (ctl *RoomController) UpdateRoom(ctx context.Context, webCtx web.Context, u
 		changed = true
 	}
 
-	if req.AvatarURL != room.AvatarUrl && req.AvatarURL != "" {
+	if req.AvatarURL != room.AvatarUrl {
 		room.AvatarUrl = req.AvatarURL
-		room.AvatarId = 0
 		changed = true
 	}
 

@@ -3,8 +3,10 @@ package chat
 import (
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
+	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
+	"github.com/mylxsw/aidea-server/internal/ai/gpt360"
 	"github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
 	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
@@ -24,6 +26,8 @@ func (Provider) Register(binder infra.Binder) {
 		sn *sensenova.SenseNova,
 		tai *tencentai.TencentAI,
 		anthai *anthropic.Anthropic,
+		baichuanai *baichuan.BaichuanAI,
+		g360 *gpt360.GPT360,
 	) Chat {
 		return NewChat(
 			conf,
@@ -34,6 +38,8 @@ func (Provider) Register(binder infra.Binder) {
 			NewSenseNovaChat(sn),
 			NewTencentAIChat(tai),
 			NewAnthropicChat(anthai),
+			NewBaichuanAIChat(baichuanai),
+			NewGPT360Chat(g360),
 		)
 	})
 }

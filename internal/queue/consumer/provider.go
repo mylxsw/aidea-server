@@ -6,6 +6,8 @@ import (
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
+	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
 	"github.com/mylxsw/aidea-server/internal/ai/deepai"
 	"github.com/mylxsw/aidea-server/internal/ai/fromston"
 	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
@@ -16,6 +18,7 @@ import (
 	"github.com/mylxsw/aidea-server/internal/mail"
 	"github.com/mylxsw/aidea-server/internal/queue"
 	"github.com/mylxsw/aidea-server/internal/repo"
+	"github.com/mylxsw/aidea-server/internal/service"
 	"github.com/mylxsw/aidea-server/internal/sms"
 	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/aidea-server/internal/youdao"
@@ -71,12 +74,6 @@ func loggingMiddleware(h asynq.Handler) asynq.Handler {
 func (p Provider) Boot(resolver infra.Resolver) {
 	resolver.MustResolve(func(
 		mux *asynq.ServeMux,
-		userRepo *repo.UserRepo,
-		eventRepo *repo.EventRepo,
-		quotaRepo *repo.QuotaRepo,
-		queueRepo *repo.QueueRepo,
-		roomRepo *repo.RoomRepo,
-		creativeRepo *repo.CreativeRepo,
 		openaiClient *helper.OpenAI,
 		deepaiClient *deepai.DeepAI,
 		stabaiClient *stabilityai.StabilityAI,
@@ -89,23 +86,30 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		smsClient *sms.Client,
 		ding *dingding.Dingding,
 		fromstonClient *fromston.Fromston,
+		dashscopeClient *dashscope.DashScope,
+		rep *repo.Repository,
+		ct chat.Chat,
+		conf *config.Config,
+		userSvc *service.UserService,
 	) {
 		log.Debugf("register all queue handlers")
-		mux.HandleFunc(queue.TypeOpenAICompletion, queue.BuildOpenAICompletionHandler(openaiClient, quotaRepo, queueRepo, creativeRepo))
-		mux.HandleFunc(queue.TypeDeepAICompletion, queue.BuildDeepAICompletionHandler(deepaiClient, translater, uploader, quotaRepo, queueRepo, creativeRepo, openaiClient))
-		mux.HandleFunc(queue.TypeStabilityAICompletion, queue.BuildStabilityAICompletionHandler(stabaiClient, translater, uploader, quotaRepo, queueRepo, creativeRepo, openaiClient))
-		mux.HandleFunc(queue.TypeLeapAICompletion, queue.BuildLeapAICompletionHandler(leapClient, translater, uploader, quotaRepo, queueRepo, creativeRepo, openaiClient))
-		mux.HandleFunc(queue.TypeMailSend, queue.BuildMailSendHandler(mailer, queueRepo))
-		mux.HandleFunc(queue.TypeSMSVerifyCodeSend, queue.BuildSMSVerifyCodeSendHandler(smsClient, queueRepo))
-		mux.HandleFunc(queue.TypeSignup, queue.BuildSignupHandler(userRepo, quotaRepo, eventRepo, queueRepo, roomRepo, mailer, ding))
-		mux.HandleFunc(queue.TypePayment, queue.BuildPaymentHandler(userRepo, quotaRepo, eventRepo, queueRepo, mailer, que, ding))
-		mux.HandleFunc(queue.TypeBindPhone, queue.BuildBindPhoneHandler(userRepo, quotaRepo, eventRepo, queueRepo, mailer))
-		mux.HandleFunc(queue.TypeImageGenCompletion, queue.BuildImageCompletionHandler(leapClient, stabaiClient, deepaiClient, fromstonClient, getimgaiClient, translater, uploader, quotaRepo, queueRepo, creativeRepo, openaiClient))
-		mux.HandleFunc(queue.TypeFromStonCompletion, queue.BuildFromStonCompletionHandler(fromstonClient, uploader, quotaRepo, queueRepo, creativeRepo))
-		mux.HandleFunc(queue.TypeGetimgAICompletion, queue.BuildGetimgAICompletionHandler(getimgaiClient, translater, uploader, quotaRepo, queueRepo, creativeRepo, openaiClient))
-		mux.HandleFunc(queue.TypeImageDownloader, queue.BuildImageDownloaderHandler(uploader, creativeRepo, queueRepo))
-		mux.HandleFunc(queue.TypeImageUpscale, queue.BuildImageUpscaleHandler(deepaiClient, stabaiClient, uploader, creativeRepo, quotaRepo, queueRepo))
-		mux.HandleFunc(queue.TypeImageColorization, queue.BuildImageColorizationHandler(deepaiClient, uploader, creativeRepo, quotaRepo, queueRepo))
+		mux.HandleFunc(queue.TypeOpenAICompletion, queue.BuildOpenAICompletionHandler(openaiClient, rep))
+		mux.HandleFunc(queue.TypeDeepAICompletion, queue.BuildDeepAICompletionHandler(deepaiClient, translater, uploader, rep, openaiClient))
+		mux.HandleFunc(queue.TypeStabilityAICompletion, queue.BuildStabilityAICompletionHandler(stabaiClient, translater, uploader, rep, openaiClient))
+		mux.HandleFunc(queue.TypeLeapAICompletion, queue.BuildLeapAICompletionHandler(leapClient, translater, uploader, rep, openaiClient))
+		mux.HandleFunc(queue.TypeMailSend, queue.BuildMailSendHandler(mailer, rep))
+		mux.HandleFunc(queue.TypeSMSVerifyCodeSend, queue.BuildSMSVerifyCodeSendHandler(smsClient, rep))
+		mux.HandleFunc(queue.TypeSignup, queue.BuildSignupHandler(rep, mailer, ding))
+		mux.HandleFunc(queue.TypePayment, queue.BuildPaymentHandler(rep, mailer, que, ding))
+		mux.HandleFunc(queue.TypeBindPhone, queue.BuildBindPhoneHandler(rep, mailer))
+		mux.HandleFunc(queue.TypeImageGenCompletion, queue.BuildImageCompletionHandler(leapClient, stabaiClient, deepaiClient, fromstonClient, dashscopeClient, getimgaiClient, translater, uploader, rep, openaiClient))
+		mux.HandleFunc(queue.TypeFromStonCompletion, queue.BuildFromStonCompletionHandler(fromstonClient, uploader, rep))
+		mux.HandleFunc(queue.TypeDashscopeImageCompletion, queue.BuildDashscopeImageCompletionHandler(dashscopeClient, uploader, rep, translater, openaiClient))
+		mux.HandleFunc(queue.TypeGetimgAICompletion, queue.BuildGetimgAICompletionHandler(getimgaiClient, translater, uploader, rep, openaiClient))
+		mux.HandleFunc(queue.TypeImageDownloader, queue.BuildImageDownloaderHandler(uploader, rep))
+		mux.HandleFunc(queue.TypeImageUpscale, queue.BuildImageUpscaleHandler(deepaiClient, stabaiClient, uploader, rep))
+		mux.HandleFunc(queue.TypeImageColorization, queue.BuildImageColorizationHandler(deepaiClient, uploader, rep))
+		mux.HandleFunc(queue.TypeGroupChat, queue.BuildGroupChatHandler(conf, ct, rep, userSvc))
 	})
 }
 

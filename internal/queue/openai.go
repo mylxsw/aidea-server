@@ -54,7 +54,7 @@ func NewOpenAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeOpenAICompletion, data)
 }
 
-func BuildOpenAICompletionHandler(client *oai.OpenAI, quotaRepo *repo.QuotaRepo, queueRepo *repo.QueueRepo, creativeRepo *repo.CreativeRepo) TaskHandler {
+func BuildOpenAICompletionHandler(client *oai.OpenAI, rep *repo.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload OpenAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -66,13 +66,13 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, quotaRepo *repo.QuotaRepo,
 			return nil
 		}
 
-		if err := queueRepo.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusRunning, nil); err != nil {
+		if err := rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusRunning, nil); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("set task status to running failed: %s", err)
 			return err
 		}
 
 		if payload.CreatedAt.Add(15 * time.Minute).Before(time.Now()) {
-			queueRepo.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -83,7 +83,7 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, quotaRepo *repo.QuotaRepo,
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
 					Status: repo.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
@@ -92,7 +92,7 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, quotaRepo *repo.QuotaRepo,
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -146,17 +146,17 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, quotaRepo *repo.QuotaRepo,
 			Answer:    content,
 			QuotaUsed: payload.GetQuota(),
 		}
-		if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
+		if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 			return err
 		}
 
 		// 记录消耗
-		if err := quotaRepo.QuotaConsume(ctx, payload.UID, payload.Quota, repo.NewQuotaUsedMeta("openai", payload.Model)); err != nil {
+		if err := rep.Quota.QuotaConsume(ctx, payload.UID, payload.Quota, repo.NewQuotaUsedMeta("openai", payload.Model)); err != nil {
 			log.With(payload).Errorf("used quota add failed: %s", err)
 		}
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,

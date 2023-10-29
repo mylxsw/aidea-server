@@ -1,0 +1,99 @@
+
+# 注册账号赠币数量
+signup_gift_coins: 100
+# 绑定手机赠币数量
+bind_phone_gift_coins: 100
+# 邀请赠币数量
+invite_gift_coins: 100
+# 被邀请赠币数量
+invited_gift_coins: 100
+# 被引荐人充值，引荐人获得的奖励比例
+invite_payment_gift_rate: 0.05
+
+# 每日免费模型额度配置
+# 模型标识参考 internal/coins/price.go 中的 coinTables
+# 字段说明：
+#   - model: 模型标识
+#   - name: 模型名称
+#   - free_count: 每日免费次数
+#   - info: 提示信息，可选
+#   - end_at: 活动结束时间，格式为 ISO 8601，如 2021-12-31T00:00:00Z
+free_models:
+  - model: gpt-3.5-turbo
+    name: GPT 3.5 Turbo
+    free_count: 5
+    non_cn: true
+
+  - model: model_ernie_bot_turbo
+    name: 文心一言 Turbo
+    free_count: 5
+    
+  - model: generalv2
+    name: 讯飞星火 v2
+    free_count: 5
+
+# 在线充值产品列表，这里为空时，将使用 internal/coins/ 中的 products 数据
+# 字段说明：
+#   - id: 产品 ID，唯一标识，不能重复
+#   - name: 产品名称
+#   - quota: 购买后获得的智慧果数量
+#   - retail_price: 零售价，单位为分
+#   - expire_policy: 有效期，可选值为 never, week, 2week, month, 3month, 6month, year
+#   - recommend: 是否推荐，推荐的产品会在充值页面显示 Best Deal 标识
+products:
+  - id: cc.aicode.aidea.coins_600_2
+    name: 6元700个
+    quota: 700
+    retail_price: 600
+    expire_policy: month
+
+  - id: cc.aicode.aidea.coins_3800
+    name: 38元5000个
+    quota: 5000
+    retail_price: 3800
+    expire_policy: 3month
+    recommend: true
+
+# 所有模型的使用价格表，单位为智慧果
+# 该文件中的配置会覆盖 internal/coins/price.go 中的 coinTables 数据，两者数据会取并集
+coin_tables:
+  # 图片生成价格：文生图、图生图、超分辨率、上色
+  image:
+      default: 20
+  # 所有聊天模型都在这里配置，因为历史遗留原因，都归类到了 openai 下
+  openai:
+    # 百川大模型
+    Baichuan2-53B: 3
+    # Anthropic
+    claude-2: 25
+    claude-instant-1: 5
+    # 讯飞星火
+    general: 3
+    generalv2: 5
+    # OpenAI
+    gpt-3.5-turbo: 3
+    gpt-3.5-turbo-16k: 5
+    gpt-3.5-turbo-16k-0613: 5
+    gpt-3.5-turbo-0613: 3
+    gpt-4: 45
+    gpt-4-8k: 45
+    gpt-4-32k: 90
+    # 腾讯混元大模型
+    hyllm: 15
+    # 文心千帆
+    model_badiu_llama2_70b: 6
+    model_baidu_aquila_chat7b: 2
+    model_baidu_bloomz_7b: 2
+    model_baidu_chatglm2_6b_32k: 2
+    model_baidu_llama2_7b_cn: 2
+    model_ernie_bot: 4
+    model_ernie_bot_turbo: 2
+    model_ernie_bot_4: 15
+    # 商汤日日新
+    nova-ptc-xl-v1: 3
+    nova-ptc-xs-v1: 2
+    # 通义千问（模型服务灵积）
+    qwen-plus: 20
+    qwen-plus-v1: 20
+    qwen-turbo: 3
+    qwen-v1: 3

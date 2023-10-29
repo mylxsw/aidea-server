@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	ErrQuotaNotEnough    = "您的配额已用完，请续费后再试"
+	ErrQuotaNotEnough    = "智慧果不足，请充值后再试"
 	ErrInvalidModel      = "无效的模型"
 	ErrInvalidRequest    = "请求参数错误"
 	ErrInternalError     = "服务器故障，请稍后再试"

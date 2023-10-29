@@ -49,7 +49,7 @@ func NewMailTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeMailSend, data)
 }
 
-func BuildMailSendHandler(mailer *mail.Sender, queueRepo *repo.QueueRepo) TaskHandler {
+func BuildMailSendHandler(mailer *mail.Sender, rep *repo.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload MailPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -68,7 +68,7 @@ func BuildMailSendHandler(mailer *mail.Sender, queueRepo *repo.QueueRepo) TaskHa
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -86,7 +86,7 @@ func BuildMailSendHandler(mailer *mail.Sender, queueRepo *repo.QueueRepo) TaskHa
 			return err
 		}
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,

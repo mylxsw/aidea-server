@@ -7,8 +7,10 @@ import (
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
+	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
+	"github.com/mylxsw/aidea-server/internal/ai/gpt360"
 	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
 	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
 	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
@@ -71,7 +73,8 @@ type Request struct {
 	N         int      `json:"n,omitempty"` // 复用作为 room_id
 
 	// 业务定制字段
-	RoomID int64 `json:"-"`
+	RoomID    int64 `json:"-"`
+	WebSocket bool  `json:"-"`
 }
 
 type FixResult struct {
@@ -79,7 +82,7 @@ type FixResult struct {
 	InputTokens int
 }
 
-func (req Request) Fix(chat Chat) (*FixResult, error) {
+func (req Request) Fix(chat Chat, maxContextLength int64) (*FixResult, error) {
 	// 去掉模型名称前缀
 	modelSegs := strings.Split(req.Model, ":")
 	if len(modelSegs) > 1 {
@@ -100,16 +103,22 @@ func (req Request) Fix(chat Chat) (*FixResult, error) {
 	req.Messages = array.Filter(req.Messages, func(item Message, _ int) bool { return strings.TrimSpace(item.Content) != "" })
 
 	// 自动缩减上下文长度至满足模型要求的最大长度，尽可能避免出现超过模型上下文长度的问题
+	systemMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
+	systemMessageLen, _ := MessageTokenCount(systemMessages, req.Model)
+
 	messages, inputTokens, err := ReduceMessageContext(
-		req.Messages,
+		ReduceMessageContextUpToContextWindow(
+			array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" }),
+			int(maxContextLength),
+		),
 		req.Model,
-		chat.MaxContextLength(req.Model),
+		chat.MaxContextLength(req.Model)-systemMessageLen,
 	)
 	if err != nil {
 		return nil, errors.New("超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度")
 	}
 
-	req.Messages = messages
+	req.Messages = append(systemMessages, messages...)
 
 	return &FixResult{
 		Request:     req,
@@ -155,6 +164,8 @@ type Imp struct {
 	snAI        *SenseNovaChat
 	tencentAI   *TencentAIChat
 	anthropicAI *AnthropicChat
+	baichuanAI  *BaichuanAIChat
+	g360        *GPT360Chat
 	virtual     *VirtualChat
 }
 
@@ -167,6 +178,8 @@ func NewChat(
 	sn *SenseNovaChat,
 	tencentAI *TencentAIChat,
 	anthropicAI *AnthropicChat,
+	baichuanAI *BaichuanAIChat,
+	g360 *GPT360Chat,
 ) Chat {
 	var virtualImpl Chat
 	switch strings.ToLower(conf.VirtualModel.Implementation) {
@@ -184,6 +197,10 @@ func NewChat(
 		virtualImpl = tencentAI
 	case "anthropic":
 		virtualImpl = anthropicAI
+	case "baichuan", "百川":
+		virtualImpl = baichuanAI
+	case "gpt360", "360智脑":
+		virtualImpl = g360
 	default:
 		virtualImpl = openAI
 	}
@@ -196,6 +213,8 @@ func NewChat(
 		snAI:        sn,
 		tencentAI:   tencentAI,
 		anthropicAI: anthropicAI,
+		baichuanAI:  baichuanAI,
+		g360:        g360,
 		virtual:     NewVirtualChat(virtualImpl, conf.VirtualModel),
 	}
 }
@@ -225,14 +244,23 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.anthropicAI
 	}
 
+	if strings.HasPrefix(model, "百川:") {
+		return ai.baichuanAI
+	}
+
 	if strings.HasPrefix(model, "virtual:") {
 		return ai.virtual
+	}
+
+	if strings.HasPrefix(model, "360智脑:") {
+		return ai.g360
 	}
 
 	// TODO 根据模型名称判断使用哪个 AI
 	switch model {
 	case string(baidu.ModelErnieBot),
 		baidu.ModelErnieBotTurbo,
+		baidu.ModelErnieBot4,
 		baidu.ModelAquilaChat7B,
 		baidu.ModelChatGLM2_6B_32K,
 		baidu.ModelBloomz7B,
@@ -245,7 +273,7 @@ func (ai *Imp) selectImp(model string) Chat {
 		dashscope.ModelQWenTurbo, dashscope.ModelQWenPlus:
 		// 阿里灵积平台
 		return ai.dashScope
-	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2):
+	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2), string(xfyun.ModelGeneralV3):
 		// 讯飞星火
 		return ai.xfyunAI
 	case string(sensenova.ModelNovaPtcXLV1), string(sensenova.ModelNovaPtcXSV1):
@@ -257,6 +285,12 @@ func (ai *Imp) selectImp(model string) Chat {
 	case string(anthropic.ModelClaude2), string(anthropic.ModelClaudeInstant):
 		// Anthropic
 		return ai.anthropicAI
+	case baichuan.ModelBaichuan2_53B:
+		// 百川
+		return ai.baichuanAI
+	case gpt360.Model360GPT_S2_V9:
+		// 360智脑
+		return ai.g360
 	case ModelNanXian, ModelBeiChou:
 		// 虚拟模型
 		return ai.virtual

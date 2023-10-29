@@ -13,3 +13,4 @@ LICENSE
 .vscode
 build/*
 docker-build.sh
+config.local.yaml

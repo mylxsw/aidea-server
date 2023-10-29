@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
@@ -39,7 +40,11 @@ func TestDashscopeChat_Chat(t *testing.T) {
 
 func TestDashscopeChat_ChatStream(t *testing.T) {
 	chatClient := createDashScopeChatClient()
-	response, err := chatClient.ChatStream(context.TODO(), chat.Request{
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+
+	response, err := chatClient.ChatStream(ctx, chat.Request{
 		Model: dashscope.ModelQWenV1,
 		Messages: []chat.Message{
 			{

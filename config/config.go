@@ -18,6 +18,22 @@ type Config struct {
 	PrometheusToken string `json:"-" yaml:"prometheus_token"`
 	// 记录聊天历史记录（可方便后期支持聊天消息多端同步，目前仅仅是做了记录，同步功能暂未实现）
 	EnableRecordChat bool `json:"enable_record_chat" yaml:"enable_record_chat"`
+	// 是否启用跨域支持
+	EnableCORS bool `json:"enable_cors" yaml:"enable_cors"`
+	// EnableWebsocket 是否启用 Websocket 支持
+	EnableWebsocket bool `json:"enable_websocket" yaml:"enable_websocket"`
+	// 是否启用 SQL 调试
+	DebugWithSQL bool `json:"debug_with_sql" yaml:"debug_with_sql"`
+
+	// UniversalLinkConfig 通用链接配置
+	UniversalLinkConfig string `json:"universal_link_config" yaml:"universal_link_config"`
+
+	// EnableModelRateLimit 是否启用模型访问限流
+	// 当前流控策略为：每个模型每分钟最多访问 5 次
+	EnableModelRateLimit bool `json:"enable_model_rate_limit" yaml:"enable_model_rate_limit"`
+
+	// EnableCustomHomeModels 是否启用自定义首页模型
+	EnableCustomHomeModels bool `json:"enable_custom_home_models" yaml:"enable_custom_home_models"`
 
 	// OpenAIKey 配置
 	EnableOpenAI       bool     `json:"enable_openai" yaml:"enable_openai"`
@@ -40,8 +56,9 @@ type Config struct {
 	BaiduWXSecret   string `json:"baidu_ai_secret" yaml:"baidu_ai_secret"`
 
 	// 阿里灵积平台配置
-	EnableDashScopeAI bool   `json:"enable_dashscope_ai" yaml:"enable_dashscope_ai"`
-	DashScopeKey      string `json:"dashscope_key" yaml:"dashscope_key"`
+	EnableDashScopeAI bool     `json:"enable_dashscope_ai" yaml:"enable_dashscope_ai"`
+	DashScopeKey      string   `json:"dashscope_key" yaml:"dashscope_key"`
+	DashScopeKeys     []string `json:"dashscope_keys" yaml:"dashscope_keys"`
 
 	// 讯飞星火大模型配置
 	EnableXFYunAI  bool   `json:"enable_xfyun_ai" yaml:"enable_xfyun_ai"`
@@ -53,6 +70,15 @@ type Config struct {
 	EnableSenseNovaAI  bool   `json:"enable_sensenova_ai" yaml:"enable_sensenova_ai"`
 	SenseNovaKeyID     string `json:"sensenova_keyid" yaml:"sensenova_keyid"`
 	SenseNovaKeySecret string `json:"-" yaml:"-"`
+
+	// 百川大模型
+	EnableBaichuan bool   `json:"enable_baichuan" yaml:"enable_baichuan"`
+	BaichuanAPIKey string `json:"baichuan_api_key" yaml:"baichuan_api_key"`
+	BaichuanSecret string `json:"-" yaml:"-"`
+
+	// 360 智脑
+	EnableGPT360 bool   `json:"enable_gpt360" yaml:"enable_gpt360"`
+	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
 
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
@@ -112,6 +138,7 @@ type Config struct {
 	StorageBucket    string `json:"storage_bucket" yaml:"storage_bucket"`
 	StorageCallback  string `json:"storage_callback" yaml:"storage_callback"`
 	StorageDomain    string `json:"storage_domain" yaml:"storage_domain"`
+	StorageRegion    string `json:"storage_region" yaml:"storage_region"`
 
 	// Apple Sign In
 	AppleSignIn AppleSignIn `json:"apple_sign_in" yaml:"apple_sign_in"`
@@ -141,6 +168,7 @@ type Config struct {
 	EnableApplePay bool `json:"enable_apple_pay" yaml:"enable_apple_pay"`
 
 	// 支付宝
+	AlipaySandbox           bool   `json:"alipay_sandbox" yaml:"alipay_sandbox"`
 	EnableAlipay            bool   `json:"enable_alipay" yaml:"enable_alipay"`
 	AliPayAppID             string `json:"alipay_appid" yaml:"alipay_appid"`
 	AliPayAppPrivateKeyPath string `json:"alipay_app_private_key_path" yaml:"alipay_app_private_key_path"`
@@ -168,7 +196,8 @@ type Config struct {
 	DefaultTextToImageModel  string `json:"default_text_to_image_model" yaml:"default_text_to_image_model"`
 
 	// 虚拟模型
-	VirtualModel VirtualModel `json:"virtual_model" yaml:"virtual_model"`
+	EnableVirtualModel bool         `json:"enable_virtual_model" yaml:"enable_virtual_model"`
+	VirtualModel       VirtualModel `json:"virtual_model" yaml:"virtual_model"`
 }
 
 type Mail struct {
@@ -212,11 +241,18 @@ func Register(ins *app.App) {
 		}
 
 		return &Config{
-			Listen:           ctx.String("listen"),
-			DBURI:            ctx.String("db-uri"),
-			SessionSecret:    ctx.String("session-secret"),
-			PrometheusToken:  ctx.String("prometheus-token"),
-			EnableRecordChat: ctx.Bool("enable-recordchat"),
+			Listen:              ctx.String("listen"),
+			DBURI:               ctx.String("db-uri"),
+			SessionSecret:       ctx.String("session-secret"),
+			PrometheusToken:     ctx.String("prometheus-token"),
+			EnableRecordChat:    ctx.Bool("enable-recordchat"),
+			EnableCORS:          ctx.Bool("enable-cors"),
+			EnableWebsocket:     ctx.Bool("enable-websocket"),
+			DebugWithSQL:        ctx.Bool("debug-with-sql"),
+			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
+
+			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),
+			EnableCustomHomeModels: ctx.Bool("enable-custom-home-models"),
 
 			RedisHost:     ctx.String("redis-host"),
 			RedisPort:     ctx.Int("redis-port"),
@@ -244,6 +280,7 @@ func Register(ins *app.App) {
 
 			EnableDashScopeAI: ctx.Bool("enable-dashscopeai"),
 			DashScopeKey:      ctx.String("dashscope-key"),
+			DashScopeKeys:     ctx.StringSlice("dashscope-keys"),
 
 			EnableXFYunAI:  ctx.Bool("enable-xfyunai"),
 			XFYunAppID:     ctx.String("xfyun-appid"),
@@ -253,6 +290,13 @@ func Register(ins *app.App) {
 			EnableSenseNovaAI:  ctx.Bool("enable-sensenovaai"),
 			SenseNovaKeyID:     ctx.String("sensenova-keyid"),
 			SenseNovaKeySecret: ctx.String("sensenova-keysecret"),
+
+			EnableBaichuan: ctx.Bool("enable-baichuan"),
+			BaichuanAPIKey: ctx.String("baichuan-apikey"),
+			BaichuanSecret: ctx.String("baichuan-secret"),
+
+			EnableGPT360: ctx.Bool("enable-gpt360"),
+			GPT360APIKey: ctx.String("gpt360-apikey"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
 
@@ -291,6 +335,7 @@ func Register(ins *app.App) {
 			StorageBucket:    ctx.String("storage-bucket"),
 			StorageCallback:  ctx.String("storage-callback"),
 			StorageDomain:    ctx.String("storage-domain"),
+			StorageRegion:    ctx.String("storage-region"),
 
 			AppleSignIn: AppleSignIn{
 				TeamID: ctx.String("apple-teamid"),
@@ -333,6 +378,7 @@ func Register(ins *app.App) {
 			AliPayPublicKeyPath:     ctx.String("alipay-public-key"),
 			AliPayNotifyURL:         ctx.String("alipay-notify-url"),
 			AliPayReturnURL:         ctx.String("alipay-return-url"),
+			AlipaySandbox:           ctx.Bool("alipay-sandbox"),
 
 			SMSChannels: ctx.StringSlice("sms-channels"),
 
@@ -347,6 +393,7 @@ func Register(ins *app.App) {
 			DefaultImageToImageModel: ctx.String("default-img2img-model"),
 			DefaultTextToImageModel:  ctx.String("default-txt2img-model"),
 
+			EnableVirtualModel: ctx.Bool("enable-virtual-model"),
 			VirtualModel: VirtualModel{
 				Implementation: ctx.String("virtual-model-implementation"),
 				NanxianRel:     ctx.String("virtual-model-nanxian-rel"),

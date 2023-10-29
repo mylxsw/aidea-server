@@ -62,7 +62,7 @@ func NewImageUpscaleTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeImageUpscale, data)
 }
 
-func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.StabilityAI, up *uploader.Uploader, creativeRepo *repo.CreativeRepo, quotaRepo *repo.QuotaRepo, queueRepo *repo.QueueRepo) TaskHandler {
+func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.StabilityAI, up *uploader.Uploader, rep *repo.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageUpscalePayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -82,7 +82,7 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
 					Status: repo.CreativeStatusFailed,
 				}); err != nil {
@@ -91,7 +91,7 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -106,7 +106,7 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 
 		var resources []string
 		if payload.CreativeHistoryID > 0 {
-			item, err := creativeRepo.FindHistoryRecord(ctx, payload.UserID, payload.CreativeHistoryID)
+			item, err := rep.Creative.FindHistoryRecord(ctx, payload.UserID, payload.CreativeHistoryID)
 			if err != nil {
 				panic(fmt.Errorf("创作岛历史记录查询失败: %w", err))
 			}
@@ -135,7 +135,7 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 			}
 
 			answer, _ := json.Marshal(resources)
-			if err := creativeRepo.UpdateRecordAnswerByID(ctx, payload.UserID, payload.CreativeHistoryID, string(answer)); err != nil {
+			if err := rep.Creative.UpdateRecordAnswerByID(ctx, payload.UserID, payload.CreativeHistoryID, string(answer)); err != nil {
 				log.WithFields(log.Fields{
 					"payload": payload,
 				}).Errorf("创作岛历史记录更新失败: %s", err)
@@ -155,18 +155,18 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 				QuotaUsed: payload.GetQuota(),
 			}
 
-			if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
+			if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), updateReq); err != nil {
 				log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 				return err
 			}
 		}
 
 		// 记录消耗
-		if err := quotaRepo.QuotaConsume(ctx, payload.GetUID(), payload.GetQuota(), repo.NewQuotaUsedMeta("upscale", "esrgan-v1-x2plus")); err != nil {
+		if err := rep.Quota.QuotaConsume(ctx, payload.GetUID(), payload.GetQuota(), repo.NewQuotaUsedMeta("upscale", "esrgan-v1-x2plus")); err != nil {
 			log.With(payload).Errorf("used quota add failed: %s", err)
 		}
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,
@@ -190,7 +190,7 @@ func upscaleByDeepAI(ctx context.Context, deepClient *deepai.DeepAI, up *uploade
 		return "", fmt.Errorf("图片超分辨率失败: %w", err)
 	}
 
-	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), true)
+	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), false)
 	if err != nil {
 		return "", fmt.Errorf("图片上传失败: %w", err)
 	}

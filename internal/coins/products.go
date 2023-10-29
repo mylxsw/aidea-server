@@ -17,16 +17,16 @@ const (
 	ExpirePolicyYear   ExpirePolicy = "year"
 )
 
-type AppleProduct struct {
-	ID               string       `json:"id"`
-	Name             string       `json:"name"`
-	Quota            int64        `json:"quota"`
-	RetailPrice      int64        `json:"retail_price"`
-	ExpirePolicy     ExpirePolicy `json:"expire_policy"`
-	ExpirePolicyText string       `json:"expire_policy_text"`
-	Recommend        bool         `json:"recommend"`
-	Description      string       `json:"description"`
-	PlatformLimit    Platform     `json:"platform_limits"`
+type Product struct {
+	ID               string       `json:"id,omitempty" yaml:"id,omitempty"`
+	Name             string       `json:"name,omitempty" yaml:"name,omitempty"`
+	Quota            int64        `json:"quota,omitempty" yaml:"quota,omitempty"`
+	RetailPrice      int64        `json:"retail_price,omitempty" yaml:"retail_price,omitempty"`
+	ExpirePolicy     ExpirePolicy `json:"expire_policy,omitempty" yaml:"expire_policy,omitempty"`
+	ExpirePolicyText string       `json:"expire_policy_text,omitempty" yaml:"expire_policy_text,omitempty"`
+	Recommend        bool         `json:"recommend,omitempty" yaml:"recommend,omitempty"`
+	Description      string       `json:"description,omitempty" yaml:"description,omitempty"`
+	PlatformLimit    Platform     `json:"platform_limits,omitempty" yaml:"platform_limits,omitempty"`
 }
 
 type Platform string
@@ -36,7 +36,7 @@ const (
 	PlatformIOS     Platform = "ios"
 )
 
-func (ap AppleProduct) GetExpirePolicyText() string {
+func (ap Product) GetExpirePolicyText() string {
 	switch ap.ExpirePolicy {
 	case ExpirePolicyNever:
 		return "永久"
@@ -57,7 +57,7 @@ func (ap AppleProduct) GetExpirePolicyText() string {
 	return "永久"
 }
 
-func (ap AppleProduct) ExpiredAt() time.Time {
+func (ap Product) ExpiredAt() time.Time {
 	switch ap.ExpirePolicy {
 	case ExpirePolicyNever:
 		return time.Now().AddDate(100, 0, 0)
@@ -82,11 +82,11 @@ func (ap AppleProduct) ExpiredAt() time.Time {
 
 func buildDescription(quota int64) string {
 	multiple := float64(quota) / 100.0
-	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4 约 %.0f 次），或创作 %d 张图片", 30*multiple, 2*multiple, quota/15)
+	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4 约 %.0f 次），或创作 %d 张图片", 30*multiple, 2*multiple, quota/int64(GetUnifiedImageGenCoins()))
 }
 
-func GetAppleProduct(productId string) *AppleProduct {
-	for _, product := range AppleProducts {
+func GetProduct(productId string) *Product {
+	for _, product := range Products {
 		if product.ID == productId {
 			return &product
 		}
@@ -95,8 +95,8 @@ func GetAppleProduct(productId string) *AppleProduct {
 	return nil
 }
 
-func IsAppleProduct(productId string) bool {
-	for _, product := range AppleProducts {
+func IsProduct(productId string) bool {
+	for _, product := range Products {
 		if product.ID == productId {
 			return true
 		}
@@ -105,23 +105,23 @@ func IsAppleProduct(productId string) bool {
 	return false
 }
 
-var AppleProducts = []AppleProduct{
-	// {
-	// 	ID:             "cc.aicode.aidea.coins_100",
-	// 	Quota:          50,
-	// 	RetailPrice:    100,
-	// 	Name:           "1元尝鲜", // 1 元
-	// 	ExpirePolicy:   ExpirePolicyWeek,
-	// 	Description:    buildDescription(50),
-	// },
+var Products = []Product{
 	{
-		ID:           "cc.aicode.aidea.coins_300",
-		Quota:        200,
-		RetailPrice:  300,
-		Name:         "3元200个", // 3 元
+		ID:           "cc.aicode.aidea.coins_100",
+		Quota:        50,
+		RetailPrice:  100,
+		Name:         "1元尝鲜", // 1 元
 		ExpirePolicy: ExpirePolicyWeek,
-		Description:  buildDescription(200),
+		Description:  buildDescription(50),
 	},
+	//{
+	//	ID:           "cc.aicode.aidea.coins_300",
+	//	Quota:        200,
+	//	RetailPrice:  300,
+	//	Name:         "3元200个", // 3 元
+	//	ExpirePolicy: ExpirePolicyWeek,
+	//	Description:  buildDescription(200),
+	//},
 	{
 		ID:           "cc.aicode.aidea.coins_600_2",
 		Quota:        700,
@@ -155,14 +155,14 @@ var AppleProducts = []AppleProduct{
 		ExpirePolicy: ExpirePolicy6Month,
 		Description:  buildDescription(10000),
 	},
-	{
-		ID:           "cc.aicode.aidea.coins_12800",
-		Quota:        22800,
-		RetailPrice:  12800,
-		Name:         "128元22800个", // 128 元
-		ExpirePolicy: ExpirePolicyYear,
-		Description:  buildDescription(22800),
-	},
+	//{
+	//	ID:           "cc.aicode.aidea.coins_12800",
+	//	Quota:        22800,
+	//	RetailPrice:  12800,
+	//	Name:         "128元22800个", // 128 元
+	//	ExpirePolicy: ExpirePolicyYear,
+	//	Description:  buildDescription(22800),
+	//},
 	// {
 	// 	ID:           "cc.aicode.aidea.coins_19800",
 	// 	Quota:        38000,

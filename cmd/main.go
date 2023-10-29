@@ -8,6 +8,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mylxsw/aidea-server/internal/ai/baichuan"
+	"github.com/mylxsw/aidea-server/internal/ai/gpt360"
+	"github.com/mylxsw/aidea-server/internal/coins"
+
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
@@ -69,6 +73,11 @@ func main() {
 	ins.AddStringFlag("db-uri", "root:12345@tcp(127.0.0.1:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local", "database url")
 	ins.AddStringFlag("session-secret", "aidea-secret", "用户会话加密密钥")
 	ins.AddBoolFlag("enable-recordchat", "是否记录聊天历史记录（目前只做记录，没有实际作用，只是为后期增加多端聊天记录同步做准备）")
+	ins.AddBoolFlag("enable-cors", "是否启用跨域请求支持")
+	ins.AddBoolFlag("enable-websocket", "是否启用 WebSocket 支持")
+	ins.AddBoolFlag("debug-with-sql", "是否在日志中输出 SQL 语句")
+	ins.AddBoolFlag("enable-model-rate-limit", "是否启用模型请求频率限制，当前限制只支持每分钟 5 次/用户")
+	ins.AddStringFlag("universal-link-config", "", "universal link 配置文件路径，留空则使用默认的 universal link，配置文件格式参考 https://developer.apple.com/documentation/xcode/supporting-associated-domains")
 
 	ins.AddStringFlag("redis-host", "127.0.0.1", "redis host")
 	ins.AddIntFlag("redis-port", 6379, "redis port")
@@ -76,6 +85,8 @@ func main() {
 
 	ins.AddIntFlag("queue-workers", 0, "任务队列工作线程（Goroutine）数量，设置为 0 则不启用任务队列")
 	ins.AddBoolFlag("enable-scheduler", "是否启用定时任务")
+
+	ins.AddBoolFlag("enable-custom-home-models", "是否启用自定义首页模型，启用后注意执行 2023101701-ddl.sql 数据迁移")
 
 	ins.AddBoolFlag("enable-openai", "是否启用 OpenAI")
 	ins.AddBoolFlag("openai-azure", "使用 Azure 的 OpenAI 服务")
@@ -96,6 +107,7 @@ func main() {
 
 	ins.AddBoolFlag("enable-dashscopeai", "是否启用阿里灵积平台(通义千问)")
 	ins.AddStringFlag("dashscope-key", "", "阿里灵积平台密钥")
+	ins.AddStringSliceFlag("dashscope-keys", []string{}, "阿里灵积平台密钥，这里所有的 Keys 会和 dashscope-key 合并到一起，随机均摊请求负载")
 
 	ins.AddBoolFlag("enable-xfyunai", "是否启用讯飞 星火 AI")
 	ins.AddStringFlag("xfyun-appid", "", "讯飞星火 APP ID")
@@ -105,6 +117,13 @@ func main() {
 	ins.AddBoolFlag("enable-sensenovaai", "是否启用商汤日日新 AI")
 	ins.AddStringFlag("sensenova-keyid", "", "商汤日日新 Key ID")
 	ins.AddStringFlag("sensenova-keysecret", "", "商汤日日新 Key Secret")
+
+	ins.AddBoolFlag("enable-baichuan", "是否启用百川大模型")
+	ins.AddStringFlag("baichuan-apikey", "", "百川大模型 API Key")
+	ins.AddStringFlag("baichuan-secret", "", "百川大模型 API Secret")
+
+	ins.AddBoolFlag("enable-gpt360", "是否启用 360 智脑大模型")
+	ins.AddStringFlag("gpt360-apikey", "", "360 智脑大模型 API Key")
 
 	ins.AddBoolFlag("enable-stabilityai", "是否启用 StabilityAI 文生图、图生图服务")
 	ins.AddBoolFlag("stabilityai-autoproxy", "使用 socks5 代理访问 StabilityAI 服务")
@@ -141,6 +160,7 @@ func main() {
 	ins.AddStringFlag("storage-bucket", "aicode", "七牛云存储 Bucket 名称")
 	ins.AddStringFlag("storage-callback", "https://YOUR_SERVER_HOST/v1/callback/storage/qiniu", "七牛云存储上传回调接口")
 	ins.AddStringFlag("storage-domain", "", "七牛云存储资源访问域名（也可以用 CDN 域名），例如 https://cdn.example.com")
+	ins.AddStringFlag("storage-region", "z0", "七牛云存储区域，可选值：z0, z1, z2, na0, as0, cn-east-2, ap-northeast-1")
 
 	ins.AddStringFlag("apple-keyid", "", "apple sign in key id")
 	ins.AddStringFlag("apple-teamid", "", "apple sign in team id")
@@ -179,6 +199,7 @@ func main() {
 	ins.AddStringFlag("alipay-public-key", "path/to/alipayCertPublicKey_RSA2.crt", "支付宝公钥证书路径")
 	ins.AddStringFlag("alipay-notify-url", "https://ai-api.aicode.cc/v1/payment/callback/alipay-notify", "支付宝支付回调地址")
 	ins.AddStringFlag("alipay-return-url", "https://ai-api.aicode.cc/public/payment/alipay-return", "支付宝支付 return url")
+	ins.AddBoolFlag("alipay-sandbox", "是否使用支付宝沙箱环境")
 
 	ins.AddStringSliceFlag("sms-channels", []string{}, "启用的短信通道，支持腾讯云和阿里云: tencent, aliyun，多个值时随机每次发送随机选择")
 
@@ -195,11 +216,14 @@ func main() {
 	ins.AddStringFlag("default-img2img-model", "lb-realistic-versionv4.0", "默认的图生图模型，值取自数据表 image_model.model_id")
 	ins.AddStringFlag("default-txt2img-model", "sb-stable-diffusion-xl-1024-v1-0", "默认的文生图模型，值取自数据表 image_model.model_id")
 
+	ins.AddBoolFlag("enable-virtual-model", "是否启用虚拟模型")
 	ins.AddStringFlag("virtual-model-implementation", "openai", "虚拟模型实现厂商")
 	ins.AddStringFlag("virtual-model-nanxian-rel", "gpt-3.5-turbo", "南贤大模型实现")
 	ins.AddStringFlag("virtual-model-nanxian-prompt", "", "南贤大模型内置提示语")
 	ins.AddStringFlag("virtual-model-beichou-rel", "gpt-4", "北丑大模型实现")
 	ins.AddStringFlag("virtual-model-beichou-prompt", "", "北丑大模型内置提示语")
+
+	ins.AddStringFlag("price-table-file", "", "价格表文件路径，留空则使用默认价格表")
 
 	// 配置文件
 	config.Register(ins)
@@ -218,8 +242,22 @@ func main() {
 			}))
 		}
 
+		// 加载价格表
+		priceTableFile := f.String("price-table-file")
+		if priceTableFile != "" {
+			if err := coins.LoadPriceInfo(priceTableFile); err != nil {
+				return fmt.Errorf("价格表加载失败: %w", err)
+			}
+
+			coins.DebugPrintPriceInfo()
+		}
+
 		return nil
 	})
+
+	//ins.Async(func(conf *config.Config) {
+	//	log.With(conf).Debugf("configuration loaded")
+	//})
 
 	// 配置要加载的服务模块
 	ins.Provider(
@@ -264,6 +302,8 @@ func main() {
 		sensenova.Provider{},
 		tencentai.Provider{},
 		anthropic.Provider{},
+		baichuan.Provider{},
+		gpt360.Provider{},
 	)
 
 	app.MustRun(ins)

@@ -12,7 +12,7 @@ require (
 	github.com/fvbommel/sortorder v1.1.0
 	github.com/go-pay/gopay v1.5.94
 	github.com/go-redis/redis_rate/v10 v10.0.1
-	github.com/gorilla/websocket v1.4.2
+	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/mylxsw/asteria v1.0.1
@@ -97,5 +97,5 @@ require (
 	github.com/urfave/cli/v2 v2.23.7 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/crypto v0.9.0
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	gopkg.in/yaml.v3 v3.0.1
 )

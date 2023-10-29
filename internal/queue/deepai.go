@@ -57,20 +57,20 @@ func NewDeepAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeDeepAICompletion, data)
 }
 
-func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Translater, up *uploader.Uploader, quotaRepo *repo.QuotaRepo, queueRepo *repo.QueueRepo, creativeRepo *repo.CreativeRepo, oai *openai.OpenAI) TaskHandler {
+func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload DeepAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 			return err
 		}
 
-		if err := queueRepo.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusRunning, nil); err != nil {
+		if err := rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusRunning, nil); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("set task status to running failed: %s", err)
 			return err
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			queueRepo.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -81,7 +81,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
 					Status: repo.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
@@ -90,7 +90,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 			}
 
 			if err != nil {
-				if err := queueRepo.Update(
+				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
 					repo.QueueTaskStatusFailed,
@@ -115,7 +115,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 				Vendor:         "deepai",
 				Model:          payload.Model,
 			},
-			creativeRepo,
+			rep.Creative,
 			oai, translator,
 		)
 
@@ -136,7 +136,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 		defer cancel()
 
 		// 上传图片到七牛云
-		tmpURL, err := up.UploadRemoteFile(ctx, res.OutputURL, int(payload.GetUID()), uploader.DefaultUploadExpireAfterDays, "png", true)
+		tmpURL, err := up.UploadRemoteFile(ctx, res.OutputURL, int(payload.GetUID()), uploader.DefaultUploadExpireAfterDays, "png", false)
 		if err != nil {
 			log.With(payload).Errorf("upload image to qiniu failed: %v", err)
 		} else {
@@ -179,13 +179,13 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 			req.ExtArguments = &ext
 		}
 
-		if err := creativeRepo.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), req); err != nil {
+		if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), req); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 			return err
 		}
 
 		// 更新用户配额
-		if err := quotaRepo.QuotaConsume(
+		if err := rep.Quota.QuotaConsume(
 			ctx,
 			payload.GetUID(),
 			payload.GetQuota(),
@@ -194,7 +194,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 			log.Errorf("used quota add failed: %s", err)
 		}
 
-		return queueRepo.Update(
+		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
 			repo.QueueTaskStatusSuccess,

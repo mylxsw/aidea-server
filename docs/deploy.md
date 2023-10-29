@@ -35,7 +35,7 @@
     - 腾讯云短信服务
 - 内容安全检测（使用阿里云的内容安全服务，用于检测提示语中是否包含敏感词汇）
 - 有道翻译 API 接口（翻译功能、文生图及图生图提示语中文转英文）
-- 百度文心千帆大模型 Keys，支持以下模型
+- 百度文心千帆大模型 Keys，支持以下模型 【[开通指南](https://github.com/mylxsw/aidea-server/wiki/百度文心千帆服务开通指南)】
     - model_ernie_bot_turbo
     - model_ernie_bot
 - 阿里灵积平台模型 Keys，支持以下模型

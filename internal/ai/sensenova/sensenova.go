@@ -193,7 +193,7 @@ func (sn *SenseNova) ChatStream(ctx context.Context, req Request) (<-chan Respon
 		return nil, fmt.Errorf("marshal request failed: %w", err)
 	}
 
-	httpReq, err := http.NewRequest("POST", "https://api.sensenova.cn/v1/llm/chat-completions", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", "https://api.sensenova.cn/v1/llm/chat-completions", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create http request failed: %w", err)
 	}
@@ -234,11 +234,14 @@ func (sn *SenseNova) ChatStream(ctx context.Context, req Request) (<-chan Respon
 					return
 				}
 
-				res <- Response{
+				select {
+				case <-ctx.Done():
+				case res <- Response{
 					Error: RespError{
 						Code:    100,
 						Message: fmt.Sprintf("read stream failed: %s", err.Error()),
 					},
+				}:
 				}
 				return
 			}
@@ -261,16 +264,23 @@ func (sn *SenseNova) ChatStream(ctx context.Context, req Request) (<-chan Respon
 
 			var chatResponse Response
 			if err := json.Unmarshal([]byte(dataStr[5:]), &chatResponse); err != nil {
-				res <- Response{
+				select {
+				case <-ctx.Done():
+				case res <- Response{
 					Error: RespError{
 						Code:    101,
 						Message: fmt.Sprintf("unmarshal stream data failed: %v", err),
 					},
+				}:
 				}
 				return
 			}
 
-			res <- chatResponse
+			select {
+			case <-ctx.Done():
+				return
+			case res <- chatResponse:
+			}
 		}
 	}()
 

@@ -15,6 +15,8 @@ var freeModels = []ModelWithName{
 	{Model: "model_baidu_bloomz_7b", Name: "Bloomz 7B", FreeCount: 5},
 	{Model: "model_baidu_aquila_chat7b", Name: "Aquila Chat 7B", FreeCount: 5},
 	{Model: "model_baidu_chatglm2_6b_32k", Name: "ChatGLM2 6B 32K", FreeCount: 5},
+	{Model: "Baichuan2-53B", Name: "百川 53B", FreeCount: 5},
+	{Model: "360GPT_S2_V9", Name: "360 智脑", FreeCount: 5},
 	{Model: "gpt-3.5-turbo", Name: "GPT 3.5 Turbo", FreeCount: 5, NonCN: true},
 	{
 		Model:     "gpt-4",
@@ -37,12 +39,12 @@ var freeModels = []ModelWithName{
 }
 
 type ModelWithName struct {
-	Model     string    `json:"model"`
-	Name      string    `json:"name,omitempty"`
-	Info      string    `json:"info,omitempty"`
-	FreeCount int       `json:"-"`
-	EndAt     time.Time `json:"-"`
-	NonCN     bool      `json:"-"`
+	Model     string    `json:"model" yaml:"model"`
+	Name      string    `json:"name,omitempty" yaml:"name,omitempty"`
+	Info      string    `json:"info,omitempty" yaml:"info,omitempty"`
+	FreeCount int       `json:"free_count,omitempty" yaml:"free_count"`
+	EndAt     time.Time `json:"end_at,omitempty" yaml:"end_at,omitempty"`
+	NonCN     bool      `json:"non_cn,omitempty" yaml:"non_cn,omitempty"`
 }
 
 // FreeModels returns all free models

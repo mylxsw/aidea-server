@@ -1,6 +1,7 @@
 package dashscope_test
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -9,8 +10,12 @@ import (
 	"github.com/mylxsw/go-utils/assert"
 )
 
+func createClient() *dashscope.DashScope {
+	return dashscope.New(os.Getenv("ALI_LINGJI_API_KEY"))
+}
+
 func TestDashScope_Chat(t *testing.T) {
-	client := dashscope.New(os.Getenv("ALI_LINGJI_API_KEY"))
+	client := createClient()
 	resp, err := client.Chat(dashscope.ChatRequest{
 		Model: "qwen-plus",
 		Input: dashscope.ChatInput{
@@ -23,9 +28,9 @@ func TestDashScope_Chat(t *testing.T) {
 }
 
 func TestDashScope_ChatStream(t *testing.T) {
-	client := dashscope.New(os.Getenv("ALI_LINGJI_API_KEY"))
+	client := createClient()
 	resp, err := client.ChatStream(dashscope.ChatRequest{
-		Model: "qwen-v1",
+		Model: "qwen-turbo",
 		Input: dashscope.ChatInput{
 			Prompt: "蓝牙耳机坏了去看牙科还是耳科呢",
 		},
@@ -40,4 +45,13 @@ func TestDashScope_ChatStream(t *testing.T) {
 
 		log.With(res).Debug("res")
 	}
+}
+
+func TestImageTaskStatus(t *testing.T) {
+	client := createClient()
+
+	resp, err := client.ImageTaskStatus(context.TODO(), "512f59d0-d4d4-4720-8fac-b7df8f587670")
+	assert.NoError(t, err)
+
+	log.With(resp).Debug("resp")
 }
