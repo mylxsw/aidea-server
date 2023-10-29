@@ -9,6 +9,17 @@ listen: 0.0.0.0:8080
 # 是否启用跨域支持
 enable-cors: false
 
+# 是否启用 Websocket 支持
+# 启用后，当客户端版本 >= 1.0.7 时，聊天协议使用 Websocket 代替 OpenAI 兼容的 SSE 协议
+enable-websocket: false
+
+# 是否在日志中输出 SQL 语句
+debug-with-sql: false
+
+# Universal Link 配置，留空则使用以下默认值
+# universal-link-config: |
+#   {"applinks":{"apps":[],"details":[{"appID":"N95437SZ2A.cc.aicode.flutter.askaide.askaide","paths":["/wechat-login/*","/wechat-links/*"]}]}}
+
 # 是否启用模型请求频率限制，当前限制只支持每分钟 5 次/用户
 enable-model-rate-limit: false
 

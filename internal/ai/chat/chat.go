@@ -73,7 +73,8 @@ type Request struct {
 	N         int      `json:"n,omitempty"` // 复用作为 room_id
 
 	// 业务定制字段
-	RoomID int64 `json:"-"`
+	RoomID    int64 `json:"-"`
+	WebSocket bool  `json:"-"`
 }
 
 type FixResult struct {
@@ -259,6 +260,7 @@ func (ai *Imp) selectImp(model string) Chat {
 	switch model {
 	case string(baidu.ModelErnieBot),
 		baidu.ModelErnieBotTurbo,
+		baidu.ModelErnieBot4,
 		baidu.ModelAquilaChat7B,
 		baidu.ModelChatGLM2_6B_32K,
 		baidu.ModelBloomz7B,
@@ -271,7 +273,7 @@ func (ai *Imp) selectImp(model string) Chat {
 		dashscope.ModelQWenTurbo, dashscope.ModelQWenPlus:
 		// 阿里灵积平台
 		return ai.dashScope
-	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2):
+	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2), string(xfyun.ModelGeneralV3):
 		// 讯飞星火
 		return ai.xfyunAI
 	case string(sensenova.ModelNovaPtcXLV1), string(sensenova.ModelNovaPtcXSV1):

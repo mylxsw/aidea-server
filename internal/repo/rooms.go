@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/mylxsw/go-utils/maps"
 	"time"
 
 	"github.com/mylxsw/asteria/log"
@@ -26,6 +27,8 @@ const (
 	RoomTypeCustom = 2
 	// RoomTypePresetCustom 预设被用户修改过
 	RoomTypePresetCustom = 3
+	// RoomTypeGroupChat 群聊
+	RoomTypeGroupChat = 4
 )
 
 type RoomRepo struct {
@@ -36,9 +39,15 @@ func NewRoomRepo(db *sql.DB) *RoomRepo {
 	return &RoomRepo{db: db}
 }
 
-func (r *RoomRepo) Rooms(ctx context.Context, userID int64, limit int64) ([]model.Rooms, error) {
+type Room struct {
+	model.Rooms
+	Members []string `json:"members,omitempty"`
+}
+
+func (r *RoomRepo) Rooms(ctx context.Context, userID int64, roomTypes []int, limit int64) ([]Room, error) {
 	q := query.Builder().
 		Where(model.FieldRoomsUserId, userID).
+		WhereIn(model.FieldRoomsRoomType, roomTypes).
 		OrderBy(model.FieldRoomsPriority, "DESC").
 		OrderBy(model.FieldRoomsLastActiveTime, "DESC").
 		Limit(limit)
@@ -48,8 +57,38 @@ func (r *RoomRepo) Rooms(ctx context.Context, userID int64, limit int64) ([]mode
 		return nil, err
 	}
 
-	return array.Map(rooms, func(room model.RoomsN, _ int) model.Rooms {
-		return room.ToRooms()
+	// 查询群聊头像列表
+	groupRooms := array.Filter(rooms, func(item model.RoomsN, index int) bool {
+		return item.RoomType.ValueOrZero() == RoomTypeGroupChat
+	})
+
+	var groupMembers map[int64][]string
+	if len(groupRooms) > 0 {
+		groupIDs := array.Map(groupRooms, func(item model.RoomsN, index int) int64 { return item.Id.ValueOrZero() })
+
+		q := query.Builder().
+			WhereIn(model.FieldChatGroupMemberGroupId, groupIDs).
+			Where(model.FieldChatGroupMemberUserId, userID).
+			Where(model.FieldChatGroupMemberStatus, MessageStatusSucceed)
+
+		members, err := model.NewChatGroupMemberModel(r.db).Get(ctx, q)
+		if err != nil {
+			log.Errorf("query chat group members failed: %v", err)
+		}
+
+		groupMembers = maps.Map(
+			array.GroupBy(members, func(item model.ChatGroupMemberN) int64 { return item.GroupId.ValueOrZero() }),
+			func(items []model.ChatGroupMemberN, _ int64) []string {
+				return array.Map(items, func(item model.ChatGroupMemberN, _ int) string { return item.ModelId.ValueOrZero() })
+			},
+		)
+	}
+
+	return array.Map(rooms, func(room model.RoomsN, _ int) Room {
+		return Room{
+			Rooms:   room.ToRooms(),
+			Members: groupMembers[room.Id.ValueOrZero()],
+		}
 	}), nil
 }
 

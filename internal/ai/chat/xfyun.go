@@ -85,7 +85,7 @@ func (chat *XFYunChat) ChatStream(ctx context.Context, req Request) (<-chan Resp
 		return nil, err
 	}
 
-	stream, err := chat.client.ChatStream(xfyun.Model(model), messages)
+	stream, err := chat.client.ChatStream(ctx, xfyun.Model(model), messages)
 	if err != nil {
 		return nil, err
 	}
@@ -94,19 +94,33 @@ func (chat *XFYunChat) ChatStream(ctx context.Context, req Request) (<-chan Resp
 	go func() {
 		defer close(res)
 
-		for data := range stream {
-			if data.Header.Code != 0 {
-				res <- Response{
-					Error:     data.Header.Message,
-					ErrorCode: fmt.Sprintf("ERR%d", data.Header.Code),
+		for {
+			select {
+			case <-ctx.Done():
+			case data, ok := <-stream:
+				if !ok {
+					return
 				}
-				return
-			}
 
-			res <- Response{
-				Text:         data.Payload.Choices.Text[0].Content,
-				InputTokens:  data.Payload.Usage.Text.PromptTokens,
-				OutputTokens: data.Payload.Usage.Text.CompletionTokens,
+				if data.Header.Code != 0 {
+					select {
+					case <-ctx.Done():
+					case res <- Response{
+						Error:     data.Header.Message,
+						ErrorCode: fmt.Sprintf("ERR%d", data.Header.Code),
+					}:
+					}
+					return
+				}
+
+				select {
+				case <-ctx.Done():
+				case res <- Response{
+					Text:         data.Payload.Choices.Text[0].Content,
+					InputTokens:  data.Payload.Usage.Text.PromptTokens,
+					OutputTokens: data.Payload.Usage.Text.CompletionTokens,
+				}:
+				}
 			}
 		}
 	}()

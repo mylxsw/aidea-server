@@ -78,27 +78,43 @@ func (ds *SenseNovaChat) ChatStream(ctx context.Context, req Request) (<-chan Re
 	go func() {
 		defer close(res)
 
-		for data := range stream {
-			if data.Error.Code != 0 {
-				res <- Response{
-					Error:     data.Error.Message,
-					ErrorCode: fmt.Sprintf("ERR%d", data.Error.Code),
-				}
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
+			case data, ok := <-stream:
+				if !ok {
+					return
+				}
 
-			var content string
-			var finishReason string
-			for _, c := range data.Data.Choices {
-				content += c.Delta
-				finishReason = c.FinishReason
-			}
+				if data.Error.Code != 0 {
+					select {
+					case <-ctx.Done():
+					case res <- Response{
+						Error:     data.Error.Message,
+						ErrorCode: fmt.Sprintf("ERR%d", data.Error.Code),
+					}:
+					}
+					return
+				}
 
-			res <- Response{
-				Text:         content,
-				FinishReason: finishReason,
-				InputTokens:  data.Data.Usage.PromptTokens,
-				OutputTokens: data.Data.Usage.CompletionTokens,
+				var content string
+				var finishReason string
+				for _, c := range data.Data.Choices {
+					content += c.Delta
+					finishReason = c.FinishReason
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				case res <- Response{
+					Text:         content,
+					FinishReason: finishReason,
+					InputTokens:  data.Data.Usage.PromptTokens,
+					OutputTokens: data.Data.Usage.CompletionTokens,
+				}:
+				}
 			}
 		}
 	}()

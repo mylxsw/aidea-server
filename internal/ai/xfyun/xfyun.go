@@ -1,6 +1,7 @@
 package xfyun
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -19,6 +20,7 @@ type Model string
 const (
 	ModelGeneralV1_5 Model = "general"
 	ModelGeneralV2   Model = "generalv2"
+	ModelGeneralV3   Model = "generalv3"
 )
 
 type XFYunAI struct {
@@ -83,12 +85,12 @@ type ResponseHeader struct {
 }
 
 // ChatStream 发起聊天
-func (ai *XFYunAI) ChatStream(model Model, messages []Message) (<-chan Response, error) {
+func (ai *XFYunAI) ChatStream(ctx context.Context, model Model, messages []Message) (<-chan Response, error) {
 	ws := websocket.DefaultDialer
 
 	host := ai.resolveHostForModel(model)
 	urlStr := ai.assembleAuthURL(host, ai.apiKey, ai.apiSecret)
-	conn, resp, err := ws.Dial(urlStr, nil)
+	conn, resp, err := ws.DialContext(ctx, urlStr, nil)
 	if err != nil {
 		return nil, fmt.Errorf("创建 WS 连接失败：%w [%d %s]", err, resp.StatusCode, resp.Status)
 	}
@@ -116,22 +118,35 @@ func (ai *XFYunAI) ChatStream(model Model, messages []Message) (<-chan Response,
 					return
 				}
 
-				respChan <- Response{Header: ResponseHeader{Code: -1, Message: err.Error()}}
+				select {
+				case <-ctx.Done():
+				case respChan <- Response{Header: ResponseHeader{Code: -1, Message: err.Error()}}:
+				}
 				return
 			}
 
 			var ret Response
 			if err := json.Unmarshal(msg, &ret); err != nil {
-				respChan <- Response{Header: ResponseHeader{Code: -1, Message: err.Error()}}
+				select {
+				case <-ctx.Done():
+				case respChan <- Response{Header: ResponseHeader{Code: -1, Message: err.Error()}}:
+				}
 				return
 			}
 
 			if ret.Header.Code != 0 {
-				respChan <- ret
+				select {
+				case <-ctx.Done():
+				case respChan <- ret:
+				}
 				return
 			}
 
-			respChan <- ret
+			select {
+			case <-ctx.Done():
+				return
+			case respChan <- ret:
+			}
 		}
 	}()
 
@@ -228,6 +243,10 @@ func (ai *XFYunAI) resolveResponse(resp *http.Response) (string, error) {
 func (ai *XFYunAI) resolveHostForModel(model Model) string {
 	if model == ModelGeneralV1_5 {
 		return "wss://spark-api.xf-yun.com/v1.1/chat"
+	}
+
+	if model == ModelGeneralV3 {
+		return "wss://spark-api.xf-yun.com/v3.1/chat"
 	}
 
 	return "wss://spark-api.xf-yun.com/v2.1/chat"

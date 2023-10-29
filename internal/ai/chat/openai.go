@@ -101,25 +101,35 @@ func (chat *OpenAIChat) ChatStream(ctx context.Context, req Request) (<-chan Res
 	go func() {
 		defer close(res)
 
-		for data := range stream {
-			if data.Code != "" {
-				res <- Response{
-					Error:     data.ErrorMessage,
-					ErrorCode: data.Code,
-				}
+		for {
+			select {
+			case <-ctx.Done():
 				return
-			}
+			case data, ok := <-stream:
+				if !ok {
+					return
+				}
 
-			res <- Response{
-				Text: array.Reduce(
-					data.ChatResponse.Choices,
-					func(carry string, item openai.ChatCompletionStreamChoice) string {
-						return carry + item.Delta.Content
-					},
-					"",
-				),
+				if data.Code != "" {
+					res <- Response{
+						Error:     data.ErrorMessage,
+						ErrorCode: data.Code,
+					}
+					return
+				}
+
+				res <- Response{
+					Text: array.Reduce(
+						data.ChatResponse.Choices,
+						func(carry string, item openai.ChatCompletionStreamChoice) string {
+							return carry + item.Delta.Content
+						},
+						"",
+					),
+				}
 			}
 		}
+
 	}()
 
 	return res, nil

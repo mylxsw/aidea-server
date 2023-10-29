@@ -28,7 +28,34 @@ func (ctl *ModelController) Register(router web.Router) {
 
 // Models 获取模型列表
 func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web.Response {
-	models := array.Filter(chat.Models(ctl.conf), func(item chat.Model, _ int) bool {
+	if helper.VersionNewer(client.Version, "1.0.6") {
+		models := array.Map(chat.Models(ctl.conf, true), func(item chat.Model, _ int) chat.Model {
+			if item.Disabled {
+				return item
+			}
+
+			if item.VersionMin != "" && helper.VersionOlder(client.Version, item.VersionMin) {
+				item.Disabled = true
+				return item
+			}
+
+			if item.VersionMax != "" && helper.VersionNewer(client.Version, item.VersionMax) {
+				item.Disabled = true
+				return item
+			}
+
+			if client.IsCNLocalMode(ctl.conf) && item.IsSenstiveModel() {
+				item.Disabled = true
+				return item
+			}
+
+			return item
+		})
+
+		return ctx.JSON(models)
+	}
+
+	models := array.Filter(chat.Models(ctl.conf, false), func(item chat.Model, _ int) bool {
 		if item.VersionMin != "" && helper.VersionOlder(client.Version, item.VersionMin) {
 			return false
 		}

@@ -64,6 +64,7 @@ func (ctl *UserController) Register(router web.Router) {
 		router.Get("/quota", ctl.UserQuota)
 		// 获取当前用户配额情况统计
 		router.Get("/quota/usage-stat", ctl.UserQuotaUsageStatistics)
+		router.Get("/quota/usage-stat/{date}", ctl.UserQuotaUsageDetails)
 
 		// 用户免费聊天次数统计
 		router.Get("/stat/free-chat-counts", ctl.UserFreeChatCounts)
@@ -474,6 +475,11 @@ func (ctl *UserController) UserQuotaUsageStatistics(ctx context.Context, webCtx 
 
 	// 生成当前日期以及前 30 天的日期列表
 	results := make([]QuotaUsageStatistics, 0)
+	results = append(results, QuotaUsageStatistics{
+		Date: time.Now().Format("2006-01-02"),
+		Used: -1,
+	})
+
 	for i := 0; i < 30; i++ {
 		// 最多统计到用户注册日期
 		if time.Now().AddDate(0, 0, -i).Before(user.CreatedAt) {
@@ -497,6 +503,47 @@ func (ctl *UserController) UserQuotaUsageStatistics(ctx context.Context, webCtx 
 	return webCtx.JSON(web.M{
 		"usages": results,
 	})
+}
+
+type QuotaUsageDetail struct {
+	Used      int64  `json:"used"`
+	Type      string `json:"type"`
+	CreatedAt string `json:"created_at"`
+}
+
+// UserQuotaUsageDetails 获取当前用户配额使用情况详情
+func (ctl *UserController) UserQuotaUsageDetails(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
+	startAt, err := time.Parse("2006-01-02", webCtx.PathVar("date"))
+	if err != nil {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	endAt := startAt.AddDate(0, 0, 1)
+
+	usages, err := quotaRepo.GetQuotaDetails(ctx, user.ID, startAt, endAt)
+	if err != nil {
+		log.WithFields(log.Fields{"user_id": user.ID}).Debugf("get quota statistics failed: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(web.M{
+		"data": array.Map(usages, func(item repo.QuotaUsage, _ int) QuotaUsageDetail {
+			var typ string
+			switch item.QuotaMeta.Tag {
+			case "chat":
+				typ = "聊天"
+			default:
+				typ = "创作岛"
+			}
+
+			return QuotaUsageDetail{
+				Used:      item.Used,
+				Type:      typ,
+				CreatedAt: item.CreatedAt.In(time.Local).Format("15:04"),
+			}
+		}),
+	})
+
 }
 
 // UserFreeChatCounts 用户免费聊天次数统计
@@ -552,7 +599,7 @@ func (ctl *UserController) CustomHomeModels(ctx context.Context, webCtx web.Cont
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	supportModels := array.ToMap(chat.Models(ctl.conf), func(item chat.Model, _ int) string { return item.RealID() })
+	supportModels := array.ToMap(chat.Models(ctl.conf, true), func(item chat.Model, _ int) string { return item.RealID() })
 	for _, model := range models {
 		if _, ok := supportModels[model]; !ok {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)

@@ -136,7 +136,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 		defer cancel()
 
 		// 上传图片到七牛云
-		tmpURL, err := up.UploadRemoteFile(ctx, res.OutputURL, int(payload.GetUID()), uploader.DefaultUploadExpireAfterDays, "png", true)
+		tmpURL, err := up.UploadRemoteFile(ctx, res.OutputURL, int(payload.GetUID()), uploader.DefaultUploadExpireAfterDays, "png", false)
 		if err != nil {
 			log.With(payload).Errorf("upload image to qiniu failed: %v", err)
 		} else {

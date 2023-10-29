@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"net"
 	"net/http"
 	"regexp"
 	"time"
@@ -49,9 +50,15 @@ func createOpenAIClient(isAzure bool, apiVersion string, server, organization, k
 	openaiConf := openai.DefaultConfig(key)
 	openaiConf.BaseURL = server
 	openaiConf.OrgID = organization
-	openaiConf.HTTPClient.Timeout = 300 * time.Second
+	openaiConf.HTTPClient.Timeout = 180 * time.Second
 	if proxy != nil {
 		openaiConf.HTTPClient.Transport = &http.Transport{Dial: proxy.Dial}
+	} else {
+		openaiConf.HTTPClient.Transport = &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: 15 * time.Second,
+			}).DialContext,
+		}
 	}
 
 	if isAzure {

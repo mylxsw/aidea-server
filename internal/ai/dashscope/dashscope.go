@@ -123,13 +123,13 @@ type ChatUsage struct {
 	InputTokens int `json:"input_tokens,omitempty"`
 }
 
-func (ds *DashScope) Chat(req ChatRequest) (*ChatResponse, error) {
+func (ds *DashScope) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequest("POST", ds.serviceURL+"/api/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+"/api/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -157,13 +157,13 @@ func (ds *DashScope) Chat(req ChatRequest) (*ChatResponse, error) {
 	return &chatResp, nil
 }
 
-func (ds *DashScope) ChatStream(req ChatRequest) (<-chan ChatResponse, error) {
+func (ds *DashScope) ChatStream(ctx context.Context, req ChatRequest) (<-chan ChatResponse, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequest("POST", ds.serviceURL+"/api/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+"/api/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,10 @@ func (ds *DashScope) ChatStream(req ChatRequest) (<-chan ChatResponse, error) {
 					return
 				}
 
-				res <- ChatResponse{Message: fmt.Sprintf("read stream failed: %s", err.Error()), Code: "READ_STREAM_FAILED"}
+				select {
+				case <-ctx.Done():
+				case res <- ChatResponse{Message: fmt.Sprintf("read stream failed: %s", err.Error()), Code: "READ_STREAM_FAILED"}:
+				}
 				return
 			}
 
@@ -219,13 +222,20 @@ func (ds *DashScope) ChatStream(req ChatRequest) (<-chan ChatResponse, error) {
 
 			var chatResponse ChatResponse
 			if err := json.Unmarshal([]byte(dataStr[5:]), &chatResponse); err != nil {
-				res <- ChatResponse{Message: fmt.Sprintf("unmarshal stream data failed: %v", err), Code: "UNMARSHAL_STREAM_DATA_FAILED"}
+				select {
+				case <-ctx.Done():
+				case res <- ChatResponse{Message: fmt.Sprintf("unmarshal stream data failed: %v", err), Code: "UNMARSHAL_STREAM_DATA_FAILED"}:
+				}
 				return
 			}
 
-			res <- chatResponse
-			if chatResponse.Output.FinishReason != "" && chatResponse.Output.FinishReason != "null" {
+			select {
+			case <-ctx.Done():
 				return
+			case res <- chatResponse:
+				if chatResponse.Output.FinishReason != "" && chatResponse.Output.FinishReason != "null" {
+					return
+				}
 			}
 		}
 	}()

@@ -74,7 +74,10 @@ func main() {
 	ins.AddStringFlag("session-secret", "aidea-secret", "用户会话加密密钥")
 	ins.AddBoolFlag("enable-recordchat", "是否记录聊天历史记录（目前只做记录，没有实际作用，只是为后期增加多端聊天记录同步做准备）")
 	ins.AddBoolFlag("enable-cors", "是否启用跨域请求支持")
+	ins.AddBoolFlag("enable-websocket", "是否启用 WebSocket 支持")
+	ins.AddBoolFlag("debug-with-sql", "是否在日志中输出 SQL 语句")
 	ins.AddBoolFlag("enable-model-rate-limit", "是否启用模型请求频率限制，当前限制只支持每分钟 5 次/用户")
+	ins.AddStringFlag("universal-link-config", "", "universal link 配置文件路径，留空则使用默认的 universal link，配置文件格式参考 https://developer.apple.com/documentation/xcode/supporting-associated-domains")
 
 	ins.AddStringFlag("redis-host", "127.0.0.1", "redis host")
 	ins.AddIntFlag("redis-port", 6379, "redis port")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
@@ -124,14 +125,24 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 		"translate_enabled": ctl.conf.EnableTranslate,
 		// 是否启用邮件发送功能
 		"mail_enabled": ctl.conf.EnableMail,
-		// 是否显示绘玩
-		"enable_gallery": true,
-		// 是否启用创作岛
-		"enable_creation_island": true,
 		// 首页模型
 		"home_models": homeModels,
+
+		// 首页路由地址
+		"home_route": "/chat-chat",
+		// 是否禁用聊一聊
+		"disable_chat": false,
+		// 是否禁用数字人
+		"disable_digital_human": false,
+		// 是否禁用绘玩
+		"disable_gallery": false,
+		// 是否禁用创作岛
+		"disable_creation_island": false,
+
 		// 是否显示首页模型描述
-		"show_home_model_description": true,
+		"show_home_model_description": strings.Contains(client.Language, "zh"),
+		// 是否支持 WebSocket
+		"support_websocket": ctl.conf.EnableWebsocket,
 	})
 }
 
@@ -143,7 +154,7 @@ func (ctl *InfoController) loadHomeModels(ctx context.Context, conf *config.Conf
 		if err != nil {
 			log.F(log.M{"user": user, "client": client}).Errorf("get user custom config failed: %s", err)
 		} else if cus != nil && len(cus.HomeModels) > 0 {
-			supportModels := array.ToMap(chat.Models(ctl.conf), func(item chat.Model, _ int) string { return item.RealID() })
+			supportModels := array.ToMap(chat.Models(ctl.conf, false), func(item chat.Model, _ int) string { return item.RealID() })
 			for i, m := range cus.HomeModels[:2] {
 				if matched, ok := supportModels[m]; ok {
 					homeModels[i].ModelID = matched.RealID()

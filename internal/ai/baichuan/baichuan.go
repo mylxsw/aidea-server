@@ -127,7 +127,7 @@ func (ai *BaichuanAI) ChatStream(ctx context.Context, req Request) (<-chan Respo
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequest("POST", "https://api.baichuan-ai.com/v1/stream/chat", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", "https://api.baichuan-ai.com/v1/stream/chat", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,10 @@ func (ai *BaichuanAI) ChatStream(ctx context.Context, req Request) (<-chan Respo
 					return
 				}
 
-				res <- Response{Code: 100, Message: fmt.Sprintf("read response failed: %v", err)}
+				select {
+				case <-ctx.Done():
+				case res <- Response{Code: 100, Message: fmt.Sprintf("read response failed: %v", err)}:
+				}
 				return
 			}
 
@@ -174,14 +177,21 @@ func (ai *BaichuanAI) ChatStream(ctx context.Context, req Request) (<-chan Respo
 
 			var chatResponse Response
 			if err := json.Unmarshal([]byte(dataStr), &chatResponse); err != nil {
-				res <- Response{Code: 100, Message: fmt.Sprintf("decode response failed: %v", err)}
+				select {
+				case <-ctx.Done():
+				case res <- Response{Code: 100, Message: fmt.Sprintf("decode response failed: %v", err)}:
+				}
 				return
 			}
 
-			res <- chatResponse
-			for _, msg := range chatResponse.Data.Messages {
-				if msg.FinishReason != "" {
-					return
+			select {
+			case <-ctx.Done():
+				return
+			case res <- chatResponse:
+				for _, msg := range chatResponse.Data.Messages {
+					if msg.FinishReason != "" {
+						return
+					}
 				}
 			}
 		}

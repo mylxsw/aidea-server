@@ -20,6 +20,13 @@ type Config struct {
 	EnableRecordChat bool `json:"enable_record_chat" yaml:"enable_record_chat"`
 	// 是否启用跨域支持
 	EnableCORS bool `json:"enable_cors" yaml:"enable_cors"`
+	// EnableWebsocket 是否启用 Websocket 支持
+	EnableWebsocket bool `json:"enable_websocket" yaml:"enable_websocket"`
+	// 是否启用 SQL 调试
+	DebugWithSQL bool `json:"debug_with_sql" yaml:"debug_with_sql"`
+
+	// UniversalLinkConfig 通用链接配置
+	UniversalLinkConfig string `json:"universal_link_config" yaml:"universal_link_config"`
 
 	// EnableModelRateLimit 是否启用模型访问限流
 	// 当前流控策略为：每个模型每分钟最多访问 5 次
@@ -234,12 +241,15 @@ func Register(ins *app.App) {
 		}
 
 		return &Config{
-			Listen:           ctx.String("listen"),
-			DBURI:            ctx.String("db-uri"),
-			SessionSecret:    ctx.String("session-secret"),
-			PrometheusToken:  ctx.String("prometheus-token"),
-			EnableRecordChat: ctx.Bool("enable-recordchat"),
-			EnableCORS:       ctx.Bool("enable-cors"),
+			Listen:              ctx.String("listen"),
+			DBURI:               ctx.String("db-uri"),
+			SessionSecret:       ctx.String("session-secret"),
+			PrometheusToken:     ctx.String("prometheus-token"),
+			EnableRecordChat:    ctx.Bool("enable-recordchat"),
+			EnableCORS:          ctx.Bool("enable-cors"),
+			EnableWebsocket:     ctx.Bool("enable-websocket"),
+			DebugWithSQL:        ctx.Bool("debug-with-sql"),
+			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
 
 			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),
 			EnableCustomHomeModels: ctx.Bool("enable-custom-home-models"),

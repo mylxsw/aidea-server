@@ -1,19 +1,11 @@
 
-CREATE TABLE chat_group
-(
-    id         INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
-    user_id    INT             NOT NULL,
-    name       VARCHAR(255)    COLLATE utf8mb4_general_ci NOT NULL,
-    created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
 
 CREATE TABLE chat_group_member
 (
     id         INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
     user_id    INT             NOT NULL,
     group_id   INT             NOT NULL,
-    model_id   INT             NOT NULL,
+    model_id   VARCHAR(255)    NOT NULL,
     model_name VARCHAR(255)    COLLATE utf8mb4_general_ci NULL,
     `status`   INT             NOT NULL DEFAULT 1 COMMENT '状态：1-正常 2-已删除',
     created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -35,8 +27,6 @@ CREATE TABLE chat_group_message
     created_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at       TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
-
-CREATE INDEX chat_group_user_idx ON chat_group (user_id);
 
 CREATE INDEX chat_group_member_group_user_idx ON chat_group_member (group_id, user_id);
 

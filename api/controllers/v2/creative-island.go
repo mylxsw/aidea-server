@@ -294,7 +294,7 @@ func (ctl *CreativeIslandController) ShareHistoryItem(ctx context.Context, webCt
 
 	err := ctl.creativeRepo.ShareCreativeHistoryToGallery(ctx, user.ID, user.Name, int64(hid))
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrNotFound), http.StatusNotFound)
 		}
 
@@ -315,7 +315,12 @@ func (ctl *CreativeIslandController) CancelShareHistoryItem(ctx context.Context,
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	err := ctl.creativeRepo.CancelCreativeHistoryShare(ctx, user.ID, int64(hid))
+	userID := user.ID
+	if user.InternalUser() {
+		userID = 0
+	}
+
+	err := ctl.creativeRepo.CancelCreativeHistoryShare(ctx, userID, int64(hid))
 	if err != nil {
 		log.WithFields(log.Fields{
 			"uid":    user.ID,

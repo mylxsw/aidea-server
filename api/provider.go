@@ -81,6 +81,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 	needAuthPrefix := []string{
 		"/v1/chat",            // OpenAI chat
 		"/v1/audio",           // OpenAI audio to text
+		"/v1/group-chat",      // 群聊
 		"/v1/users",           // 用户管理
 		"/v1/translate",       // 翻译 API
 		"/v1/storage",         // 存储 API
@@ -93,7 +94,6 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v1/rooms",           // 数字人管理
 		"/v1/room-galleries",  // 数字人 Gallery
 		"/v1/voice",           // 语音合成
-		"/v1/notifications",   // 通知管理
 		"/v1/admin",           // 管理员接口
 
 		// v2 版本
@@ -142,7 +142,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		mws = append(mws,
 			mw.CustomAccessLog(func(cal web.CustomAccessLog) {
 				// 记录访问日志
-				platform := cal.Context.Header("X-PLATFORM")
+				platform := readFromWebContext(cal.Context, "platform")
 				path, _ := cal.Context.CurrentRoute().GetPathTemplate()
 				reqCounterMetric.WithLabelValues(
 					cal.Method,
@@ -157,20 +157,16 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 					"code":     cal.ResponseCode,
 					"elapse":   cal.Elapse.Milliseconds(),
 					"ip":       cal.Context.Header("X-Real-IP"),
-					"lang":     cal.Context.Header("X-LANGUAGE"),
-					"ver":      cal.Context.Header("X-CLIENT-VERSION"),
+					"lang":     readFromWebContext(cal.Context, "language"),
+					"ver":      readFromWebContext(cal.Context, "client-version"),
 					"plat":     platform,
-					"plat-ver": cal.Context.Header("X-PLATFORM-VERSION"),
+					"plat-ver": readFromWebContext(cal.Context, "platform-version"),
 				}).Debug("request")
 			}),
-			mw.AuthHandlerSkippable(
-				func(webCtx web.Context, typ string, credential string) error {
+			authHandler(
+				func(webCtx web.Context, credential string) error {
 					urlPath := webCtx.Request().Raw().URL.Path
 					needAuth := str.HasPrefixes(urlPath, needAuthPrefix)
-
-					if needAuth && typ != "Bearer" {
-						return errors.New("invalid auth type")
-					}
 
 					claims, err := tk.ParseToken(credential)
 					if needAuth && err != nil {
@@ -236,10 +232,10 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 					// 注入客户端信息
 					ctx.Provide(func() *auth.ClientInfo {
 						return &auth.ClientInfo{
-							Version:         ctx.Header("X-CLIENT-VERSION"),
-							Platform:        ctx.Header("X-PLATFORM"),
-							PlatformVersion: ctx.Header("X-PLATFORM-VERSION"),
-							Language:        ctx.Header("X-LANGUAGE"),
+							Version:         readFromWebContext(ctx, "client-version"),
+							Platform:        readFromWebContext(ctx, "platform"),
+							PlatformVersion: readFromWebContext(ctx, "platform-version"),
+							Language:        readFromWebContext(ctx, "language"),
 							IP:              ctx.Header("X-Real-IP"),
 						}
 					})
@@ -250,9 +246,9 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 						return false
 					}
 
-					authHeader := ctx.Header("Authorization")
+					authHeader := readFromWebContext(ctx, "authorization")
 					// 如果有 Authorization 头，且 Authorization 头以 Bearer 开头，则需要鉴权
-					if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
+					if authHeader != "" {
 						return false
 					}
 
@@ -278,6 +274,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 
 		controllers.NewTranslateController(resolver, conf),
 		controllers.NewOpenAIController(resolver, conf),
+		controllers.NewGroupChatController(resolver),
 
 		controllers.NewAuthController(resolver, conf),
 		controllers.NewUserController(resolver),
@@ -323,6 +320,17 @@ func muxRoutes(resolver infra.Resolver, router *mux.Router) {
 		router.PathPrefix("/metrics").Handler(PrometheusHandler{token: conf.PrometheusToken})
 		// 添加健康检查接口支持
 		router.PathPrefix("/health").Handler(HealthCheck{})
+		// Universal Links
+		router.PathPrefix("/.well-known/apple-app-site-association").HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			writer.Header().Add("Content-Type", "application/json")
+
+			data := `{"applinks":{"apps":[],"details":[{"appID":"N95437SZ2A.cc.aicode.flutter.askaide.askaide","paths":["/wechat-login/*","/wechat-links/*"]}]}}`
+			if conf.UniversalLinkConfig != "" {
+				data = conf.UniversalLinkConfig
+			}
+
+			writer.Write([]byte(data))
+		})
 	})
 }
 
@@ -379,4 +387,45 @@ func BuildCounterVec(namespace, name, help string, tags []string) *prometheus.Co
 	counterVecs[cacheKey] = counterVec
 
 	return counterVec
+}
+
+// readFromWebContext 优先读取请求参数，请求参数不存在，读取请求头
+func readFromWebContext(webCtx web.Context, key string) string {
+	val := webCtx.Input(key)
+	if val != "" {
+		return val
+	}
+
+	val = webCtx.Header(strings.ToUpper(key))
+	if val != "" {
+		return val
+	}
+
+	return webCtx.Header("X-" + strings.ToUpper(key))
+}
+
+func authHandler(cb func(ctx web.Context, credential string) error, skip func(ctx web.Context) bool) web.HandlerDecorator {
+	return func(handler web.WebHandler) web.WebHandler {
+		return func(ctx web.Context) (resp web.Response) {
+			if !skip(ctx) {
+				segs := strings.SplitN(readFromWebContext(ctx, "authorization"), " ", 2)
+
+				var authToken string
+				if len(segs) >= 2 {
+					if segs[0] != "Bearer" {
+						return ctx.JSONError("auth failed: invalid auth type", http.StatusUnauthorized)
+					}
+					authToken = segs[1]
+				} else {
+					authToken = segs[0]
+				}
+
+				if err := cb(ctx, authToken); err != nil {
+					return ctx.JSONError(fmt.Sprintf("auth failed: %s", err), http.StatusUnauthorized)
+				}
+			}
+
+			return handler(ctx)
+		}
+	}
 }

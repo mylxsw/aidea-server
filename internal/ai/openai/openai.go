@@ -167,11 +167,18 @@ func (client *OpenAI) ChatStream(ctx context.Context, request openai.ChatComplet
 			}
 
 			if err != nil {
-				res <- ChatStreamResponse{Code: "READ_STREAM_FAILED", ErrorMessage: fmt.Errorf("read stream failed: %v", err).Error()}
+				select {
+				case <-ctx.Done():
+				case res <- ChatStreamResponse{Code: "READ_STREAM_FAILED", ErrorMessage: fmt.Errorf("read stream failed: %v", err).Error()}:
+				}
 				return
 			}
 
-			res <- ChatStreamResponse{ChatResponse: &response}
+			select {
+			case <-ctx.Done():
+				return
+			case res <- ChatStreamResponse{ChatResponse: &response}:
+			}
 		}
 	}()
 
