@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -297,11 +298,12 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
-	failedMessageWriter := func() int64 {
+	failedMessageWriter := func(errorMessage string) int64 {
 		questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
 			Message: req.Message,
 			Role:    int64(repo.MessageRoleUser),
 			Status:  repo.MessageStatusFailed,
+			Error:   errorMessage,
 		})
 		if err != nil {
 			log.With(req).Errorf("add chat message failed: %s", err)
@@ -318,14 +320,14 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 
 	availableMembers := req.AvailableMembers(array.Map(grp.Members, func(m model.ChatGroupMember, _ int) int64 { return m.Id }))
 	if len(availableMembers) == 0 {
-		failedMessageWriter()
+		failedMessageWriter("没有匹配的成员")
 		return webCtx.JSONError("no available members", http.StatusBadRequest)
 	}
 
 	// 每个成员的聊天上下文
 	contextMessages, _, err := ctl.repo.ChatGroup.GetChatMessages(ctx, grp.Group.Id, user.ID, 0, 100)
 	if err != nil {
-		questionID := failedMessageWriter()
+		questionID := failedMessageWriter(fmt.Sprintf("查询聊天上下文失败: %v", err))
 		log.F(log.M{
 			"req":         req,
 			"question_id": questionID,
@@ -381,7 +383,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	needCoins := array.Reduce(coinCounts, func(carry, item int64) int64 { return carry + item }, 0)
 	quota, err := ctl.repo.Quota.GetUserQuota(ctx, user.ID)
 	if err != nil {
-		questionID := failedMessageWriter()
+		questionID := failedMessageWriter(fmt.Sprintf("查询用户剩余智慧果数量失败: %v", err))
 		log.F(log.M{
 			"req":         req,
 			"question_id": questionID,
@@ -398,7 +400,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	}).Debugf("group chat consume estimate")
 
 	if restQuota < 0 {
-		failedMessageWriter()
+		failedMessageWriter(fmt.Sprintf("智慧果数量不足，需要 %d 个智慧果，剩余 %d 个", needCoins, quota.Quota-quota.Used))
 		return webCtx.JSONError(common.ErrQuotaNotEnough, http.StatusPaymentRequired)
 	}
 

@@ -57,3 +57,6 @@ models:
     - name: status
       type: int64
       tag: json:"status,omitempty"
+    - name: error
+      type: string
+      tag: json:"error,omitempty"

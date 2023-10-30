@@ -761,6 +761,7 @@ type ChatGroupMessageN struct {
 	Pid           null.Int    `json:"pid,omitempty"`
 	MemberId      null.Int    `json:"member_id,omitempty"`
 	Status        null.Int    `json:"status,omitempty"`
+	Error         null.String `json:"error,omitempty"`
 	CreatedAt     null.Time
 	UpdatedAt     null.Time
 }
@@ -788,6 +789,7 @@ type chatGroupMessageOriginal struct {
 	Pid           null.Int
 	MemberId      null.Int
 	Status        null.Int
+	Error         null.String
 	CreatedAt     null.Time
 	UpdatedAt     null.Time
 }
@@ -828,6 +830,9 @@ func (inst *ChatGroupMessageN) Staled(onlyFields ...string) bool {
 			return true
 		}
 		if inst.Status != inst.original.Status {
+			return true
+		}
+		if inst.Error != inst.original.Error {
 			return true
 		}
 		if inst.CreatedAt != inst.original.CreatedAt {
@@ -878,6 +883,10 @@ func (inst *ChatGroupMessageN) Staled(onlyFields ...string) bool {
 				}
 			case "status":
 				if inst.Status != inst.original.Status {
+					return true
+				}
+			case "error":
+				if inst.Error != inst.original.Error {
 					return true
 				}
 			case "created_at":
@@ -936,6 +945,9 @@ func (inst *ChatGroupMessageN) StaledKV(onlyFields ...string) query.KV {
 		if inst.Status != inst.original.Status {
 			kv["status"] = inst.Status
 		}
+		if inst.Error != inst.original.Error {
+			kv["error"] = inst.Error
+		}
 		if inst.CreatedAt != inst.original.CreatedAt {
 			kv["created_at"] = inst.CreatedAt
 		}
@@ -985,6 +997,10 @@ func (inst *ChatGroupMessageN) StaledKV(onlyFields ...string) query.KV {
 			case "status":
 				if inst.Status != inst.original.Status {
 					kv["status"] = inst.Status
+				}
+			case "error":
+				if inst.Error != inst.original.Error {
+					kv["error"] = inst.Error
 				}
 			case "created_at":
 				if inst.CreatedAt != inst.original.CreatedAt {
@@ -1103,6 +1119,7 @@ type ChatGroupMessage struct {
 	Pid           int64  `json:"pid,omitempty"`
 	MemberId      int64  `json:"member_id,omitempty"`
 	Status        int64  `json:"status,omitempty"`
+	Error         string `json:"error,omitempty"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -1121,6 +1138,7 @@ func (w ChatGroupMessage) ToChatGroupMessageN(allows ...string) ChatGroupMessage
 			Pid:           null.IntFrom(int64(w.Pid)),
 			MemberId:      null.IntFrom(int64(w.MemberId)),
 			Status:        null.IntFrom(int64(w.Status)),
+			Error:         null.StringFrom(w.Error),
 			CreatedAt:     null.TimeFrom(w.CreatedAt),
 			UpdatedAt:     null.TimeFrom(w.UpdatedAt),
 		}
@@ -1150,6 +1168,8 @@ func (w ChatGroupMessage) ToChatGroupMessageN(allows ...string) ChatGroupMessage
 			res.MemberId = null.IntFrom(int64(w.MemberId))
 		case "status":
 			res.Status = null.IntFrom(int64(w.Status))
+		case "error":
+			res.Error = null.StringFrom(w.Error)
 		case "created_at":
 			res.CreatedAt = null.TimeFrom(w.CreatedAt)
 		case "updated_at":
@@ -1180,6 +1200,7 @@ func (w *ChatGroupMessageN) ToChatGroupMessage() ChatGroupMessage {
 		Pid:           w.Pid.Int64,
 		MemberId:      w.MemberId.Int64,
 		Status:        w.Status.Int64,
+		Error:         w.Error.String,
 		CreatedAt:     w.CreatedAt.Time,
 		UpdatedAt:     w.UpdatedAt.Time,
 	}
@@ -1214,6 +1235,7 @@ const (
 	FieldChatGroupMessagePid           = "pid"
 	FieldChatGroupMessageMemberId      = "member_id"
 	FieldChatGroupMessageStatus        = "status"
+	FieldChatGroupMessageError         = "error"
 	FieldChatGroupMessageCreatedAt     = "created_at"
 	FieldChatGroupMessageUpdatedAt     = "updated_at"
 )
@@ -1231,6 +1253,7 @@ func ChatGroupMessageFields() []string {
 		"pid",
 		"member_id",
 		"status",
+		"error",
 		"created_at",
 		"updated_at",
 	}
@@ -1373,6 +1396,7 @@ func (m *ChatGroupMessageModel) Get(ctx context.Context, builders ...query.SQLBu
 			"pid",
 			"member_id",
 			"status",
+			"error",
 			"created_at",
 			"updated_at",
 		)
@@ -1403,6 +1427,8 @@ func (m *ChatGroupMessageModel) Get(ctx context.Context, builders ...query.SQLBu
 		case "member_id":
 			selectFields = append(selectFields, f)
 		case "status":
+			selectFields = append(selectFields, f)
+		case "error":
 			selectFields = append(selectFields, f)
 		case "created_at":
 			selectFields = append(selectFields, f)
@@ -1438,6 +1464,8 @@ func (m *ChatGroupMessageModel) Get(ctx context.Context, builders ...query.SQLBu
 				scanFields = append(scanFields, &chatGroupMessageVar.MemberId)
 			case "status":
 				scanFields = append(scanFields, &chatGroupMessageVar.Status)
+			case "error":
+				scanFields = append(scanFields, &chatGroupMessageVar.Error)
 			case "created_at":
 				scanFields = append(scanFields, &chatGroupMessageVar.CreatedAt)
 			case "updated_at":

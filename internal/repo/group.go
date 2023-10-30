@@ -251,6 +251,7 @@ type ChatGroupMessage struct {
 	Pid           int64  `json:"pid,omitempty"`
 	MemberId      int64  `json:"member_id,omitempty"`
 	Status        int64  `json:"status,omitempty"`
+	Error         string `json:"error,omitempty"`
 }
 
 // AddChatMessage 添加聊天消息
@@ -280,6 +281,7 @@ func (repo *ChatGroupRepo) AddChatMessage(ctx context.Context, groupID, userID i
 			Pid:           msg.Pid,
 			MemberId:      msg.MemberId,
 			Status:        msg.Status,
+			Error:         msg.Error,
 		}
 
 		msgID, err := model.NewChatGroupMessageModel(tx).Save(ctx, chatMsg.ToChatGroupMessageN(
@@ -292,6 +294,7 @@ func (repo *ChatGroupRepo) AddChatMessage(ctx context.Context, groupID, userID i
 			model.FieldChatGroupMessagePid,
 			model.FieldChatGroupMessageMemberId,
 			model.FieldChatGroupMessageStatus,
+			model.FieldChatGroupMessageError,
 		))
 		if err != nil {
 			return fmt.Errorf("save chat message failed: %w", err)
@@ -441,6 +444,7 @@ type ChatGroupMessageUpdate struct {
 	TokenConsumed int64  `json:"token_consumed,omitempty"`
 	QuotaConsumed int64  `json:"quota_consumed,omitempty"`
 	Status        int64  `json:"status,omitempty"`
+	Error         string `json:"error,omitempty"`
 }
 
 // UpdateChatMessage 更新聊天消息
@@ -456,6 +460,7 @@ func (repo *ChatGroupRepo) UpdateChatMessage(ctx context.Context, groupID, userI
 			model.FieldChatGroupMessageTokenConsumed: msg.TokenConsumed,
 			model.FieldChatGroupMessageQuotaConsumed: msg.QuotaConsumed,
 			model.FieldChatGroupMessageStatus:        msg.Status,
+			model.FieldChatGroupMessageError:         msg.Error,
 		}, q)
 
 		return err

@@ -80,6 +80,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 				msg := repo.ChatGroupMessageUpdate{
 					Message: err.Error(),
 					Status:  repo.MessageStatusFailed,
+					Error:   err.Error(),
 				}
 				if err := rep.ChatGroup.UpdateChatMessage(ctx, payload.GroupID, payload.UserID, payload.MessageID, msg); err != nil {
 					log.With(task).Errorf("update chat message failed: %s", err)
