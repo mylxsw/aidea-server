@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -141,17 +142,15 @@ func BuildSignupHandler(rep *repo.Repository, mailer *mail.Sender, ding *dingdin
 		if payload.InviteCode != "" {
 			inviteByUser, err := rep.User.GetUserByInviteCode(ctx, payload.InviteCode)
 			if err != nil {
-				if err != repo.ErrNotFound {
+				if !errors.Is(err, repo.ErrNotFound) {
 					log.With(payload).Errorf("通过邀请码查询用户失败: %s", err)
 				}
 			} else {
 				if err := rep.User.UpdateUserInviteBy(ctx, eventPayload.UserID, inviteByUser.Id); err != nil {
 					log.WithFields(log.Fields{"user_id": eventPayload.UserID, "invited_by": inviteByUser.Id}).Errorf("更新用户邀请信息失败: %s", err)
 				} else {
-					if eventPayload.From == repo.UserCreatedEventSourcePhone {
-						// 为邀请人和被邀请人分配智慧果
-						inviteGiftHandler(ctx, rep.Quota, eventPayload.UserID, inviteByUser.Id)
-					}
+					// 为邀请人和被邀请人分配智慧果
+					inviteGiftHandler(ctx, rep.Quota, eventPayload.UserID, inviteByUser.Id)
 				}
 			}
 		}

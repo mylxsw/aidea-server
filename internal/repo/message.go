@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"github.com/mylxsw/aidea-server/internal/helper"
 	"time"
 
 	"github.com/mylxsw/aidea-server/internal/repo/model"
@@ -82,7 +83,7 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error)
 
 			_, err = model.NewRoomsModel(r.db).Update(ctx, q, model.RoomsN{
 				LastActiveTime: null.TimeFrom(time.Now()),
-				Description:    null.StringFrom(req.Message),
+				Description:    null.StringFrom(helper.WordTruncate(req.Message, 80)),
 			})
 		}
 
