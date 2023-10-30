@@ -88,6 +88,17 @@ https://aidea.aicode.cc
 go build -o build/debug/aidea-server cmd/main.go
 ```
 
+## APP 预览图
+
+亮色系
+
+![image](https://github.com/mylxsw/aidea-server/assets/2330911/9c9e878c-67ab-43d6-a9d0-84faf9a6a511)
+
+暗色系
+
+![image](https://github.com/mylxsw/aidea-server/assets/2330911/9e5cc989-4ef5-496b-ab4d-7b9d29793ce3)
+
+
 ## Star History
 
 <a href="https://star-history.com/#mylxsw/aidea-server">
