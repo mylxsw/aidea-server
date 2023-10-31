@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gorilla/websocket"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/mylxsw/aidea-server/internal/rate"
@@ -366,7 +367,30 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 	stream, err := ctl.chat.ChatStream(chatCtx, req)
 	if err != nil {
-		log.Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
+		// 更新问题为失败状态
+		if questionID > 0 {
+			if err := ctl.messageRepo.UpdateMessageStatus(ctx, questionID, repo.MessageUpdateReq{
+				Status: repo.MessageStatusFailed,
+				Error:  err.Error(),
+			}); err != nil {
+				log.WithFields(log.Fields{
+					"question_id": questionID,
+					"error":       err,
+				}).Errorf("update message status failed: %s", err)
+			}
+		}
+
+		// 内容违反内容安全策略
+		if errors.Is(err, chat.ErrContentFilter) {
+			ctl.sendViolateContentPolicyResp(req, wsConn, w)
+			return
+		}
+
+		log.WithFields(log.Fields{
+			"req":  req,
+			"user": user,
+		}).Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
+
 		if req.WebSocket {
 			wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: common.Text(webCtx, ctl.translater, common.ErrInternalError)})
 		} else {
@@ -412,7 +436,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 
 		if chatErrorMessage != "" {
-			log.F(log.M{"req": req, "user": user}).Errorf("聊天失败：%s", chatErrorMessage)
+			log.F(log.M{"req": req, "user_id": user.ID}).Errorf("聊天失败，模型：%s，错误：%s", req.Model, chatErrorMessage)
 		}
 
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -581,53 +605,59 @@ func (ctl *OpenAIController) securityCheck(webCtx web.Context, req chat.Request,
 				"content": content,
 			}).Warningf("用户 %d 违规，违规内容：%s", user.ID, checkRes.Reason)
 
-			if req.WebSocket {
-				if err := wsConn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
-					`{"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
-					time.Now().Unix(),
-					strconv.Quote("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc"),
-				))); err != nil {
-					log.Warningf("write response failed: %v", err)
-				}
-
-			} else {
-				ctl.wrapRawResponse(w, func() {
-					w.Header().Set("Content-Type", "text/event-stream")
-					w.Header().Set("Cache-Control", "no-cache")
-					w.Header().Set("Connection", "keep-alive")
-				})
-
-				w.Write([]byte(fmt.Sprintf(
-					`data: {"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
-					time.Now().Unix(),
-					strconv.Quote("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc"),
-				)))
-
-				if f, ok := w.(http.Flusher); ok {
-					f.Flush()
-				}
-
-				w.Write([]byte(fmt.Sprintf(
-					`data: {"id":"chatxxx2","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}`+"\n\n",
-					time.Now().Unix(),
-				)))
-
-				if f, ok := w.(http.Flusher); ok {
-					f.Flush()
-				}
-
-				w.Write([]byte("data: [DONE]\n\n"))
-
-				if f, ok := w.(http.Flusher); ok {
-					f.Flush()
-				}
-			}
+			ctl.sendViolateContentPolicyResp(req, wsConn, w)
 
 			return true
 		}
 	}
 
 	return false
+}
+
+const violateContentPolicyMessage = "抱歉，您的请求因包含违规内容被系统拦截，如果您对此有任何疑问或想进一步了解详情，欢迎通过以下渠道与我们联系：\n\n服务邮箱：support@aicode.cc\n\n微博：@mylxsw\n\n客服微信：x-prometheus\n\n\n---\n\n> 本次请求不扣除智慧果。"
+
+func (ctl *OpenAIController) sendViolateContentPolicyResp(req chat.Request, wsConn *websocket.Conn, w http.ResponseWriter) {
+	if req.WebSocket {
+		if err := wsConn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf(
+			`{"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
+			time.Now().Unix(),
+			strconv.Quote(violateContentPolicyMessage),
+		))); err != nil {
+			log.Warningf("write response failed: %v", err)
+		}
+
+	} else {
+		ctl.wrapRawResponse(w, func() {
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Connection", "keep-alive")
+		})
+
+		w.Write([]byte(fmt.Sprintf(
+			`data: {"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
+			time.Now().Unix(),
+			strconv.Quote(violateContentPolicyMessage),
+		)))
+
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+
+		w.Write([]byte(fmt.Sprintf(
+			`data: {"id":"chatxxx2","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}`+"\n\n",
+			time.Now().Unix(),
+		)))
+
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+
+		w.Write([]byte("data: [DONE]\n\n"))
+
+		if f, ok := w.(http.Flusher); ok {
+			f.Flush()
+		}
+	}
 }
 
 // Images 图像生成接口，接口参数参考 https://platform.openai.com/docs/api-reference/images/create

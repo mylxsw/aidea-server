@@ -3,8 +3,9 @@ package repo
 import (
 	"context"
 	"database/sql"
-	"github.com/mylxsw/aidea-server/internal/helper"
 	"time"
+
+	"github.com/mylxsw/aidea-server/internal/helper"
 
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/eloquent"
@@ -90,4 +91,28 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error)
 		return err
 	})
 
+}
+
+type MessageUpdateReq struct {
+	Status int64
+	Error  string
+}
+
+func (r *MessageRepo) UpdateMessageStatus(ctx context.Context, id int64, req MessageUpdateReq) error {
+	kv := query.KV{}
+
+	if req.Status > 0 {
+		kv[model.FieldChatMessagesStatus] = req.Status
+	}
+
+	if req.Error != "" {
+		kv[model.FieldChatMessagesError] = req.Error
+	}
+
+	if len(kv) == 0 {
+		return nil
+	}
+
+	_, err := model.NewChatMessagesModel(r.db).UpdateFields(ctx, kv, query.Builder().Where(model.FieldChatMessagesId, id))
+	return err
 }

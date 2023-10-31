@@ -10,7 +10,6 @@ import (
 	"github.com/mylxsw/glacier/infra"
 
 	"github.com/mylxsw/aidea-server/api/controllers/common"
-	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/web"
 	"github.com/mylxsw/go-utils/array"
@@ -18,7 +17,6 @@ import (
 
 // ExampleController 用户提示语示例
 type ExampleController struct {
-	conf       *config.Config   `autowire:"@"`
 	promptRepo *repo.PromptRepo `autowire:"@"`
 }
 

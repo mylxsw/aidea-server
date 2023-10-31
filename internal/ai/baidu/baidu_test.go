@@ -1,6 +1,7 @@
 package baidu_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -36,6 +37,7 @@ func testBaiduAI_Chat(t *testing.T, model baidu.Model) {
 
 	client := baidu.NewBaiduAI(os.Getenv("BAIDU_WXQF_API_KEY"), os.Getenv("BAIDU_WXQF_SECRET"))
 	chatResp, err := client.Chat(
+		context.TODO(),
 		model,
 		baidu.ChatRequest{
 			Messages: messages,
@@ -64,6 +66,7 @@ func testBaiduAI_ChatStream(t *testing.T, model baidu.Model) {
 
 	client := baidu.NewBaiduAI(os.Getenv("BAIDU_WXQF_API_KEY"), os.Getenv("BAIDU_WXQF_SECRET"))
 	chatResp, err := client.ChatStream(
+		context.TODO(),
 		model,
 		baidu.ChatRequest{
 			Messages: messages,

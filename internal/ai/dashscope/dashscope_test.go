@@ -16,7 +16,7 @@ func createClient() *dashscope.DashScope {
 
 func TestDashScope_Chat(t *testing.T) {
 	client := createClient()
-	resp, err := client.Chat(dashscope.ChatRequest{
+	resp, err := client.Chat(context.TODO(), dashscope.ChatRequest{
 		Model: "qwen-plus",
 		Input: dashscope.ChatInput{
 			Prompt: "鲁迅为什么要暴打周树人呢",
@@ -29,7 +29,7 @@ func TestDashScope_Chat(t *testing.T) {
 
 func TestDashScope_ChatStream(t *testing.T) {
 	client := createClient()
-	resp, err := client.ChatStream(dashscope.ChatRequest{
+	resp, err := client.ChatStream(context.TODO(), dashscope.ChatRequest{
 		Model: "qwen-turbo",
 		Input: dashscope.ChatInput{
 			Prompt: "蓝牙耳机坏了去看牙科还是耳科呢",

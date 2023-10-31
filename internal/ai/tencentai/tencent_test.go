@@ -51,7 +51,7 @@ func TestTencentAI_ChatStream(t *testing.T) {
 		os.Getenv("TENCENTCLOUD_SECRET_KEY"),
 	)
 
-	resp, err := client.ChatStream(tencentai.NewRequest([]tencentai.Message{
+	resp, err := client.ChatStream(context.TODO(), tencentai.NewRequest([]tencentai.Message{
 		{
 			Role:    "user",
 			Content: "你是一名占卜师，我给你名字，你帮我占卜运势",

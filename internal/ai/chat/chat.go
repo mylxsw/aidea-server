@@ -3,6 +3,7 @@ package chat
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -19,6 +20,7 @@ import (
 
 var (
 	ErrContextExceedLimit = errors.New("上下文长度超过最大限制")
+	ErrContentFilter      = errors.New("请求或响应内容包含敏感词")
 )
 
 type Message struct {
@@ -75,6 +77,15 @@ type Request struct {
 	// 业务定制字段
 	RoomID    int64 `json:"-"`
 	WebSocket bool  `json:"-"`
+}
+
+func (req Request) assembleMessage() string {
+	var msgs []string
+	for _, msg := range req.Messages {
+		msgs = append(msgs, fmt.Sprintf("%s: %s", msg.Role, msg.Content))
+	}
+
+	return strings.Join(msgs, "\n\n")
 }
 
 type FixResult struct {

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	oai "github.com/mylxsw/aidea-server/internal/ai/openai"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
 	"github.com/sashabaranov/go-openai"
 )
@@ -68,6 +69,11 @@ func (chat *OpenAIChat) Chat(ctx context.Context, req Request) (*Response, error
 
 	res, err := chat.oai.CreateChatCompletion(ctx, *openaiReq)
 	if err != nil {
+		if strings.Contains(err.Error(), "content management policy") {
+			log.With(err).Errorf("违反 Azure OpenAI 内容管理策略")
+			return nil, ErrContentFilter
+		}
+
 		return nil, err
 	}
 
@@ -94,6 +100,16 @@ func (chat *OpenAIChat) ChatStream(ctx context.Context, req Request) (<-chan Res
 
 	stream, err := chat.oai.ChatStream(ctx, *openaiReq)
 	if err != nil {
+		if strings.Contains(err.Error(), "content management policy") {
+			log.WithFields(log.Fields{
+				"error":   err,
+				"message": req.assembleMessage(),
+				"model":   req.Model,
+				"room_id": req.RoomID,
+			}).Errorf("违反 Azure OpenAI 内容管理策略")
+			return nil, ErrContentFilter
+		}
+
 		return nil, err
 	}
 

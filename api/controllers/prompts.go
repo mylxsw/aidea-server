@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/mylxsw/aidea-server/api/controllers/common"
-	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/asteria/log"
@@ -16,7 +15,6 @@ import (
 
 // PromptController 提示语控制器
 type PromptController struct {
-	conf       *config.Config   `autowire:"@"`
 	promptRepo *repo.PromptRepo `autowire:"@"`
 }
 
