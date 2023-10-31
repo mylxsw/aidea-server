@@ -8,7 +8,7 @@ import (
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/service"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
@@ -77,7 +77,7 @@ func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 
 	var hasUpdate bool
 	if clientOS == "android" || clientOS == "macos" {
-		hasUpdate = helper.VersionNewer(CurrentVersion, clientVersion)
+		hasUpdate = misc.VersionNewer(CurrentVersion, clientVersion)
 	}
 
 	return ctx.JSON(web.M{

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/eloquent/query"
@@ -48,7 +48,7 @@ func (srv *GalleryService) Gallery(ctx context.Context, page, perPage int64) (*G
 	}
 
 	items = array.Map(items, func(item model.CreativeGallery, _ int) model.CreativeGallery {
-		item.Prompt = helper.SubString(item.Prompt, 100)
+		item.Prompt = misc.SubString(item.Prompt, 100)
 		return item
 	})
 

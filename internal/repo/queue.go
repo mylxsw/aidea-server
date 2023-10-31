@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/eloquent/query"
 	"gopkg.in/guregu/null.v3"
@@ -33,7 +33,7 @@ func NewQueueRepo(db *sql.DB, conf *config.Config) *QueueRepo {
 
 func (repo *QueueRepo) Add(ctx context.Context, uid int64, taskID, taskType, queueName string, title string, payload []byte) error {
 	_, err := model.NewQueueTasksModel(repo.db).Create(ctx, query.KV{
-		model.FieldQueueTasksTitle:     helper.SubString(title, 70),
+		model.FieldQueueTasksTitle:     misc.SubString(title, 70),
 		model.FieldQueueTasksUid:       uid,
 		model.FieldQueueTasksTaskId:    taskID,
 		model.FieldQueueTasksTaskType:  taskType,

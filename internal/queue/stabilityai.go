@@ -66,7 +66,7 @@ func NewStabilityAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeStabilityAICompletion, data)
 }
 
-func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
+func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload StabilityAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -249,7 +249,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 
 var stableDiffusionPrompt = `You are an artsy Stable Diffusion prompt assistant, and based on the theme I provided, you need to generate a prompt describing the image. Prompt consists of a series of comma-separated words or phrases, called tags. You can use parentheses and square brackets to adjust the strength of keywords. Prompt should include the main body of the picture, materials, additional details, image quality, art style, color tone and lighting, but should not contain paragraph descriptions, colons or periods. For human subjects, the eyes, nose, and lips must be described to avoid distortion of facial features. The number of Tags cannot exceed 40, and they must be arranged in order of importance from high to low. The number of words is limited to 60, and the prompt you reply must be in English.`
 
-func AIRewriteSDPrompt(ctx context.Context, oai *openai.OpenAI, userPrompt string) string {
+func AIRewriteSDPrompt(ctx context.Context, oai openai.Client, userPrompt string) string {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -311,7 +311,7 @@ type PromptArg struct {
 	NegativePrompt2 string `json:"negative_prompt,omitempty"`
 }
 
-func AIRewriteSDPromptEnhanced(ctx context.Context, oai *openai.OpenAI, userPrompt string) (string, string) {
+func AIRewriteSDPromptEnhanced(ctx context.Context, oai openai.Client, userPrompt string) (string, string) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 

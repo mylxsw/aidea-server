@@ -112,7 +112,7 @@ type LeapAIResponse interface {
 	GetImages() []string
 }
 
-func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
+func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload LeapAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {

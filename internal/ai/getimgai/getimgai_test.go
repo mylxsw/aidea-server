@@ -8,7 +8,7 @@ import (
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/assert"
 	"gopkg.in/resty.v1"
@@ -64,7 +64,7 @@ func TestTextToImage(t *testing.T) {
 }
 
 func TestImageToImage(t *testing.T) {
-	imageBase64, err := helper.ImageToRawBase64("/Users/mylxsw/Downloads/2b7d9a35-29c9-3cb4-94ea-9870e91d1928.png")
+	imageBase64, err := misc.ImageToRawBase64("/Users/mylxsw/Downloads/2b7d9a35-29c9-3cb4-94ea-9870e91d1928.png")
 	assert.NoError(t, err)
 
 	resp, err := createClient().ImageToImage(context.TODO(), getimgai.ImageToImageRequest{
@@ -80,7 +80,7 @@ func TestImageToImage(t *testing.T) {
 }
 
 func TestUpscale(t *testing.T) {
-	imageBase64, err := helper.ImageToRawBase64("/Users/mylxsw/Downloads/bedab99a-7f0a-0caa-be7e-b8fbccf4f54c.png")
+	imageBase64, err := misc.ImageToRawBase64("/Users/mylxsw/Downloads/bedab99a-7f0a-0caa-be7e-b8fbccf4f54c.png")
 	assert.NoError(t, err)
 
 	resp, err := createClient().Upscale(context.TODO(), getimgai.UpscaleRequest{

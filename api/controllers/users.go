@@ -20,7 +20,7 @@ import (
 	"github.com/mylxsw/aidea-server/api/controllers/common"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/queue"
 	"github.com/mylxsw/aidea-server/internal/rate"
 	"github.com/mylxsw/aidea-server/internal/repo"
@@ -414,7 +414,7 @@ func (ctl *UserController) CurrentUser(ctx context.Context, webCtx web.Context, 
 
 	user = auth.CreateAuthUserFromModel(u)
 	if user.Phone != "" {
-		user.Phone = helper.MaskPhoneNumber(user.Phone)
+		user.Phone = misc.MaskPhoneNumber(user.Phone)
 	}
 
 	return webCtx.JSON(web.M{

@@ -8,9 +8,7 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/mylxsw/aidea-server/config"
-
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/go-utils/array"
 	"github.com/pkoukk/tiktoken-go"
 	"github.com/sashabaranov/go-openai"
@@ -74,7 +72,7 @@ func ReduceChatCompletionMessages(messages []openai.ChatCompletionMessage, model
 func WordCountForChatCompletionMessages(messages []openai.ChatCompletionMessage) int64 {
 	var count int64
 	for _, msg := range messages {
-		count += helper.WordCount(msg.Content)
+		count += misc.WordCount(msg.Content)
 	}
 
 	return count
@@ -118,25 +116,25 @@ func NumTokensFromMessages(messages []openai.ChatCompletionMessage, model string
 	return numTokens, nil
 }
 
-type OpenAI struct {
-	conf    *config.Config
+type realClientImpl struct {
+	conf    *Config
 	clients []*openai.Client
 }
 
-func New(conf *config.Config, clients []*openai.Client) *OpenAI {
-	return &OpenAI{clients: clients, conf: conf}
+func New(conf *Config, clients []*openai.Client) Client {
+	return &realClientImpl{clients: clients, conf: conf}
 }
 
 // client 随机返回一个 OpenAI Client
-func (client *OpenAI) client(model string) *openai.Client {
+func (client *realClientImpl) client(model string) *openai.Client {
 	return client.clients[rand.Intn(len(client.clients))]
 }
 
-func (client *OpenAI) CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error) {
+func (client *realClientImpl) CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error) {
 	return client.client(request.Model).CreateChatCompletion(ctx, request)
 }
 
-func (client *OpenAI) CreateChatCompletionStream(ctx context.Context, request openai.ChatCompletionRequest) (stream *openai.ChatCompletionStream, err error) {
+func (client *realClientImpl) CreateChatCompletionStream(ctx context.Context, request openai.ChatCompletionRequest) (stream *openai.ChatCompletionStream, err error) {
 	return client.client(request.Model).CreateChatCompletionStream(ctx, request)
 }
 
@@ -146,7 +144,7 @@ type ChatStreamResponse struct {
 	ChatResponse *openai.ChatCompletionStreamResponse
 }
 
-func (client *OpenAI) ChatStream(ctx context.Context, request openai.ChatCompletionRequest) (<-chan ChatStreamResponse, error) {
+func (client *realClientImpl) ChatStream(ctx context.Context, request openai.ChatCompletionRequest) (<-chan ChatStreamResponse, error) {
 	stream, err := client.CreateChatCompletionStream(ctx, request)
 	if err != nil {
 		return nil, err
@@ -185,16 +183,16 @@ func (client *OpenAI) ChatStream(ctx context.Context, request openai.ChatComplet
 	return res, nil
 }
 
-func (client *OpenAI) CreateImage(ctx context.Context, request openai.ImageRequest) (response openai.ImageResponse, err error) {
+func (client *realClientImpl) CreateImage(ctx context.Context, request openai.ImageRequest) (response openai.ImageResponse, err error) {
 	return client.client("dall-e").CreateImage(ctx, request)
 }
 
-func (client *OpenAI) CreateTranscription(ctx context.Context, request openai.AudioRequest) (response openai.AudioResponse, err error) {
+func (client *realClientImpl) CreateTranscription(ctx context.Context, request openai.AudioRequest) (response openai.AudioResponse, err error) {
 	return client.client("audio").CreateTranscription(ctx, request)
 }
 
-func (client *OpenAI) QuickAsk(ctx context.Context, prompt string, question string, maxTokenCount int) (string, error) {
-	if client.conf != nil && !client.conf.EnableOpenAI {
+func (client *realClientImpl) QuickAsk(ctx context.Context, prompt string, question string, maxTokenCount int) (string, error) {
+	if client.conf != nil && !client.conf.Enable {
 		return question, nil
 	}
 

@@ -111,7 +111,7 @@ func BuildDashscopeImageCompletionHandler(
 	up *uploader.Uploader,
 	rep *repo.Repository,
 	translator youdao.Translater,
-	oai *openai.OpenAI,
+	oai openai.Client,
 ) TaskHandler {
 
 	return func(ctx context.Context, task *asynq.Task) (err error) {

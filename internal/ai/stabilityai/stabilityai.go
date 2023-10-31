@@ -17,7 +17,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
@@ -258,7 +258,7 @@ func (ai *StabilityAI) TextToImage(model string, param TextToImageRequest) (*Tex
 
 	log.Debugf("request data: %s", string(reqData))
 
-	client := helper.RestyClient(2).R().
+	client := misc.RestyClient(2).R().
 		SetHeader("Authorization", "Bearer "+ai.conf.StabilityAIKey).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json")

@@ -18,7 +18,7 @@ import (
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/api/controllers/common"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/queue"
 	"github.com/mylxsw/aidea-server/internal/rate"
 	"github.com/mylxsw/aidea-server/internal/repo"
@@ -1071,7 +1071,7 @@ func appleSignIn(
 // buildUserLoginRes 构建用户登录响应
 func buildUserLoginRes(user *model.Users, isSignup bool, tk *token.Token) web.M {
 	if user.Phone != "" {
-		user.Phone = helper.MaskPhoneNumber(user.Phone)
+		user.Phone = misc.MaskPhoneNumber(user.Phone)
 	}
 
 	return web.M{

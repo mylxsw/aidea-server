@@ -11,10 +11,10 @@ import (
 )
 
 type OpenAIChat struct {
-	oai *oai.OpenAI
+	oai oai.Client
 }
 
-func NewOpenAIChat(oai *oai.OpenAI) *OpenAIChat {
+func NewOpenAIChat(oai oai.Client) *OpenAIChat {
 	return &OpenAIChat{oai: oai}
 }
 

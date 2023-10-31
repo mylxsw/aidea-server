@@ -9,7 +9,7 @@ import (
 	"github.com/mylxsw/aidea-server/api/controllers/common"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
@@ -48,7 +48,7 @@ func (ctl *TranslateController) translate(ctx context.Context, webCtx web.Contex
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	quotaConsumed := coins.GetTranslateCoins("youdao", helper.WordCount(text))
+	quotaConsumed := coins.GetTranslateCoins("youdao", misc.WordCount(text))
 	if quota.Quota < quota.Used+quotaConsumed {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}

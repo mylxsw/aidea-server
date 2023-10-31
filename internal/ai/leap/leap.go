@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/uploader"
@@ -44,7 +44,7 @@ type LeapAI struct {
 
 func NewLeapAI(resolver infra.Resolver, conf *config.Config) *LeapAI {
 	client := &http.Client{Timeout: 180 * time.Second}
-	restyClient := helper.RestyClient(2).SetTimeout(180 * time.Second)
+	restyClient := misc.RestyClient(2).SetTimeout(180 * time.Second)
 
 	if conf.Socks5Proxy != "" && conf.LeapAIAutoProxy {
 		resolver.MustResolve(func(dialer proxy.Dialer) {

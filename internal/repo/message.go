@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/eloquent"
@@ -84,7 +84,7 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error)
 
 			_, err = model.NewRoomsModel(r.db).Update(ctx, q, model.RoomsN{
 				LastActiveTime: null.TimeFrom(time.Now()),
-				Description:    null.StringFrom(helper.WordTruncate(req.Message, 80)),
+				Description:    null.StringFrom(misc.WordTruncate(req.Message, 80)),
 			})
 		}
 

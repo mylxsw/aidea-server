@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/eloquent"
@@ -127,7 +127,7 @@ func (ext CreativeIslandExt) Init() CreativeIslandExt {
 		}
 
 		if size.AspectRatio == "" {
-			size.AspectRatio = helper.ResolveAspectRatio(size.Width, size.Height)
+			size.AspectRatio = misc.ResolveAspectRatio(size.Width, size.Height)
 		}
 
 		return size
@@ -540,7 +540,7 @@ func (r *CreativeRepo) HistoryRecordPaginate(ctx context.Context, userId int64, 
 	ret := array.Map(items, func(item model.CreativeHistoryN, _ int) CreativeHistoryItem {
 		answer := item.Answer.ValueOrZero()
 		if item.IslandType.ValueOrZero() == int64(IslandTypeText) {
-			answer = helper.SubString(answer, 100)
+			answer = misc.SubString(answer, 100)
 		}
 
 		return CreativeHistoryItem{
@@ -549,7 +549,7 @@ func (r *CreativeRepo) HistoryRecordPaginate(ctx context.Context, userId int64, 
 			IslandType:  item.IslandType.ValueOrZero(),
 			IslandModel: item.IslandModel.ValueOrZero(),
 			Arguments:   item.Arguments.ValueOrZero(),
-			Prompt:      helper.SubString(item.Prompt.ValueOrZero(), 100),
+			Prompt:      misc.SubString(item.Prompt.ValueOrZero(), 100),
 			Answer:      answer,
 			QuotaUsed:   item.QuotaUsed.ValueOrZero(),
 			Status:      item.Status.ValueOrZero(),

@@ -57,7 +57,7 @@ func NewDeepAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeDeepAICompletion, data)
 }
 
-func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
+func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload DeepAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {

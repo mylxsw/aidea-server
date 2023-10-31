@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"net/http"
 	"os"
 	"strconv"
@@ -38,7 +39,7 @@ import (
 type OpenAIController struct {
 	conf        *config.Config
 	chat        chat.Chat                `autowire:"@"`
-	client      *openaiHelper.OpenAI     `autowire:"@"`
+	client      openaiHelper.Client      `autowire:"@"`
 	translater  youdao.Translater        `autowire:"@"`
 	tencent     *tencent.Tencent         `autowire:"@"`
 	messageRepo *repo.MessageRepo        `autowire:"@"`
@@ -96,12 +97,12 @@ func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web
 
 	tempPath := uploadedFile.GetTempFilename() + "." + uploadedFile.Extension()
 	if err := uploadedFile.Store(tempPath); err != nil {
-		uploadedFile.Delete()
+		misc.NoError(uploadedFile.Delete())
 		log.Errorf("store file failed: %s", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	defer os.Remove(tempPath)
+	defer misc.NoError(os.Remove(tempPath))
 
 	log.Debugf("upload file: %s", tempPath)
 
@@ -208,7 +209,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		if wsConn, err = ctl.upgrader.Upgrade(w, webCtx.Request().Raw(), corsHeaders); err != nil {
 			log.Errorf("upgrade websocket failed: %v", err)
 			ctl.wrapRawResponse(w, func() {
-				webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse()
+				misc.NoError(webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse())
 			})
 
 			return
@@ -219,13 +220,13 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		_, msg, err := wsConn.ReadMessage()
 		if err != nil {
 			log.Errorf("read websocket message failed: %v", err)
-			wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: err.Error()})
+			misc.NoError(wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: err.Error()}))
 			return
 		}
 
 		if err := json.Unmarshal(msg, &req); err != nil {
 			log.Errorf("unmarshal websocket message failed: %v", err)
-			wsConn.WriteJSON(WSError{Code: http.StatusBadRequest, Error: err.Error()})
+			misc.NoError(wsConn.WriteJSON(WSError{Code: http.StatusBadRequest, Error: err.Error()}))
 			return
 		}
 
@@ -233,7 +234,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	} else {
 		if err := webCtx.Unmarshal(&req); err != nil {
 			ctl.wrapRawResponse(w, func() {
-				webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest).CreateResponse()
+				misc.NoError(webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest).CreateResponse())
 			})
 			return
 		}
@@ -260,10 +261,10 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	fixRes, err := req.Fix(ctl.chat, maxContextLength)
 	if err != nil {
 		if req.WebSocket {
-			wsConn.WriteJSON(WSError{Code: http.StatusBadRequest, Error: err.Error()})
+			misc.NoError(wsConn.WriteJSON(WSError{Code: http.StatusBadRequest, Error: err.Error()}))
 		} else {
 			ctl.wrapRawResponse(w, func() {
-				webCtx.JSONError(err.Error(), http.StatusBadRequest).CreateResponse()
+				misc.NoError(webCtx.JSONError(err.Error(), http.StatusBadRequest).CreateResponse())
 			})
 		}
 
@@ -277,10 +278,10 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		if err := ctl.limiter.Allow(ctx, fmt.Sprintf("chat-limit:u:%d:m:%s:minute", user.ID, req.Model), redis_rate.PerMinute(5)); err != nil {
 			if errors.Is(err, rate.ErrRateLimitExceeded) {
 				if req.WebSocket {
-					wsConn.WriteJSON(WSError{Code: http.StatusBadRequest, Error: common.Text(webCtx, ctl.translater, "操作频率过高，请稍后再试")})
+					misc.NoError(wsConn.WriteJSON(WSError{Code: http.StatusBadRequest, Error: common.Text(webCtx, ctl.translater, "操作频率过高，请稍后再试")}))
 				} else {
 					ctl.wrapRawResponse(w, func() {
-						webCtx.JSONError(common.Text(webCtx, ctl.translater, "操作频率过高，请稍后再试"), http.StatusBadRequest).CreateResponse()
+						misc.NoError(webCtx.JSONError(common.Text(webCtx, ctl.translater, "操作频率过高，请稍后再试"), http.StatusBadRequest).CreateResponse())
 					})
 				}
 				return
@@ -299,10 +300,10 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		if err != nil {
 			log.Errorf("get user quota failed: %s", err)
 			if req.WebSocket {
-				wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: common.Text(webCtx, ctl.translater, common.ErrInternalError)})
+				misc.NoError(wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: common.Text(webCtx, ctl.translater, common.ErrInternalError)}))
 			} else {
 				ctl.wrapRawResponse(w, func() {
-					webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError).CreateResponse()
+					misc.NoError(webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError).CreateResponse())
 				})
 			}
 			return
@@ -314,20 +315,20 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		if restQuota < 0 {
 			if maxFreeCount > 0 {
 				if req.WebSocket {
-					wsConn.WriteJSON(WSError{Code: http.StatusPaymentRequired, Error: common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试")})
+					misc.NoError(wsConn.WriteJSON(WSError{Code: http.StatusPaymentRequired, Error: common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试")}))
 				} else {
 					ctl.wrapRawResponse(w, func() {
-						webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试"), http.StatusPaymentRequired).CreateResponse()
+						misc.NoError(webCtx.JSONError(common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试"), http.StatusPaymentRequired).CreateResponse())
 					})
 				}
 				return
 			}
 
 			if req.WebSocket {
-				wsConn.WriteJSON(WSError{Code: http.StatusPaymentRequired, Error: common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough)})
+				misc.NoError(wsConn.WriteJSON(WSError{Code: http.StatusPaymentRequired, Error: common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough)}))
 			} else {
 				ctl.wrapRawResponse(w, func() {
-					webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse()
+					misc.NoError(webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired).CreateResponse())
 				})
 			}
 			return
@@ -335,7 +336,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 
 	// 内容安全检测
-	shouldReturn := ctl.securityCheck(webCtx, req, user, w, wsConn)
+	shouldReturn := ctl.securityCheck(req, user, w, wsConn)
 	if shouldReturn {
 		return
 	}
@@ -392,10 +393,10 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}).Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
 
 		if req.WebSocket {
-			wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: common.Text(webCtx, ctl.translater, common.ErrInternalError)})
+			misc.NoError(wsConn.WriteJSON(WSError{Code: http.StatusInternalServerError, Error: common.Text(webCtx, ctl.translater, common.ErrInternalError)}))
 		} else {
 			ctl.wrapRawResponse(w, func() {
-				webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse()
+				misc.NoError(webCtx.JSONError(err.Error(), http.StatusInternalServerError).CreateResponse())
 			})
 		}
 		return
@@ -527,12 +528,12 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}()
 
 	// 生成 SSE 流
-	timer := time.NewTimer(15 * time.Second)
+	timer := time.NewTimer(30 * time.Second)
 	defer timer.Stop()
 
 	id := 0
 	for {
-		timer.Reset(15 * time.Second)
+		timer.Reset(30 * time.Second)
 
 		select {
 		case <-timer.C:
@@ -547,8 +548,18 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			id++
 
 			if res.ErrorCode != "" {
-				log.With(req).Errorf("chat error: %v", res)
-				return
+				log.WithFields(log.Fields{
+					"req":     req,
+					"user_id": user.ID,
+				}).Errorf("chat error: %v", res)
+
+				if res.Error != "" {
+					res.Text = fmt.Sprintf("\n\n---\n抱歉，我们遇到了一些错误，以下是错误详情：\n%s\n", res.Error)
+				} else {
+					return
+				}
+			} else {
+				replyText += res.Text
 			}
 
 			resp := openai.ChatCompletionStreamResponse{
@@ -564,8 +575,6 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 					},
 				},
 			}
-
-			replyText += res.Text
 
 			if req.WebSocket {
 				err := wsConn.WriteJSON(resp)
@@ -594,7 +603,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 }
 
 // 内容安全检测
-func (ctl *OpenAIController) securityCheck(webCtx web.Context, req chat.Request, user *auth.User, w http.ResponseWriter, wsConn *websocket.Conn) bool {
+func (ctl *OpenAIController) securityCheck(req chat.Request, user *auth.User, w http.ResponseWriter, wsConn *websocket.Conn) bool {
 	// content := strings.Join(array.Map(req.Messages, func(msg openai.ChatCompletionMessage, _ int) string { return msg.Content }), "\n")
 	content := req.Messages[len(req.Messages)-1].Content
 	if checkRes := ctl.securitySrv.ChatDetect(content); checkRes != nil {
@@ -633,26 +642,26 @@ func (ctl *OpenAIController) sendViolateContentPolicyResp(req chat.Request, wsCo
 			w.Header().Set("Connection", "keep-alive")
 		})
 
-		w.Write([]byte(fmt.Sprintf(
+		misc.NoError2(w.Write([]byte(fmt.Sprintf(
 			`data: {"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
 			time.Now().Unix(),
 			strconv.Quote(violateContentPolicyMessage),
-		)))
+		))))
 
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()
 		}
 
-		w.Write([]byte(fmt.Sprintf(
+		misc.NoError2(w.Write([]byte(fmt.Sprintf(
 			`data: {"id":"chatxxx2","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}`+"\n\n",
 			time.Now().Unix(),
-		)))
+		))))
 
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()
 		}
 
-		w.Write([]byte("data: [DONE]\n\n"))
+		misc.NoError2(w.Write([]byte("data: [DONE]\n\n")))
 
 		if f, ok := w.(http.Flusher); ok {
 			f.Flush()

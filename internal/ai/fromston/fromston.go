@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/uploader"
 	"gopkg.in/resty.v1"
 )
@@ -19,7 +19,7 @@ type Fromston struct {
 }
 
 func NewFromston(conf *config.Config) *Fromston {
-	client := helper.RestyClient(2).SetTimeout(180 * time.Second)
+	client := misc.RestyClient(2).SetTimeout(180 * time.Second)
 	return &Fromston{conf: conf, resty: client}
 }
 

@@ -15,7 +15,7 @@ import (
 	"github.com/mylxsw/go-utils/ternary"
 
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/queue"
 	"github.com/mylxsw/aidea-server/internal/service"
 	"github.com/mylxsw/aidea-server/internal/uploader"
@@ -110,7 +110,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 		},
 	}
 
-	if client != nil && helper.VersionNewer(client.Version, "1.0.2") && ctl.conf.EnableDeepAI {
+	if client != nil && misc.VersionNewer(client.Version, "1.0.2") && ctl.conf.EnableDeepAI {
 		items = append(items, CreativeIslandItem{
 			ID:           "image-upscale",
 			Title:        "高清修复",
@@ -517,7 +517,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 	}
 
 	negativePrompt := strings.ReplaceAll(strings.TrimSpace(webCtx.Input("negative_prompt")), "，", ",")
-	if helper.WordCount(negativePrompt) > 1000 {
+	if misc.WordCount(negativePrompt) > 1000 {
 		return nil, webCtx.JSONError(fmt.Sprintf("排除内容输入字数不能超过 %d", 1000), http.StatusBadRequest)
 	}
 
@@ -609,7 +609,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 	}
 
 	// TODO 临时处理：0.5 效果不明显，但是客户端默认为 0.5，需要客户端同步调整
-	if imageStrength == 0.5 && helper.VersionOlder(client.Version, "1.0.7") {
+	if imageStrength == 0.5 && misc.VersionOlder(client.Version, "1.0.7") {
 		imageStrength = 0.65
 	}
 

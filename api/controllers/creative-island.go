@@ -12,7 +12,7 @@ import (
 
 	openaiHelper "github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/queue"
 	"github.com/mylxsw/aidea-server/internal/service"
 	"github.com/mylxsw/aidea-server/internal/youdao"
@@ -240,11 +240,11 @@ func (ctl *CreativeIslandController) List(ctx context.Context, webCtx web.Contex
 			return true
 		}
 
-		if item.VersionMin != "" && helper.VersionOlder(client.Version, item.VersionMin) {
+		if item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
 			return false
 		}
 
-		if item.VersionMax != "" && helper.VersionNewer(client.Version, item.VersionMax) {
+		if item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
 			return false
 		}
 
@@ -404,7 +404,7 @@ func (ctl *CreativeIslandController) completionsDeepAI(ctx context.Context, webC
 		}
 	}
 
-	if helper.WordCount(prompt) > item.WordCount {
+	if misc.WordCount(prompt) > item.WordCount {
 		return webCtx.JSONError(fmt.Sprintf("创作内容输入字数不能超过 %d", item.WordCount), http.StatusBadRequest)
 	}
 
@@ -414,7 +414,7 @@ func (ctl *CreativeIslandController) completionsDeepAI(ctx context.Context, webC
 		stylePreset = "text2img"
 	}
 
-	if helper.WordCount(negativePrompt) > 500 {
+	if misc.WordCount(negativePrompt) > 500 {
 		return webCtx.JSONError(fmt.Sprintf("排除内容输入字数不能超过 %d", 500), http.StatusBadRequest)
 	}
 
@@ -508,12 +508,12 @@ func (ctl *CreativeIslandController) completionsStabilityAI(ctx context.Context,
 		}
 	}
 
-	if helper.WordCount(prompt) > item.WordCount {
+	if misc.WordCount(prompt) > item.WordCount {
 		return webCtx.JSONError(fmt.Sprintf("创作内容输入字数不能超过 %d", item.WordCount), http.StatusBadRequest)
 	}
 
 	negativePrompt := strings.ReplaceAll(strings.TrimSpace(webCtx.Input("negative_prompt")), "，", ",")
-	if helper.WordCount(negativePrompt) > 500 {
+	if misc.WordCount(negativePrompt) > 500 {
 		return webCtx.JSONError(fmt.Sprintf("排除内容输入字数不能超过 %d", 500), http.StatusBadRequest)
 	}
 
@@ -646,12 +646,12 @@ func (ctl *CreativeIslandController) completionsLeapAI(ctx context.Context, webC
 		}
 	}
 
-	if helper.WordCount(prompt) > item.WordCount {
+	if misc.WordCount(prompt) > item.WordCount {
 		return webCtx.JSONError(fmt.Sprintf("创作内容输入字数不能超过 %d", item.WordCount), http.StatusBadRequest)
 	}
 
 	negativePrompt := strings.ReplaceAll(strings.TrimSpace(webCtx.Input("negative_prompt")), "，", ",")
-	if helper.WordCount(negativePrompt) > 500 {
+	if misc.WordCount(negativePrompt) > 500 {
 		return webCtx.JSONError(fmt.Sprintf("排除内容输入字数不能超过 %d", 500), http.StatusBadRequest)
 	}
 
@@ -813,7 +813,7 @@ func (ctl *CreativeIslandController) completionsOpenAI(ctx context.Context, webC
 		}
 	}
 
-	if helper.WordCount(prompt) > item.WordCount {
+	if misc.WordCount(prompt) > item.WordCount {
 		return webCtx.JSONError(fmt.Sprintf("创作内容输入字数不能超过 %d", item.WordCount), http.StatusBadRequest)
 	}
 

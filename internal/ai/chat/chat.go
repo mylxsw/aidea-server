@@ -315,6 +315,17 @@ func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
 }
 
 func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
+	// TODO 这里是临时解决方案
+	// 使用微软的 Azure OpenAI 接口时，聊天内容只有“继续”两个字时，会触发风控，导致无法继续对话
+	req.Messages = array.Map(req.Messages, func(item Message, _ int) Message {
+		content := strings.TrimSpace(item.Content)
+		if content == "继续" {
+			item.Content = "请接着说"
+		}
+
+		return item
+	})
+
 	return ai.selectImp(req.Model).ChatStream(ctx, req)
 }
 

@@ -96,6 +96,22 @@ func main() {
 	ins.AddStringSliceFlag("openai-servers", []string{"https://api.openai.com/v1"}, "OpenAI 服务地址，配置多个时会自动在多个服务之间平衡负载，不要忘记在在 URL 后面添加 /v1")
 	ins.AddStringSliceFlag("openai-keys", []string{}, "OpenAI Keys，如果指定多个，会在多个服务之间平衡负载")
 
+	//EnableFallbackOpenAI:       ctx.Bool("enable-fallback-openai"),
+	//	FallbackOpenAIAzure:        ctx.Bool("fallback-openai-azure"),
+	//		FallbackOpenAIServers:      ctx.StringSlice("fallback-openai-servers"),
+	//		FallbackOpenAIKeys:         ctx.StringSlice("fallback-openai-keys"),
+	//		FallbackOpenAIOrganization: ctx.String("fallback-openai-organization"),
+	//		FallbackOpenAIAPIVersion:   ctx.String("fallback-openai-apiversion"),
+	//		FallbackOpenAIAutoProxy:    ctx.Bool("fallback-openai-autoproxy"),
+
+	ins.AddBoolFlag("enable-fallback-openai", "是否启用备用 OpenAI 服务")
+	ins.AddBoolFlag("fallback-openai-azure", "使用 Azure 的 OpenAI 服务")
+	ins.AddStringFlag("fallback-openai-apiversion", "2023-05-15", "required when fallback-openai-azure is true")
+	ins.AddBoolFlag("fallback-openai-autoproxy", "使用 Socks5 代理访问 OpenAI 服务")
+	ins.AddStringFlag("fallback-openai-organization", "", "openai organization")
+	ins.AddStringSliceFlag("fallback-openai-servers", []string{"https://api.openai.com/v1"}, "OpenAI 服务地址，配置多个时会自动在多个服务之间平衡负载，不要忘记在在 URL 后面添加 /v1")
+	ins.AddStringSliceFlag("fallback-openai-keys", []string{}, "OpenAI Keys，如果指定多个，会在多个服务之间平衡负载")
+
 	ins.AddBoolFlag("enable-anthropic", "是否启用 Anthropic")
 	ins.AddBoolFlag("anthropic-autoproxy", "使用 socks5 代理访问 Anthropic 服务")
 	ins.AddStringFlag("anthropic-server", "https://api.anthropic.com", "anthropic server")

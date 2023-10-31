@@ -16,34 +16,47 @@ import (
 type Provider struct{}
 
 func (Provider) Register(binder infra.Binder) {
-	binder.MustSingleton(func(conf *config.Config, resolver infra.Resolver) *OpenAI {
+	binder.MustSingleton(func(conf *config.Config, resolver infra.Resolver) Client {
 		var proxyDialer proxy.Dialer
-		if conf.Socks5Proxy != "" && conf.OpenAIAutoProxy {
+		if conf.Socks5Proxy != "" {
 			resolver.MustResolve(func(dialer proxy.Dialer) {
 				proxyDialer = dialer
 			})
 		}
 
-		clients := make([]*openai.Client, 0)
-
-		// 如果是 Azure API，则每一个 Server 对应一个 Key
-		// 否则 Servers 和 Keys 取笛卡尔积
-		if conf.OpenAIAzure {
-			for i, server := range conf.OpenAIServers {
-				clients = append(clients, createOpenAIClient(true, conf.OpenAIAPIVersion, server, "", conf.OpenAIKeys[i], proxyDialer))
-			}
-		} else {
-			for _, server := range conf.OpenAIServers {
-				for _, key := range conf.OpenAIKeys {
-					clients = append(clients, createOpenAIClient(false, "", server, conf.OpenAIOrganization, key, proxyDialer))
-				}
-			}
+		var mainClient, backupClient Client
+		if conf.EnableOpenAI {
+			mainClient = NewOpenAIClient(parseMainConfig(conf), proxyDialer)
 		}
 
-		log.Debugf("create %d openai clients", len(clients))
+		if conf.EnableFallbackOpenAI {
+			backupClient = NewOpenAIClient(parseBackupConfig(conf), proxyDialer)
+		}
 
-		return New(conf, clients)
+		return NewOpenAIProxy(mainClient, backupClient)
 	})
+}
+
+func NewOpenAIClient(conf *Config, dialer proxy.Dialer) Client {
+	clients := make([]*openai.Client, 0)
+
+	// 如果是 Azure API，则每一个 Server 对应一个 Key
+	// 否则 Servers 和 Keys 取笛卡尔积
+	if conf.OpenAIAzure {
+		for i, server := range conf.OpenAIServers {
+			clients = append(clients, createOpenAIClient(true, conf.OpenAIAPIVersion, server, "", conf.OpenAIKeys[i], dialer))
+		}
+	} else {
+		for _, server := range conf.OpenAIServers {
+			for _, key := range conf.OpenAIKeys {
+				clients = append(clients, createOpenAIClient(false, "", server, conf.OpenAIOrganization, key, dialer))
+			}
+		}
+	}
+
+	log.Debugf("create %d openai clients", len(clients))
+
+	return New(conf, clients)
 }
 
 func createOpenAIClient(isAzure bool, apiVersion string, server, organization, key string, proxy proxy.Dialer) *openai.Client {
@@ -56,7 +69,7 @@ func createOpenAIClient(isAzure bool, apiVersion string, server, organization, k
 	} else {
 		openaiConf.HTTPClient.Transport = &http.Transport{
 			DialContext: (&net.Dialer{
-				Timeout: 15 * time.Second,
+				Timeout: 120 * time.Second,
 			}).DialContext,
 		}
 	}

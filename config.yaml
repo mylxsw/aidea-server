@@ -67,6 +67,25 @@ openai-keys: [ "sk-xxxxxxxxxxxxxxxx" ]
 #openai-servers: ["https://xxxx.openai.azure.com"]
 #openai-keys: ["xxxxxxxxxxxxxxxxxxxxxxx"]
 
+######## OpenAI 备用配置 ########
+# 当主 OpenAI 访问遇到一些问题时，切换备用配置继续尝试
+# 目前支持的切换问题为：内容风控
+
+# 是否启用备用 OpenAI 服务
+enable-fallback-openai: false
+# 是否使用备用的 Azure 的 OpenAI 服务
+fallback-openai-azure: false
+# Azure OpenAI 服务版本
+fallback-openai-apiversion: "2023-05-15"
+# 是否使用 Socks5 代理访问 OpenAI 服务
+fallback-openai-autoproxy: false
+# OpenAI 服务配置
+fallback-openai-organization: ""
+# 备用的 OpenAI 服务器地址，配置多个时会自动在多个服务之间平衡负载，不要忘记在在 URL 后面添加 /v1
+fallback-openai-servers: ["https://api.openai.com/v1"]
+# 备用的 OpenAI Keys，如果指定多个，会在多个服务之间平衡负载
+fallback-openai-keys: [""]
+
 ######## Anthropic #######
 
 # API 申请：https://www.anthropic.com/

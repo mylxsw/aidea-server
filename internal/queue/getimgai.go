@@ -15,7 +15,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
 	"github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/aidea-server/internal/youdao"
@@ -69,7 +69,7 @@ func NewGetimgAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeGetimgAICompletion, data)
 }
 
-func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
+func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload GetimgAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -121,7 +121,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 				panic(err)
 			}
 
-			localImageBase64, err = helper.ImageToRawBase64(imagePath)
+			localImageBase64, err = misc.ImageToRawBase64(imagePath)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"payload": payload,
@@ -276,7 +276,7 @@ type PromptResolverPayload struct {
 	Model          string
 }
 
-func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creativeRepo *repo.CreativeRepo, oai *openai.OpenAI, translator youdao.Translater) (string, string, bool) {
+func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creativeRepo *repo.CreativeRepo, oai openai.Client, translator youdao.Translater) (string, string, bool) {
 	prompt := payload.Prompt
 	negativePrompt := payload.NegativePrompt
 
@@ -325,7 +325,7 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 	}
 
 	if translator != nil {
-		if helper.IsChinese(prompt) {
+		if misc.IsChinese(prompt) {
 			translateRes, err := translator.Translate(ctx, youdao.LanguageAuto, youdao.LanguageEnglish, prompt)
 			if err != nil {
 				log.With(payload).Errorf("translate failed: %v", err)
@@ -334,7 +334,7 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 			}
 		}
 
-		if strings.TrimSpace(negativePrompt) != "" && helper.IsChinese(negativePrompt) {
+		if strings.TrimSpace(negativePrompt) != "" && misc.IsChinese(negativePrompt) {
 			translateRes, err := translator.Translate(ctx, youdao.LanguageAuto, youdao.LanguageEnglish, negativePrompt)
 			if err != nil {
 				log.With(payload).Errorf("translate failed: %v", err)

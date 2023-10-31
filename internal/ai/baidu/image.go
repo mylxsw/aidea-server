@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/asteria/log"
 	"gopkg.in/resty.v1"
 	"io"
@@ -126,7 +126,7 @@ func (resp ImageResponse) WriteTo(target io.Writer) (int64, error) {
 
 // ImageStyleTrans 图像风格转换
 func (ai *BaiduImageAI) ImageStyleTrans(ctx context.Context, req ImageStyleTransRequest) (*ImageResponse, error) {
-	resp, err := helper.RestyClient(2).R().
+	resp, err := misc.RestyClient(2).R().
 		SetFormData(req.ToFormData()).
 		SetQueryParam("access_token", ai.getAccessToken()).
 		SetContext(ctx).
@@ -189,7 +189,7 @@ func (req SelfieAnimeRequest) ToFormData() map[string]string {
 
 // SelfieAnime 人像动漫化
 func (ai *BaiduImageAI) SelfieAnime(ctx context.Context, req SelfieAnimeRequest) (*ImageResponse, error) {
-	resp, err := helper.RestyClient(2).R().
+	resp, err := misc.RestyClient(2).R().
 		SetFormData(req.ToFormData()).
 		SetQueryParam("access_token", ai.getAccessToken()).
 		SetContext(ctx).
@@ -239,7 +239,7 @@ func (req SimpleImageRequest) ToFormData() map[string]string {
 
 // Colourize 照片上色
 func (ai *BaiduImageAI) Colourize(ctx context.Context, req SimpleImageRequest) (*ImageResponse, error) {
-	resp, err := helper.RestyClient(2).R().
+	resp, err := misc.RestyClient(2).R().
 		SetFormData(req.ToFormData()).
 		SetQueryParam("access_token", ai.getAccessToken()).
 		SetContext(ctx).
@@ -266,7 +266,7 @@ func (ai *BaiduImageAI) Colourize(ctx context.Context, req SimpleImageRequest) (
 
 // QualityEnhance 图像无损放大
 func (ai *BaiduImageAI) QualityEnhance(ctx context.Context, req SimpleImageRequest) (*ImageResponse, error) {
-	resp, err := helper.RestyClient(2).R().
+	resp, err := misc.RestyClient(2).R().
 		SetFormData(req.ToFormData()).
 		SetQueryParam("access_token", ai.getAccessToken()).
 		SetContext(ctx).

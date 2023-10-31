@@ -1,8 +1,9 @@
-package helper
+package misc
 
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/mylxsw/asteria/log"
 	"net/http"
 	"os"
 	"strconv"
@@ -200,4 +201,16 @@ func TodayRemainTimeSeconds() float64 {
 	now := time.Now()
 	endOfDay := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 0, now.Location())
 	return endOfDay.Sub(now).Seconds()
+}
+
+func NoError(err error) {
+	if err != nil {
+		log.Warningf("出错啦: %v", err)
+	}
+}
+
+func NoError2[T any](_ T, err error) {
+	if err != nil {
+		log.Warningf("出错啦: %v", err)
+	}
 }

@@ -44,6 +44,15 @@ type Config struct {
 	OpenAIServers      []string `json:"openai_servers" yaml:"openai_servers"`
 	OpenAIKeys         []string `json:"openai_keys" yaml:"openai_keys"`
 
+	// OpenAI Fallback 配置
+	EnableFallbackOpenAI       bool     `json:"enable_fallback_openai" yaml:"enable_fallback_openai"`
+	FallbackOpenAIAzure        bool     `json:"fallback_openai_azure" yaml:"fallback_openai_azure"`
+	FallbackOpenAIServers      []string `json:"fallback_openai_servers" yaml:"fallback_openai_servers"`
+	FallbackOpenAIKeys         []string `json:"fallback_openai_keys" yaml:"fallback_openai_keys"`
+	FallbackOpenAIOrganization string   `json:"fallback_openai_organization" yaml:"fallback_openai_organization"`
+	FallbackOpenAIAPIVersion   string   `json:"fallback_openai_api_version" yaml:"fallback_openai_api_version"`
+	FallbackOpenAIAutoProxy    bool     `json:"fallback_openai_auto_proxy" yaml:"fallback_openai_auto_proxy"`
+
 	// Anthropic 配置
 	EnableAnthropic    bool   `json:"enable_anthropic" yaml:"enable_anthropic"`
 	AnthropicAutoProxy bool   `json:"anthropic_auto_proxy" yaml:"anthropic_auto_proxy"`
@@ -268,6 +277,14 @@ func Register(ins *app.App) {
 			OpenAIOrganization: ctx.String("openai-organization"),
 			OpenAIServers:      ctx.StringSlice("openai-servers"),
 			OpenAIKeys:         ctx.StringSlice("openai-keys"),
+
+			EnableFallbackOpenAI:       ctx.Bool("enable-fallback-openai"),
+			FallbackOpenAIAzure:        ctx.Bool("fallback-openai-azure"),
+			FallbackOpenAIServers:      ctx.StringSlice("fallback-openai-servers"),
+			FallbackOpenAIKeys:         ctx.StringSlice("fallback-openai-keys"),
+			FallbackOpenAIOrganization: ctx.String("fallback-openai-organization"),
+			FallbackOpenAIAPIVersion:   ctx.String("fallback-openai-apiversion"),
+			FallbackOpenAIAutoProxy:    ctx.Bool("fallback-openai-autoproxy"),
 
 			EnableAnthropic:    ctx.Bool("enable-anthropic"),
 			AnthropicAutoProxy: ctx.Bool("anthropic-autoproxy"),

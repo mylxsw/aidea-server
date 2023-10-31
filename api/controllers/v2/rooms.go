@@ -8,7 +8,7 @@ import (
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/api/controllers/common"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
@@ -41,7 +41,7 @@ const RoomsQueryLimit = 100
 // Rooms 获取房间列表
 func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	roomTypes := []int{repo.RoomTypePreset, repo.RoomTypePresetCustom, repo.RoomTypeCustom}
-	if helper.VersionNewer(client.Version, "1.0.6") {
+	if misc.VersionNewer(client.Version, "1.0.6") {
 		roomTypes = append(roomTypes, repo.RoomTypeGroupChat)
 	}
 
@@ -107,11 +107,11 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 				return true
 			}
 
-			if item.VersionMin != "" && helper.VersionOlder(client.Version, item.VersionMin) {
+			if item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
 				return false
 			}
 
-			if item.VersionMax != "" && helper.VersionNewer(client.Version, item.VersionMax) {
+			if item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
 				return false
 			}
 

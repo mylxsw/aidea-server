@@ -11,7 +11,7 @@ import (
 	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/api/controllers/common"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/voice"
 	"github.com/mylxsw/aidea-server/internal/youdao"
@@ -49,7 +49,7 @@ func (ctl *VoiceController) Text2Voice(ctx context.Context, webCtx web.Context, 
 	style := webCtx.Int64Input("style", 7)
 
 	// 把 text 以 200 个字符为单位分割
-	segments := helper.TextSplit(text, 200)
+	segments := misc.TextSplit(text, 200)
 
 	// 优先检查缓存中是否存在之前生成的结果，每一段全部符合则返回，不再扣费
 	cachedResults := array.Filter(

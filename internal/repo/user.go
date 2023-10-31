@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/eloquent"
@@ -82,7 +82,7 @@ func (repo *UserRepo) UpdateUserInviteBy(ctx context.Context, userId int64, invi
 // GenerateInviteCode 为用户生成邀请码
 func (repo *UserRepo) GenerateInviteCode(ctx context.Context, userId int64) error {
 	_, err := model.NewUsersModel(repo.db).Update(ctx, query.Builder().Where(model.FieldUsersId, userId), model.UsersN{
-		InviteCode: null.StringFrom(helper.HashID(userId)),
+		InviteCode: null.StringFrom(misc.HashID(userId)),
 	})
 
 	return err

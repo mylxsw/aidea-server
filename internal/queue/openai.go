@@ -54,7 +54,7 @@ func NewOpenAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeOpenAICompletion, data)
 }
 
-func BuildOpenAICompletionHandler(client *oai.OpenAI, rep *repo.Repository) TaskHandler {
+func BuildOpenAICompletionHandler(client oai.Client, rep *repo.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload OpenAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {

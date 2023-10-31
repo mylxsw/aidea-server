@@ -19,7 +19,7 @@ type Provider struct{}
 func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(func(
 		conf *config.Config,
-		oai *openai.OpenAI,
+		oai openai.Client,
 		bai baidu.BaiduAI,
 		ds *dashscope.DashScope,
 		xf *xfyun.XFYunAI,

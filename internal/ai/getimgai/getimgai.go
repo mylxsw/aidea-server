@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/mylxsw/aidea-server/config"
@@ -27,7 +27,7 @@ type GetimgAI struct {
 }
 
 func NewGetimgAI(conf *config.Config, resolver infra.Resolver) *GetimgAI {
-	restyClient := helper.RestyClient(2).SetTimeout(180 * time.Second)
+	restyClient := misc.RestyClient(2).SetTimeout(180 * time.Second)
 
 	if conf.Socks5Proxy != "" && conf.GetimgAIAutoProxy {
 		resolver.MustResolve(func(dialer proxy.Dialer) {

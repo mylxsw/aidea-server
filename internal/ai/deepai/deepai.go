@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/glacier/infra"
@@ -113,7 +113,7 @@ type DeepAIImageGeneratorResponse struct {
 func (ai *DeepAI) Upscale(ctx context.Context, imageURL string) (*DeepAIImageGeneratorResponse, error) {
 	selectedServerURL := ai.lb()
 
-	resp, err := helper.RestyClient(2).R().
+	resp, err := misc.RestyClient(2).R().
 		SetFormData(map[string]string{"image": imageURL}).
 		SetHeader("api-key", ai.conf.DeepAIKey).
 		SetContext(ctx).
@@ -142,7 +142,7 @@ func (ai *DeepAI) Upscale(ctx context.Context, imageURL string) (*DeepAIImageGen
 // DrawColor 图片上色
 func (ai *DeepAI) DrawColor(ctx context.Context, imageURL string) (*DeepAIImageGeneratorResponse, error) {
 	selectedServerURL := ai.lb()
-	resp, err := helper.RestyClient(2).R().
+	resp, err := misc.RestyClient(2).R().
 		SetFormData(map[string]string{"image": imageURL}).
 		SetHeader("api-key", ai.conf.DeepAIKey).
 		SetContext(ctx).

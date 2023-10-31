@@ -2,7 +2,7 @@ package auth
 
 import (
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 )
 
 type ClientInfo struct {
@@ -32,5 +32,5 @@ func (inf ClientInfo) isCNLocalMode(conf *config.Config) bool {
 		return true
 	}
 
-	return inf.IsIOS() && helper.VersionNewer(inf.Version, "1.0.4")
+	return inf.IsIOS() && misc.VersionNewer(inf.Version, "1.0.4")
 }

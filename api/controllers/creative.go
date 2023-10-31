@@ -3,7 +3,7 @@ package controllers
 import (
 	"context"
 	"github.com/mylxsw/aidea-server/api/auth"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"net/http"
 	"strconv"
 
@@ -71,7 +71,7 @@ func (ctl *CreativeController) GalleryItem(ctx context.Context, webCtx web.Conte
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	if helper.VersionNewer(client.Version, "1.0.6") {
+	if misc.VersionNewer(client.Version, "1.0.6") {
 		return webCtx.JSON(web.M{
 			"data":             item,
 			"is_internal_user": user.User != nil && user.User.InternalUser(),

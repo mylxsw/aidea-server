@@ -74,7 +74,7 @@ func loggingMiddleware(h asynq.Handler) asynq.Handler {
 func (p Provider) Boot(resolver infra.Resolver) {
 	resolver.MustResolve(func(
 		mux *asynq.ServeMux,
-		openaiClient *helper.OpenAI,
+		openaiClient helper.Client,
 		deepaiClient *deepai.DeepAI,
 		stabaiClient *stabilityai.StabilityAI,
 		getimgaiClient *getimgai.GetimgAI,

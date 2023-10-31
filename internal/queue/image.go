@@ -102,7 +102,7 @@ func BuildImageCompletionHandler(
 	translator youdao.Translater,
 	up *uploader.Uploader,
 	rep *repo.Repository,
-	oai *openai.OpenAI,
+	oai openai.Client,
 ) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageCompletionPayload

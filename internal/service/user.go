@@ -9,7 +9,7 @@ import (
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/helper"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/rate"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/repo/model"
@@ -136,7 +136,7 @@ func (srv *UserService) UpdateFreeChatCount(ctx context.Context, userID int64, m
 		return nil
 	}
 
-	secondsRemain := helper.TodayRemainTimeSeconds()
+	secondsRemain := misc.TodayRemainTimeSeconds()
 	if err := srv.limiter.OperationIncr(
 		ctx,
 		srv.freeChatCacheKey(userID, model),
