@@ -76,7 +76,7 @@ func (ai *StabilityAI) AccountBalance(ctx context.Context) (float64, error) {
 			return 0.0, fmt.Errorf("failed to decode response body: %v", err)
 		}
 
-		return 0.0, fmt.Errorf("request failed: %s", body["message"])
+		return 0.0, fmt.Errorf("请求失败： %s", body["message"])
 	}
 
 	var ret BalanceResponse
@@ -85,6 +85,12 @@ func (ai *StabilityAI) AccountBalance(ctx context.Context) (float64, error) {
 	}
 
 	return ret.Credits, nil
+}
+
+type ErrorResponse struct {
+	ID      string `json:"id,omitempty"`
+	Message string `json:"message,omitempty"`
+	Name    string `json:"name,omitempty"`
 }
 
 // ImageToImage 图片转图片 https://platform.stability.ai/docs/features/image-to-image?tab=python
@@ -166,7 +172,7 @@ func (ai *StabilityAI) ImageToImage(ctx context.Context, model string, param Ima
 			return nil, errors.New(string(respBody))
 		}
 
-		return nil, fmt.Errorf("request failed: %s", body["message"])
+		return nil, fmt.Errorf("请求失败: %s", body["message"])
 	}
 
 	var body TextToImageResponse
@@ -237,7 +243,7 @@ func (ai *StabilityAI) Upscale(ctx context.Context, model string, imagePath stri
 			return nil, errors.New(string(respBody))
 		}
 
-		return nil, fmt.Errorf("request failed: %s", body["message"])
+		return nil, fmt.Errorf("请求失败： %s", body["message"])
 	}
 
 	var body TextToImageResponse
@@ -273,7 +279,7 @@ func (ai *StabilityAI) TextToImage(model string, param TextToImageRequest) (*Tex
 	}
 
 	if resp.IsError() {
-		return nil, fmt.Errorf("request failed: %s", string(resp.Body()))
+		return nil, errorHandle(resp.Body())
 	}
 
 	var body TextToImageResponse
@@ -282,6 +288,20 @@ func (ai *StabilityAI) TextToImage(model string, param TextToImageRequest) (*Tex
 	}
 
 	return &body, nil
+}
+
+func errorHandle(body []byte) error {
+	var errResp ErrorResponse
+	if err := json.Unmarshal(body, &errResp); err != nil {
+		return fmt.Errorf("请求失败: %s", string(body))
+	}
+
+	switch errResp.Name {
+	case "invalid_prompts":
+		return errors.New("请求失败: 检测到违规内容，请修改后重试")
+	}
+
+	return fmt.Errorf("请求失败: %s", errResp.Message)
 }
 
 type TextToImageImage struct {

@@ -251,7 +251,7 @@ func BuildFromStonCompletionHandler(client *fromston.Fromston, up *uploader.Uplo
 
 			resp, err = client.GenImage(ctx, req)
 			if err != nil {
-				log.With(payload).Errorf("create completion failed: %v", err)
+				log.With(payload).Errorf("[fromston] 图片生成失败: %v", err)
 				panic(err)
 			}
 		}
@@ -383,7 +383,15 @@ func fromStonAsyncJobProcesser(que *Queue, client *fromston.Fromston, up *upload
 			log.WithFields(log.Fields{"payload": payload, "tasks": tasks}).Errorf("no success task found")
 			failedTasks := array.Filter(tasks, func(item fromston.Task, _ int) bool { return item.State == "fail" })
 			if len(failedTasks) > 0 {
-				panic(errors.New(strings.Join(array.Map(failedTasks, func(t fromston.Task, _ int) string { return t.FailReson }), "; ")))
+				panic(errors.New(strings.Join(array.Map(failedTasks, func(t fromston.Task, _ int) string {
+					switch t.FailReson {
+					case "NSFW":
+						return "检测到违规内容，请修改后重试"
+					case "":
+						return "生成失败，请重试"
+					}
+					return t.FailReson
+				}), "; ")))
 			} else {
 				panic(errors.New("fromston tasks failed"))
 			}

@@ -3,6 +3,7 @@ package fromston
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -39,6 +40,10 @@ func (art *Fromston) GenImageCustom(ctx context.Context, req GenImageCustomReque
 	}
 
 	if !resp.IsSuccess() {
+		if resp.StatusCode() == 422 {
+			return nil, errors.New("请求失败: 检测到违规内容，请修改后重试")
+		}
+
 		return nil, fmt.Errorf("request failed: [%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
 	}
 
@@ -64,6 +69,10 @@ func (art *Fromston) QueryCustomTask(ctx context.Context, id string) (*Task, err
 	}
 
 	if !resp.IsSuccess() {
+		if resp.StatusCode() == 422 {
+			return nil, errors.New("请求失败: 检测到违规内容，请修改后重试")
+		}
+
 		return nil, fmt.Errorf("request failed: [%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
 	}
 

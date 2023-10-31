@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -326,7 +325,7 @@ func leapAsyncJobProcesser(client *leap.LeapAI, up *uploader.Uploader, rep *repo
 			if !resp.IsProcessing() {
 				log.Warningf("task %s state is %s", payload.Payload.ID, resp.GetState())
 				update = &repo.PendingTaskUpdate{Status: repo.PendingTaskStatusFailed}
-				panic(fmt.Errorf("leap: invalid task status [%s]", resp.GetState()))
+				panic(errors.New("任务处理失败，请重试"))
 			}
 
 			return &repo.PendingTaskUpdate{

@@ -172,7 +172,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 		}
 
 		if err != nil {
-			log.With(payload).Errorf("create completion failed: %v", err)
+			log.With(payload).Errorf("[StabilityAI] 图片生成失败: %v", err)
 			panic(err)
 		}
 

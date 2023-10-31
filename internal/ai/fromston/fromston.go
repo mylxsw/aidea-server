@@ -3,6 +3,7 @@ package fromston
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -167,6 +168,7 @@ func (art *Fromston) GenImage(ctx context.Context, req GenImageRequest) (*GenIma
 		return nil, err
 	}
 	resp, err := art.resty.R().
+		SetContext(ctx).
 		SetBody(reqBody).
 		SetHeader("ys-api-key", art.conf.FromstonKey).
 		SetHeader("Content-Type", "application/json").
@@ -176,7 +178,11 @@ func (art *Fromston) GenImage(ctx context.Context, req GenImageRequest) (*GenIma
 	}
 
 	if !resp.IsSuccess() {
-		return nil, fmt.Errorf("request failed: [%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
+		if resp.StatusCode() == 422 {
+			return nil, errors.New("请求失败: 检测到违规内容，请修改后重试")
+		}
+
+		return nil, fmt.Errorf("请求失败：[%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
 	}
 
 	var res Response[GenImageResponseData]
@@ -227,7 +233,11 @@ func (art *Fromston) QueryTask(ctx context.Context, id string) (*Task, error) {
 	}
 
 	if !resp.IsSuccess() {
-		return nil, fmt.Errorf("request failed: [%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
+		if resp.StatusCode() == 422 {
+			return nil, errors.New("请求失败: 检测到违规内容，请修改后重试")
+		}
+
+		return nil, fmt.Errorf("请求失败：[%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
 	}
 
 	var res Response[Task]
@@ -252,7 +262,11 @@ func (art *Fromston) QueryTasks(ctx context.Context, ids []string) ([]Task, erro
 	}
 
 	if !resp.IsSuccess() {
-		return nil, fmt.Errorf("request failed: [%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
+		if resp.StatusCode() == 422 {
+			return nil, errors.New("请求失败: 检测到违规内容，请修改后重试")
+		}
+
+		return nil, fmt.Errorf("请求失败：[%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
 	}
 
 	var res Response[[]Task]
@@ -279,6 +293,7 @@ type Model struct {
 
 func (art *Fromston) Models(ctx context.Context) ([]Model, error) {
 	resp, err := art.resty.R().
+		SetContext(ctx).
 		SetHeader("ys-api-key", art.conf.FromstonKey).
 		SetQueryParam("page_size", "100").
 		Get(art.conf.FromstonServer + "/release/open-task/models")
@@ -287,7 +302,7 @@ func (art *Fromston) Models(ctx context.Context) ([]Model, error) {
 	}
 
 	if !resp.IsSuccess() {
-		return nil, fmt.Errorf("request failed: [%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
+		return nil, fmt.Errorf("请求失败：[%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
 	}
 
 	var res Response[[]Model]
@@ -317,7 +332,7 @@ func (art *Fromston) UploadImage(ctx context.Context, file string) (string, erro
 	}
 
 	if !resp.IsSuccess() {
-		return "", fmt.Errorf("request failed: [%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
+		return "", fmt.Errorf("请求失败：[%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
 	}
 
 	var res Response[UploadData]
