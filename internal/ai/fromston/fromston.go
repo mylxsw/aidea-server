@@ -191,6 +191,9 @@ func (art *Fromston) GenImage(ctx context.Context, req GenImageRequest) (*GenIma
 	}
 
 	if res.Code != 200 {
+		if res.Code == 422 {
+			return nil, errors.New("检测到违规内容，请修改后重试")
+		}
 		return nil, fmt.Errorf("request failed:[%d] %s", res.Code, res.Info)
 	}
 
@@ -246,6 +249,10 @@ func (art *Fromston) QueryTask(ctx context.Context, id string) (*Task, error) {
 	}
 
 	if res.Code != 200 {
+		if res.Code == 422 {
+			return nil, errors.New("检测到违规内容，请修改后重试")
+		}
+
 		return nil, fmt.Errorf("request failed:[%d] %s", res.Code, res.Info)
 	}
 
@@ -275,6 +282,10 @@ func (art *Fromston) QueryTasks(ctx context.Context, ids []string) ([]Task, erro
 	}
 
 	if res.Code != 200 {
+		if res.Code == 422 {
+			return nil, errors.New("检测到违规内容，请修改后重试")
+		}
+
 		return nil, fmt.Errorf("request failed:[%d] %s", res.Code, res.Info)
 	}
 

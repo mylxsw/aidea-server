@@ -61,12 +61,12 @@ func loggingMiddleware(h asynq.Handler) asynq.Handler {
 		log.Debugf("Start processing %q", t.Type())
 		err := h.ProcessTask(ctx, t)
 		if err != nil {
-			log.Errorf("Error processing %q: %v", t.Type(), err)
+			log.Warningf("task process failed: %q, %v", t.Type(), err)
 			// 失败后不再进行重试
 			return asynq.SkipRetry
 		}
 
-		log.Debugf("Finished processing %q: Elapsed Time = %v", t.Type(), time.Since(start))
+		log.Debugf("finished processing %q: elapsed time = %v", t.Type(), time.Since(start))
 		return nil
 	})
 }

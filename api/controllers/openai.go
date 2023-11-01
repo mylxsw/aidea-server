@@ -180,7 +180,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		webCtx.Input("ws") == "true", ctl.conf.EnableCORS, webCtx.Request().Raw(), w,
 	)
 	if err != nil {
-		log.F(log.M{"user": user.ID}).Errorf("create stream writer failed: %s", err)
+		log.F(log.M{"user": user.ID, "client": client}).Errorf("create stream writer failed: %s", err)
 		return
 	}
 	defer sw.Close()
@@ -365,7 +365,11 @@ func (*OpenAIController) buildFinalSystemMessage(
 	}
 
 	if realTokenConsumed > 1024 && len(req.Messages) >= int(maxContextLen*2) {
-		finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请记得及时使用“[新对话](aidea-command://reset-context)”来重置对话上下文。", realTokenConsumed)
+		if req.RoomID <= 1 {
+			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请在“聊一聊”页面创建新对话。", realTokenConsumed)
+		} else {
+			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请使用“[新对话](aidea-command://reset-context)”来重置对话上下文。", realTokenConsumed)
+		}
 	}
 
 	if user.InternalUser() {
