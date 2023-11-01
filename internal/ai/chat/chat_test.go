@@ -1,10 +1,58 @@
 package chat
 
 import (
+	"context"
+	"testing"
+
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/assert"
-	"testing"
 )
+
+type ChatTestClient struct{}
+
+func (c ChatTestClient) Chat(ctx context.Context, req Request) (*Response, error) {
+	panic("implement me")
+}
+
+func (c ChatTestClient) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
+	panic("implement me")
+}
+
+func (c ChatTestClient) MaxContextLength(model string) int {
+	return 2048
+}
+
+func TestRequestFix(t *testing.T) {
+	req := Request{
+		Messages: Messages{
+			{Role: "system", Content: "system #1"},
+			{Role: "user", Content: "user #1"},
+			{Role: "assistant", Content: "assistant #1"},
+			{Role: "user", Content: "user #2"},
+			{Role: "assistant", Content: "assistant #2"},
+			{Role: "user", Content: "user #3"},
+		},
+		Model: "gpt-3.5-turbo",
+	}
+
+	{
+		fixed, _, err := req.Fix(ChatTestClient{}, 0)
+		assert.NoError(t, err)
+		assert.Equal(t, 2, len(fixed.Messages))
+	}
+
+	{
+		fixed, _, err := req.Fix(ChatTestClient{}, 1)
+		assert.NoError(t, err)
+		assert.Equal(t, 4, len(fixed.Messages))
+	}
+
+	{
+		fixed, _, err := req.Fix(ChatTestClient{}, 2)
+		assert.NoError(t, err)
+		assert.Equal(t, 6, len(fixed.Messages))
+	}
+}
 
 func TestMessages_Fix(t *testing.T) {
 	messages := Messages{

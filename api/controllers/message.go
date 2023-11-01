@@ -1,15 +1,13 @@
 package controllers
 
 import (
-	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
 )
 
 type MessageController struct {
-	repo *repo.Repository `autowire:"@"`
-	conf *config.Config   `autowire:"@"`
+	// repo *repo.Repository `autowire:"@"`
+	// conf *config.Config   `autowire:"@"`
 }
 
 func NewMessageController(resolver infra.Resolver) web.Controller {

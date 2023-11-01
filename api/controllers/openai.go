@@ -159,10 +159,13 @@ func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web
 //})
 
 type FinalMessage struct {
-	QuotaConsumed int64 `json:"quota_consumed,omitempty"`
-	Token         int64 `json:"token,omitempty"`
-	QuestionID    int64 `json:"question_id,omitempty"`
-	AnswerID      int64 `json:"answer_id,omitempty"`
+	Type          string `json:"type,omitempty"`
+	QuotaConsumed int64  `json:"quota_consumed,omitempty"`
+	Token         int64  `json:"token,omitempty"`
+	QuestionID    int64  `json:"question_id,omitempty"`
+	AnswerID      int64  `json:"answer_id,omitempty"`
+	Info          string `json:"info,omitempty"`
+	Error         string `json:"error,omitempty"`
 }
 
 func (m FinalMessage) ToJSON() string {
@@ -172,7 +175,7 @@ func (m FinalMessage) ToJSON() string {
 
 // Chat 聊天接口，接口参数参考 https://platform.openai.com/docs/api-reference/chat/create
 // 该接口会返回一个 SSE 流，接口参数 stream 总是为 true（忽略客户端设置）
-func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo, w http.ResponseWriter) {
+func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo, w http.ResponseWriter, client *auth.ClientInfo) {
 	sw, req, err := streamwriter.New[chat.Request](
 		webCtx.Input("ws") == "true", ctl.conf.EnableCORS, webCtx.Request().Raw(), w,
 	)
@@ -183,11 +186,16 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	defer sw.Close()
 
 	// 请求参数预处理
-	req, inputTokenCount, err := req.Fix(ctl.chat, ctl.loadRoomContextLen(ctx, req.RoomID, user.ID))
+	maxContextLen := ctl.loadRoomContextLen(ctx, req.RoomID, user.ID)
+	var inputTokenCount int64
+	req, inputTokenCount, err = req.Fix(ctl.chat, maxContextLen)
 	if err != nil {
 		misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
 		return
 	}
+
+	log.F(log.M{"user_id": user.ID, "client": client, "room_id": req.RoomID}).
+		Debugf("接收到聊天请求，模型 %s, 上下文消息数量 %d, 输入 token 数量 %d", req.Model, len(req.Messages), inputTokenCount)
 
 	// 基于模型的流控，避免单一模型用户过度使用
 	if err := ctl.rateLimitPass(ctx, user, req, sw); err != nil {
@@ -240,7 +248,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 		replyText = strings.TrimSpace(replyText)
 		// 返回自定义控制信息，告诉客户端当前消耗情况
-		realWordCount, quotaConsumed := ctl.resolveConsumeQuota(req, replyText, leftCount > 0)
+		realTokenConsumed, quotaConsumed := ctl.resolveConsumeQuota(req, replyText, leftCount > 0)
 
 		// 响应内容为空，报错给客户端
 		if replyText == "" && chatErrorMessage == "" {
@@ -255,33 +263,13 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		defer cancel()
 
 		// 写入用户消息
-		answerID := ctl.saveChatAnswer(ctx, user, replyText, quotaConsumed, realWordCount, req, questionID, chatErrorMessage)
+		answerID := ctl.saveChatAnswer(ctx, user, replyText, quotaConsumed, realTokenConsumed, req, questionID, chatErrorMessage)
 
-		finalMsg := FinalMessage{QuestionID: questionID, AnswerID: answerID}
-		if user.InternalUser() {
-			finalMsg.QuotaConsumed = quotaConsumed
-			finalMsg.Token = int64(realWordCount)
-		}
-
-		// final 消息为定制消息，用于告诉 AIdea 客户端当前回话的资源消耗情况以及服务端信息
-		finalWord := openai.ChatCompletionStreamResponse{
-			ID: "final",
-			Choices: []openai.ChatCompletionStreamChoice{
-				{
-					Index:        0,
-					FinishReason: "",
-					Delta: openai.ChatCompletionStreamChoiceDelta{
-						Content: finalMsg.ToJSON(),
-						Role:    "system",
-					},
-				},
-			},
-			Model: req.Model,
-		}
-
-		if chatErrorMessage != "" {
+		if chatErrorMessage != "" && replyText == "" {
 			misc.NoError(sw.WriteErrorStream(errors.New(chatErrorMessage), http.StatusInternalServerError))
 		} else {
+			// final 消息为定制消息，用于告诉 AIdea 客户端当前的资源消耗情况以及服务端信息
+			finalWord := ctl.buildFinalSystemMessage(questionID, answerID, user, quotaConsumed, realTokenConsumed, req, maxContextLen, chatErrorMessage)
 			misc.NoError(sw.WriteStream(finalWord))
 		}
 
@@ -357,6 +345,49 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 }
 
+// buildFinalSystemMessage 构建最后一条消息，该消息为系统消息，用于告诉 AIdea 客户端当前的资源消耗情况以及服务端信息
+func (*OpenAIController) buildFinalSystemMessage(
+	questionID int64,
+	answerID int64,
+	user *auth.User,
+	quotaConsumed int64,
+	realTokenConsumed int,
+	req *chat.Request,
+	maxContextLen int64,
+	chatErrorMessage string,
+) openai.ChatCompletionStreamResponse {
+	finalMsg := FinalMessage{
+		Type:       "summary",
+		QuestionID: questionID,
+		AnswerID:   answerID,
+		Token:      int64(realTokenConsumed),
+		Error:      chatErrorMessage,
+	}
+
+	if realTokenConsumed > 1024 && len(req.Messages) >= int(maxContextLen*2) {
+		finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请记得及时使用“[新对话](aidea-command://reset-context)”来重置对话上下文。", realTokenConsumed)
+	}
+
+	if user.InternalUser() {
+		finalMsg.QuotaConsumed = quotaConsumed
+	}
+
+	return openai.ChatCompletionStreamResponse{
+		ID: "final",
+		Choices: []openai.ChatCompletionStreamChoice{
+			{
+				Index:        0,
+				FinishReason: "",
+				Delta: openai.ChatCompletionStreamChoiceDelta{
+					Content: finalMsg.ToJSON(),
+					Role:    "system",
+				},
+			},
+		},
+		Model: req.Model,
+	}
+}
+
 // userQuotaEnough 检查用户智慧果余量是否足够
 func (ctl *OpenAIController) userQuotaEnough(ctx context.Context, quotaRepo *repo.QuotaRepo, user *auth.User, sw *streamwriter.StreamWriter, webCtx web.Context, req *chat.Request, inputTokenCount int64, maxFreeCount int) error {
 	quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
@@ -426,15 +457,15 @@ func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText st
 		Content: replyText,
 	})
 
-	realWordCount, _ := chat.MessageTokenCount(messages, req.Model)
-	quotaConsumed := coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(realWordCount))
+	realTokenConsumed, _ := chat.MessageTokenCount(messages, req.Model)
+	quotaConsumed := coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(realTokenConsumed))
 
 	// 免费请求，不扣除智慧果
 	if isFreeRequest || replyText == "" {
 		quotaConsumed = 0
 	}
 
-	return realWordCount, quotaConsumed
+	return realTokenConsumed, quotaConsumed
 }
 
 // makeChatQuestionFailed 更新聊天问题为失败状态
@@ -474,7 +505,7 @@ func (ctl *OpenAIController) saveChatQuestion(ctx context.Context, user *auth.Us
 }
 
 func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int64, userID int64) int64 {
-	var maxContextLength int64 = 5
+	var maxContextLength int64 = 3
 	if roomID > 0 {
 		ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		defer cancel()

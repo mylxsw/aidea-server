@@ -88,6 +88,7 @@ func (req Request) assembleMessage() string {
 	return strings.Join(msgs, "\n\n")
 }
 
+// Fix 修复请求内容，注意：上下文长度修复后，最终的上下文数量不包含 system 消息和用户最后一条消息
 func (req Request) Fix(chat Chat, maxContextLength int64) (*Request, int64, error) {
 	// 去掉模型名称前缀
 	modelSegs := strings.Split(req.Model, ":")
