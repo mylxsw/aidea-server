@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mylxsw/aidea-server/internal/misc"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mylxsw/aidea-server/internal/misc"
 
 	"github.com/gorilla/websocket"
 
@@ -102,7 +103,7 @@ func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	defer misc.NoError(os.Remove(tempPath))
+	defer func() { misc.NoError(os.Remove(tempPath)) }()
 
 	log.Debugf("upload file: %s", tempPath)
 
@@ -214,7 +215,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 			return
 		}
-		defer wsConn.Close()
+		defer func() { misc.NoError(wsConn.Close()) }()
 
 		// 读取第一条消息，用于获取用户输入
 		_, msg, err := wsConn.ReadMessage()
