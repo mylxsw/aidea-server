@@ -947,11 +947,6 @@ func (ctl *AuthController) signInWithPassword(ctx context.Context, webCtx web.Co
 
 	user, err := ctl.userRepo.SignIn(ctx, username, password)
 	if err != nil {
-		if err != repo.ErrNotFound {
-			log.WithFields(log.Fields{
-				"username": username,
-			}).Errorf("failed to sign in: %s", err)
-		}
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名或密码错误"), http.StatusBadRequest)
 	}
 
