@@ -70,6 +70,7 @@ coin_tables:
     # 讯飞星火
     general: 3
     generalv2: 5
+    generalv3: 5
     # OpenAI
     gpt-3.5-turbo: 3
     gpt-3.5-turbo-16k: 5
