@@ -96,14 +96,6 @@ func main() {
 	ins.AddStringSliceFlag("openai-servers", []string{"https://api.openai.com/v1"}, "OpenAI 服务地址，配置多个时会自动在多个服务之间平衡负载，不要忘记在在 URL 后面添加 /v1")
 	ins.AddStringSliceFlag("openai-keys", []string{}, "OpenAI Keys，如果指定多个，会在多个服务之间平衡负载")
 
-	//EnableFallbackOpenAI:       ctx.Bool("enable-fallback-openai"),
-	//	FallbackOpenAIAzure:        ctx.Bool("fallback-openai-azure"),
-	//		FallbackOpenAIServers:      ctx.StringSlice("fallback-openai-servers"),
-	//		FallbackOpenAIKeys:         ctx.StringSlice("fallback-openai-keys"),
-	//		FallbackOpenAIOrganization: ctx.String("fallback-openai-organization"),
-	//		FallbackOpenAIAPIVersion:   ctx.String("fallback-openai-apiversion"),
-	//		FallbackOpenAIAutoProxy:    ctx.Bool("fallback-openai-autoproxy"),
-
 	ins.AddBoolFlag("enable-fallback-openai", "是否启用备用 OpenAI 服务")
 	ins.AddBoolFlag("fallback-openai-azure", "使用 Azure 的 OpenAI 服务")
 	ins.AddStringFlag("fallback-openai-apiversion", "2023-05-15", "required when fallback-openai-azure is true")
@@ -220,6 +212,7 @@ func main() {
 	ins.AddStringSliceFlag("sms-channels", []string{}, "启用的短信通道，支持腾讯云和阿里云: tencent, aliyun，多个值时随机每次发送随机选择")
 
 	ins.AddStringFlag("log-path", "", "日志文件存储目录，留空则写入到标准输出")
+	ins.AddBoolFlag("log-colorful", "是否启用彩色日志")
 
 	ins.AddStringFlag("dingding-token", "", "钉钉群通知 Token，留空则不通知")
 	ins.AddStringFlag("dingding-secret", "", "钉钉群通知 Secret")
@@ -251,7 +244,10 @@ func main() {
 
 	// 日志配置
 	ins.Init(func(f infra.FlagContext) error {
-		log.All().LogFormatter(formatter.NewJSONFormatter())
+		if !f.Bool("log-colorful") {
+			log.All().LogFormatter(formatter.NewJSONFormatter())
+		}
+
 		if f.String("log-path") != "" {
 			log.All().LogWriter(writer.NewDefaultRotatingFileWriter(context.TODO(), func(le level.Level, module string) string {
 				return filepath.Join(f.String("log-path"), fmt.Sprintf("%s.%s.log", le.GetLevelName(), time.Now().Format("20060102")))

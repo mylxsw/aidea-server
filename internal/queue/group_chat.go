@@ -100,7 +100,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 			}
 		}()
 
-		chatReq, err := (chat.Request{
+		req, _, err := (chat.Request{
 			Model:    payload.ModelID,
 			Messages: payload.ContextMessages,
 		}).Fix(ct, 5)
@@ -109,7 +109,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 		}
 
 		// 调用 AI 系统
-		resp, err := ct.Chat(ctx, chatReq.Request)
+		resp, err := ct.Chat(ctx, *req)
 		if err != nil {
 			panic(fmt.Errorf("chat failed: %w", err))
 		}
@@ -120,11 +120,11 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 
 		tokenConsumed := int64(resp.InputTokens + resp.OutputTokens)
 		// 免费请求不计费
-		leftCount, _ := userSrv.FreeChatRequestCounts(ctx, payload.UserID, chatReq.Request.Model)
+		leftCount, _ := userSrv.FreeChatRequestCounts(ctx, payload.UserID, req.Model)
 		quotaConsumed := ternary.IfLazy(
 			leftCount > 0,
 			func() int64 { return 0 },
-			func() int64 { return coins.GetOpenAITextCoins(chatReq.Request.ResolveCalFeeModel(conf), tokenConsumed) },
+			func() int64 { return coins.GetOpenAITextCoins(req.ResolveCalFeeModel(conf), tokenConsumed) },
 		)
 
 		// 更新消息状态
@@ -139,13 +139,13 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 		}
 
 		// 更新免费聊天次数
-		if err := userSrv.UpdateFreeChatCount(ctx, payload.UserID, chatReq.Request.Model); err != nil {
+		if err := userSrv.UpdateFreeChatCount(ctx, payload.UserID, req.Model); err != nil {
 			log.With(payload).Errorf("update free chat count failed: %s", err)
 		}
 
 		// 扣除智慧果
 		if quotaConsumed > 0 {
-			if err := rep.Quota.QuotaConsume(ctx, payload.UserID, quotaConsumed, repo.NewQuotaUsedMeta("group_chat", chatReq.Request.Model)); err != nil {
+			if err := rep.Quota.QuotaConsume(ctx, payload.UserID, quotaConsumed, repo.NewQuotaUsedMeta("group_chat", req.Model)); err != nil {
 				log.Errorf("used quota add failed: %s", err)
 			}
 		}

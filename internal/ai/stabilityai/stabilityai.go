@@ -298,7 +298,7 @@ func errorHandle(body []byte) error {
 
 	switch errResp.Name {
 	case "invalid_prompts":
-		return errors.New("请求失败: 检测到违规内容，请修改后重试")
+		return errors.New("检测到违规内容，请修改后重试")
 	}
 
 	return fmt.Errorf("请求失败: %s", errResp.Message)

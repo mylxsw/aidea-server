@@ -88,12 +88,7 @@ func (req Request) assembleMessage() string {
 	return strings.Join(msgs, "\n\n")
 }
 
-type FixResult struct {
-	Request     Request
-	InputTokens int
-}
-
-func (req Request) Fix(chat Chat, maxContextLength int64) (*FixResult, error) {
+func (req Request) Fix(chat Chat, maxContextLength int64) (*Request, int64, error) {
 	// 去掉模型名称前缀
 	modelSegs := strings.Split(req.Model, ":")
 	if len(modelSegs) > 1 {
@@ -126,15 +121,12 @@ func (req Request) Fix(chat Chat, maxContextLength int64) (*FixResult, error) {
 		chat.MaxContextLength(req.Model)-systemMessageLen,
 	)
 	if err != nil {
-		return nil, errors.New("超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度")
+		return nil, 0, errors.New("超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度")
 	}
 
 	req.Messages = append(systemMessages, messages...)
 
-	return &FixResult{
-		Request:     req,
-		InputTokens: inputTokens,
-	}, nil
+	return &req, int64(inputTokens), nil
 }
 
 func (req Request) ResolveCalFeeModel(conf *config.Config) string {

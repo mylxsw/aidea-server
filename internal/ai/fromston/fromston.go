@@ -179,7 +179,7 @@ func (art *Fromston) GenImage(ctx context.Context, req GenImageRequest) (*GenIma
 
 	if !resp.IsSuccess() {
 		if resp.StatusCode() == 422 {
-			return nil, errors.New("请求失败: 检测到违规内容，请修改后重试")
+			return nil, errors.New("检测到违规内容，请修改后重试")
 		}
 
 		return nil, fmt.Errorf("请求失败：[%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
@@ -234,7 +234,7 @@ func (art *Fromston) QueryTask(ctx context.Context, id string) (*Task, error) {
 
 	if !resp.IsSuccess() {
 		if resp.StatusCode() == 422 {
-			return nil, errors.New("请求失败: 检测到违规内容，请修改后重试")
+			return nil, errors.New("检测到违规内容，请修改后重试")
 		}
 
 		return nil, fmt.Errorf("请求失败：[%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
@@ -263,7 +263,7 @@ func (art *Fromston) QueryTasks(ctx context.Context, ids []string) ([]Task, erro
 
 	if !resp.IsSuccess() {
 		if resp.StatusCode() == 422 {
-			return nil, errors.New("请求失败: 检测到违规内容，请修改后重试")
+			return nil, errors.New("检测到违规内容，请修改后重试")
 		}
 
 		return nil, fmt.Errorf("请求失败：[%d %s] %s", resp.StatusCode(), resp.Status(), resp.String())
