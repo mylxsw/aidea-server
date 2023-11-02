@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/go-utils/array"
+	openailib "github.com/sashabaranov/go-openai"
 )
 
 const (
@@ -30,7 +32,28 @@ func (chat *VirtualChat) ChatStream(ctx context.Context, req Request) (<-chan Re
 }
 
 func (chat *VirtualChat) MaxContextLength(model string) int {
-	return chat.imp.MaxContextLength(model)
+	var prompt string
+	if model == ModelNanXian {
+		model = chat.conf.NanxianRel
+		prompt = chat.conf.NanxianPrompt
+	}
+
+	if model == ModelBeiChou {
+		model = chat.conf.BeichouRel
+		prompt = chat.conf.BeichouPrompt
+	}
+
+	var promptTokens int
+	if prompt != "" {
+		messages := []openailib.ChatCompletionMessage{
+			{Role: "system", Content: chat.conf.NanxianPrompt},
+		}
+
+		num, _ := openai.NumTokensFromMessages(messages, model)
+		promptTokens = num
+	}
+
+	return chat.imp.MaxContextLength(model) - promptTokens
 }
 
 func (chat *VirtualChat) prepare(req Request) Request {
