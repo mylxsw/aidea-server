@@ -21,11 +21,12 @@ import (
 )
 
 type ImageColorizationPayload struct {
-	ID        string    `json:"id,omitempty"`
-	Image     string    `json:"image,omitempty"`
-	UserID    int64     `json:"user_id,omitempty"`
-	Quota     int64     `json:"quota,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	ID           string    `json:"id,omitempty"`
+	Image        string    `json:"image,omitempty"`
+	UserID       int64     `json:"user_id,omitempty"`
+	Quota        int64     `json:"quota,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	FreezedCoins int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *ImageColorizationPayload) GetTitle() string {

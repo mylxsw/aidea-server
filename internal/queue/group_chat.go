@@ -26,6 +26,7 @@ type GroupChatPayload struct {
 	ModelID         string        `json:"model_id,omitempty"`
 	ContextMessages chat.Messages `json:"context_messages,omitempty"`
 	CreatedAt       time.Time     `json:"created_at,omitempty"`
+	FreezedCoins    int64         `json:"freezed_coins,omitempty"`
 }
 
 func (payload *GroupChatPayload) GetTitle() string {
@@ -74,7 +75,6 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 				log.With(task).Errorf("panic: %v", err2)
 				err = err2.(error)
 			}
-
 			if err != nil {
 				// 更新消息状态为失败
 				msg := repo.ChatGroupMessageUpdate{
@@ -96,6 +96,13 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 					},
 				); err != nil {
 					log.With(task).Errorf("update queue status failed: %s", err)
+				}
+			}
+
+			// 无论如何，都要释放用户被冻结的智慧果
+			if payload.FreezedCoins > 0 {
+				if err := userSrv.UnfreezeUserQuota(ctx, payload.UserID, payload.FreezedCoins); err != nil {
+					log.F(log.M{"payload": payload}).Errorf("群聊任务执行失败，释放用户冻结的智慧果失败: %s", err)
 				}
 			}
 		}()

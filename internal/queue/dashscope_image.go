@@ -40,7 +40,8 @@ type DashscopeImageCompletionPayload struct {
 	ImageStrength float64 `json:"image_strength,omitempty"`
 	FilterID      int64   `json:"filter_id,omitempty"`
 
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	FreezedCoins int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *DashscopeImageCompletionPayload) GetTitle() string {

@@ -29,7 +29,8 @@ type DeepAICompletionPayload struct {
 	CreatedAt      time.Time `json:"created_at,omitempty"`
 	FilterID       int64     `json:"filter_id,omitempty"`
 
-	AIRewrite bool `json:"ai_rewrite,omitempty"`
+	AIRewrite    bool  `json:"ai_rewrite,omitempty"`
+	FreezedCoins int64 `json:"freezed_coins,omitempty"`
 }
 
 func (payload *DeepAICompletionPayload) GetTitle() string {

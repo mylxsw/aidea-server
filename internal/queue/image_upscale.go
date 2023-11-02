@@ -31,6 +31,7 @@ type ImageUpscalePayload struct {
 	UpscaleBy         string    `json:"upscale_by,omitempty"`
 	Quota             int64     `json:"quota,omitempty"`
 	CreatedAt         time.Time `json:"created_at,omitempty"`
+	FreezedCoins      int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *ImageUpscalePayload) GetTitle() string {

@@ -188,3 +188,83 @@ func (srv *UserService) CustomConfig(ctx context.Context, userID int64) (*repo.U
 func (srv *UserService) UpdateCustomConfig(ctx context.Context, userID int64, config repo.UserCustomConfig) error {
 	return srv.userRepo.UpdateCustomConfig(ctx, userID, config)
 }
+
+// UserQuota 用户配额
+type UserQuota struct {
+	Quota   int64 `json:"quota,omitempty"`
+	Used    int64 `json:"used,omitempty"`
+	Rest    int64 `json:"rest,omitempty"`
+	Freezed int64 `json:"freezed,omitempty"`
+}
+
+// UserQuota 获取用户配额
+func (srv *UserService) UserQuota(ctx context.Context, userID int64) (*UserQuota, error) {
+	quota, err := srv.quotaRepo.GetUserQuota(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("get user quota failed: %w", err)
+	}
+
+	freezed, err := srv.rds.Get(ctx, srv.userQuotaFreezedCacheKey(userID)).Int()
+	if err != nil && err != redis.Nil {
+		log.F(log.M{"user_id": userID, "quota": quota}).Errorf("查询用户冻结的配额失败: %s", err)
+
+		return &UserQuota{Rest: quota.Rest, Quota: quota.Quota, Used: quota.Used}, nil
+	}
+
+	return &UserQuota{
+		Rest:    quota.Rest,
+		Quota:   quota.Quota,
+		Used:    quota.Used,
+		Freezed: int64(freezed),
+	}, nil
+}
+
+// FreezeUserQuota 冻结用户配额
+func (srv *UserService) FreezeUserQuota(ctx context.Context, userID int64, quota int64) error {
+	if quota <= 0 {
+		return nil
+	}
+
+	key := srv.userQuotaFreezedCacheKey(userID)
+	newVal, err := srv.rds.IncrBy(ctx, key, quota).Result()
+	if err != nil {
+		return fmt.Errorf("freeze user quota failed: %w", err)
+	}
+
+	if err := srv.rds.Expire(ctx, key, 5*time.Minute).Err(); err != nil {
+		log.F(log.M{"user_id": userID, "quota": quota}).Errorf("设置用户冻结配额过期时间失败: %s", err)
+	}
+
+	log.F(log.M{"user_id": userID, "delta": quota, "new_val": newVal, "key": key}).
+		Debugf("freeze user quota")
+
+	return nil
+}
+
+// UnfreezeUserQuota 解冻用户配额
+func (srv *UserService) UnfreezeUserQuota(ctx context.Context, userID int64, quota int64) error {
+	if quota <= 0 {
+		return nil
+	}
+
+	key := srv.userQuotaFreezedCacheKey(userID)
+	newVal, err := srv.rds.DecrBy(ctx, key, quota).Result()
+	if err != nil {
+		return fmt.Errorf("解冻用户配额失败: %w", err)
+	}
+
+	if newVal <= 0 {
+		if err := srv.rds.Del(ctx, key).Err(); err != nil {
+			log.F(log.M{"user_id": userID, "quota": quota}).Errorf("清空用户冻结配额失败: %s", err)
+		}
+	}
+
+	log.F(log.M{"user_id": userID, "delta": quota, "new_val": newVal, "key": key}).
+		Debugf("unfreeze user quota")
+
+	return nil
+}
+
+func (srv *UserService) userQuotaFreezedCacheKey(userID int64) string {
+	return fmt.Sprintf("user:%d:quota:freezed", userID)
+}

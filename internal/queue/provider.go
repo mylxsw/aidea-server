@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -11,9 +12,12 @@ import (
 	"github.com/mylxsw/aidea-server/internal/ai/fromston"
 	"github.com/mylxsw/aidea-server/internal/ai/leap"
 	"github.com/mylxsw/aidea-server/internal/repo"
+	"github.com/mylxsw/aidea-server/internal/service"
 	"github.com/mylxsw/aidea-server/internal/uploader"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/must"
+	"github.com/redis/go-redis/v9"
 )
 
 type Provider struct{}
@@ -39,11 +43,32 @@ func (Provider) Boot(app infra.Resolver) {
 		up *uploader.Uploader,
 		queue *Queue,
 		rep *repo.Repository,
+		userSvc *service.UserService,
+		rds *redis.Client,
 	) {
 		// 注册异步 PendingTask 任务处理器
 		manager.Register(TypeLeapAICompletion, leapAsyncJobProcesser(leapClient, up, rep))
 		manager.Register(TypeFromStonCompletion, fromStonAsyncJobProcesser(queue, fromstonClient, up, rep))
 		manager.Register(TypeDashscopeImageCompletion, dashscopeImageAsyncJobProcesser(queue, dashscopeClient, up, rep))
+
+		// 注册创作岛更新后，自动释放冻结的智慧果任务
+		rep.Creative.RegisterRecordStatusUpdateCallback(func(taskID string, userID int64, status repo.CreativeStatus) {
+			key := fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", userID, taskID)
+			if status == repo.CreativeStatusSuccess || status == repo.CreativeStatusFailed {
+				freezedValue, err := rds.Get(context.TODO(), key).Int64()
+				if err != nil {
+					log.F(log.M{"task_id": taskID, "user_id": userID, "status": status}).Errorf("获取创作岛任务冻结的智慧果数量失败：%s", err)
+					return
+				}
+
+				if freezedValue > 0 {
+					if err := userSvc.UnfreezeUserQuota(context.TODO(), userID, freezedValue); err != nil {
+						log.F(log.M{"task_id": taskID, "user_id": userID, "status": status}).Errorf("释放创作岛任务冻结的智慧果失败：%s", err)
+						return
+					}
+				}
+			}
+		})
 	})
 }
 

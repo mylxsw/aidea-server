@@ -41,7 +41,8 @@ type GetimgAICompletionPayload struct {
 	UpscaleBy      string   `json:"upscale_by,omitempty"`
 	FilterID       int64    `json:"filter_id,omitempty"`
 
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	FreezedCoins int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *GetimgAICompletionPayload) GetTitle() string {

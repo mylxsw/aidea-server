@@ -47,6 +47,8 @@ type ImageCompletionPayload struct {
 	FilterID       int64     `json:"filter_id,omitempty"`
 	FilterName     string    `json:"filter_name,omitempty"`
 	GalleryCopyID  int64     `json:"gallery_copy_id,omitempty"`
+
+	FreezedCoins int64 `json:"freezed_coins,omitempty"`
 }
 
 func (payload *ImageCompletionPayload) GetTitle() string {

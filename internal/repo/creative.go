@@ -55,7 +55,8 @@ const (
 )
 
 type CreativeRepo struct {
-	db *sql.DB
+	db                         *sql.DB
+	recordStatusUpdateCallback func(taskID string, userID int64, status CreativeStatus)
 }
 
 func NewCreativeRepo(db *sql.DB) *CreativeRepo {
@@ -377,7 +378,21 @@ func (r *CreativeRepo) UpdateRecordArgumentsByTaskID(ctx context.Context, userId
 	return err
 }
 
+func (r *CreativeRepo) RegisterRecordStatusUpdateCallback(callback func(taskID string, userID int64, status CreativeStatus)) {
+	if r.recordStatusUpdateCallback != nil {
+		panic(errors.New("record status update callback already registered"))
+	}
+
+	r.recordStatusUpdateCallback = callback
+}
+
 func (r *CreativeRepo) UpdateRecordByTaskID(ctx context.Context, userId int64, taskID string, req CreativeRecordUpdateRequest) error {
+	defer func() {
+		if r.recordStatusUpdateCallback != nil {
+			r.recordStatusUpdateCallback(taskID, userId, req.Status)
+		}
+	}()
+
 	q := query.Builder().Where(model.FieldCreativeHistoryTaskId, taskID).
 		Where(model.FieldCreativeHistoryUserId, userId)
 

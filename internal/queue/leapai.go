@@ -41,7 +41,8 @@ type LeapAICompletionPayload struct {
 	AIRewrite bool   `json:"ai_rewrite,omitempty"`
 	FilterID  int64  `json:"filter_id,omitempty"`
 
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	FreezedCoins int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *LeapAICompletionPayload) GetTitle() string {

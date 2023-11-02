@@ -15,13 +15,14 @@ import (
 )
 
 type OpenAICompletionPayload struct {
-	ID        string                         `json:"id,omitempty"`
-	Model     string                         `json:"model,omitempty"`
-	Quota     int64                          `json:"quota,omitempty"`
-	UID       int64                          `json:"uid,omitempty"`
-	Prompts   []openai.ChatCompletionMessage `json:"prompts,omitempty"`
-	WordCount int64                          `json:"word_count,omitempty"`
-	CreatedAt time.Time                      `json:"created_at,omitempty"`
+	ID           string                         `json:"id,omitempty"`
+	Model        string                         `json:"model,omitempty"`
+	Quota        int64                          `json:"quota,omitempty"`
+	UID          int64                          `json:"uid,omitempty"`
+	Prompts      []openai.ChatCompletionMessage `json:"prompts,omitempty"`
+	WordCount    int64                          `json:"word_count,omitempty"`
+	CreatedAt    time.Time                      `json:"created_at,omitempty"`
+	FreezedCoins int64                          `json:"freezed_coins,omitempty"`
 }
 
 func (payload *OpenAICompletionPayload) GetTitle() string {

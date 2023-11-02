@@ -13,6 +13,7 @@ import (
 
 	"github.com/fvbommel/sortorder"
 	"github.com/mylxsw/go-utils/ternary"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/aidea-server/internal/misc"
@@ -44,6 +45,8 @@ type CreativeIslandController struct {
 	trans        youdao.Translater        `autowire:"@"`
 	creativeRepo *repo.CreativeRepo       `autowire:"@"`
 	securitySrv  *service.SecurityService `autowire:"@"`
+	userSvc      *service.UserService     `autowire:"@"`
+	rds          *redis.Client            `autowire:"@"`
 }
 
 // NewCreativeIslandController create a new CreativeIslandController
@@ -816,14 +819,14 @@ func (ctl *CreativeIslandController) ImageUpscale(ctx context.Context, webCtx we
 	}
 
 	// 检查用户是否有足够的智慧果
-	quota, err := ctl.quotaRepo.GetUserQuota(ctx, user.ID)
+	quota, err := ctl.userSvc.UserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	quotaConsume := int64(coins.GetUnifiedImageGenCoins())
-	if quota.Quota < quota.Used+quotaConsume {
+	if quota.Rest-quota.Freezed < quotaConsume {
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
@@ -844,6 +847,15 @@ func (ctl *CreativeIslandController) ImageUpscale(ctx context.Context, webCtx we
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
+
+	// 冻结智慧果
+	if err := ctl.userSvc.FreezeUserQuota(ctx, user.ID, req.Quota); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛冻结用户配额失败: %s", err)
+	}
+
+	if err := ctl.rds.SetEx(ctx, fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", user.ID, taskID), req.Quota, 5*time.Minute).Err(); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛用户配额已冻结，更新 Redis 任务与配额关系失败: %s", err)
+	}
 
 	creativeItem := repo.CreativeItem{
 		IslandId:   AllInOneIslandID,
@@ -881,14 +893,14 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 	}
 
 	// 检查用户是否有足够的智慧果
-	quota, err := ctl.quotaRepo.GetUserQuota(ctx, user.ID)
+	quota, err := ctl.userSvc.UserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
 	quotaConsume := int64(coins.GetUnifiedImageGenCoins())
-	if quota.Quota < quota.Used+quotaConsume {
+	if quota.Rest-quota.Freezed < quotaConsume {
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
@@ -906,6 +918,15 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
+
+	// 冻结智慧果
+	if err := ctl.userSvc.FreezeUserQuota(ctx, user.ID, req.Quota); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛冻结用户配额失败: %s", err)
+	}
+
+	if err := ctl.rds.SetEx(ctx, fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", user.ID, taskID), req.Quota, 5*time.Minute).Err(); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛用户配额已冻结，更新 Redis 任务与配额关系失败: %s", err)
+	}
 
 	creativeItem := repo.CreativeItem{
 		IslandId:   AllInOneIslandID,
@@ -948,13 +969,13 @@ func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web
 	}
 
 	// 检查用户是否有足够的智慧果
-	quota, err := ctl.quotaRepo.GetUserQuota(ctx, user.ID)
+	quota, err := ctl.userSvc.UserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	if quota.Quota < quota.Used+req.Quota {
+	if quota.Rest-quota.Freezed < req.Quota {
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
@@ -977,6 +998,15 @@ func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
+
+	// 冻结智慧果
+	if err := ctl.userSvc.FreezeUserQuota(ctx, user.ID, req.Quota); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛冻结用户配额失败: %s", err)
+	}
+
+	if err := ctl.rds.SetEx(ctx, fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", user.ID, taskID), req.Quota, 5*time.Minute).Err(); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛用户配额已冻结，更新 Redis 任务与配额关系失败: %s", err)
+	}
 
 	// 保存历史记录
 	creativeItem, arg := ctl.buildHistorySaveRecord(req, taskID)

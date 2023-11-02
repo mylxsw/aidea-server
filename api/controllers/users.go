@@ -394,7 +394,7 @@ func (ctl *UserController) ResetPassword(ctx context.Context, webCtx web.Context
 
 // CurrentUser 获取当前用户信息
 func (ctl *UserController) CurrentUser(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
-	quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
+	quota, err := ctl.userSrv.UserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
 	}

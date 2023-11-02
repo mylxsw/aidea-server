@@ -272,6 +272,11 @@ type Question struct {
 	Answers  []repo.ChatGroupMessageRes `json:"answers"`
 }
 
+type GroupChatMessages struct {
+	Messages  chat.Messages
+	NeedCoins int64
+}
+
 // Chat 发起聊天
 func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	groupID, err := strconv.Atoi(webCtx.PathVar("group_id"))
@@ -336,7 +341,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	}
 
 	qas := buildQuestionFromChatGroupMessages(contextMessages)
-	messagesPerMembers := make(map[int64]chat.Messages)
+	messagesPerMembers := make(map[int64]GroupChatMessages)
 	for _, memberID := range availableMembers {
 		memberMessages := make(chat.Messages, 0)
 		for _, qa := range qas {
@@ -357,7 +362,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		}
 
 		memberMessages = append(memberMessages, chat.Message{Role: "user", Content: req.Message})
-		messagesPerMembers[memberID] = memberMessages
+		messagesPerMembers[memberID] = GroupChatMessages{Messages: memberMessages}
 	}
 
 	log.With(messagesPerMembers).Debugf("group chat messages per members")
@@ -371,17 +376,23 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 			return 0
 		}
 
-		count, err := chat.MessageTokenCount(messagesPerMembers[memID], membersMap[memID].ModelId)
+		mpm := messagesPerMembers[memID]
+
+		count, err := chat.MessageTokenCount(mpm.Messages, membersMap[memID].ModelId)
 		if err != nil {
 			log.F(log.M{"member_id": memID, "req": req}).Errorf("calc message token count failed: %v", err)
 			return coins.GetOpenAITextCoins(membersMap[memID].ModelId, 1000)
 		}
 
-		return coins.GetOpenAITextCoins(membersMap[memID].ModelId, int64(count)) + 2
+		// 假设每次聊天消耗 3 个智慧果
+		mpm.NeedCoins = coins.GetOpenAITextCoins(membersMap[memID].ModelId, int64(count)) + 3
+		messagesPerMembers[memID] = mpm
+
+		return mpm.NeedCoins
 	})
 
 	needCoins := array.Reduce(coinCounts, func(carry, item int64) int64 { return carry + item }, 0)
-	quota, err := ctl.repo.Quota.GetUserQuota(ctx, user.ID)
+	quota, err := ctl.userSrv.UserQuota(ctx, user.ID)
 	if err != nil {
 		questionID := failedMessageWriter(fmt.Sprintf("查询用户剩余智慧果数量失败: %v", err))
 		log.F(log.M{
@@ -392,15 +403,15 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	}
 
 	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
-	restQuota := quota.Quota - quota.Used - needCoins
+	restQuota := quota.Rest - quota.Freezed - needCoins
 
 	log.F(log.M{
-		"need_coins": needCoins,
-		"rest_quota": quota.Quota - quota.Used,
+		"need_coins":     needCoins,
+		"avaiable_quota": quota.Rest - quota.Freezed,
 	}).Debugf("group chat consume estimate")
 
 	if restQuota < 0 {
-		failedMessageWriter(fmt.Sprintf("智慧果数量不足，需要 %d 个智慧果，剩余 %d 个", needCoins, quota.Quota-quota.Used))
+		failedMessageWriter(fmt.Sprintf("智慧果数量不足，需要 %d 个智慧果，当前可用 %d 个", needCoins, quota.Rest-quota.Freezed))
 		return webCtx.JSONError(common.ErrQuotaNotEnough, http.StatusPaymentRequired)
 	}
 
@@ -415,9 +426,14 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
+	// 冻结用户的智慧果
+	if err := ctl.userSrv.FreezeUserQuota(ctx, user.ID, needCoins); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("群聊冻结用户智慧果失败: %s", err)
+	}
+
 	// 为每一个成员创建聊天记录（待处理任务）
 	tasks := make([]GroupChatTask, 0)
-	for memberID, msg := range messagesPerMembers {
+	for memberID, mpm := range messagesPerMembers {
 		answerID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
 			Role:     int64(repo.MessageRoleAssistant),
 			Pid:      questionID,
@@ -437,8 +453,9 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 			QuestionID:      questionID,
 			MessageID:       answerID,
 			ModelID:         membersMap[memberID].ModelId,
-			ContextMessages: msg,
+			ContextMessages: mpm.Messages,
 			CreatedAt:       time.Now(),
+			FreezedCoins:    mpm.NeedCoins,
 		}
 
 		// 加入异步任务队列

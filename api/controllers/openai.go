@@ -206,8 +206,32 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
 	leftCount, maxFreeCount := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, req.Model)
 	if leftCount <= 0 {
-		if err := ctl.userQuotaEnough(ctx, quotaRepo, user, sw, webCtx, req, inputTokenCount, maxFreeCount); err != nil {
+		quota, needCoins, err := ctl.queryChatQuota(ctx, quotaRepo, user, sw, webCtx, req, inputTokenCount, maxFreeCount)
+		if err != nil {
 			return
+		}
+
+		// 智慧果不足
+		if quota.Rest-quota.Freezed < needCoins {
+			if maxFreeCount > 0 {
+				misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试")), http.StatusPaymentRequired))
+				return
+			}
+
+			misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough)), http.StatusPaymentRequired))
+			return
+		}
+
+		// 冻结本次所需要的智慧果
+		if ctl.userSrv.FreezeUserQuota(ctx, user.ID, needCoins); err != nil {
+			log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("freeze user quota failed: %s", err)
+		} else {
+			defer func() {
+				// 解冻智慧果
+				if err := ctl.userSrv.UnfreezeUserQuota(ctx, user.ID, needCoins); err != nil {
+					log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("unfreeze user quota failed: %s", err)
+				}
+			}()
 		}
 	}
 
@@ -364,7 +388,7 @@ func (*OpenAIController) buildFinalSystemMessage(
 		Error:      chatErrorMessage,
 	}
 
-	if realTokenConsumed > 1024 && len(req.Messages) >= int(maxContextLen*2) {
+	if len(req.Messages) >= int(maxContextLen*2) {
 		if req.RoomID <= 1 {
 			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请在“聊一聊”页面创建新对话。", realTokenConsumed)
 		} else {
@@ -392,29 +416,27 @@ func (*OpenAIController) buildFinalSystemMessage(
 	}
 }
 
-// userQuotaEnough 检查用户智慧果余量是否足够
-func (ctl *OpenAIController) userQuotaEnough(ctx context.Context, quotaRepo *repo.QuotaRepo, user *auth.User, sw *streamwriter.StreamWriter, webCtx web.Context, req *chat.Request, inputTokenCount int64, maxFreeCount int) error {
-	quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
+// queryChatQuota 检查用户智慧果余量是否足够
+func (ctl *OpenAIController) queryChatQuota(
+	ctx context.Context,
+	quotaRepo *repo.QuotaRepo,
+	user *auth.User,
+	sw *streamwriter.StreamWriter,
+	webCtx web.Context,
+	req *chat.Request,
+	inputTokenCount int64,
+	maxFreeCount int,
+) (quota *service.UserQuota, needCoins int64, err error) {
+	quota, err = ctl.userSrv.UserQuota(ctx, user.ID)
 	if err != nil {
 		log.F(log.M{"user_id": user.ID}).Errorf("查询用户智慧果余量失败: %s", err)
 		misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrInternalError)), http.StatusInternalServerError))
 
-		return err
+		return nil, 0, err
 	}
 
-	// 假设当前响应消耗 2 个智慧果
-	restQuota := quota.Quota - quota.Used - coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), inputTokenCount) - 2
-	if restQuota < 0 {
-		if maxFreeCount > 0 {
-			misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试")), http.StatusPaymentRequired))
-			return errors.New("今日免费额度已不足，请充值后再试")
-		}
-
-		misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough)), http.StatusPaymentRequired))
-		return errors.New("智慧果余额不足")
-	}
-
-	return nil
+	// 假设本次请求将会消耗 3 个智慧果
+	return quota, coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), inputTokenCount) + 3, nil
 }
 
 func (ctl *OpenAIController) rateLimitPass(ctx context.Context, user *auth.User, req *chat.Request, sw *streamwriter.StreamWriter) error {
