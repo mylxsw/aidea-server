@@ -189,7 +189,7 @@ func (ctl *PaymentController) AlipayClientConfirm(ctx context.Context, webCtx we
 		log.WithFields(log.Fields{
 			"his":    his,
 			"result": res,
-		}).Errorf("客户端获取支付宝支付状态失败，支付状态不是成功状态")
+		}).Warning("客户端获取支付宝支付状态失败，支付状态不是成功状态")
 	}
 
 	return webCtx.JSON(web.M{

@@ -45,12 +45,7 @@ func (chat *VirtualChat) MaxContextLength(model string) int {
 
 	var promptTokens int
 	if prompt != "" {
-		messages := []openailib.ChatCompletionMessage{
-			{Role: "system", Content: chat.conf.NanxianPrompt},
-		}
-
-		num, _ := openai.NumTokensFromMessages(messages, model)
-		promptTokens = num
+		promptTokens, _ = openai.NumTokensFromMessages([]openailib.ChatCompletionMessage{{Role: "system", Content: prompt}}, model)
 	}
 
 	return chat.imp.MaxContextLength(model) - promptTokens
