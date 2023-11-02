@@ -30,7 +30,7 @@ func TestDashScope_Chat(t *testing.T) {
 func TestDashScope_ChatStream(t *testing.T) {
 	client := createClient()
 	resp, err := client.ChatStream(context.TODO(), dashscope.ChatRequest{
-		Model: "qwen-turbo",
+		Model: "sanle-v1",
 		Input: dashscope.ChatInput{
 			Prompt: "蓝牙耳机坏了去看牙科还是耳科呢",
 		},

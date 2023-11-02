@@ -268,13 +268,15 @@ func (ai *Imp) selectImp(model string) Chat {
 		baidu.ModelAquilaChat7B,
 		baidu.ModelChatGLM2_6B_32K,
 		baidu.ModelBloomz7B,
+		baidu.ModelLlama2_13b,
 		baidu.ModelLlama2_7b_CN,
 		baidu.ModelLlama2_70b:
 		// 百度文心千帆
 		return ai.baiduAI
 	case dashscope.ModelQWenV1, dashscope.ModelQWenPlusV1,
 		dashscope.ModelQWen7BV1, dashscope.ModelQWen7BChatV1,
-		dashscope.ModelQWenTurbo, dashscope.ModelQWenPlus:
+		dashscope.ModelQWenTurbo, dashscope.ModelQWenPlus, dashscope.ModelBaiChuan7BChatV1,
+		dashscope.ModelQWen7BChat, dashscope.ModelQWen14BChat:
 		// 阿里灵积平台
 		return ai.dashScope
 	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2), string(xfyun.ModelGeneralV3):

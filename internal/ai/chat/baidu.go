@@ -137,7 +137,7 @@ func (chat *BaiduAIChat) MaxContextLength(model string) int {
 	case baidu.ModelErnieBotTurbo:
 		// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/4lilb2lpf
 		return 7000
-	case baidu.ModelLlama2_70b:
+	case baidu.ModelLlama2_70b, baidu.ModelLlama2_13b:
 		// https://cloud.baidu.com/doc/WENXINWORKSHOP/s/8lkjfhiyt
 		return 3000
 	case baidu.ModelLlama2_7b_CN:

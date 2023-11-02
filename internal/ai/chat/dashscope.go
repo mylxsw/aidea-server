@@ -147,7 +147,7 @@ func (ds *DashScopeChat) ChatStream(ctx context.Context, req Request) (<-chan Re
 
 func (ds *DashScopeChat) MaxContextLength(model string) int {
 	switch model {
-	case dashscope.ModelQWenV1, dashscope.ModelQWenTurbo, dashscope.ModelQWenPlusV1, dashscope.ModelQWenPlus:
+	case dashscope.ModelQWenV1, dashscope.ModelQWenTurbo, dashscope.ModelQWenPlusV1, dashscope.ModelQWenPlus, dashscope.ModelQWen7BChat, dashscope.ModelQWen14BChat:
 		// https://help.aliyun.com/zh/dashscope/developer-reference/api-details?disableWebsiteRedirect=true
 		return 6000
 	}

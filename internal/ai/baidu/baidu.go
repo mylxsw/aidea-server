@@ -224,6 +224,9 @@ const (
 	// ModelLlama2_70b Llama-2-70b-chat由Meta AI研发并开源，在编码、推理及知识应用等场景表现优秀
 	// ¥0.044元/千tokens
 	ModelLlama2_70b = "model_badiu_llama2_70b"
+	// ModelLlama2_13b Llama-2-13b-chat由Meta AI研发并开源，在编码、推理及知识应用等场景表现优秀
+	// ¥0.008元/千tokens
+	ModelLlama2_13b = "model_baidu_llama2_13b"
 	// ModelLlama2_7b_CN Qianfan-Chinese-Llama-2-7B是千帆团队在Llama-2-7b基础上的中文增强版本，在CMMLU、C-EVAL等中文数据集上表现优异
 	// ¥0.006元/千tokens
 	ModelLlama2_7b_CN = "model_baidu_llama2_7b_cn"
@@ -279,6 +282,8 @@ func (ai *BaiduAIImpl) modelURL(model Model) string {
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions_pro"
 	case ModelLlama2_70b:
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/llama_2_70b"
+	case ModelLlama2_13b:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/llama_2_13b"
 	case ModelLlama2_7b_CN:
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/qianfan_chinese_llama_2_7b"
 	case ModelChatGLM2_6B_32K:

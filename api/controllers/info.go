@@ -69,7 +69,7 @@ func (ctl *InfoController) shareInfo(ctx web.Context, user *auth.UserOptional) w
 	return ctx.JSON(res)
 }
 
-const CurrentVersion = "1.0.6"
+const CurrentVersion = "1.0.7"
 
 func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 	clientVersion := ctx.Input("version")
@@ -171,14 +171,14 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		return false, []HomeModel{
 			{
-				Name:     "南贤",
+				Name:     "南贤 3.5",
 				ModelID:  "nanxian",
 				Desc:     "速度快，成本低",
 				Color:    "FF67AC5C",
 				Powerful: false,
 			},
 			{
-				Name:     "北丑",
+				Name:     "北丑 4.0",
 				ModelID:  "beichou",
 				Desc:     "能力强，更精准",
 				Color:    "FF714BD7",

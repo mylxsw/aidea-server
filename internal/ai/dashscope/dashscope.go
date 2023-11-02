@@ -37,6 +37,9 @@ const (
 	ModelQWen7BV1     = "qwen-7b-v1"
 	ModelQWen7BChatV1 = "qwen-7b-chat-v1"
 
+	ModelQWen7BChat  = "qwen-7b-chat"
+	ModelQWen14BChat = "qwen-14b-chat"
+
 	// Llama2
 	ModelLlama27BV2      = "llama2-7b-v2"
 	ModelLlama27BChatV2  = "llama2-7b-chat-v2"
@@ -44,7 +47,8 @@ const (
 	ModelLlama213BChatV2 = "llama2-13b-chat-v2"
 
 	// 百川
-	ModelBaiChuan7BV1 = "baichuan-7b-v1"
+	ModelBaiChuan7BV1     = "baichuan-7b-v1"
+	ModelBaiChuan7BChatV1 = "baichuan2-7b-chat-v1"
 
 	// ChatGLM
 	ModelChatGLM6BV2 = "chatglm-6b-v2"

@@ -1,8 +1,9 @@
 package chat
 
 import (
-	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
 	"strings"
+
+	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/ai/anthropic"
@@ -183,8 +184,19 @@ func chinaModels(conf *config.Config) []Model {
 	})
 	models = append(models, Model{
 		ID:          "文心千帆:" + baidu.ModelLlama2_70b,
-		Name:        "Llama 2 70B",
-		ShortName:   "Llama2",
+		Name:        "Llama 2 70B 英文版",
+		ShortName:   "Llama2 70B",
+		Description: "由 Meta AI 研发并开源，在编码、推理及知识应用等场景表现优秀，暂不支持中文输出",
+		Category:    "文心千帆",
+		IsChat:      true,
+		Disabled:    !conf.EnableBaiduWXAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/llama2.png",
+	})
+	models = append(models, Model{
+		ID:          "文心千帆:" + baidu.ModelLlama2_13b,
+		Name:        "Llama 2 13B 英文版",
+		ShortName:   "Llama2 13B",
 		Description: "由 Meta AI 研发并开源，在编码、推理及知识应用等场景表现优秀，暂不支持中文输出",
 		Category:    "文心千帆",
 		IsChat:      true,
@@ -195,7 +207,7 @@ func chinaModels(conf *config.Config) []Model {
 	models = append(models, Model{
 		ID:          "文心千帆:" + baidu.ModelLlama2_7b_CN,
 		Name:        "Llama 2 7B 中文版",
-		ShortName:   "Llama2 中文",
+		ShortName:   "Llama2 7B",
 		Description: "由 Meta AI 研发并开源，在编码、推理及知识应用等场景表现优秀，当前版本是千帆团队的中文增强版本",
 		Category:    "文心千帆",
 		IsChat:      true,
@@ -245,7 +257,7 @@ func chinaModels(conf *config.Config) []Model {
 			Description: "通义千问超大规模语言模型，支持中文英文等不同语言输入",
 			Category:    "灵积",
 			IsChat:      true,
-			Disabled:    !conf.EnableBaiduWXAI,
+			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
 			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
 		})
@@ -256,20 +268,64 @@ func chinaModels(conf *config.Config) []Model {
 			Description: "通义千问超大规模语言模型增强版，支持中文英文等不同语言输入",
 			Category:    "灵积",
 			IsChat:      true,
-			Disabled:    !conf.EnableBaiduWXAI,
+			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
 			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+		})
+		models = append(models, Model{
+			ID:          "灵积:" + dashscope.ModelQWen7BChat,
+			Name:        "通义千问 7B",
+			ShortName:   "千问 7B",
+			Description: "通义千问 7B 是阿里云研发的通义千问大模型系列的 70 亿参数规模的模型，开源",
+			Category:    "灵积",
+			IsChat:      true,
+			Disabled:    !conf.EnableDashScopeAI,
+			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+		})
+		models = append(models, Model{
+			ID:          "灵积:" + dashscope.ModelQWen14BChat,
+			Name:        "通义千问 14B",
+			ShortName:   "千问 14B",
+			Description: "通义千问 14B 是阿里云研发的通义千问大模型系列的 140 亿参数规模的模型，开源",
+			Category:    "灵积",
+			IsChat:      true,
+			Disabled:    !conf.EnableDashScopeAI,
+			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+		})
+		models = append(models, Model{
+			ID:          "灵积:" + dashscope.ModelBaiChuan7BChatV1,
+			Name:        "百川2 7B",
+			ShortName:   "百川2 7B",
+			Description: "由百川智能研发的大语言模型，融合了意图理解、信息检索以及强化学习技术，结合有监督微调与人类意图对齐，在知识问答、文本创作领域表现突出",
+			Category:    "灵积",
+			IsChat:      true,
+			Disabled:    !conf.EnableDashScopeAI,
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/baichuan.jpg",
 		})
 	}
 
 	models = append(models, Model{
 		ID:          "商汤日日新:" + string(sensenova.ModelNovaPtcXLV1),
-		Name:        "商汤日日新",
-		ShortName:   "日日新",
+		Name:        "商汤日日新（大）",
+		ShortName:   "日日新（大）",
 		Description: "商汤科技自主研发的超大规模语言模型，能够回答问题、创作文字，还能表达观点、撰写代码",
 		Category:    "商汤日日新",
 		IsChat:      true,
-		Disabled:    conf.EnableSenseNovaAI,
+		Disabled:    !conf.EnableSenseNovaAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/sensenova.png",
+	})
+	models = append(models, Model{
+		ID:          "商汤日日新:" + string(sensenova.ModelNovaPtcXSV1),
+		Name:        "商汤日日新（小）",
+		ShortName:   "日日新（小）",
+		Description: "商汤科技自主研发的超大规模语言模型，能够回答问题、创作文字，还能表达观点、撰写代码",
+		Category:    "商汤日日新",
+		IsChat:      true,
+		Disabled:    !conf.EnableSenseNovaAI,
 		VersionMin:  "1.0.3",
 		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/sensenova.png",
 	})
@@ -288,8 +344,8 @@ func chinaModels(conf *config.Config) []Model {
 
 	models = append(models, Model{
 		ID:          "百川:" + baichuan.ModelBaichuan2_53B,
-		Name:        "百川大模型",
-		ShortName:   "百川",
+		Name:        "百川2 53B",
+		ShortName:   "百川2 53B",
 		Description: "由百川智能研发的大语言模型，融合了意图理解、信息检索以及强化学习技术，结合有监督微调与人类意图对齐，在知识问答、文本创作领域表现突出",
 		Category:    "百川",
 		IsChat:      true,
@@ -356,8 +412,8 @@ func aideaModels(conf *config.Config) []Model {
 	return []Model{
 		{
 			ID:          "virtual:nanxian",
-			Name:        "南贤大模型",
-			ShortName:   "南贤",
+			Name:        "南贤 3.5",
+			ShortName:   "南贤 3.5",
 			Description: "速度快，成本低",
 			Category:    "virtual",
 			IsChat:      true,
@@ -367,8 +423,8 @@ func aideaModels(conf *config.Config) []Model {
 		},
 		{
 			ID:          "virtual:beichou",
-			Name:        "北丑大模型",
-			ShortName:   "北丑",
+			Name:        "北丑 4.0",
+			ShortName:   "北丑 4.0",
 			Description: "能力强，更精准",
 			Category:    "virtual",
 			IsChat:      true,

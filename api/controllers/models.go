@@ -28,18 +28,18 @@ func (ctl *ModelController) Register(router web.Router) {
 
 // Models 获取模型列表
 func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web.Response {
-	if misc.VersionNewer(client.Version, "1.0.6") {
+	if client.Version == "" || misc.VersionNewer(client.Version, "1.0.6") {
 		models := array.Map(chat.Models(ctl.conf, true), func(item chat.Model, _ int) chat.Model {
 			if item.Disabled {
 				return item
 			}
 
-			if item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
+			if client.Version != "" && item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
 				item.Disabled = true
 				return item
 			}
 
-			if item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
+			if client.Version != "" && item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
 				item.Disabled = true
 				return item
 			}

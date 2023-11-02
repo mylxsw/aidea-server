@@ -35,15 +35,19 @@ var coinTables = map[string]CoinTable{
 		"model_ernie_bot_4":           15, // valid 文心一言 4.0 ¥0.12/1K tokens
 		"model_badiu_llama2_70b":      6,  // valid llama2 70b ¥0.044元/千tokens
 		"model_baidu_llama2_7b_cn":    2,  // valid llama2 7b cn ¥0.006元/千tokens
+		"model_baidu_llama2_13b":      2,  // valid llama2 7b ¥0.008元/千tokens
 		"model_baidu_chatglm2_6b_32k": 2,  // valid chatglm2 6b ¥0.006/1K tokens
 		"model_baidu_aquila_chat7b":   2,  // valid aquila chat7b ¥0.006/1K tokens
 		"model_baidu_bloomz_7b":       2,  // valid bloomz 7b ¥0.006/1K tokens
 
 		// 阿里 https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing
-		"qwen-v1":      1, // valid 通义千问 v1    ¥0.008/1K tokens
-		"qwen-plus-v1": 3, // valid 通义千问 plus v1 ¥0.02/1K tokens
-		"qwen-turbo":   1, // valid 通义千问 turbo ¥0.008/1K tokens
-		"qwen-plus":    3, // valid 通义千问 plus ¥0.02/1K tokens
+		"qwen-v1":              1, // valid 通义千问 v1    ¥0.008/1K tokens
+		"qwen-plus-v1":         3, // valid 通义千问 plus v1 ¥0.02/1K tokens
+		"qwen-turbo":           1, // valid 通义千问 turbo ¥0.008/1K tokens
+		"qwen-plus":            3, // valid 通义千问 plus ¥0.02/1K tokens
+		"baichuan2-7b-chat-v1": 2, // valid 百川2 7b ¥0.006/1K tokens
+		"qwen-7b-chat":         2, // valid 通义千问 7b ¥0.006/1K tokens
+		"qwen-14b-chat":        2, // valid 通义千问 14b ¥0.008/1K tokens
 
 		// 讯飞星火 https://xinghuo.xfyun.cn/sparkapi
 		"generalv3": 5, // valid 讯飞星火 v3    ¥0.036/1K tokens

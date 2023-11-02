@@ -3,12 +3,13 @@ package controllers
 import (
 	"context"
 	"errors"
-	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
+
+	"github.com/mylxsw/aidea-server/internal/ai/chat"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/misc"
@@ -115,11 +116,11 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 			return true
 		}
 
-		if item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
+		if client.Version != "" && item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
 			return false
 		}
 
-		if item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
+		if client.Version != "" && item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
 			return false
 		}
 
