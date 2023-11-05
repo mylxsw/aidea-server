@@ -191,10 +191,10 @@ func (srv *UserService) UpdateCustomConfig(ctx context.Context, userID int64, co
 
 // UserQuota 用户配额
 type UserQuota struct {
-	Quota   int64 `json:"quota,omitempty"`
-	Used    int64 `json:"used,omitempty"`
-	Rest    int64 `json:"rest,omitempty"`
-	Freezed int64 `json:"freezed,omitempty"`
+	Quota   int64 `json:"quota"`
+	Used    int64 `json:"used"`
+	Rest    int64 `json:"rest"`
+	Freezed int64 `json:"freezed"`
 }
 
 // UserQuota 获取用户配额

@@ -246,9 +246,9 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 						return false
 					}
 
-					authHeader := readFromWebContext(ctx, "authorization")
+					authHeader := strings.ToLower(readFromWebContext(ctx, "authorization"))
 					// 如果有 Authorization 头，且 Authorization 头以 Bearer 开头，则需要鉴权
-					if authHeader != "" {
+					if strings.HasPrefix(authHeader, "bearer ") {
 						return false
 					}
 
@@ -408,7 +408,8 @@ func authHandler(cb func(ctx web.Context, credential string) error, skip func(ct
 	return func(handler web.WebHandler) web.WebHandler {
 		return func(ctx web.Context) (resp web.Response) {
 			if !skip(ctx) {
-				segs := strings.SplitN(readFromWebContext(ctx, "authorization"), " ", 2)
+				authHeader := readFromWebContext(ctx, "authorization")
+				segs := strings.SplitN(authHeader, " ", 2)
 
 				var authToken string
 				if len(segs) >= 2 {

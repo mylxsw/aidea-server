@@ -401,7 +401,7 @@ func (ctl *UserController) CurrentUser(ctx context.Context, webCtx web.Context, 
 
 	u, err := ctl.userSrv.GetUserByID(ctx, user.ID, true)
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusNotFound)
 		}
 
