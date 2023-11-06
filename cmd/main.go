@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/ai/oneapi"
 	"math/rand"
 	"path/filepath"
 	"time"
@@ -132,6 +133,11 @@ func main() {
 
 	ins.AddBoolFlag("enable-gpt360", "是否启用 360 智脑大模型")
 	ins.AddStringFlag("gpt360-apikey", "", "360 智脑大模型 API Key")
+
+	ins.AddStringSliceFlag("oneapi-support-models", []string{}, "one-api 支持的模型，可选项 chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2")
+	ins.AddBoolFlag("enable-oneapi", "是否启用 OneAPI")
+	ins.AddStringFlag("oneapi-server", "", "one-api server")
+	ins.AddStringFlag("oneapi-key", "", "one-api key")
 
 	ins.AddBoolFlag("enable-stabilityai", "是否启用 StabilityAI 文生图、图生图服务")
 	ins.AddBoolFlag("stabilityai-autoproxy", "使用 socks5 代理访问 StabilityAI 服务")
@@ -316,6 +322,7 @@ func main() {
 		anthropic.Provider{},
 		baichuan.Provider{},
 		gpt360.Provider{},
+		oneapi.Provider{},
 	)
 
 	app.MustRun(ins)

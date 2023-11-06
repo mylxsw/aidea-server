@@ -7,6 +7,7 @@ import (
 	"github.com/mylxsw/aidea-server/internal/ai/baidu"
 	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
 	"github.com/mylxsw/aidea-server/internal/ai/gpt360"
+	"github.com/mylxsw/aidea-server/internal/ai/oneapi"
 	"github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/aidea-server/internal/ai/sensenova"
 	"github.com/mylxsw/aidea-server/internal/ai/tencentai"
@@ -28,6 +29,7 @@ func (Provider) Register(binder infra.Binder) {
 		anthai *anthropic.Anthropic,
 		baichuanai *baichuan.BaichuanAI,
 		g360 *gpt360.GPT360,
+		one *oneapi.OneAPI,
 	) Chat {
 		return NewChat(
 			conf,
@@ -40,6 +42,7 @@ func (Provider) Register(binder infra.Binder) {
 			NewAnthropicChat(anthai),
 			NewBaichuanAIChat(baichuanai),
 			NewGPT360Chat(g360),
+			NewOneAPIChat(one),
 		)
 	})
 }

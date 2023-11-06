@@ -66,6 +66,15 @@ var coinTables = map[string]CoinTable{
 
 		// 360 智脑
 		"360GPT_S2_V9": 2, // valid 360 智脑 ¥0.012/1K tokens
+
+		// OneAPI
+		// ChatGLM: https://open.bigmodel.cn/pricing
+		"chatglm_turbo": 1, // valid ¥0.005/1K tokens
+		"chatglm_pro":   2, // valid ¥0.01/1K tokens
+		"chatglm_std":   1, // valid ¥0.005/1K tokens
+		"chatglm_lite":  1, // valid ¥0.004/1K tokens
+		// Google
+		"PaLM-2": 3, // valid ¥0.0148/1K tokens
 	},
 
 	"voice-recognition": {

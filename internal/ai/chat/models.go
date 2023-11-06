@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"github.com/mylxsw/go-utils/str"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/internal/ai/xfyun"
@@ -364,6 +365,64 @@ func chinaModels(conf *config.Config) []Model {
 		VersionMin:  "1.0.5",
 		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gpt360.jpg",
 	})
+
+	if conf.EnableOneAPI {
+		models = append(models, Model{
+			ID:          "oneapi:chatglm_turbo",
+			Name:        "ChatGLM Turbo",
+			ShortName:   "ChatGLM Turbo",
+			Description: "智谱 AI 发布的对话模型，具备强大的推理性能、效果、较低的部署门槛及更长的上下文",
+			Category:    "oneapi",
+			IsChat:      true,
+			Disabled:    !str.In("chatglm_turbo", conf.OneAPISupportModels),
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/chatglm.png",
+		})
+		models = append(models, Model{
+			ID:          "oneapi:chatglm_pro",
+			Name:        "ChatGLM Pro",
+			ShortName:   "ChatGLM Pro",
+			Description: "智谱 AI 发布的对话模型，具备强大的推理性能、效果、较低的部署门槛及更长的上下文",
+			Category:    "oneapi",
+			IsChat:      true,
+			Disabled:    !str.In("chatglm_pro", conf.OneAPISupportModels),
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/chatglm.png",
+		})
+		models = append(models, Model{
+			ID:          "oneapi:chatglm_std",
+			Name:        "ChatGLM Std",
+			ShortName:   "ChatGLM Std",
+			Description: "智谱 AI 发布的对话模型，具备强大的推理性能、效果、较低的部署门槛及更长的上下文",
+			Category:    "oneapi",
+			IsChat:      true,
+			Disabled:    !str.In("chatglm_std", conf.OneAPISupportModels),
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/chatglm.png",
+		})
+		models = append(models, Model{
+			ID:          "oneapi:chatglm_lite",
+			Name:        "ChatGLM Lite",
+			ShortName:   "ChatGLM Lite",
+			Description: "智谱 AI 发布的对话模型，具备强大的推理性能、效果、较低的部署门槛及更长的上下文",
+			Category:    "oneapi",
+			IsChat:      true,
+			Disabled:    !str.In("chatglm_lite", conf.OneAPISupportModels),
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/chatglm.png",
+		})
+		models = append(models, Model{
+			ID:          "oneapi:PaLM-2",
+			Name:        "Google PaLM-2",
+			ShortName:   "PaLM-2",
+			Description: "PaLM 2 是谷歌的下一代大规模语言模型",
+			Category:    "oneapi",
+			IsChat:      true,
+			Disabled:    !str.In("PaLM-2", conf.OneAPISupportModels),
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/google-palm2.png",
+		})
+	}
 
 	return models
 }

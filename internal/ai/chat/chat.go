@@ -171,6 +171,7 @@ type Imp struct {
 	baichuanAI  *BaichuanAIChat
 	g360        *GPT360Chat
 	virtual     *VirtualChat
+	one         *OneAPIChat
 }
 
 func NewChat(
@@ -184,6 +185,7 @@ func NewChat(
 	anthropicAI *AnthropicChat,
 	baichuanAI *BaichuanAIChat,
 	g360 *GPT360Chat,
+	one *OneAPIChat,
 ) Chat {
 	var virtualImpl Chat
 	switch strings.ToLower(conf.VirtualModel.Implementation) {
@@ -205,6 +207,8 @@ func NewChat(
 		virtualImpl = baichuanAI
 	case "gpt360", "360智脑":
 		virtualImpl = g360
+	case "chatglm_turbo", "chatglm_pro", "chatglm_lite", "chatglm_std", "PaLM-2":
+		virtualImpl = one
 	default:
 		virtualImpl = openAI
 	}
@@ -220,6 +224,7 @@ func NewChat(
 		baichuanAI:  baichuanAI,
 		g360:        g360,
 		virtual:     NewVirtualChat(virtualImpl, conf.VirtualModel),
+		one:         one,
 	}
 }
 
@@ -258,6 +263,10 @@ func (ai *Imp) selectImp(model string) Chat {
 
 	if strings.HasPrefix(model, "360智脑:") {
 		return ai.g360
+	}
+
+	if strings.HasPrefix(model, "oneapi:") {
+		return ai.one
 	}
 
 	// TODO 根据模型名称判断使用哪个 AI
@@ -300,6 +309,9 @@ func (ai *Imp) selectImp(model string) Chat {
 	case ModelNanXian, ModelBeiChou:
 		// 虚拟模型
 		return ai.virtual
+	case "chatglm_turbo", "chatglm_pro", "chatglm_lite", "chatglm_std", "PaLM-2":
+		// oneapi
+		return ai.one
 	}
 
 	return ai.openAI

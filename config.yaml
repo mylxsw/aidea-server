@@ -150,6 +150,16 @@ baichuan-secret: ""
 enable-gpt360: false
 gpt360-apikey: ""
 
+######## ONEAPI ########
+
+# https://github.com/songquanpeng/one-api
+
+# 支持的模型列表，当前支持：chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2
+oneapi-support-models: []
+enable-oneapi: false
+oneapi-server: ""
+oneapi-key: ""
+
 ######## DeepAI 配置 ########
 
 # 用于图片超分辨率、图片上色

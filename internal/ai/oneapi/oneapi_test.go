@@ -24,7 +24,7 @@ func TestOneAPI_ChatStream(t *testing.T) {
 	defer cancel()
 
 	response, err := client.ChatStream(ctx, openai.ChatCompletionRequest{
-		Model: "PaLM-2",
+		Model: "chatglm_turbo",
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    "system",

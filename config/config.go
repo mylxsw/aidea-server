@@ -89,6 +89,13 @@ type Config struct {
 	EnableGPT360 bool   `json:"enable_gpt360" yaml:"enable_gpt360"`
 	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
 
+	// OneAPI 支持的模型列表
+	// one-api: https://github.com/songquanpeng/one-api
+	OneAPISupportModels []string `json:"oneapi_support_models" yaml:"oneapi_support_models"`
+	EnableOneAPI        bool     `json:"enable_oneapi" yaml:"enable_oneapi"`
+	OneAPIServer        string   `json:"oneapi_server" yaml:"oneapi_server"`
+	OneAPIKey           string   `json:"one_api_key" yaml:"one_api_key"`
+
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
 
@@ -314,6 +321,11 @@ func Register(ins *app.App) {
 
 			EnableGPT360: ctx.Bool("enable-gpt360"),
 			GPT360APIKey: ctx.String("gpt360-apikey"),
+
+			OneAPISupportModels: ctx.StringSlice("oneapi-support-models"),
+			EnableOneAPI:        ctx.Bool("enable-oneapi"),
+			OneAPIServer:        ctx.String("oneapi-server"),
+			OneAPIKey:           ctx.String("oneapi-key"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
 
