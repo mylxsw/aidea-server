@@ -71,6 +71,22 @@ func IsChinese(str string) bool {
 	return count/float64(utf8.RuneCountInString(str)) > 0.3
 }
 
+// ContainChinese 判断是否包含中文
+func ContainChinese(str string) bool {
+	if str == "" {
+		return false
+	}
+
+	var count float64
+	for _, v := range str {
+		if unicode.Is(unicode.Han, v) {
+			count += 1.0
+		}
+	}
+
+	return count > 0
+}
+
 // WordCount 统计字符串中的字符数
 func WordCount(text string) int64 {
 	return int64(utf8.RuneCountInString(text))

@@ -65,7 +65,7 @@ func (tr *TranslaterImpl) Translate(ctx context.Context, from, target string, te
 			"cache_key": cacheKey,
 		}).Errorf("marshal translate result failed: %s", err)
 	} else {
-		if err := tr.cacheRepo.Set(ctx, cacheKey, string(cacheValue), 30*24*time.Hour); err != nil {
+		if err := tr.cacheRepo.Set(ctx, cacheKey, string(cacheValue), 6*30*24*time.Hour); err != nil {
 			log.WithFields(log.Fields{
 				"cache_key": cacheKey,
 			}).Errorf("cache translate result failed: %s", err)

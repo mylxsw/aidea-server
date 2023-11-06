@@ -223,7 +223,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 
 		// 冻结本次所需要的智慧果
-		if ctl.userSrv.FreezeUserQuota(ctx, user.ID, needCoins); err != nil {
+		if err := ctl.userSrv.FreezeUserQuota(ctx, user.ID, needCoins); err != nil {
 			log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("freeze user quota failed: %s", err)
 		} else {
 			defer func() {
@@ -243,7 +243,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	// 写入用户消息
 	questionID := ctl.saveChatQuestion(ctx, user, req)
 
-	chatCtx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	chatCtx, cancel := context.WithTimeout(ctx, 180*time.Second)
 	defer cancel()
 
 	var replyText string
@@ -280,48 +280,62 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 
 		if chatErrorMessage != "" {
-			log.F(log.M{"req": req, "user_id": user.ID}).Errorf("聊天失败，模型：%s，错误：%s", req.Model, chatErrorMessage)
+			log.F(log.M{"req": req, "user_id": user.ID, "reply": replyText}).Errorf("聊天失败，模型：%s，错误：%s", req.Model, chatErrorMessage)
 		}
 
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		defer cancel()
+		func() {
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
 
-		// 写入用户消息
-		answerID := ctl.saveChatAnswer(ctx, user, replyText, quotaConsumed, realTokenConsumed, req, questionID, chatErrorMessage)
+			// 写入用户消息
+			answerID := ctl.saveChatAnswer(ctx, user, replyText, quotaConsumed, realTokenConsumed, req, questionID, chatErrorMessage)
 
-		if chatErrorMessage != "" && replyText == "" {
-			misc.NoError(sw.WriteErrorStream(errors.New(chatErrorMessage), http.StatusInternalServerError))
-		} else {
-			// final 消息为定制消息，用于告诉 AIdea 客户端当前的资源消耗情况以及服务端信息
-			finalWord := ctl.buildFinalSystemMessage(questionID, answerID, user, quotaConsumed, realTokenConsumed, req, maxContextLen, chatErrorMessage)
-			misc.NoError(sw.WriteStream(finalWord))
-		}
+			if chatErrorMessage != "" && replyText == "" {
+				misc.NoError(sw.WriteErrorStream(errors.New(chatErrorMessage), http.StatusInternalServerError))
+			} else {
+				// final 消息为定制消息，用于告诉 AIdea 客户端当前的资源消耗情况以及服务端信息
+				finalWord := ctl.buildFinalSystemMessage(questionID, answerID, user, quotaConsumed, realTokenConsumed, req, maxContextLen, chatErrorMessage)
+				misc.NoError(sw.WriteStream(finalWord))
+			}
+		}()
 
 		// 更新用户免费聊天次数
 		if replyText != "" {
-			if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
-				log.WithFields(log.Fields{
-					"user_id": user.ID,
-					"model":   req.Model,
-				}).Errorf("update free chat count failed: %s", err)
-			}
+			func() {
+				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				defer cancel()
+
+				if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.ID, req.Model); err != nil {
+					log.WithFields(log.Fields{
+						"user_id": user.ID,
+						"model":   req.Model,
+					}).Errorf("update free chat count failed: %s", err)
+				}
+			}()
 		}
 
 		// 扣除智慧果
 		if leftCount <= 0 && quotaConsumed > 0 {
-			if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo.NewQuotaUsedMeta("chat", req.Model)); err != nil {
-				log.Errorf("used quota add failed: %s", err)
-			}
+			func() {
+				ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+				defer cancel()
+
+				if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo.NewQuotaUsedMeta("chat", req.Model)); err != nil {
+					log.Errorf("used quota add failed: %s", err)
+				}
+			}()
 		}
 	}()
 
 	// 生成 SSE 流
-	timer := time.NewTimer(30 * time.Second)
+	timer := time.NewTimer(60 * time.Second)
 	defer timer.Stop()
 
 	id := 0
 	for {
-		timer.Reset(30 * time.Second)
+		if id > 0 {
+			timer.Reset(30 * time.Second)
+		}
 
 		select {
 		case <-timer.C:
