@@ -111,8 +111,10 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 	return webCtx.JSON(web.M{
 		// 是否启用苹果 App 支付
 		"applepay_enabled": ctl.conf.EnableApplePay,
-		// 是否启用支付宝支付
+		// 是否启用支付宝支付 @deprecated(since 1.0.8)
 		"alipay_enabled": ctl.conf.EnableAlipay,
+		// 是否启用支付宝支付
+		"other_pay_enabled": ctl.conf.EnableAlipay,
 		// 是否启用讯飞星火模型
 		"xfyunai_enabled": ctl.conf.EnableXFYunAI,
 		// 是否启用百度文心千帆模型

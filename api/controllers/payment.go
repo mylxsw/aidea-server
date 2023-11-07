@@ -51,9 +51,17 @@ func (p *PaymentController) Register(router web.Router) {
 		router.Delete("/apple/{id}", p.CancelApplePayment)
 		router.Post("/apple/{id}/verify", p.VerifyApplePayment)
 
-		// 支付宝支付
+		// 支付宝支付 @deprecated(since 1.0.8)
 		router.Get("/alipay/products", p.AppleProducts)
+		// 支付宝支付 @deprecated(since 1.0.8)
 		router.Group("/alipay", func(router web.Router) {
+			router.Post("/", p.CreateAlipay)
+			router.Post("/client-confirm", p.AlipayClientConfirm)
+		})
+
+		// 支付宝支付别名(IOS 完全去支付宝，避免审核被拒)
+		router.Get("/others/products", p.AppleProducts)
+		router.Group("/others", func(router web.Router) {
 			router.Post("/", p.CreateAlipay)
 			router.Post("/client-confirm", p.AlipayClientConfirm)
 		})

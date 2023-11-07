@@ -88,7 +88,8 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v1/creative-island", // 创作岛
 		"/v1/tasks",           // 任务管理
 		"/v1/payment/apple",   // Apple 支付管理
-		"/v1/payment/alipay",  // 支付宝支付管理
+		"/v1/payment/alipay",  // 支付宝支付管理 @deprecated(since 1.0.8)
+		"/v1/payment/others",  // 支付宝支付管理
 		"/v1/payment/status",  // 支付状态查询
 		"/v1/auth/bind-phone", // 绑定手机号码
 		"/v1/rooms",           // 数字人管理
