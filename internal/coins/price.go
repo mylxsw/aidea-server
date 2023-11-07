@@ -9,6 +9,16 @@ var coinTables = map[string]CoinTable{
 	// 统一图片价格
 	"image": {
 		"default": 20,
+		// 1024×1024           -> $0.040
+		// 1024×1792,1792×1024 -> $0.080
+		"dall-e-3": 100,
+		// 1024×1024           -> $0.080
+		// 1024×1792,1792×1024 -> $0.120
+		"dall-e-3:hd": 150,
+		// 1024x1024 -> $0.020
+		// 512x512   -> $0.018
+		// 256x256   -> $0.016
+		"dall-e-2": 20,
 	},
 
 	"openai": {
@@ -155,21 +165,8 @@ func GetUploadCoins() int64 {
 
 // GetUnifiedImageGenCoins 统一的图片生成计费
 func GetUnifiedImageGenCoins(model string) int {
-	// Dalle 价格较高，单独计费
-	switch model {
-	case "dall-e-3":
-		// 1024×1024           -> $0.040
-		// 1024×1792,1792×1024 -> $0.080
-		return 100
-	case "dall-e-3:hd":
-		// 1024×1024           -> $0.080
-		// 1024×1792,1792×1024 -> $0.120
-		return 150
-	case "dall-e-2":
-		// 1024x1024 -> $0.020
-		// 512x512   -> $0.018
-		// 256x256   -> $0.016
-		return 30
+	if price, ok := coinTables["image"][model]; ok {
+		return int(price)
 	}
 
 	return int(coinTables["image"]["default"])
