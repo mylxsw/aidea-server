@@ -162,6 +162,7 @@ func (repo *QuotaRepo) QuotaConsume(ctx context.Context, userID int64, used int6
 	var debt int64
 
 	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
+		usedVar := used
 		// 查询当前可用配额
 		q := query.Builder().
 			Where(model.FieldQuotaUserId, userID).
@@ -176,10 +177,10 @@ func (repo *QuotaRepo) QuotaConsume(ctx context.Context, userID int64, used int6
 		for _, quota := range quotas {
 			quotaID := quota.Id.ValueOrZero()
 			rest := quota.Rest.ValueOrZero()
-			if rest >= used {
-				relatedQuotaIds[quotaID] = used
+			if rest >= usedVar {
+				relatedQuotaIds[quotaID] = usedVar
 				// 当前配额足够，直接更新配额
-				_, err := tx.ExecContext(ctx, "UPDATE quota SET rest = rest - ? WHERE id = ?", used, quotaID)
+				_, err := tx.ExecContext(ctx, "UPDATE quota SET rest = rest - ? WHERE id = ?", usedVar, quotaID)
 				return err
 			}
 
@@ -192,15 +193,15 @@ func (repo *QuotaRepo) QuotaConsume(ctx context.Context, userID int64, used int6
 			}
 
 			// 更新已使用量
-			used -= rest
+			usedVar -= rest
 		}
 
 		// 没有配额了，创建欠费记录
-		if used > 0 {
-			debt = used
+		if usedVar > 0 {
+			debt = usedVar
 			if _, err := model.NewDebtModel(tx).Create(ctx, query.KV{
 				model.FieldDebtUserId: userID,
-				model.FieldDebtUsed:   used,
+				model.FieldDebtUsed:   usedVar,
 			}); err != nil {
 				return err
 			}

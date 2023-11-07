@@ -44,6 +44,15 @@ type Config struct {
 	OpenAIServers      []string `json:"openai_servers" yaml:"openai_servers"`
 	OpenAIKeys         []string `json:"openai_keys" yaml:"openai_keys"`
 
+	EnableOpenAIDalle       bool     `json:"enable_openai_dalle" yaml:"enable_openai_dalle"`
+	DalleUsingOpenAISetting bool     `json:"dalle_using_openai_setting" yaml:"dalle_using_openai_setting"`
+	OpenAIDalleAzure        bool     `json:"openai_dalle_azure" yaml:"openai_dalle_azure"`
+	OpenAIDalleAPIVersion   string   `json:"openai_dalle_api_version" yaml:"openai_dalle_api_version"`
+	OpenAIDalleAutoProxy    bool     `json:"openai_dalle_auto_proxy" yaml:"openai_dalle_auto_proxy"`
+	OpenAIDalleOrganization string   `json:"openai_dalle_organization" yaml:"openai_dalle_organization"`
+	OpenAIDalleServers      []string `json:"openai_dalle_servers" yaml:"openai_dalle_servers"`
+	OpenAIDalleKeys         []string `json:"openai_dalle_keys" yaml:"openai_dalle_keys"`
+
 	// OpenAI Fallback 配置
 	EnableFallbackOpenAI       bool     `json:"enable_fallback_openai" yaml:"enable_fallback_openai"`
 	FallbackOpenAIAzure        bool     `json:"fallback_openai_azure" yaml:"fallback_openai_azure"`
@@ -284,6 +293,15 @@ func Register(ins *app.App) {
 			OpenAIOrganization: ctx.String("openai-organization"),
 			OpenAIServers:      ctx.StringSlice("openai-servers"),
 			OpenAIKeys:         ctx.StringSlice("openai-keys"),
+
+			EnableOpenAIDalle:       ctx.Bool("enable-openai-dalle"),
+			DalleUsingOpenAISetting: ctx.Bool("dalle-using-openai-setting"),
+			OpenAIDalleAzure:        ctx.Bool("openai-dalle-azure"),
+			OpenAIDalleAPIVersion:   ctx.String("openai-dalle-apiversion"),
+			OpenAIDalleAutoProxy:    ctx.Bool("openai-dalle-autoproxy"),
+			OpenAIDalleOrganization: ctx.String("openai-dalle-organization"),
+			OpenAIDalleServers:      ctx.StringSlice("openai-dalle-servers"),
+			OpenAIDalleKeys:         ctx.StringSlice("openai-dalle-keys"),
 
 			EnableFallbackOpenAI:       ctx.Bool("enable-fallback-openai"),
 			FallbackOpenAIAzure:        ctx.Bool("fallback-openai-azure"),

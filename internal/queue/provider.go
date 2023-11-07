@@ -80,6 +80,7 @@ const (
 	TypeFromStonCompletion       = "fromston:completion"
 	TypeImageGenCompletion       = "imagegen:completion"
 	TypeGetimgAICompletion       = "getimgai:completion"
+	TypeDalleCompletion          = "dalle:completion"
 	TypeDashscopeImageCompletion = "dashscope-image:completion"
 	TypeMailSend                 = "mail:send"
 	TypeImageDownloader          = "image:downloader"
@@ -106,6 +107,8 @@ func ResolveTaskType(category, model string) string {
 		return TypeGetimgAICompletion
 	case "dashscope":
 		return TypeDashscopeImageCompletion
+	case "dalle":
+		return TypeDalleCompletion
 	}
 
 	return ""

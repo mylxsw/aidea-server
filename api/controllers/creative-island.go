@@ -435,7 +435,7 @@ func (ctl *CreativeIslandController) completionsDeepAI(ctx context.Context, webC
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	quotaConsume := int64(coins.GetUnifiedImageGenCoins())
+	quotaConsume := int64(coins.GetUnifiedImageGenCoins(""))
 
 	if evaluate {
 		return webCtx.JSON(web.M{"cost": quotaConsume, "enough": quota.Quota >= quota.Used+quotaConsume})
@@ -567,7 +567,7 @@ func (ctl *CreativeIslandController) completionsStabilityAI(ctx context.Context,
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	quotaConsume := int64(coins.GetUnifiedImageGenCoins()) * imageCount
+	quotaConsume := int64(coins.GetUnifiedImageGenCoins("")) * imageCount
 	if evaluate {
 		return webCtx.JSON(web.M{"cost": quotaConsume, "enough": quota.Quota >= quota.Used+quotaConsume})
 	}
@@ -700,7 +700,7 @@ func (ctl *CreativeIslandController) completionsLeapAI(ctx context.Context, webC
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	quotaConsume := int64(coins.GetUnifiedImageGenCoins()) * imageCount
+	quotaConsume := int64(coins.GetUnifiedImageGenCoins("")) * imageCount
 	if evaluate {
 		return webCtx.JSON(web.M{"cost": quotaConsume, "enough": quota.Quota >= quota.Used+quotaConsume})
 	}

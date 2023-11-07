@@ -189,6 +189,10 @@ func (ctl *CreativeIslandController) loadAllModels(ctx context.Context) []repo.I
 			return ctl.conf.EnableDashScopeAI
 		}
 
+		if m.Vendor == "dalle" {
+			return ctl.conf.EnableOpenAIDalle
+		}
+
 		return true
 	})
 }
@@ -245,6 +249,10 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 			}
 
 			if !ctl.conf.EnableGetimgAI && item.Vendor == "getimgai" {
+				return false
+			}
+
+			if !ctl.conf.EnableOpenAIDalle && item.Vendor == "dalle" {
 				return false
 			}
 
@@ -642,7 +650,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 		GalleryCopyID:  webCtx.Int64Input("gallery_copy_id", 0),
 
 		UID:       user.ID,
-		Quota:     int64(coins.GetUnifiedImageGenCoins()) * imageCount,
+		Quota:     int64(coins.GetUnifiedImageGenCoins(vendorModel.Model)) * imageCount,
 		CreatedAt: time.Now(),
 
 		Vendor:    vendorModel.Vendor,
@@ -825,7 +833,7 @@ func (ctl *CreativeIslandController) ImageUpscale(ctx context.Context, webCtx we
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	quotaConsume := int64(coins.GetUnifiedImageGenCoins())
+	quotaConsume := int64(coins.GetUnifiedImageGenCoins(""))
 	if quota.Rest-quota.Freezed < quotaConsume {
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
@@ -899,7 +907,7 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	quotaConsume := int64(coins.GetUnifiedImageGenCoins())
+	quotaConsume := int64(coins.GetUnifiedImageGenCoins(""))
 	if quota.Rest-quota.Freezed < quotaConsume {
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}

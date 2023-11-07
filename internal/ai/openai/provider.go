@@ -16,6 +16,17 @@ import (
 type Provider struct{}
 
 func (Provider) Register(binder infra.Binder) {
+	binder.MustSingleton(func(conf *config.Config, resolver infra.Resolver) *DalleImageClient {
+		var proxyDialer proxy.Dialer
+		if conf.Socks5Proxy != "" && ((conf.DalleUsingOpenAISetting && conf.OpenAIAutoProxy) || (!conf.DalleUsingOpenAISetting && conf.OpenAIDalleAutoProxy)) {
+			resolver.MustResolve(func(dialer proxy.Dialer) {
+				proxyDialer = dialer
+			})
+		}
+
+		return NewDalleImageClient(parseDalleConfig(conf), proxyDialer)
+	})
+
 	binder.MustSingleton(func(conf *config.Config, resolver infra.Resolver) Client {
 		var proxyDialer proxy.Dialer
 		if conf.Socks5Proxy != "" {

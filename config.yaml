@@ -86,6 +86,18 @@ fallback-openai-servers: ["https://api.openai.com/v1"]
 # 备用的 OpenAI Keys，如果指定多个，会在多个服务之间平衡负载
 fallback-openai-keys: [""]
 
+######## OpenAI Dalle 配置 ########
+# OpenAI Dalle 服务配置，用于文生图
+enable-openai-dalle: false
+# 复用 OpenAI 配置
+dalle-using-openai-setting: true
+openai-dalle-autoproxy: false
+openai-dalle-azure: false
+openai-dalle-apiversion: "2023-05-15"
+openai-dalle-organization: ""
+openai-dalle-servers: ["https://api.openai.com/v1"]
+openai-dalle-keys: [""]
+
 ######## Anthropic #######
 
 # API 申请：https://www.anthropic.com/

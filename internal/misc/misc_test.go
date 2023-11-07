@@ -64,6 +64,7 @@ func TestResolveAspectRadio(t *testing.T) {
 		{768, 1344},
 		{1536, 640},
 		{640, 1536},
+		{1024, 1792},
 	}
 
 	for _, c := range cases {

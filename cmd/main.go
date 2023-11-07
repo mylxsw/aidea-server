@@ -97,6 +97,15 @@ func main() {
 	ins.AddStringSliceFlag("openai-servers", []string{"https://api.openai.com/v1"}, "OpenAI 服务地址，配置多个时会自动在多个服务之间平衡负载，不要忘记在在 URL 后面添加 /v1")
 	ins.AddStringSliceFlag("openai-keys", []string{}, "OpenAI Keys，如果指定多个，会在多个服务之间平衡负载")
 
+	ins.AddBoolFlag("enable-openai-dalle", "是否启用 OpenAI DALL-E")
+	ins.AddBoolFlag("dalle-using-openai-setting", "是否使用 OpenAI 的配置")
+	ins.AddBoolFlag("openai-dalle-azure", "使用 Azure 的 OpenAI 服务")
+	ins.AddStringFlag("openai-dalle-apiversion", "2023-05-15", "required when openai-dalle-azure is true")
+	ins.AddBoolFlag("openai-dalle-autoproxy", "使用 Socks5 代理访问 OpenAI 服务")
+	ins.AddStringFlag("openai-dalle-organization", "", "openai organization")
+	ins.AddStringSliceFlag("openai-dalle-servers", []string{"https://api.openai.com/v1"}, "OpenAI 服务地址，配置多个时会自动在多个服务之间平衡负载，不要忘记在在 URL 后面添加 /v1")
+	ins.AddStringSliceFlag("openai-dalle-keys", []string{}, "OpenAI Keys，如果指定多个，会在多个服务之间平衡负载")
+
 	ins.AddBoolFlag("enable-fallback-openai", "是否启用备用 OpenAI 服务")
 	ins.AddBoolFlag("fallback-openai-azure", "使用 Azure 的 OpenAI 服务")
 	ins.AddStringFlag("fallback-openai-apiversion", "2023-05-15", "required when fallback-openai-azure is true")

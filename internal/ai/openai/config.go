@@ -32,3 +32,25 @@ func parseBackupConfig(conf *config.Config) *Config {
 		OpenAIKeys:         conf.FallbackOpenAIKeys,
 	}
 }
+
+func parseDalleConfig(conf *config.Config) *Config {
+	if conf.DalleUsingOpenAISetting {
+		return &Config{
+			Enable:             conf.EnableOpenAI && conf.EnableOpenAIDalle,
+			OpenAIAzure:        conf.OpenAIAzure,
+			OpenAIAPIVersion:   conf.OpenAIAPIVersion,
+			OpenAIOrganization: conf.OpenAIOrganization,
+			OpenAIServers:      conf.OpenAIServers,
+			OpenAIKeys:         conf.OpenAIKeys,
+		}
+	}
+
+	return &Config{
+		Enable:             conf.EnableOpenAIDalle,
+		OpenAIAzure:        conf.OpenAIDalleAzure,
+		OpenAIAPIVersion:   conf.OpenAIDalleAPIVersion,
+		OpenAIOrganization: conf.OpenAIDalleOrganization,
+		OpenAIServers:      conf.OpenAIDalleServers,
+		OpenAIKeys:         conf.OpenAIDalleKeys,
+	}
+}

@@ -105,6 +105,7 @@ func BuildImageCompletionHandler(
 	up *uploader.Uploader,
 	rep *repo.Repository,
 	oai openai.Client,
+	dalleClient *openai.DalleImageClient,
 ) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageCompletionPayload
@@ -131,6 +132,8 @@ func BuildImageCompletionHandler(
 			return BuildGetimgAICompletionHandler(getimgaiClient, translator, up, rep, oai)(ctx, task)
 		case "dashscope":
 			return BuildDashscopeImageCompletionHandler(dashscopeClient, up, rep, translator, oai)(ctx, task)
+		case "dalle":
+			return BuildDalleCompletionHandler(dalleClient, up, rep)(ctx, task)
 		default:
 			return nil
 		}

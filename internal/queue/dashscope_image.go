@@ -356,7 +356,7 @@ func handleDashscopeImageTask(
 
 	// 重新计算配额消耗，以实际发生计算
 	// quotaConsumed := coins.GetDashscopeImageImageCoins(payload.GetModel(), isCsMode, width, height) * int64(len(resources))
-	quotaConsumed := int64(coins.GetUnifiedImageGenCoins() * len(resources))
+	quotaConsumed := int64(coins.GetUnifiedImageGenCoins("") * len(resources))
 
 	req := repo.CreativeRecordUpdateRequest{
 		Answer:    string(retJson),
