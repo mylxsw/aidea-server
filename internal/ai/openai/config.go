@@ -9,6 +9,7 @@ type Config struct {
 	OpenAIOrganization string
 	OpenAIServers      []string
 	OpenAIKeys         []string
+	AutoProxy          bool
 }
 
 func parseMainConfig(conf *config.Config) *Config {
@@ -19,6 +20,7 @@ func parseMainConfig(conf *config.Config) *Config {
 		OpenAIOrganization: conf.OpenAIOrganization,
 		OpenAIServers:      conf.OpenAIServers,
 		OpenAIKeys:         conf.OpenAIKeys,
+		AutoProxy:          conf.OpenAIAutoProxy,
 	}
 }
 
@@ -30,6 +32,7 @@ func parseBackupConfig(conf *config.Config) *Config {
 		OpenAIOrganization: conf.FallbackOpenAIOrganization,
 		OpenAIServers:      conf.FallbackOpenAIServers,
 		OpenAIKeys:         conf.FallbackOpenAIKeys,
+		AutoProxy:          conf.FallbackOpenAIAutoProxy,
 	}
 }
 
@@ -42,6 +45,7 @@ func parseDalleConfig(conf *config.Config) *Config {
 			OpenAIOrganization: conf.OpenAIOrganization,
 			OpenAIServers:      conf.OpenAIServers,
 			OpenAIKeys:         conf.OpenAIKeys,
+			AutoProxy:          conf.OpenAIAutoProxy,
 		}
 	}
 
@@ -52,5 +56,6 @@ func parseDalleConfig(conf *config.Config) *Config {
 		OpenAIOrganization: conf.OpenAIDalleOrganization,
 		OpenAIServers:      conf.OpenAIDalleServers,
 		OpenAIKeys:         conf.OpenAIDalleKeys,
+		AutoProxy:          conf.OpenAIDalleAutoProxy,
 	}
 }

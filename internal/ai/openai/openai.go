@@ -16,35 +16,33 @@ import (
 
 // SelectBestModel 根据字数选择最合适的模型
 func SelectBestModel(model string, tokenCount int) string {
-	if strings.HasPrefix(model, "gpt-3.5-turbo") && tokenCount <= 4000 {
-		return "gpt-3.5-turbo-0613"
+	if strings.HasPrefix(model, "gpt-3.5-turbo-16k") && tokenCount <= 4000 {
+		return "gpt-3.5-turbo"
 	}
 
-	switch model {
-	case "gpt-3.5-turbo":
-		return "gpt-3.5-turbo-0613"
-	case "gpt-3.5-turbo-16k":
-		return "gpt-3.5-turbo-16k-0613"
-		// case "gpt-4":
-		// 	return "gpt-4-0613"
+	if strings.HasPrefix(model, "gpt-4-32k") && tokenCount <= 8000 {
+		return "gpt-4"
 	}
 
 	return model
 }
 
 // ModelMaxContextSize 模型最大上下文长度
+// https://platform.openai.com/docs/models/overview
 func ModelMaxContextSize(model string) int {
 	switch model {
-	case "gpt-3.5-turbo": // fallthrough
-	case "gpt-3.5-turbo-0613":
+	case "gpt-3.5-turbo", "gpt-3.5-turbo-0613", "gpt-3.5-turbo-instruct":
 		return 4000
-	case "gpt-3.5-turbo-16k": // fallthrough
-	case "gpt-3.5-turbo-16k-0613":
+	case "gpt-3.5-turbo-16k", "gpt-3.5-turbo-16k-0613":
 		return 4000 * 4
-	case "gpt-4":
+	case "gpt-4", "gpt-4-0613":
 		return 8000
-	case "gpt-4-32k":
+	case "gpt-4-32k", "gpt-4-32k-0613":
 		return 4000 * 8
+	case "gpt-3.5-turbo-1106":
+		return 16385 - 4096
+	case "gpt-4-1106-preview", "gpt-4-vision-preview":
+		return 128000 - 4096
 	}
 
 	return 4000
@@ -80,8 +78,13 @@ func WordCountForChatCompletionMessages(messages []openai.ChatCompletionMessage)
 
 // NumTokensFromMessages 计算对话上下文的 token 数量
 func NumTokensFromMessages(messages []openai.ChatCompletionMessage, model string) (numTokens int, err error) {
-	// 所有非 gpt-3.5-turbo/gpt-4 的模型，都按照 gpt-3.5 的方式处理
-	if !array.In(model, []string{"gpt-3.5-turbo", "gpt-4"}) {
+	switch model {
+	case "gpt-3.5-turbo-0613", "gpt-3.5-turbo-1106", "gpt-3.5-turbo-16k-0613", "gpt-3.5-turbo-16k", "gpt-3.5-turbo-instruct":
+		model = "gpt-3.5-turbo"
+	case "gpt-4-0613", "gpt-4-32k", "gpt-4-1106-preview", "gpt-4-vision-preview", "gpt-4-32k-0613":
+		model = "gpt-4"
+	case "gpt-3.5-turbo", "gpt-4":
+	default:
 		model = "gpt-3.5-turbo"
 	}
 

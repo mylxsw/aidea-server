@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"github.com/mylxsw/go-utils/ternary"
 	"net"
 	"net/http"
 	"regexp"
@@ -55,12 +56,26 @@ func NewOpenAIClient(conf *Config, dialer proxy.Dialer) Client {
 	// 否则 Servers 和 Keys 取笛卡尔积
 	if conf.OpenAIAzure {
 		for i, server := range conf.OpenAIServers {
-			clients = append(clients, createOpenAIClient(true, conf.OpenAIAPIVersion, server, "", conf.OpenAIKeys[i], dialer))
+			clients = append(clients, createOpenAIClient(
+				true,
+				conf.OpenAIAPIVersion,
+				server,
+				"",
+				conf.OpenAIKeys[i],
+				ternary.If(conf.AutoProxy, dialer, nil),
+			))
 		}
 	} else {
 		for _, server := range conf.OpenAIServers {
 			for _, key := range conf.OpenAIKeys {
-				clients = append(clients, createOpenAIClient(false, "", server, conf.OpenAIOrganization, key, dialer))
+				clients = append(clients, createOpenAIClient(
+					false,
+					"",
+					server,
+					conf.OpenAIOrganization,
+					key,
+					ternary.If(conf.AutoProxy, dialer, nil),
+				))
 			}
 		}
 	}

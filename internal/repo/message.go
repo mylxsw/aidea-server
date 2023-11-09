@@ -84,7 +84,7 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error)
 
 			_, err = model.NewRoomsModel(r.db).Update(ctx, q, model.RoomsN{
 				LastActiveTime: null.TimeFrom(time.Now()),
-				Description:    null.StringFrom(misc.WordTruncate(req.Message, 80)),
+				Description:    null.StringFrom(misc.SubString(req.Message, 70)),
 			})
 		}
 

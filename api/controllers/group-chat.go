@@ -406,8 +406,8 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	restQuota := quota.Rest - quota.Freezed - needCoins
 
 	log.F(log.M{
-		"need_coins":     needCoins,
-		"avaiable_quota": quota.Rest - quota.Freezed,
+		"need_coins":      needCoins,
+		"available_quota": quota.Rest - quota.Freezed,
 	}).Debugf("group chat consume estimate")
 
 	if restQuota < 0 {

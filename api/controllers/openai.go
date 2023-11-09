@@ -226,12 +226,12 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		if err := ctl.userSrv.FreezeUserQuota(ctx, user.ID, needCoins); err != nil {
 			log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("freeze user quota failed: %s", err)
 		} else {
-			defer func() {
+			defer func(ctx context.Context) {
 				// 解冻智慧果
 				if err := ctl.userSrv.UnfreezeUserQuota(ctx, user.ID, needCoins); err != nil {
 					log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("unfreeze user quota failed: %s", err)
 				}
-			}()
+			}(ctx)
 		}
 	}
 

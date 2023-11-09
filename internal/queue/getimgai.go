@@ -311,7 +311,7 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 	if prompt == "" {
 		// 如果没有输入 prompt，则使用默认的 prompt
 		// 注意，要停用 AI 自动改写，避免改写出奇怪的东西
-		prompt = "best quality, animation effect"
+		prompt = "a character from Anime style"
 		payload.AIRewrite = false
 	}
 

@@ -21,7 +21,7 @@ type DalleImageClient struct {
 
 func NewDalleImageClient(conf *Config, dialer proxy.Dialer) *DalleImageClient {
 	restyClient := misc.RestyClient(2).SetTimeout(180 * time.Second)
-	if dialer != nil {
+	if dialer != nil && conf.AutoProxy {
 		restyClient.SetTransport(&http.Transport{Dial: dialer.Dial})
 	}
 

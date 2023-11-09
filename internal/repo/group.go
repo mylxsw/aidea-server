@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/misc"
 	"time"
 
 	"github.com/mylxsw/aidea-server/internal/repo/model"
@@ -263,7 +264,7 @@ func (repo *ChatGroupRepo) AddChatMessage(ctx context.Context, groupID, userID i
 				ctx,
 				query.KV{
 					model.FieldRoomsLastActiveTime: null.TimeFrom(time.Now()),
-					model.FieldRoomsDescription:    null.StringFrom(msg.Message),
+					model.FieldRoomsDescription:    null.StringFrom(misc.SubString(msg.Message, 70)),
 				},
 				query.Builder().Where(model.FieldRoomsId, groupID),
 			); err != nil {
