@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/ai/control"
 	"net/http"
 	"os"
 	"strconv"
@@ -261,7 +262,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	questionID := ctl.saveChatQuestion(ctx, user, req)
 
 	// 发起聊天请求并返回 SSE/WS 流
-	replyText, err := ctl.handleChat(ctx, req, user, sw, webCtx, questionID)
+	replyText, err := ctl.handleChat(ctx, req, user, sw, webCtx, questionID, 0)
 	if errors.Is(err, ErrChatResponseHasSent) {
 		return
 	}
@@ -274,7 +275,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		if startTime.Add(60 * time.Second).After(time.Now()) {
 			log.F(log.M{"req": req, "user_id": user.ID}).Warningf("聊天响应为空，尝试再次请求，模型：%s", req.Model)
 
-			replyText, err = ctl.handleChat(ctx, req, user, sw, webCtx, questionID)
+			replyText, err = ctl.handleChat(ctx, req, user, sw, webCtx, questionID, 1)
 			if errors.Is(err, ErrChatResponseHasSent) {
 				return
 			}
@@ -283,7 +284,8 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 	chatErrorMessage := ternary.IfLazy(err == nil, func() string { return "" }, func() string { return err.Error() })
 	if chatErrorMessage != "" {
-		log.F(log.M{"req": req, "user_id": user.ID, "reply": replyText}).Errorf("聊天失败，模型：%s，错误：%s", req.Model, chatErrorMessage)
+		log.F(log.M{"req": req, "user_id": user.ID, "reply": replyText, "elapse": time.Since(startTime).Seconds()}).
+			Errorf("聊天失败，模型：%s，错误：%s", req.Model, chatErrorMessage)
 	}
 
 	// 返回自定义控制信息，告诉客户端当前消耗情况
@@ -333,9 +335,22 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 }
 
-func (ctl *OpenAIController) handleChat(ctx context.Context, req *chat.Request, user *auth.User, sw *streamwriter.StreamWriter, webCtx web.Context, questionID int64) (string, error) {
+func (ctl *OpenAIController) handleChat(
+	ctx context.Context,
+	req *chat.Request,
+	user *auth.User,
+	sw *streamwriter.StreamWriter,
+	webCtx web.Context,
+	questionID int64,
+	retryTimes int,
+) (string, error) {
 	chatCtx, cancel := context.WithTimeout(ctx, 180*time.Second)
 	defer cancel()
+
+	// 如果是重试请求，则优先使用备用模型
+	if retryTimes > 0 {
+		chatCtx = control.NewContext(chatCtx, &control.Control{PreferBackup: true})
+	}
 
 	stream, err := ctl.chat.ChatStream(chatCtx, *req)
 	if err != nil {
@@ -348,7 +363,7 @@ func (ctl *OpenAIController) handleChat(ctx context.Context, req *chat.Request, 
 			return "", ErrChatResponseHasSent
 		}
 
-		log.WithFields(log.Fields{"req": req, "user_id": user.ID}).Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
+		log.WithFields(log.Fields{"req": req, "user_id": user.ID, "retry_times": retryTimes}).Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
 
 		misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrInternalError)), http.StatusInternalServerError))
 		return "", ErrChatResponseHasSent

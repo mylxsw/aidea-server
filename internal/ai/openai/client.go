@@ -2,6 +2,7 @@ package openai
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/internal/ai/control"
 	"github.com/mylxsw/asteria/log"
 	"github.com/sashabaranov/go-openai"
 )
@@ -21,6 +22,11 @@ type ClientImpl struct {
 }
 
 func (proxy *ClientImpl) CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error) {
+	ctl := control.FromContext(ctx)
+	if ctl.PreferBackup && proxy.backup != nil {
+		return proxy.backup.CreateChatCompletion(ctx, request)
+	}
+
 	if proxy.main != nil {
 		response, err = proxy.main.CreateChatCompletion(ctx, request)
 		if err == nil {
@@ -32,7 +38,7 @@ func (proxy *ClientImpl) CreateChatCompletion(ctx context.Context, request opena
 		log.WithFields(log.Fields{
 			"request": request,
 			"error":   err.Error(),
-		}).Warningf("use backup openai client")
+		}).Warningf("use control openai client")
 		return proxy.backup.CreateChatCompletion(ctx, request)
 	}
 
@@ -40,6 +46,11 @@ func (proxy *ClientImpl) CreateChatCompletion(ctx context.Context, request opena
 }
 
 func (proxy *ClientImpl) CreateChatCompletionStream(ctx context.Context, request openai.ChatCompletionRequest) (stream *openai.ChatCompletionStream, err error) {
+	ctl := control.FromContext(ctx)
+	if ctl.PreferBackup && proxy.backup != nil {
+		return proxy.backup.CreateChatCompletionStream(ctx, request)
+	}
+
 	if proxy.main != nil {
 		stream, err = proxy.main.CreateChatCompletionStream(ctx, request)
 		if err == nil {
@@ -51,7 +62,7 @@ func (proxy *ClientImpl) CreateChatCompletionStream(ctx context.Context, request
 		log.WithFields(log.Fields{
 			"request": request,
 			"error":   err.Error(),
-		}).Warningf("use backup openai client")
+		}).Warningf("use control openai client")
 		return proxy.backup.CreateChatCompletionStream(ctx, request)
 	}
 
@@ -59,8 +70,14 @@ func (proxy *ClientImpl) CreateChatCompletionStream(ctx context.Context, request
 }
 
 func (proxy *ClientImpl) ChatStream(ctx context.Context, request openai.ChatCompletionRequest) (<-chan ChatStreamResponse, error) {
+	ctl := control.FromContext(ctx)
+	if ctl.PreferBackup && proxy.backup != nil {
+		return proxy.backup.ChatStream(ctx, request)
+	}
+
 	var stream <-chan ChatStreamResponse
 	var err error
+
 	if proxy.main != nil {
 		stream, err = proxy.main.ChatStream(ctx, request)
 		if err == nil {
@@ -72,7 +89,7 @@ func (proxy *ClientImpl) ChatStream(ctx context.Context, request openai.ChatComp
 		log.WithFields(log.Fields{
 			"request": request,
 			"error":   err.Error(),
-		}).Warningf("use backup openai client")
+		}).Warningf("use control openai client")
 		return proxy.backup.ChatStream(ctx, request)
 	}
 
@@ -80,6 +97,11 @@ func (proxy *ClientImpl) ChatStream(ctx context.Context, request openai.ChatComp
 }
 
 func (proxy *ClientImpl) CreateImage(ctx context.Context, request openai.ImageRequest) (response openai.ImageResponse, err error) {
+	ctl := control.FromContext(ctx)
+	if ctl.PreferBackup && proxy.backup != nil {
+		return proxy.backup.CreateImage(ctx, request)
+	}
+
 	if proxy.main != nil {
 		return proxy.main.CreateImage(ctx, request)
 	}
@@ -92,6 +114,11 @@ func (proxy *ClientImpl) CreateImage(ctx context.Context, request openai.ImageRe
 }
 
 func (proxy *ClientImpl) CreateTranscription(ctx context.Context, request openai.AudioRequest) (response openai.AudioResponse, err error) {
+	ctl := control.FromContext(ctx)
+	if ctl.PreferBackup && proxy.backup != nil {
+		return proxy.backup.CreateTranscription(ctx, request)
+	}
+
 	if proxy.main != nil {
 		return proxy.main.CreateTranscription(ctx, request)
 	}
@@ -119,7 +146,7 @@ func (proxy *ClientImpl) QuickAsk(ctx context.Context, prompt string, question s
 			"question":        question,
 			"max_token_count": maxTokenCount,
 			"error":           err.Error(),
-		}).Error("use backup openai client")
+		}).Error("use control openai client")
 		return proxy.backup.QuickAsk(ctx, prompt, question, maxTokenCount)
 	}
 
