@@ -994,7 +994,7 @@ func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web
 				"user_id": user.ID,
 				"details": checkRes,
 				"content": req.Prompt,
-			}).Warningf("用户 %d 违规，违规内容：%s", user.ID, checkRes.Reason)
+			}).Errorf("用户 %d 违规，违规内容：%s", user.ID, checkRes.Reason)
 			return webCtx.JSONError("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc", http.StatusNotAcceptable)
 		}
 	}
