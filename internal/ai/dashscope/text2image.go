@@ -84,7 +84,7 @@ func (ds *DashScope) Text2Image(ctx context.Context, req Text2ImageRequest) (*Im
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequest("POST", ds.serviceURL+"/api/v1/services/aigc/text2image/image-synthesis", bytes.NewReader(body))
+	httpReq, err := http.NewRequest("POST", ds.serviceURL+"/server/v1/services/aigc/text2image/image-synthesis", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

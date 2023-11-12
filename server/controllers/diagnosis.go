@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/internal/rate"
+	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"

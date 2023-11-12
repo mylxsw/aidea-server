@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/mylxsw/aidea-server/api"
 	"github.com/mylxsw/aidea-server/internal/ai/oneapi"
 	"math/rand"
 	"path/filepath"
@@ -50,10 +51,10 @@ import (
 	"github.com/mylxsw/asteria/writer"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/mylxsw/aidea-server/api"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/redis"
 	"github.com/mylxsw/aidea-server/internal/repo"
+	"github.com/mylxsw/aidea-server/server"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/starter/app"
 )
@@ -64,12 +65,16 @@ var Version string
 func main() {
 	// 初始化随机数种子
 	rand.Seed(time.Now().UnixNano())
+	// 关闭框架的 WARN 日志
+	infra.WARN = false
 
 	ins := app.Create(fmt.Sprintf("%s(%s)", Version, GitCommit), 3).WithYAMLFlag("conf")
 
 	// 命令行选项（使用配置文件的话，只需要指定 `--conf 配置文件地址`，格式为 YAML）
 
 	ins.AddStringFlag("listen", ":8080", "Web 服务监听地址")
+	ins.AddStringFlag("api-listen", ":8081", "API 服务监听地址")
+
 	ins.AddStringFlag("socks5-proxy", "", "socks5 proxy")
 	ins.AddStringFlag("db-uri", "root:12345@tcp(127.0.0.1:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local", "database url")
 	ins.AddStringFlag("session-secret", "aidea-secret", "用户会话加密密钥")
@@ -117,7 +122,7 @@ func main() {
 	ins.AddBoolFlag("enable-anthropic", "是否启用 Anthropic")
 	ins.AddBoolFlag("anthropic-autoproxy", "使用 socks5 代理访问 Anthropic 服务")
 	ins.AddStringFlag("anthropic-server", "https://api.anthropic.com", "anthropic server")
-	ins.AddStringFlag("anthropic-apikey", "", "anthropic api key")
+	ins.AddStringFlag("anthropic-apikey", "", "anthropic server key")
 
 	ins.AddBoolFlag("enable-baiduwxai", "是否启用百度文心千帆大模型")
 	ins.AddStringFlag("baiduwx-key", "", "百度文心大模型 Key")
@@ -143,10 +148,10 @@ func main() {
 	ins.AddBoolFlag("enable-gpt360", "是否启用 360 智脑大模型")
 	ins.AddStringFlag("gpt360-apikey", "", "360 智脑大模型 API Key")
 
-	ins.AddStringSliceFlag("oneapi-support-models", []string{}, "one-api 支持的模型，可选项 chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2")
+	ins.AddStringSliceFlag("oneapi-support-models", []string{}, "one-server 支持的模型，可选项 chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2")
 	ins.AddBoolFlag("enable-oneapi", "是否启用 OneAPI")
-	ins.AddStringFlag("oneapi-server", "", "one-api server")
-	ins.AddStringFlag("oneapi-key", "", "one-api key")
+	ins.AddStringFlag("oneapi-server", "", "one-server server")
+	ins.AddStringFlag("oneapi-key", "", "one-server key")
 
 	ins.AddBoolFlag("enable-stabilityai", "是否启用 StabilityAI 文生图、图生图服务")
 	ins.AddBoolFlag("stabilityai-autoproxy", "使用 socks5 代理访问 StabilityAI 服务")
@@ -289,6 +294,7 @@ func main() {
 	// 配置要加载的服务模块
 	ins.Provider(
 		api.Provider{},
+		server.Provider{},
 		repo.Provider{},
 		redis.Provider{},
 		queue.Provider{},

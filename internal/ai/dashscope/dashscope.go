@@ -133,7 +133,7 @@ func (ds *DashScope) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, 
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+"/api/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+"/server/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (ds *DashScope) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+"/api/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+"/server/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +291,7 @@ type ImageTaskUsage struct {
 
 // ImageTaskStatus 查询异步任务的状态
 func (ds *DashScope) ImageTaskStatus(ctx context.Context, taskID string) (*ImageTaskResponse, error) {
-	httpReq, err := http.NewRequest("GET", ds.serviceURL+"/api/v1/tasks/"+taskID, nil)
+	httpReq, err := http.NewRequest("GET", ds.serviceURL+"/server/v1/tasks/"+taskID, nil)
 	if err != nil {
 		return nil, err
 	}

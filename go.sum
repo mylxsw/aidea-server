@@ -181,6 +181,8 @@ github.com/mylxsw/eloquent v0.0.2-0.20230528030952-90014b5782ec h1:sofgyrcfHBwLZ
 github.com/mylxsw/eloquent v0.0.2-0.20230528030952-90014b5782ec/go.mod h1:NmopDvIviRJ9qcYIWkO0BKEMm3SkaU7g8axjiJwu8B4=
 github.com/mylxsw/glacier v1.1.4-0.20230425093359-8b073ae5b7af h1:eUZl8PbsIzB12duqfLw8GslVvgdUaNocq8cHlNb3vzw=
 github.com/mylxsw/glacier v1.1.4-0.20230425093359-8b073ae5b7af/go.mod h1:memrPz3F1+z+uczIOsv4pux//xezU+GQk4R8dtNmB7Q=
+github.com/mylxsw/glacier v1.1.4-0.20231112080120-114e547468b0 h1:z2H/ojjImo8e9Ss/2PEylKMhQUNhS6DnBE9CXF8uGXc=
+github.com/mylxsw/glacier v1.1.4-0.20231112080120-114e547468b0/go.mod h1:memrPz3F1+z+uczIOsv4pux//xezU+GQk4R8dtNmB7Q=
 github.com/mylxsw/go-ioc v1.1.0 h1:oBHGkeIl511UTw22wM4wNJlsvQjheyLsfo8K5p4hp+U=
 github.com/mylxsw/go-ioc v1.1.0/go.mod h1:HUGesamRKCt0Rd7DEPYKfj+ZJuY7rtjiYuZLNGasekk=
 github.com/mylxsw/go-utils v1.0.3 h1:kL1n25xVzEDCjhtNx32dXXixFvuslCE5RGKMEUxeeJI=

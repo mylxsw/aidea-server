@@ -3,9 +3,9 @@ package controllers
 import (
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
 
-	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/misc"
+	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/glacier/web"
 	"github.com/mylxsw/go-utils/array"
 )

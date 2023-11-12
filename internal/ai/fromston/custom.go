@@ -32,7 +32,7 @@ func (art *Fromston) GenImageCustom(ctx context.Context, req GenImageCustomReque
 	}
 	resp, err := art.resty.R().
 		SetBody(reqBody).
-		SetHeader("ys-api-key", art.conf.FromstonKey).
+		SetHeader("ys-server-key", art.conf.FromstonKey).
 		SetHeader("Content-Type", "application/json").
 		Post(art.conf.FromstonServer + "/release/open-custom-model/task")
 	if err != nil {
@@ -61,7 +61,7 @@ func (art *Fromston) GenImageCustom(ctx context.Context, req GenImageCustomReque
 
 func (art *Fromston) QueryCustomTask(ctx context.Context, id string) (*Task, error) {
 	resp, err := art.resty.R().
-		SetHeader("ys-api-key", art.conf.FromstonKey).
+		SetHeader("ys-server-key", art.conf.FromstonKey).
 		SetQueryParam("id", id).
 		Get(art.conf.FromstonServer + "/release/open-custom-model/task")
 	if err != nil {

@@ -2,18 +2,18 @@ package controllers
 
 import (
 	"context"
-	"github.com/mylxsw/aidea-server/api/auth"
 	"github.com/mylxsw/aidea-server/internal/misc"
+	"github.com/mylxsw/aidea-server/server/auth"
 	"net/http"
 	"strconv"
 
 	"github.com/mylxsw/aidea-server/internal/service"
 	"github.com/mylxsw/asteria/log"
 
-	"github.com/mylxsw/aidea-server/api/controllers/common"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/internal/youdao"
+	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
 )

@@ -60,7 +60,7 @@ func (ai *DeepAI) TextToImage(model string, params TextToImageParam) (*DeepAIIma
 
 	selectedServerURL := ai.lb()
 
-	req, err := http.NewRequest("POST", selectedServerURL+"/api/"+model, strings.NewReader(form.Encode()))
+	req, err := http.NewRequest("POST", selectedServerURL+"/server/"+model, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
@@ -115,9 +115,9 @@ func (ai *DeepAI) Upscale(ctx context.Context, imageURL string) (*DeepAIImageGen
 
 	resp, err := misc.RestyClient(2).R().
 		SetFormData(map[string]string{"image": imageURL}).
-		SetHeader("api-key", ai.conf.DeepAIKey).
+		SetHeader("server-key", ai.conf.DeepAIKey).
 		SetContext(ctx).
-		Post(selectedServerURL + "/api/torch-srgan")
+		Post(selectedServerURL + "/server/torch-srgan")
 	if err != nil {
 		return nil, fmt.Errorf("failed to request: %v", err)
 	}
@@ -144,9 +144,9 @@ func (ai *DeepAI) DrawColor(ctx context.Context, imageURL string) (*DeepAIImageG
 	selectedServerURL := ai.lb()
 	resp, err := misc.RestyClient(2).R().
 		SetFormData(map[string]string{"image": imageURL}).
-		SetHeader("api-key", ai.conf.DeepAIKey).
+		SetHeader("server-key", ai.conf.DeepAIKey).
 		SetContext(ctx).
-		Post(selectedServerURL + "/api/colorizer")
+		Post(selectedServerURL + "/server/colorizer")
 	if err != nil {
 		return nil, fmt.Errorf("failed to request: %v", err)
 	}

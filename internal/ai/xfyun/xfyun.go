@@ -242,12 +242,12 @@ func (ai *XFYunAI) resolveResponse(resp *http.Response) (string, error) {
 // resolveHostForModel 根据模型获取对应的 host
 func (ai *XFYunAI) resolveHostForModel(model Model) string {
 	if model == ModelGeneralV1_5 {
-		return "wss://spark-api.xf-yun.com/v1.1/chat"
+		return "wss://spark-server.xf-yun.com/v1.1/chat"
 	}
 
 	if model == ModelGeneralV3 {
-		return "wss://spark-api.xf-yun.com/v3.1/chat"
+		return "wss://spark-server.xf-yun.com/v3.1/chat"
 	}
 
-	return "wss://spark-api.xf-yun.com/v2.1/chat"
+	return "wss://spark-server.xf-yun.com/v2.1/chat"
 }

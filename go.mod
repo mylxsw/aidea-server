@@ -17,7 +17,7 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/mylxsw/asteria v1.0.1
 	github.com/mylxsw/eloquent v0.0.2-0.20230528030952-90014b5782ec
-	github.com/mylxsw/glacier v1.1.4-0.20230425093359-8b073ae5b7af
+	github.com/mylxsw/glacier v1.1.4-0.20231112080120-114e547468b0
 	github.com/redis/go-redis/v9 v9.0.3
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/sashabaranov/go-openai v1.16.1

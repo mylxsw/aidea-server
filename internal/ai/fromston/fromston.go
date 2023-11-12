@@ -170,7 +170,7 @@ func (art *Fromston) GenImage(ctx context.Context, req GenImageRequest) (*GenIma
 	resp, err := art.resty.R().
 		SetContext(ctx).
 		SetBody(reqBody).
-		SetHeader("ys-api-key", art.conf.FromstonKey).
+		SetHeader("ys-server-key", art.conf.FromstonKey).
 		SetHeader("Content-Type", "application/json").
 		Post(art.conf.FromstonServer + "/release/open-task")
 	if err != nil {
@@ -228,7 +228,7 @@ func (task Task) UploadResources(ctx context.Context, up *uploader.Uploader, uid
 
 func (art *Fromston) QueryTask(ctx context.Context, id string) (*Task, error) {
 	resp, err := art.resty.R().
-		SetHeader("ys-api-key", art.conf.FromstonKey).
+		SetHeader("ys-server-key", art.conf.FromstonKey).
 		SetQueryParam("id", id).
 		Get(art.conf.FromstonServer + "/release/open-task")
 	if err != nil {
@@ -261,7 +261,7 @@ func (art *Fromston) QueryTask(ctx context.Context, id string) (*Task, error) {
 
 func (art *Fromston) QueryTasks(ctx context.Context, ids []string) ([]Task, error) {
 	resp, err := art.resty.R().
-		SetHeader("ys-api-key", art.conf.FromstonKey).
+		SetHeader("ys-server-key", art.conf.FromstonKey).
 		SetQueryParam("ids", strings.Join(ids, ",")).
 		Get(art.conf.FromstonServer + "/release/open-task")
 	if err != nil {
@@ -305,7 +305,7 @@ type Model struct {
 func (art *Fromston) Models(ctx context.Context) ([]Model, error) {
 	resp, err := art.resty.R().
 		SetContext(ctx).
-		SetHeader("ys-api-key", art.conf.FromstonKey).
+		SetHeader("ys-server-key", art.conf.FromstonKey).
 		SetQueryParam("page_size", "100").
 		Get(art.conf.FromstonServer + "/release/open-task/models")
 	if err != nil {
@@ -335,7 +335,7 @@ type UploadData struct {
 
 func (art *Fromston) UploadImage(ctx context.Context, file string) (string, error) {
 	resp, err := art.resty.R().
-		SetHeader("ys-api-key", art.conf.FromstonKey).
+		SetHeader("ys-server-key", art.conf.FromstonKey).
 		SetFile("ref_img", file).
 		Post(art.conf.FromstonServer + "/release/upload")
 	if err != nil {

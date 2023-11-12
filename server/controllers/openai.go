@@ -22,8 +22,6 @@ import (
 	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"github.com/mylxsw/aidea-server/internal/ai/streamwriter"
 
-	"github.com/mylxsw/aidea-server/api/auth"
-	"github.com/mylxsw/aidea-server/api/controllers/common"
 	"github.com/mylxsw/aidea-server/config"
 	openaiHelper "github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/aidea-server/internal/coins"
@@ -31,6 +29,8 @@ import (
 	"github.com/mylxsw/aidea-server/internal/service"
 	"github.com/mylxsw/aidea-server/internal/tencent"
 	"github.com/mylxsw/aidea-server/internal/youdao"
+	"github.com/mylxsw/aidea-server/server/auth"
+	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
@@ -52,11 +52,13 @@ type OpenAIController struct {
 	limiter     *rate.RateLimiter        `autowire:"@"`
 
 	upgrader websocket.Upgrader
+
+	apiMode bool // 是否为 OpenAI API 模式
 }
 
 // NewOpenAIController 创建 OpenAI 控制器
-func NewOpenAIController(resolver infra.Resolver, conf *config.Config) web.Controller {
-	ctl := &OpenAIController{conf: conf}
+func NewOpenAIController(resolver infra.Resolver, conf *config.Config, apiMode bool) web.Controller {
+	ctl := &OpenAIController{conf: conf, apiMode: apiMode}
 	resolver.MustAutoWire(ctl)
 
 	ctl.upgrader = websocket.Upgrader{
@@ -301,9 +303,11 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		if errors.Is(ErrChatResponseEmpty, err) {
 			misc.NoError(sw.WriteErrorStream(err, http.StatusInternalServerError))
 		} else {
-			// final 消息为定制消息，用于告诉 AIdea 客户端当前的资源消耗情况以及服务端信息
-			finalWord := ctl.buildFinalSystemMessage(questionID, answerID, user, quotaConsumed, realTokenConsumed, req, maxContextLen, chatErrorMessage)
-			misc.NoError(sw.WriteStream(finalWord))
+			if !ctl.apiMode {
+				// final 消息为定制消息，用于告诉 AIdea 客户端当前的资源消耗情况以及服务端信息
+				finalWord := ctl.buildFinalSystemMessage(questionID, answerID, user, quotaConsumed, realTokenConsumed, req, maxContextLen, chatErrorMessage)
+				misc.NoError(sw.WriteStream(finalWord))
+			}
 		}
 	}()
 
@@ -426,13 +430,14 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 				replyText += res.Text
 			}
 
-			resp := openai.ChatCompletionStreamResponse{
+			resp := ChatCompletionStreamResponse{
 				ID:      strconv.Itoa(id),
 				Created: time.Now().Unix(),
 				Model:   req.Model,
-				Choices: []openai.ChatCompletionStreamChoice{
+				Object:  "chat.completion",
+				Choices: []ChatCompletionStreamChoice{
 					{
-						Delta: openai.ChatCompletionStreamChoiceDelta{
+						Delta: ChatCompletionStreamChoiceDelta{
 							Role:    "assistant",
 							Content: res.Text,
 						},
@@ -448,6 +453,26 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 	}
 }
 
+type ChatCompletionStreamResponse struct {
+	ID      string                       `json:"id"`
+	Object  string                       `json:"object"`
+	Created int64                        `json:"created"`
+	Model   string                       `json:"model"`
+	Choices []ChatCompletionStreamChoice `json:"choices"`
+}
+
+type ChatCompletionStreamChoice struct {
+	Index        int                             `json:"index"`
+	Delta        ChatCompletionStreamChoiceDelta `json:"delta"`
+	FinishReason *string                         `json:"finish_reason,omitempty"`
+}
+
+type ChatCompletionStreamChoiceDelta struct {
+	Content      string               `json:"content"`
+	Role         string               `json:"role,omitempty"`
+	FunctionCall *openai.FunctionCall `json:"function_call,omitempty"`
+}
+
 // buildFinalSystemMessage 构建最后一条消息，该消息为系统消息，用于告诉 AIdea 客户端当前的资源消耗情况以及服务端信息
 func (*OpenAIController) buildFinalSystemMessage(
 	questionID int64,
@@ -458,7 +483,7 @@ func (*OpenAIController) buildFinalSystemMessage(
 	req *chat.Request,
 	maxContextLen int64,
 	chatErrorMessage string,
-) openai.ChatCompletionStreamResponse {
+) ChatCompletionStreamResponse {
 	finalMsg := FinalMessage{
 		Type:       "summary",
 		QuestionID: questionID,
@@ -479,13 +504,14 @@ func (*OpenAIController) buildFinalSystemMessage(
 		finalMsg.QuotaConsumed = quotaConsumed
 	}
 
-	return openai.ChatCompletionStreamResponse{
-		ID: "final",
-		Choices: []openai.ChatCompletionStreamChoice{
+	return ChatCompletionStreamResponse{
+		ID:      "final",
+		Object:  "chat.completion",
+		Created: time.Now().Unix(),
+		Choices: []ChatCompletionStreamChoice{
 			{
-				Index:        0,
-				FinishReason: "",
-				Delta: openai.ChatCompletionStreamChoiceDelta{
+				Index: 0,
+				Delta: ChatCompletionStreamChoiceDelta{
 					Content: finalMsg.ToJSON(),
 					Role:    "system",
 				},

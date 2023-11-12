@@ -16,7 +16,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 )
 
-// Client is a youdao translate api client
+// Client is a youdao translate server client
 type Client struct {
 	serverURL string
 	appID     string
@@ -24,7 +24,7 @@ type Client struct {
 	client    *http.Client
 }
 
-// NewClient create a new youdao api client
+// NewClient create a new youdao server client
 func NewClient(serverURL, appID, appKey string) *Client {
 	return &Client{
 		serverURL: serverURL,

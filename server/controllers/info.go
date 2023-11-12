@@ -14,7 +14,7 @@ import (
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/array"
 
-	"github.com/mylxsw/aidea-server/api/auth"
+	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/glacier/web"
 )
 

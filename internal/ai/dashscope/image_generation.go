@@ -76,7 +76,7 @@ func (ds *DashScope) ImageGeneration(ctx context.Context, req ImageGenerationReq
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequest("POST", ds.serviceURL+"/api/v1/services/aigc/image-generation/generation", bytes.NewReader(body))
+	httpReq, err := http.NewRequest("POST", ds.serviceURL+"/server/v1/services/aigc/image-generation/generation", bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

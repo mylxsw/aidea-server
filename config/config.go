@@ -99,7 +99,7 @@ type Config struct {
 	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
 
 	// OneAPI 支持的模型列表
-	// one-api: https://github.com/songquanpeng/one-api
+	// one-server: https://github.com/songquanpeng/one-api
 	OneAPISupportModels []string `json:"oneapi_support_models" yaml:"oneapi_support_models"`
 	EnableOneAPI        bool     `json:"enable_oneapi" yaml:"enable_oneapi"`
 	OneAPIServer        string   `json:"oneapi_server" yaml:"oneapi_server"`
