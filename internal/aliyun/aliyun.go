@@ -184,7 +184,7 @@ func (a *Aliyun) ContentDetect(checkType CheckType, content string) (*CheckResul
 	if strings.Contains(label, "sexual_content") {
 		tags := strings.Split(unsafeResult.Reason.RiskTips, ",")
 		for _, tag := range tags {
-			if str.In(tag, []string{"色情_性行为", "色情_性器官", "色情_涉黄产业", "色情_诱导生成色情内容"}) {
+			if str.In(tag, []string{"色情_性行为", "色情_性器官", "色情_涉黄产业", "色情_诱导生成色情内容", "色情_低俗", "色情_严重色情"}) {
 				return &unsafeResult, nil
 			}
 		}
