@@ -55,7 +55,7 @@ func (ctl *APIKeyController) GetKey(ctx context.Context, webCtx web.Context, use
 		return webCtx.JSONError(common.ErrInternalError, http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(web.M{"key": key})
+	return webCtx.JSON(web.M{"data": key})
 }
 
 // Create 创建 API Key
