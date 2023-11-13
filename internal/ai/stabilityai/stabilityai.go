@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/proxy"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -22,7 +23,6 @@ import (
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/must"
-	"golang.org/x/net/proxy"
 )
 
 const (
@@ -37,9 +37,9 @@ type StabilityAI struct {
 
 func NewStabilityAI(resolver infra.Resolver, conf *config.Config) *StabilityAI {
 	client := &http.Client{Timeout: 300 * time.Second}
-	if conf.Socks5Proxy != "" && conf.StabilityAIAutoProxy {
-		resolver.MustResolve(func(dialer proxy.Dialer) {
-			client.Transport = &http.Transport{Dial: dialer.Dial}
+	if conf.SupportProxy() && conf.StabilityAIAutoProxy {
+		resolver.MustResolve(func(pp *proxy.Proxy) {
+			client.Transport = pp.BuildTransport()
 		})
 	}
 

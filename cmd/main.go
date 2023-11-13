@@ -71,6 +71,7 @@ func main() {
 
 	ins.AddStringFlag("listen", ":8080", "Web 服务监听地址")
 	ins.AddStringFlag("socks5-proxy", "", "socks5 proxy")
+	ins.AddStringFlag("proxy-url", "", "HTTP 代理放置，支持 http、https、socks5，代理类型由 URL schema 决定，如果 scheme 为空，则默认为 http")
 	ins.AddStringFlag("db-uri", "root:12345@tcp(127.0.0.1:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local", "database url")
 	ins.AddStringFlag("session-secret", "aidea-secret", "用户会话加密密钥")
 	ins.AddBoolFlag("enable-recordchat", "是否记录聊天历史记录（目前只做记录，没有实际作用，只是为后期增加多端聊天记录同步做准备）")

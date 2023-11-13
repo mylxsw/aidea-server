@@ -6,11 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mylxsw/aidea-server/internal/misc"
+	"github.com/mylxsw/aidea-server/internal/proxy"
 	"github.com/mylxsw/aidea-server/internal/uploader"
-	"golang.org/x/net/proxy"
 	"gopkg.in/resty.v1"
 	"math/rand"
-	"net/http"
 	"time"
 )
 
@@ -19,10 +18,10 @@ type DalleImageClient struct {
 	http *resty.Client
 }
 
-func NewDalleImageClient(conf *Config, dialer proxy.Dialer) *DalleImageClient {
+func NewDalleImageClient(conf *Config, pp *proxy.Proxy) *DalleImageClient {
 	restyClient := misc.RestyClient(2).SetTimeout(180 * time.Second)
-	if dialer != nil && conf.AutoProxy {
-		restyClient.SetTransport(&http.Transport{Dial: dialer.Dial})
+	if pp != nil && conf.AutoProxy {
+		restyClient.SetTransport(pp.BuildTransport())
 	}
 
 	return &DalleImageClient{conf: conf, http: restyClient}

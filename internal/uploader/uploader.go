@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/proxy"
 	"io"
 	"net/http"
 	"path"
@@ -19,7 +20,6 @@ import (
 	qiniuAuth "github.com/qiniu/go-sdk/v7/auth"
 	"github.com/qiniu/go-sdk/v7/cdn"
 	"github.com/qiniu/go-sdk/v7/storage"
-	"golang.org/x/net/proxy"
 )
 
 // DefaultUploadExpireAfterDays 默认上传文件过期时间，0 表示永不过期
@@ -33,9 +33,9 @@ type Uploader struct {
 
 func NewUploader(resolver infra.Resolver, conf *config.Config) *Uploader {
 	client := &http.Client{Timeout: 120 * time.Second}
-	if conf.Socks5Proxy != "" {
-		resolver.MustResolve(func(dialer proxy.Dialer) {
-			client.Transport = &http.Transport{Dial: dialer.Dial}
+	if conf.SupportProxy() {
+		resolver.MustResolve(func(pp *proxy.Proxy) {
+			client.Transport = pp.BuildTransport()
 		})
 	}
 

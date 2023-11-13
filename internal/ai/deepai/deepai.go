@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/proxy"
 	"io"
 	"net/http"
 	"net/url"
@@ -15,7 +16,6 @@ import (
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/glacier/infra"
-	"golang.org/x/net/proxy"
 )
 
 const DefaultServerURL = "https://api.deepai.org"
@@ -31,9 +31,9 @@ func NewDeepAIRaw(conf *config.Config) *DeepAI {
 
 func NewDeepAI(resolver infra.Resolver, conf *config.Config) *DeepAI {
 	client := &http.Client{Timeout: 300 * time.Second}
-	if conf.Socks5Proxy != "" && conf.DeepAIAutoProxy {
-		resolver.MustResolve(func(dialer proxy.Dialer) {
-			client.Transport = &http.Transport{Dial: dialer.Dial}
+	if conf.SupportProxy() && conf.DeepAIAutoProxy {
+		resolver.MustResolve(func(pp *proxy.Proxy) {
+			client.Transport = pp.BuildTransport()
 		})
 	}
 

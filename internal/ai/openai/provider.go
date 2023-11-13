@@ -1,6 +1,7 @@
 package openai
 
 import (
+	"github.com/mylxsw/aidea-server/internal/proxy"
 	"github.com/mylxsw/go-utils/ternary"
 	"net"
 	"net/http"
@@ -11,17 +12,16 @@ import (
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/sashabaranov/go-openai"
-	"golang.org/x/net/proxy"
 )
 
 type Provider struct{}
 
 func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(func(conf *config.Config, resolver infra.Resolver) *DalleImageClient {
-		var proxyDialer proxy.Dialer
-		if conf.Socks5Proxy != "" && ((conf.DalleUsingOpenAISetting && conf.OpenAIAutoProxy) || (!conf.DalleUsingOpenAISetting && conf.OpenAIDalleAutoProxy)) {
-			resolver.MustResolve(func(dialer proxy.Dialer) {
-				proxyDialer = dialer
+		var proxyDialer *proxy.Proxy
+		if conf.SupportProxy() && ((conf.DalleUsingOpenAISetting && conf.OpenAIAutoProxy) || (!conf.DalleUsingOpenAISetting && conf.OpenAIDalleAutoProxy)) {
+			resolver.MustResolve(func(pp *proxy.Proxy) {
+				proxyDialer = pp
 			})
 		}
 
@@ -29,10 +29,10 @@ func (Provider) Register(binder infra.Binder) {
 	})
 
 	binder.MustSingleton(func(conf *config.Config, resolver infra.Resolver) Client {
-		var proxyDialer proxy.Dialer
-		if conf.Socks5Proxy != "" {
-			resolver.MustResolve(func(dialer proxy.Dialer) {
-				proxyDialer = dialer
+		var proxyDialer *proxy.Proxy
+		if conf.SupportProxy() {
+			resolver.MustResolve(func(pp *proxy.Proxy) {
+				proxyDialer = pp
 			})
 		}
 
@@ -49,7 +49,7 @@ func (Provider) Register(binder infra.Binder) {
 	})
 }
 
-func NewOpenAIClient(conf *Config, dialer proxy.Dialer) Client {
+func NewOpenAIClient(conf *Config, pp *proxy.Proxy) Client {
 	clients := make([]*openai.Client, 0)
 
 	// 如果是 Azure API，则每一个 Server 对应一个 Key
@@ -62,7 +62,7 @@ func NewOpenAIClient(conf *Config, dialer proxy.Dialer) Client {
 				server,
 				"",
 				conf.OpenAIKeys[i],
-				ternary.If(conf.AutoProxy, dialer, nil),
+				ternary.If(conf.AutoProxy, pp, nil),
 			))
 		}
 	} else {
@@ -74,7 +74,7 @@ func NewOpenAIClient(conf *Config, dialer proxy.Dialer) Client {
 					server,
 					conf.OpenAIOrganization,
 					key,
-					ternary.If(conf.AutoProxy, dialer, nil),
+					ternary.If(conf.AutoProxy, pp, nil),
 				))
 			}
 		}
@@ -85,13 +85,13 @@ func NewOpenAIClient(conf *Config, dialer proxy.Dialer) Client {
 	return New(conf, clients)
 }
 
-func createOpenAIClient(isAzure bool, apiVersion string, server, organization, key string, proxy proxy.Dialer) *openai.Client {
+func createOpenAIClient(isAzure bool, apiVersion string, server, organization, key string, pp *proxy.Proxy) *openai.Client {
 	openaiConf := openai.DefaultConfig(key)
 	openaiConf.BaseURL = server
 	openaiConf.OrgID = organization
 	openaiConf.HTTPClient.Timeout = 180 * time.Second
-	if proxy != nil {
-		openaiConf.HTTPClient.Transport = &http.Transport{Dial: proxy.Dial}
+	if pp != nil {
+		openaiConf.HTTPClient.Transport = pp.BuildTransport()
 	} else {
 		openaiConf.HTTPClient.Transport = &http.Transport{
 			DialContext: (&net.Dialer{
