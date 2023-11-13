@@ -236,3 +236,11 @@ func (u *Uploader) RefreshCDN(ctx context.Context, urls []string) (cdn.RefreshRe
 func fileExt(filename string) string {
 	return strings.ToLower(path.Ext(filename))
 }
+
+// MakePrivateURL 生成私有文件访问 URL
+func (u *Uploader) MakePrivateURL(key string, ttl time.Duration) string {
+	mac := qiniuAuth.New(u.conf.StorageAppKey, u.conf.StorageAppSecret)
+	deadline := time.Now().Add(ttl).Unix() // 24 小时有效期
+
+	return storage.MakePrivateURL(mac, u.baseURL, key, deadline)
+}

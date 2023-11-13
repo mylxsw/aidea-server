@@ -2,6 +2,7 @@ package uploader
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -33,6 +34,10 @@ func BuildImageURLWithFilter(remoteURL string, filter, storageDomain string) str
 	return remoteURL
 }
 
+var (
+	ErrFileForbidden = fmt.Errorf("文件违规已被禁用")
+)
+
 // DownloadRemoteFile download remote file to local
 func DownloadRemoteFile(ctx context.Context, remoteURL string) (string, error) {
 	if str.HasSuffixes(strings.ToLower(remoteURL), supportImages) {
@@ -44,6 +49,13 @@ func DownloadRemoteFile(ctx context.Context, remoteURL string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		if resp.StatusCode == http.StatusForbidden {
+			return "", ErrFileForbidden
+		}
+		return "", fmt.Errorf("download remote file failed: [%d] %s", resp.StatusCode, resp.Status)
+	}
 
 	prefix, _ := uuid.GenerateUUID()
 	savePath := filepath.Join(os.TempDir(), prefix+"-"+filepath.Base(remoteURL))
