@@ -107,6 +107,8 @@ type Config struct {
 
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
+	// ProxyURL 代理地址，该值会覆盖 Socks5Proxy 配置
+	ProxyURL string `json:"proxy_url" yaml:"proxy_url"`
 
 	// DeepAIKey 配置
 	EnableDeepAI    bool     `json:"enable_deepai" yaml:"enable_deepai"`
@@ -223,6 +225,10 @@ type Config struct {
 	// 虚拟模型
 	EnableVirtualModel bool         `json:"enable_virtual_model" yaml:"enable_virtual_model"`
 	VirtualModel       VirtualModel `json:"virtual_model" yaml:"virtual_model"`
+}
+
+func (conf *Config) SupportProxy() bool {
+	return conf.Socks5Proxy != "" || conf.ProxyURL != ""
 }
 
 type Mail struct {
@@ -346,6 +352,7 @@ func Register(ins *app.App) {
 			OneAPIKey:           ctx.String("oneapi-key"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
+			ProxyURL:    ctx.String("proxy-url"),
 
 			EnableDeepAI:    ctx.Bool("enable-deepai"),
 			DeepAIAutoProxy: ctx.Bool("deepai-autoproxy"),

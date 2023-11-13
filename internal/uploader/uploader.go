@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/proxy"
 	"io"
 	"net/http"
 	"path"
@@ -19,7 +20,6 @@ import (
 	qiniuAuth "github.com/qiniu/go-sdk/v7/auth"
 	"github.com/qiniu/go-sdk/v7/cdn"
 	"github.com/qiniu/go-sdk/v7/storage"
-	"golang.org/x/net/proxy"
 )
 
 // DefaultUploadExpireAfterDays 默认上传文件过期时间，0 表示永不过期
@@ -33,9 +33,9 @@ type Uploader struct {
 
 func NewUploader(resolver infra.Resolver, conf *config.Config) *Uploader {
 	client := &http.Client{Timeout: 120 * time.Second}
-	if conf.Socks5Proxy != "" {
-		resolver.MustResolve(func(dialer proxy.Dialer) {
-			client.Transport = &http.Transport{Dial: dialer.Dial}
+	if conf.SupportProxy() {
+		resolver.MustResolve(func(pp *proxy.Proxy) {
+			client.Transport = pp.BuildTransport()
 		})
 	}
 
@@ -235,4 +235,12 @@ func (u *Uploader) RefreshCDN(ctx context.Context, urls []string) (cdn.RefreshRe
 
 func fileExt(filename string) string {
 	return strings.ToLower(path.Ext(filename))
+}
+
+// MakePrivateURL 生成私有文件访问 URL
+func (u *Uploader) MakePrivateURL(key string, ttl time.Duration) string {
+	mac := qiniuAuth.New(u.conf.StorageAppKey, u.conf.StorageAppSecret)
+	deadline := time.Now().Add(ttl).Unix() // 24 小时有效期
+
+	return storage.MakePrivateURL(mac, u.baseURL, key, deadline)
 }

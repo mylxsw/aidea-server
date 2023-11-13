@@ -10,33 +10,33 @@ import (
 	"net/http"
 )
 
-type OpenAICompatibleController struct {
+type CompatibleController struct {
 	conf *config.Config `autowire:"@"`
 }
 
 func NewOpenAICompatibleController(resolver infra.Resolver) web.Controller {
-	ctl := &OpenAICompatibleController{}
+	ctl := &CompatibleController{}
 	resolver.MustAutoWire(ctl)
 	return ctl
 }
 
-func (ctl *OpenAICompatibleController) Register(router web.Router) {
+func (ctl *CompatibleController) Register(router web.Router) {
 	router.Group("/models", func(router web.Router) {
 		router.Get("/", ctl.Models)
 		router.Get("/{model_id}", ctl.Model)
 	})
 }
 
-type OpenAIModel struct {
+type Model struct {
 	ID      string `json:"id"`
 	Object  string `json:"object"`
 	Created int64  `json:"created"`
 	OwnedBy string `json:"owned_by"`
 }
 
-func (ctl *OpenAICompatibleController) Models(ctx context.Context, webCtx web.Context) web.Response {
-	models := array.Map(chat.Models(ctl.conf, false), func(item chat.Model, _ int) OpenAIModel {
-		return OpenAIModel{
+func (ctl *CompatibleController) Models(ctx context.Context, webCtx web.Context) web.Response {
+	models := array.Map(chat.Models(ctl.conf, false), func(item chat.Model, _ int) Model {
+		return Model{
 			ID:      item.RealID(),
 			Object:  "model",
 			Created: 1626777600,
@@ -46,7 +46,7 @@ func (ctl *OpenAICompatibleController) Models(ctx context.Context, webCtx web.Co
 	return webCtx.JSON(web.M{"data": models, "object": "list"})
 }
 
-func (ctl *OpenAICompatibleController) Model(ctx context.Context, webCtx web.Context) web.Response {
+func (ctl *CompatibleController) Model(ctx context.Context, webCtx web.Context) web.Response {
 	modelID := webCtx.PathVar("model_id")
 	matched := array.Filter(chat.Models(ctl.conf, true), func(item chat.Model, _ int) bool {
 		return item.RealID() == modelID
@@ -56,7 +56,7 @@ func (ctl *OpenAICompatibleController) Model(ctx context.Context, webCtx web.Con
 		return webCtx.JSONError("model not found", http.StatusNotFound)
 	}
 
-	return webCtx.JSON(OpenAIModel{
+	return webCtx.JSON(Model{
 		ID:      modelID,
 		Object:  "model",
 		Created: 1626777600,

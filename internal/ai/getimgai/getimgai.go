@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"github.com/mylxsw/aidea-server/internal/proxy"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,7 +17,6 @@ import (
 	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/must"
-	"golang.org/x/net/proxy"
 	"gopkg.in/resty.v1"
 )
 
@@ -29,9 +28,9 @@ type GetimgAI struct {
 func NewGetimgAI(conf *config.Config, resolver infra.Resolver) *GetimgAI {
 	restyClient := misc.RestyClient(2).SetTimeout(180 * time.Second)
 
-	if conf.Socks5Proxy != "" && conf.GetimgAIAutoProxy {
-		resolver.MustResolve(func(dialer proxy.Dialer) {
-			restyClient.SetTransport(&http.Transport{Dial: dialer.Dial})
+	if conf.SupportProxy() && conf.GetimgAIAutoProxy {
+		resolver.MustResolve(func(pp *proxy.Proxy) {
+			restyClient.SetTransport(pp.BuildTransport())
 		})
 	}
 

@@ -1,11 +1,11 @@
 package anthropic
 
 import (
+	"github.com/mylxsw/aidea-server/internal/proxy"
 	"net/http"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/glacier/infra"
-	"golang.org/x/net/proxy"
 )
 
 type Provider struct{}
@@ -13,9 +13,9 @@ type Provider struct{}
 func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(func(conf *config.Config, resolver infra.Resolver) *Anthropic {
 		client := &http.Client{}
-		if conf.Socks5Proxy != "" && conf.AnthropicAutoProxy {
-			resolver.MustResolve(func(dialer proxy.Dialer) {
-				client.Transport = &http.Transport{Dial: dialer.Dial}
+		if conf.SupportProxy() && conf.AnthropicAutoProxy {
+			resolver.MustResolve(func(pp *proxy.Proxy) {
+				client.Transport = pp.BuildTransport()
 			})
 		}
 

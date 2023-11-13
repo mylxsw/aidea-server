@@ -37,6 +37,9 @@ redis-password: "123456"
 # 代理服务器
 # 如果启用了 xxx-autoproxy，则该选项必须
 socks5-proxy: 127.0.0.1:1080
+# HTTP 代理放置，支持 http、https、socks5，代理类型由 URL schema 决定，如果 scheme 为空，则默认为 http
+# 注意：配置 proxy-url 后， socks5-proxy 配置失效
+proxy-url: ""
 
 # 任务队列：用于处理图片生成、邮件发送、短信发送、用户注册等耗时任务
 # 这里指任务队列工作线程（Goroutine）数量，设置为 0 则不启用任务队列，该进程实例无法处理上述任务

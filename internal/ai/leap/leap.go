@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/proxy"
 	"io"
 	"net/http"
 	"os"
@@ -18,7 +19,6 @@ import (
 	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
-	"golang.org/x/net/proxy"
 	"gopkg.in/resty.v1"
 )
 
@@ -46,10 +46,11 @@ func NewLeapAI(resolver infra.Resolver, conf *config.Config) *LeapAI {
 	client := &http.Client{Timeout: 180 * time.Second}
 	restyClient := misc.RestyClient(2).SetTimeout(180 * time.Second)
 
-	if conf.Socks5Proxy != "" && conf.LeapAIAutoProxy {
-		resolver.MustResolve(func(dialer proxy.Dialer) {
-			client.Transport = &http.Transport{Dial: dialer.Dial}
-			restyClient.SetTransport(&http.Transport{Dial: dialer.Dial})
+	if conf.SupportProxy() && conf.LeapAIAutoProxy {
+		resolver.MustResolve(func(pp *proxy.Proxy) {
+			transport := pp.BuildTransport()
+			client.Transport = transport
+			restyClient.SetTransport(transport)
 		})
 	}
 
