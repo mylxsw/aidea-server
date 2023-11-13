@@ -5,6 +5,7 @@ import (
 	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
 	"net/http"
@@ -67,6 +68,7 @@ func (ctl *APIKeyController) Create(ctx context.Context, webCtx web.Context, use
 
 	key, err := ctl.repo.User.CreateAPIKey(ctx, user.ID, name, time.Now().AddDate(1, 0, 0))
 	if err != nil {
+		log.Errorf("create api key failed: %v", err)
 		return webCtx.JSONError(common.ErrInternalError, http.StatusInternalServerError)
 	}
 
