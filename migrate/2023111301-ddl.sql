@@ -11,5 +11,5 @@ CREATE TABLE user_api_key
     updated_at   TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_api_token ON user_api_key (token);
+CREATE UNIQUE INDEX idx_api_token ON user_api_key (token);
 CREATE INDEX idx_api_user ON user_api_key (user_id);
