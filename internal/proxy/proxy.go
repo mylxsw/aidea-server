@@ -29,10 +29,6 @@ func (pp *Proxy) BuildTransport() *http.Transport {
 }
 
 func (Provider) Register(binder infra.Binder) {
-	binder.MustSingleton(func(conf *config.Config) (proxy.Dialer, error) {
-		return proxy.SOCKS5("tcp", conf.Socks5Proxy, nil, proxy.Direct)
-	})
-
 	binder.MustSingleton(func(conf *config.Config) (*Proxy, error) {
 		pp := &Proxy{}
 		if conf.ProxyURL == "" {
