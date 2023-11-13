@@ -33,7 +33,7 @@ func TestRequestFix(t *testing.T) {
 			{Role: "user", Content: "user #3"},
 		},
 		Model: "gpt-3.5-turbo",
-	}
+	}.Init()
 
 	{
 		fixed, _, err := req.Fix(ChatTestClient{}, 0)

@@ -209,12 +209,25 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	defer sw.Close()
 
 	// 请求参数预处理
-	maxContextLen := ctl.loadRoomContextLen(ctx, req.RoomID, user.ID)
-	var inputTokenCount int64
-	req, inputTokenCount, err = req.Fix(ctl.chat, maxContextLen)
-	if err != nil {
-		misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
-		return
+	var inputTokenCount, maxContextLen int64
+
+	if ctl.apiMode {
+		// API 模式下，还原 n 参数原始值（不支持 room 上下文配置）
+		req.N = int(req.RoomID)
+		icnt, err := chat.MessageTokenCount(req.Messages, req.Model)
+		if err != nil {
+			misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
+			return
+		}
+
+		inputTokenCount = int64(icnt)
+	} else {
+		maxContextLen = ctl.loadRoomContextLen(ctx, req.RoomID, user.ID)
+		req, inputTokenCount, err = req.Fix(ctl.chat, maxContextLen)
+		if err != nil {
+			misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
+			return
+		}
 	}
 
 	// 基于模型的流控，避免单一模型用户过度使用
@@ -580,7 +593,7 @@ func (ctl *OpenAIController) rateLimitPass(ctx context.Context, user *auth.User,
 }
 
 func (ctl *OpenAIController) saveChatAnswer(ctx context.Context, user *auth.User, replyText string, quotaConsumed int64, realWordCount int, req *chat.Request, questionID int64, chatErrorMessage string) int64 {
-	if ctl.conf.EnableRecordChat {
+	if ctl.conf.EnableRecordChat && !ctl.apiMode {
 		answerID, err := ctl.messageRepo.Add(ctx, repo.MessageAddReq{
 			UserID:        user.ID,
 			Message:       replyText,
@@ -636,7 +649,7 @@ func (ctl *OpenAIController) makeChatQuestionFailed(ctx context.Context, questio
 
 // saveChatQuestion 保存用户聊天问题
 func (ctl *OpenAIController) saveChatQuestion(ctx context.Context, user *auth.User, req *chat.Request) int64 {
-	if ctl.conf.EnableRecordChat {
+	if ctl.conf.EnableRecordChat && !ctl.apiMode {
 		qid, err := ctl.messageRepo.Add(ctx, repo.MessageAddReq{
 			UserID:  user.ID,
 			Message: req.Messages[len(req.Messages)-1].Content,
@@ -676,7 +689,11 @@ func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int6
 
 // 内容安全检测
 func (ctl *OpenAIController) contentSafety(req *chat.Request, user *auth.User, sw *streamwriter.StreamWriter) error {
-	// content := strings.Join(array.Map(req.Messages, func(msg openai.ChatCompletionMessage, _ int) string { return msg.Content }), "\n")
+	// API 模式下，不进行内容安全检测
+	if ctl.apiMode {
+		return nil
+	}
+
 	content := req.Messages[len(req.Messages)-1].Content
 	if checkRes := ctl.securitySrv.ChatDetect(content); checkRes != nil {
 		if !checkRes.Safe {

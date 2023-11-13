@@ -179,6 +179,21 @@ func (srv *UserService) GetUserByID(ctx context.Context, id int64, forceUpdate b
 	return user, nil
 }
 
+// GetUserByAPIKey 根据用户 API Key 获取用户信息，带缓存（10分钟）
+func (srv *UserService) GetUserByAPIKey(ctx context.Context, key string) (*model.Users, error) {
+	userKey := fmt.Sprintf("user-apikey:%s:info", key)
+	user, err := srv.userRepo.GetUserByAPIKey(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := srv.rds.SetNX(ctx, userKey, string(must.Must(json.Marshal(user))), 10*time.Minute).Err(); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 // CustomConfig 获取用户自定义配置
 func (srv *UserService) CustomConfig(ctx context.Context, userID int64) (*repo.UserCustomConfig, error) {
 	return srv.userRepo.CustomConfig(ctx, userID)

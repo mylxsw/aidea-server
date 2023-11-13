@@ -57,7 +57,11 @@ func (sw *StreamWriter) Close() {
 	}
 }
 
-func New[T any](enableWs bool, enableCors bool, r *http.Request, w http.ResponseWriter) (*StreamWriter, *T, error) {
+type InitRequest[T any] interface {
+	Init() T
+}
+
+func New[T InitRequest[T]](enableWs bool, enableCors bool, r *http.Request, w http.ResponseWriter) (*StreamWriter, *T, error) {
 	sw := &StreamWriter{
 		r:          r,
 		w:          w,
@@ -103,6 +107,7 @@ func New[T any](enableWs bool, enableCors bool, r *http.Request, w http.Response
 		}
 	}
 
+	req = req.Init()
 	return sw, &req, nil
 }
 

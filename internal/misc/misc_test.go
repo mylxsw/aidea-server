@@ -125,3 +125,7 @@ func TestWordTruncate(t *testing.T) {
 	assert.EqualValues(t, "", misc.WordTruncate("逍遥神剑", 0))
 	assert.EqualValues(t, "逍遥神剑", misc.WordTruncate("逍遥神剑", 5))
 }
+
+func TestGenerateAPIToken(t *testing.T) {
+	fmt.Println(misc.GenerateAPIToken("default", 11222233))
+}

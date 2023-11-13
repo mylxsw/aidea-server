@@ -127,14 +127,12 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 					}
 				})
 
-				claims, err := tk.ParseToken(credential)
-				if err != nil {
-					return errors.New("invalid auth credential")
-				}
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
 
 				// 查询用户信息
 				var user *auth.User
-				if u, err := userSrv.GetUserByID(context.TODO(), claims.Int64Value("id"), false); err != nil {
+				if u, err := userSrv.GetUserByAPIKey(ctx, credential); err != nil {
 					if errors.Is(err, repo.ErrNotFound) {
 						return errors.New("invalid auth credential, user not found")
 					}

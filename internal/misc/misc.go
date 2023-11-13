@@ -1,9 +1,11 @@
 package misc
 
 import (
+	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
 	"github.com/mylxsw/asteria/log"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
@@ -37,6 +39,16 @@ func MaskPhoneNumber(phone string) string {
 	}
 
 	return phone[:3] + "****" + phone[7:]
+}
+
+// MaskStr 隐藏字符串中间部分
+func MaskStr(content string, left int) string {
+	size := len(content)
+	if size < 16 {
+		return strings.Repeat("*", size)
+	}
+
+	return content[:left] + strings.Repeat("*", size-left*2) + content[size-left:]
 }
 
 func HashID(id int64) string {
@@ -229,4 +241,9 @@ func NoError2[T any](_ T, err error) {
 	if err != nil {
 		log.Warningf("出错啦: %v", err)
 	}
+}
+
+// GenerateAPIToken 生成 API Token
+func GenerateAPIToken(name string, uid int64) string {
+	return fmt.Sprintf("%s.%d.%x", HashID(uid), time.Now().UnixNano(), sha1.Sum([]byte(fmt.Sprintf("%s:%d:%d:%d", name, uid, time.Now().UnixNano(), rand.Intn(9999999999)))))
 }

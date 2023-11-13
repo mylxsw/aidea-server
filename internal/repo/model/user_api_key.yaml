@@ -1,0 +1,24 @@
+package: model
+
+models:
+  - name: user_api_key
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: user_id
+          type: int64
+          tag: json:"user_id"
+        - name: name
+          type: string
+          tag: json:"name"
+        - name: token
+          type: string
+          tag: json:"token"
+        - name: status
+          type: int64
+          tag: json:"status"
+        - name: valid_before
+          type: time.Time
+          tag: json:"valid_before"

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/misc"
@@ -32,13 +33,13 @@ const (
 )
 
 const (
-	// 普通用户
+	// UserTypeNormal 普通用户
 	UserTypeNormal = 0
-	// 内部用户
+	// UserTypeInternal 内部用户
 	UserTypeInternal = 1
-	// 测试用户
+	// UserTypeTester 测试用户
 	UserTypeTester = 2
-	// 例外用户
+	// UserTypeExtraPermission 例外用户
 	UserTypeExtraPermission = 3
 )
 
@@ -55,7 +56,7 @@ func NewUserRepo(db *sql.DB, conf *config.Config) *UserRepo {
 func (repo *UserRepo) GetUserByInviteCode(ctx context.Context, code string) (*model.Users, error) {
 	user, err := model.NewUsersModel(repo.db).First(ctx, query.Builder().Where(model.FieldUsersInviteCode, code))
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
@@ -92,7 +93,7 @@ func (repo *UserRepo) GenerateInviteCode(ctx context.Context, userId int64) erro
 func (repo *UserRepo) GetUserByID(ctx context.Context, userID int64) (*model.Users, error) {
 	user, err := model.NewUsersModel(repo.db).First(ctx, query.Builder().Where(model.FieldUsersId, userID))
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
@@ -111,7 +112,7 @@ func (repo *UserRepo) GetUserByID(ctx context.Context, userID int64) (*model.Use
 func (repo *UserRepo) GetUserByPhone(ctx context.Context, phone string) (*model.Users, error) {
 	user, err := model.NewUsersModel(repo.db).First(ctx, query.Builder().Where(model.FieldUsersPhone, phone))
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
@@ -126,11 +127,11 @@ func (repo *UserRepo) GetUserByPhone(ctx context.Context, phone string) (*model.
 	return &ret, nil
 }
 
-// GetUserByID 根据用户邮箱地址获取用户信息
+// GetUserByEmail 根据用户邮箱地址获取用户信息
 func (repo *UserRepo) GetUserByEmail(ctx context.Context, username string) (*model.Users, error) {
 	user, err := model.NewUsersModel(repo.db).First(ctx, query.Builder().Where(model.FieldUsersEmail, username))
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
@@ -149,7 +150,7 @@ func (repo *UserRepo) GetUserByEmail(ctx context.Context, username string) (*mod
 func (repo *UserRepo) VerifyPassword(ctx context.Context, userID int64, password string) error {
 	user, err := model.NewUsersModel(repo.db).First(ctx, query.Builder().Where(model.FieldUsersId, userID))
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return ErrNotFound
 		}
 
@@ -204,7 +205,7 @@ func (repo *UserRepo) UpdateRealname(ctx context.Context, userID int64, realname
 	return err
 }
 
-// SignUp 使用手机号注册用户
+// SignUpPhone 使用手机号注册用户
 func (repo *UserRepo) SignUpPhone(ctx context.Context, username string, password string, realname string) (user *model.Users, eventID int64, err error) {
 	if err = eloquent.Transaction(repo.db, func(tx query.Database) error {
 		q := query.Builder().Where(model.FieldUsersPhone, username)
@@ -260,7 +261,7 @@ func (repo *UserRepo) SignUpPhone(ctx context.Context, username string, password
 	return user, eventID, nil
 }
 
-// SignUp 使用邮箱注册用户
+// SignUpEmail 使用邮箱注册用户
 func (repo *UserRepo) SignUpEmail(ctx context.Context, username string, password string, realname string) (user *model.Users, eventID int64, err error) {
 	if err = eloquent.Transaction(repo.db, func(tx query.Database) error {
 		q := query.Builder().Where(model.FieldUsersEmail, username)
@@ -320,7 +321,7 @@ func (repo *UserRepo) SignIn(ctx context.Context, emailOrPhone, password string)
 	q := query.Builder().Where(model.FieldUsersEmail, emailOrPhone).OrWhere(model.FieldUsersPhone, emailOrPhone)
 	user, err := model.NewUsersModel(repo.db).First(ctx, q)
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
@@ -463,12 +464,12 @@ type UserCustomConfig struct {
 // CustomConfig 查询用户自定义配置
 func (repo *UserRepo) CustomConfig(ctx context.Context, userID int64) (*UserCustomConfig, error) {
 	user, err := model.NewUserCustomModel(repo.db).First(ctx, query.Builder().Where(model.FieldUserCustomUserId, userID))
-	if err != nil && err != query.ErrNoResult {
+	if err != nil && !errors.Is(err, query.ErrNoResult) {
 		return nil, fmt.Errorf("查询用户自定义配置失败：%w", err)
 	}
 
 	var configData string
-	if err == query.ErrNoResult {
+	if errors.Is(err, query.ErrNoResult) {
 		configData = "{}"
 	} else {
 		configData = user.Config.ValueOrZero()
@@ -493,11 +494,11 @@ func (repo *UserRepo) UpdateCustomConfig(ctx context.Context, userID int64, conf
 		q := query.Builder().Where(model.FieldUserCustomUserId, userID)
 
 		cus, err := model.NewUserCustomModel(tx).First(ctx, q)
-		if err != nil && err != query.ErrNoResult {
+		if err != nil && !errors.Is(err, query.ErrNoResult) {
 			return fmt.Errorf("查询用户自定义配置失败：%w", err)
 		}
 
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			_, err = model.NewUserCustomModel(tx).Save(ctx, model.UserCustomN{
 				UserId: null.IntFrom(userID),
 				Config: null.StringFrom(string(configData)),
@@ -514,4 +515,102 @@ func (repo *UserRepo) UpdateCustomConfig(ctx context.Context, userID int64, conf
 
 		return err
 	})
+}
+
+const (
+	UserApiKeyStatusDisabled = 2
+	UserAPiKeyStatusActive   = 1
+)
+
+// GetUserByAPIKey 根据 API Token 获取用户信息
+func (repo *UserRepo) GetUserByAPIKey(ctx context.Context, token string) (*model.Users, error) {
+	key, err := model.NewUserApiKeyModel(repo.db).First(ctx, query.Builder().Where(model.FieldUserApiKeyToken, token))
+	if err != nil {
+		if errors.Is(err, query.ErrNoResult) {
+			return nil, ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	apiKey := key.ToUserApiKey()
+	if apiKey.Status == UserApiKeyStatusDisabled {
+		return nil, ErrNotFound
+	}
+
+	if !apiKey.ValidBefore.IsZero() && apiKey.ValidBefore.Before(time.Now()) {
+		return nil, ErrNotFound
+	}
+
+	return repo.GetUserByID(ctx, apiKey.UserId)
+}
+
+// GetAPIKeys 获取用户的 API Keys
+func (repo *UserRepo) GetAPIKeys(ctx context.Context, userID int64) ([]model.UserApiKey, error) {
+	keys, err := model.NewUserApiKeyModel(repo.db).Get(ctx, query.Builder().Where(model.FieldUserApiKeyUserId, userID))
+	if err != nil {
+		return nil, err
+	}
+
+	return array.Map(keys, func(key model.UserApiKeyN, _ int) model.UserApiKey {
+		item := key.ToUserApiKey()
+		item.Token = misc.MaskStr(item.Token, 6)
+		return item
+	}), nil
+}
+
+// GetAPIKey 获取用户的 API Key
+func (repo *UserRepo) GetAPIKey(ctx context.Context, userID int64, keyID int64) (*model.UserApiKey, error) {
+	key, err := model.NewUserApiKeyModel(repo.db).First(ctx, query.Builder().
+		Where(model.FieldUserApiKeyUserId, userID).
+		Where(model.FieldUserApiKeyId, keyID),
+	)
+	if err != nil {
+		if errors.Is(err, query.ErrNoResult) {
+			return nil, ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	ret := key.ToUserApiKey()
+	return &ret, nil
+}
+
+// CreateAPIKey 创建一个 API Token
+func (repo *UserRepo) CreateAPIKey(ctx context.Context, userID int64, name string, validBefore time.Time) (string, error) {
+	key := model.UserApiKey{
+		UserId:      userID,
+		Name:        name,
+		ValidBefore: validBefore,
+		Token:       fmt.Sprintf("sk-%s", misc.GenerateAPIToken(name, userID)),
+	}
+
+	allows := []string{
+		model.FieldUserApiKeyUserId,
+		model.FieldUserApiKeyName,
+		model.FieldUserApiKeyToken,
+	}
+
+	if !validBefore.IsZero() {
+		allows = append(allows, model.FieldUserApiKeyValidBefore)
+	}
+
+	id, err := model.NewUserApiKeyModel(repo.db).Save(ctx, key.ToUserApiKeyN(allows...))
+	if err != nil {
+		return "", err
+	}
+
+	key.Id = id
+	return key.Token, nil
+}
+
+// DeleteAPIKey 删除一个 API Key
+func (repo *UserRepo) DeleteAPIKey(ctx context.Context, userID int64, keyID int64) error {
+	_, err := model.NewUserApiKeyModel(repo.db).Delete(ctx, query.Builder().
+		Where(model.FieldUserApiKeyUserId, userID).
+		Where(model.FieldUserApiKeyId, keyID),
+	)
+
+	return err
 }

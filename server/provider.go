@@ -83,6 +83,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v1/audio",           // OpenAI audio to text
 		"/v1/group-chat",      // 群聊
 		"/v1/users",           // 用户管理
+		"/v1/api-keys",        // API Key 管理
 		"/v1/translate",       // 翻译 API
 		"/v1/storage",         // 存储 API
 		"/v1/creative-island", // 创作岛
@@ -174,9 +175,12 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 						return errors.New("invalid auth credential")
 					}
 
+					ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+					defer cancel()
+
 					// 查询用户信息
 					var user *auth.User
-					if u, err := userSrv.GetUserByID(context.TODO(), claims.Int64Value("id"), false); err != nil {
+					if u, err := userSrv.GetUserByID(ctx, claims.Int64Value("id"), false); err != nil {
 						if needAuth {
 							if errors.Is(err, repo.ErrNotFound) {
 								return errors.New("invalid auth credential, user not found")
@@ -279,6 +283,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 
 		controllers.NewAuthController(resolver, conf),
 		controllers.NewUserController(resolver),
+		controllers.NewAPIKeyController(resolver),
 		controllers.NewUploadController(resolver, conf),
 		controllers.NewTaskController(resolver, conf),
 		controllers.NewAppleAuthController(resolver, conf),
