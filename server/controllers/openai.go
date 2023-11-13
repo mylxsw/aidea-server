@@ -88,7 +88,43 @@ func (ctl *OpenAIController) Register(router web.Router) {
 }
 
 // audioTranscriptions 语音转文本
+// https://platform.openai.com/docs/api-reference/audio/createTranscription
 func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
+	// TODO 增加客户端控制语音转文本的参数：model/file/language/prompt/response_format/temperature
+	model := ternary.If(ctl.conf.UseTencentVoiceToText, "tencent", "whisper-1")
+
+	if ctl.conf.EnableModelRateLimit {
+		if err := ctl.limiter.Allow(ctx, fmt.Sprintf("chat-limit:u:%d:m:%s:minute", user.ID, model), redis_rate.PerMinute(5)); err != nil {
+			if errors.Is(err, rate.ErrRateLimitExceeded) {
+				return webCtx.JSONError("操作频率过高，请稍后再试", http.StatusTooManyRequests)
+			}
+
+			log.F(log.M{"user_id": user.ID}).Errorf("check rate limit failed: %s", err)
+		}
+	}
+
+	quota, err := ctl.userSrv.UserQuota(ctx, user.ID)
+	if err != nil {
+		log.F(log.M{"user_id": user.ID}).Errorf("查询用户智慧果余量失败: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	needCoins := coins.GetVoiceCoins(model)
+	if quota.Rest-quota.Freezed < needCoins {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
+	}
+
+	// 冻结本次所需要的智慧果
+	if err := ctl.userSrv.FreezeUserQuota(ctx, user.ID, needCoins); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("freeze user quota failed: %s", err)
+	} else {
+		defer func(ctx context.Context) {
+			// 解冻智慧果
+			if err := ctl.userSrv.UnfreezeUserQuota(ctx, user.ID, needCoins); err != nil {
+				log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("unfreeze user quota failed: %s", err)
+			}
+		}(ctx)
+	}
 
 	uploadedFile, err := webCtx.File("file")
 	if err != nil {
@@ -110,18 +146,6 @@ func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web
 	defer func() { misc.NoError(os.Remove(tempPath)) }()
 
 	log.Debugf("upload file: %s", tempPath)
-
-	model := ternary.If(ctl.conf.UseTencentVoiceToText, "tencent", "whisper-1")
-
-	quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
-	if err != nil {
-		log.Errorf("get user quota failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
-	}
-
-	if quota.Quota < quota.Used+coins.GetVoiceCoins(model) {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
-	}
 
 	var resp openai.AudioResponse
 
@@ -156,10 +180,6 @@ func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web
 
 	return webCtx.JSON(resp)
 }
-
-//var openAIChatModelNames = array.Map(array.Filter(openAIModels(), func(m Model, _ int) bool { return m.IsChat }), func(m Model, _ int) string {
-//	return strings.TrimPrefix(m.ID, "openai:")
-//})
 
 type FinalMessage struct {
 	Type          string `json:"type,omitempty"`
@@ -681,19 +701,60 @@ func (ctl *OpenAIController) sendViolateContentPolicyResp(sw *streamwriter.Strea
 
 // Images 图像生成接口，接口参数参考 https://platform.openai.com/docs/api-reference/images/create
 func (ctl *OpenAIController) Images(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
-	quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
-	if err != nil {
-		log.Errorf("get user quota failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
-	}
-
-	if quota.Quota < quota.Used+int64(coins.GetUnifiedImageGenCoins("dall-e-3:hd")) {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
-	}
-
 	var req openai.ImageRequest
 	if err := webCtx.Unmarshal(&req); err != nil {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	if req.N == 0 {
+		req.N = 1
+	}
+
+	model := req.Model
+	if model == "" {
+		switch model {
+		case "dall-e-3":
+			if req.Quality == "hd" {
+				model = "dall-e-3:hd"
+			} else {
+				model = "dall-e-3"
+			}
+		default:
+			model = "dall-e-2"
+		}
+	}
+
+	if ctl.conf.EnableModelRateLimit {
+		if err := ctl.limiter.Allow(ctx, fmt.Sprintf("chat-limit:u:%d:m:%s:minute", user.ID, model), redis_rate.PerMinute(5)); err != nil {
+			if errors.Is(err, rate.ErrRateLimitExceeded) {
+				return webCtx.JSONError("操作频率过高，请稍后再试", http.StatusTooManyRequests)
+			}
+
+			log.F(log.M{"user_id": user.ID, "req": req}).Errorf("check rate limit failed: %s", err)
+		}
+	}
+
+	quota, err := ctl.userSrv.UserQuota(ctx, user.ID)
+	if err != nil {
+		log.F(log.M{"user_id": user.ID}).Errorf("查询用户智慧果余量失败: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	needCoins := int64(coins.GetUnifiedImageGenCoins(model) * req.N)
+	if quota.Rest-quota.Freezed < needCoins {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
+	}
+
+	// 冻结本次所需要的智慧果
+	if err := ctl.userSrv.FreezeUserQuota(ctx, user.ID, needCoins); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("freeze user quota failed: %s", err)
+	} else {
+		defer func(ctx context.Context) {
+			// 解冻智慧果
+			if err := ctl.userSrv.UnfreezeUserQuota(ctx, user.ID, needCoins); err != nil {
+				log.F(log.M{"user_id": user.ID, "quota": needCoins}).Errorf("unfreeze user quota failed: %s", err)
+			}
+		}(ctx)
 	}
 
 	resp, err := ctl.client.CreateImage(ctx, req)
@@ -703,7 +764,7 @@ func (ctl *OpenAIController) Images(ctx context.Context, webCtx web.Context, use
 	}
 
 	defer func() {
-		if err := quotaRepo.QuotaConsume(ctx, user.ID, int64(coins.GetUnifiedImageGenCoins("dall-e-3:hd")), repo.NewQuotaUsedMeta("openai-image", "DALL·E")); err != nil {
+		if err := quotaRepo.QuotaConsume(ctx, user.ID, int64(coins.GetUnifiedImageGenCoins(model)*req.N), repo.NewQuotaUsedMeta("openai-image", model)); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
 	}()

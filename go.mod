@@ -20,7 +20,7 @@ require (
 	github.com/mylxsw/glacier v1.1.4-0.20231112080120-114e547468b0
 	github.com/redis/go-redis/v9 v9.0.3
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/sashabaranov/go-openai v1.16.1
+	github.com/sashabaranov/go-openai v1.17.5
 	github.com/speps/go-hashids/v2 v2.0.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/aiart v1.0.727
 	github.com/tideland/gorest v2.15.5+incompatible
