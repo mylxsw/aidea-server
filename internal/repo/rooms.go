@@ -92,14 +92,29 @@ func (r *RoomRepo) Rooms(ctx context.Context, userID int64, roomTypes []int, lim
 	}), nil
 }
 
+func GetDefaultRoom() *model.Rooms {
+	return &model.Rooms{
+		Id:         1,
+		Name:       "默认",
+		Model:      "gpt-3.5-turbo",
+		Vendor:     "openai",
+		MaxContext: 5,
+		RoomType:   RoomTypePreset,
+	}
+}
+
 func (r *RoomRepo) Room(ctx context.Context, userID, roomID int64) (*model.Rooms, error) {
+	if roomID == 1 {
+		return GetDefaultRoom(), nil
+	}
+
 	q := query.Builder().
 		Where(model.FieldRoomsUserId, userID).
 		Where(model.FieldRoomsId, roomID)
 
 	room, err := model.NewRoomsModel(r.db).First(ctx, q)
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 

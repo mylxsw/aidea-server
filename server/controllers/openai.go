@@ -679,7 +679,7 @@ func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int6
 			log.F(log.M{"room_id": roomID, "user_id": userID}).Errorf("查询 ROOM 信息失败: %s", err)
 		}
 
-		if room.MaxContext > 0 {
+		if room != nil && room.MaxContext > 0 {
 			maxContextLength = room.MaxContext
 		}
 	}

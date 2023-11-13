@@ -308,17 +308,7 @@ func (ctl *RoomController) Room(ctx context.Context, webCtx web.Context, user *a
 	}
 
 	if roomID == 1 {
-		return webCtx.JSON(model.Rooms{
-			Id:          1,
-			Name:        "默认数字人",
-			Description: "默认数字人",
-			Model:       "gpt-3.5-turbo",
-			Vendor:      "openai",
-			MaxContext:  5,
-			RoomType:    repo.RoomTypePreset,
-			AvatarId:    0,
-			// AvatarUrl:   "https://ssl.aicode.cc/ai-server/5/4416d36c-edda-a479-46fd-dea634f43754.png",
-		})
+		return webCtx.JSON(repo.GetDefaultRoom())
 	}
 
 	room, err := ctl.roomRepo.Room(ctx, user.ID, int64(roomID))

@@ -241,7 +241,7 @@ func (srv *UserService) FreezeUserQuota(ctx context.Context, userID int64, quota
 	}
 
 	key := srv.userQuotaFreezedCacheKey(userID)
-	newVal, err := srv.rds.IncrBy(ctx, key, quota).Result()
+	_, err := srv.rds.IncrBy(ctx, key, quota).Result()
 	if err != nil {
 		return fmt.Errorf("freeze user quota failed: %w", err)
 	}
@@ -249,9 +249,6 @@ func (srv *UserService) FreezeUserQuota(ctx context.Context, userID int64, quota
 	if err := srv.rds.Expire(ctx, key, 5*time.Minute).Err(); err != nil {
 		log.F(log.M{"user_id": userID, "quota": quota}).Errorf("设置用户冻结配额过期时间失败: %s", err)
 	}
-
-	log.F(log.M{"user_id": userID, "delta": quota, "new_val": newVal, "key": key}).
-		Debugf("freeze user quota")
 
 	return nil
 }
@@ -273,9 +270,6 @@ func (srv *UserService) UnfreezeUserQuota(ctx context.Context, userID int64, quo
 			log.F(log.M{"user_id": userID, "quota": quota}).Errorf("清空用户冻结配额失败: %s", err)
 		}
 	}
-
-	log.F(log.M{"user_id": userID, "delta": quota, "new_val": newVal, "key": key}).
-		Debugf("unfreeze user quota")
 
 	return nil
 }

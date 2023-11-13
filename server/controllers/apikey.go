@@ -19,7 +19,7 @@ type APIKeyController struct {
 
 func NewAPIKeyController(resolver infra.Resolver) web.Controller {
 	ctl := &APIKeyController{}
-	resolver.MustResolve(ctl)
+	resolver.MustAutoWire(ctl)
 
 	return ctl
 }
