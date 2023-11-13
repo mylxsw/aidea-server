@@ -118,9 +118,11 @@ func (sw *StreamWriter) initSSE() {
 			log.Debug("init sse")
 		}
 
-		sw.w.Header().Set("Content-Type", "text/event-stream")
-		sw.w.Header().Set("Cache-Control", "no-cache")
-		sw.w.Header().Set("Connection", "keep-alive")
+		sw.wrapRawResponse(sw.w, func() {
+			sw.w.Header().Set("Content-Type", "text/event-stream")
+			sw.w.Header().Set("Cache-Control", "no-cache")
+			sw.w.Header().Set("Connection", "keep-alive")
+		})
 	})
 }
 
