@@ -5,6 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	service2 "github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -15,15 +20,9 @@ import (
 	"github.com/mylxsw/go-utils/ternary"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/misc"
-	"github.com/mylxsw/aidea-server/internal/queue"
-	"github.com/mylxsw/aidea-server/internal/service"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
-
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/repo"
+	"github.com/mylxsw/aidea-server/internal/coins"
+	"github.com/mylxsw/aidea-server/internal/queue"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/asteria/log"
@@ -40,13 +39,13 @@ const (
 // CreativeIslandController 创作岛
 type CreativeIslandController struct {
 	conf         *config.Config
-	quotaRepo    *repo.QuotaRepo          `autowire:"@"`
-	queue        *queue.Queue             `autowire:"@"`
-	trans        youdao.Translater        `autowire:"@"`
-	creativeRepo *repo.CreativeRepo       `autowire:"@"`
-	securitySrv  *service.SecurityService `autowire:"@"`
-	userSvc      *service.UserService     `autowire:"@"`
-	rds          *redis.Client            `autowire:"@"`
+	quotaRepo    *repo2.QuotaRepo          `autowire:"@"`
+	queue        *queue.Queue              `autowire:"@"`
+	trans        youdao.Translater         `autowire:"@"`
+	creativeRepo *repo2.CreativeRepo       `autowire:"@"`
+	securitySrv  *service2.SecurityService `autowire:"@"`
+	userSvc      *service2.UserService     `autowire:"@"`
+	rds          *redis.Client             `autowire:"@"`
 }
 
 // NewCreativeIslandController create a new CreativeIslandController
@@ -162,13 +161,13 @@ func (ctl *CreativeIslandController) Models(ctx context.Context, webCtx web.Cont
 
 // loadAllModels 加载所有的模型
 // TODO 加缓存
-func (ctl *CreativeIslandController) loadAllModels(ctx context.Context) []repo.ImageModel {
+func (ctl *CreativeIslandController) loadAllModels(ctx context.Context) []repo2.ImageModel {
 	models, err := ctl.creativeRepo.Models(ctx)
 	if err != nil {
 		log.Errorf("get models failed: %v", err)
 	}
 
-	return array.Filter(models, func(m repo.ImageModel, _ int) bool {
+	return array.Filter(models, func(m repo2.ImageModel, _ int) bool {
 		if m.Vendor == "leapai" {
 			return ctl.conf.EnableLeapAI
 		}
@@ -208,7 +207,7 @@ func (ctl *CreativeIslandController) ImageStyles(ctx context.Context, webCtx web
 
 	// 查询所有可用的模型，转换为 map[模型ID]模型ID
 	availableModels := array.ToMap(
-		array.Map(ctl.loadAllModels(ctx), func(item repo.ImageModel, _ int) string {
+		array.Map(ctl.loadAllModels(ctx), func(item repo2.ImageModel, _ int) string {
 			return item.ModelId
 		}),
 		func(val string, _ int) string {
@@ -217,7 +216,7 @@ func (ctl *CreativeIslandController) ImageStyles(ctx context.Context, webCtx web
 	)
 
 	// 过滤掉当前没有启用的模型
-	filters = array.Filter(filters, func(item repo.ImageFilter, _ int) bool {
+	filters = array.Filter(filters, func(item repo2.ImageFilter, _ int) bool {
 		_, ok := availableModels[item.ModelId]
 		return ok
 	})
@@ -305,7 +304,7 @@ func (ctl *CreativeIslandController) ShareHistoryItem(ctx context.Context, webCt
 
 	err := ctl.creativeRepo.ShareCreativeHistoryToGallery(ctx, user.ID, user.Name, int64(hid))
 	if err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
+		if errors.Is(err, repo2.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrNotFound), http.StatusNotFound)
 		}
 
@@ -355,7 +354,7 @@ func (ctl *CreativeIslandController) Histories(ctx context.Context, webCtx web.C
 		perPage = 20
 	}
 
-	items, meta, err := ctl.creativeRepo.HistoryRecordPaginate(ctx, user.ID, repo.CreativeHistoryQuery{
+	items, meta, err := ctl.creativeRepo.HistoryRecordPaginate(ctx, user.ID, repo2.CreativeHistoryQuery{
 		Page:        page,
 		PerPage:     perPage,
 		IslandId:    AllInOneIslandID,
@@ -367,7 +366,7 @@ func (ctl *CreativeIslandController) Histories(ctx context.Context, webCtx web.C
 	}
 
 	// 以下字段不需要返回给前端
-	items = array.Map(items, func(item repo.CreativeHistoryItem, _ int) repo.CreativeHistoryItem {
+	items = array.Map(items, func(item repo2.CreativeHistoryItem, _ int) repo2.CreativeHistoryItem {
 		//  Arguments 只保留必须的 image 字段，用于客户端区分是文生图还是图生图
 		var arguments map[string]any
 		_ = json.Unmarshal([]byte(item.Arguments), &arguments)
@@ -385,7 +384,7 @@ func (ctl *CreativeIslandController) Histories(ctx context.Context, webCtx web.C
 		item.QuotaUsed = 0
 
 		switch item.IslandType {
-		case int64(repo.IslandTypeImage):
+		case int64(repo2.IslandTypeImage):
 			if arguments != nil {
 				if _, ok := arguments["image"]; ok {
 					item.IslandTitle = "图生图"
@@ -395,15 +394,15 @@ func (ctl *CreativeIslandController) Histories(ctx context.Context, webCtx web.C
 			if item.IslandTitle == "" {
 				item.IslandTitle = "文生图"
 			}
-		case int64(repo.IslandTypeUpscale):
+		case int64(repo2.IslandTypeUpscale):
 			item.IslandTitle = "高清修复"
-		case int64(repo.IslandTypeImageColorization):
+		case int64(repo2.IslandTypeImageColorization):
 			item.IslandTitle = "图片上色"
 		}
 
 		// 客户端目前不支持封禁状态展示，这里转换为失败
-		if item.Status == int64(repo.CreativeStatusForbid) {
-			item.Status = int64(repo.CreativeStatusFailed)
+		if item.Status == int64(repo2.CreativeStatusForbid) {
+			item.Status = int64(repo2.CreativeStatusFailed)
 		}
 
 		return item
@@ -427,7 +426,7 @@ func (ctl *CreativeIslandController) Histories(ctx context.Context, webCtx web.C
 }
 
 type CreativeHistoryItemResp struct {
-	repo.CreativeHistoryItem
+	repo2.CreativeHistoryItem
 	ShowBetaFeature bool `json:"show_beta_feature,omitempty"`
 }
 
@@ -445,7 +444,7 @@ func (ctl *CreativeIslandController) HistoryItem(ctx context.Context, webCtx web
 
 	item, err := ctl.creativeRepo.FindHistoryRecord(ctx, userId, int64(hid))
 	if err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
+		if errors.Is(err, repo2.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrNotFound), http.StatusNotFound)
 		}
 
@@ -454,8 +453,8 @@ func (ctl *CreativeIslandController) HistoryItem(ctx context.Context, webCtx web
 	}
 
 	// 客户端目前不支持封禁状态展示，这里转换为失败
-	if item.Status == int64(repo.CreativeStatusForbid) {
-		item.Status = int64(repo.CreativeStatusFailed)
+	if item.Status == int64(repo2.CreativeStatusForbid) {
+		item.Status = int64(repo2.CreativeStatusFailed)
 	}
 
 	return webCtx.JSON(CreativeHistoryItemResp{
@@ -660,7 +659,7 @@ func (ctl *CreativeIslandController) resolveImageCompletionRequest(ctx context.C
 }
 
 func (ctl *CreativeIslandController) getAllModels(ctx context.Context) []VendorModel {
-	return array.Map(ctl.loadAllModels(ctx), func(m repo.ImageModel, _ int) VendorModel {
+	return array.Map(ctl.loadAllModels(ctx), func(m repo2.ImageModel, _ int) VendorModel {
 		return VendorModel{
 			ID:                m.ModelId,
 			Name:              m.ModelName,
@@ -707,7 +706,7 @@ func (ctl *CreativeIslandController) getAllImageStyles(ctx context.Context) []Im
 		return []ImageStyle{}
 	}
 
-	return array.Map(filters, func(f repo.ImageFilter, _ int) ImageStyle {
+	return array.Map(filters, func(f repo2.ImageFilter, _ int) ImageStyle {
 		return ImageStyle{
 			ID:             f.Id,
 			Name:           f.Name,
@@ -768,32 +767,32 @@ type VendorModel struct {
 	Upscale           bool                      `json:"upscale,omitempty"`
 	ShowStyle         bool                      `json:"show_style,omitempty"`
 	ShowImageStrength bool                      `json:"show_image_strength,omitempty"`
-	IntroURL          string                    `json:"intro_url,omitempty"`
-	RatioDimensions   map[string]repo.Dimension `json:"-"`
+	IntroURL          string                     `json:"intro_url,omitempty"`
+	RatioDimensions   map[string]repo2.Dimension `json:"-"`
 }
 
-func (vm VendorModel) defaultDimension(ratio string) repo.Dimension {
+func (vm VendorModel) defaultDimension(ratio string) repo2.Dimension {
 	switch ratio {
 	case "1:1":
-		return repo.Dimension{Width: 512, Height: 512}
+		return repo2.Dimension{Width: 512, Height: 512}
 	case "4:3":
-		return repo.Dimension{Width: 768, Height: 576}
+		return repo2.Dimension{Width: 768, Height: 576}
 	case "3:4":
-		return repo.Dimension{Width: 576, Height: 768}
+		return repo2.Dimension{Width: 576, Height: 768}
 	case "3:2":
-		return repo.Dimension{Width: 768, Height: 512}
+		return repo2.Dimension{Width: 768, Height: 512}
 	case "2:3":
-		return repo.Dimension{Width: 512, Height: 768}
+		return repo2.Dimension{Width: 512, Height: 768}
 	case "16:9":
-		return repo.Dimension{Width: 1024, Height: 576}
+		return repo2.Dimension{Width: 1024, Height: 576}
 	}
 
-	return repo.Dimension{Width: 512, Height: 512}
+	return repo2.Dimension{Width: 512, Height: 512}
 }
 
-func (vm VendorModel) GetDimension(ratio string) repo.Dimension {
+func (vm VendorModel) GetDimension(ratio string) repo2.Dimension {
 	if vm.RatioDimensions == nil {
-		vm.RatioDimensions = map[string]repo.Dimension{}
+		vm.RatioDimensions = map[string]repo2.Dimension{}
 	}
 
 	dimension, ok := vm.RatioDimensions[ratio]
@@ -865,14 +864,14 @@ func (ctl *CreativeIslandController) ImageUpscale(ctx context.Context, webCtx we
 		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛用户配额已冻结，更新 Redis 任务与配额关系失败: %s", err)
 	}
 
-	creativeItem := repo.CreativeItem{
+	creativeItem := repo2.CreativeItem{
 		IslandId:   AllInOneIslandID,
-		IslandType: repo.IslandTypeUpscale,
+		IslandType: repo2.IslandTypeUpscale,
 		TaskId:     taskID,
-		Status:     repo.CreativeStatusPending,
+		Status:     repo2.CreativeStatusPending,
 	}
 
-	arg := repo.CreativeRecordArguments{
+	arg := repo2.CreativeRecordArguments{
 		Image:     image,
 		UpscaleBy: upscaleBy,
 	}
@@ -936,14 +935,14 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛用户配额已冻结，更新 Redis 任务与配额关系失败: %s", err)
 	}
 
-	creativeItem := repo.CreativeItem{
+	creativeItem := repo2.CreativeItem{
 		IslandId:   AllInOneIslandID,
-		IslandType: repo.IslandTypeImageColorization,
+		IslandType: repo2.IslandTypeImageColorization,
 		TaskId:     taskID,
-		Status:     repo.CreativeStatusPending,
+		Status:     repo2.CreativeStatusPending,
 	}
 
-	arg := repo.CreativeRecordArguments{
+	arg := repo2.CreativeRecordArguments{
 		Image: image,
 	}
 
@@ -1030,16 +1029,16 @@ func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web
 }
 
 // buildHistorySaveRecord 构建保存历史记录的 CreativeItem
-func (*CreativeIslandController) buildHistorySaveRecord(req *queue.ImageCompletionPayload, taskID string) (repo.CreativeItem, repo.CreativeRecordArguments) {
-	creativeItem := repo.CreativeItem{
+func (*CreativeIslandController) buildHistorySaveRecord(req *queue.ImageCompletionPayload, taskID string) (repo2.CreativeItem, repo2.CreativeRecordArguments) {
+	creativeItem := repo2.CreativeItem{
 		IslandId:    AllInOneIslandID,
-		IslandType:  repo.IslandTypeImage,
+		IslandType:  repo2.IslandTypeImage,
 		IslandModel: req.Model,
 		Prompt:      req.Prompt,
 		TaskId:      taskID,
-		Status:      repo.CreativeStatusPending,
+		Status:      repo2.CreativeStatusPending,
 	}
-	return creativeItem, repo.CreativeRecordArguments{
+	return creativeItem, repo2.CreativeRecordArguments{
 		NegativePrompt: req.NegativePrompt,
 		PromptTags:     req.PromptTags,
 		Width:          req.Width,

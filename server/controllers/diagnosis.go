@@ -3,10 +3,10 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/rate"
 	"net/http"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/rate"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"

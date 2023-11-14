@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/uploader"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/aidea-server/server/controllers"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/assert"

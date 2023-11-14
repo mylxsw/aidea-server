@@ -3,11 +3,11 @@ package jobs
 import (
 	"context"
 	"database/sql"
+	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"math/rand"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/eloquent/query"
 	"github.com/redis/go-redis/v9"

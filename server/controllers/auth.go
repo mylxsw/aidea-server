@@ -4,6 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/rate"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/token"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"math/rand"
 	"net/http"
 	"regexp"
@@ -16,13 +22,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/queue"
-	"github.com/mylxsw/aidea-server/internal/rate"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/repo/model"
-	"github.com/mylxsw/aidea-server/internal/token"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/asteria/log"
@@ -40,8 +40,8 @@ type AuthController struct {
 	translater youdao.Translater `autowire:"@"`
 	limiter    *rate.RateLimiter `autowire:"@"`
 	tk         *token.Token      `autowire:"@"`
-	rds        *redis.Client     `autowire:"@"`
-	userRepo   *repo.UserRepo    `autowire:"@"`
+	rds        *redis.Client   `autowire:"@"`
+	userRepo   *repo2.UserRepo `autowire:"@"`
 }
 
 func NewAuthController(resolver infra.Resolver, conf *config.Config) web.Controller {
@@ -113,11 +113,11 @@ func (ctl *AuthController) checkPhoneExistence(ctx context.Context, webCtx web.C
 		signInMethod = "email_code"
 	}
 	if err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
+		if errors.Is(err, repo2.ErrNotFound) {
 			return webCtx.JSON(web.M{"exist": false, "sign_in_method": signInMethod})
 		}
 
-		if errors.Is(err, repo.ErrUserAccountDisabled) {
+		if errors.Is(err, repo2.ErrUserAccountDisabled) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "账号不可用：用户账号已注销"), http.StatusForbidden)
 		}
 
@@ -152,7 +152,7 @@ func (ctl *AuthController) signInOrUpWithSMSCode(ctx context.Context, webCtx web
 	inviteCode := strings.TrimSpace(webCtx.Input("invite_code"))
 	if inviteCode != "" {
 		if err := ctl.verifyInviteCode(ctx, inviteCode); err != nil {
-			if errors.Is(err, repo.ErrNotFound) {
+			if errors.Is(err, repo2.ErrNotFound) {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "邀请码无效"), http.StatusBadRequest)
 			}
 
@@ -201,7 +201,7 @@ func (ctl *AuthController) signInOrUpWithSMSCode(ctx context.Context, webCtx web
 		user, err = ctl.userRepo.GetUserByEmail(ctx, username)
 	}
 	if err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
+		if errors.Is(err, repo2.ErrNotFound) {
 			// 用户不存在，注册新用户
 			return ctl.createAccount(ctx, webCtx, username, "", inviteCode)
 		}
@@ -219,7 +219,7 @@ func (ctl *AuthController) sendSigninSMSCode(ctx context.Context, webCtx web.Con
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if _, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-			if errors.Is(err, repo.ErrNotFound) {
+			if errors.Is(err, repo2.ErrNotFound) {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 			}
 
@@ -237,8 +237,8 @@ func (ctl *AuthController) sendSigninSMSCode(ctx context.Context, webCtx web.Con
 // verifyInviteCode 验证邀请码
 func (ctl *AuthController) verifyInviteCode(ctx context.Context, code string) error {
 	_, err := ctl.userRepo.GetUserByInviteCode(ctx, code)
-	if errors.Is(err, repo.ErrUserAccountDisabled) {
-		return repo.ErrNotFound
+	if errors.Is(err, repo2.ErrUserAccountDisabled) {
+		return repo2.ErrNotFound
 	}
 
 	return err
@@ -258,7 +258,7 @@ func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, cu
 	inviteCode := strings.TrimSpace(webCtx.Input("invite_code"))
 	if inviteCode != "" {
 		if err := ctl.verifyInviteCode(ctx, inviteCode); err != nil {
-			if err == repo.ErrNotFound {
+			if err == repo2.ErrNotFound {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "邀请码无效"), http.StatusBadRequest)
 			}
 
@@ -302,7 +302,7 @@ func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, cu
 	// 检查用户信息
 	user, err := ctl.userRepo.GetUserByID(ctx, current.ID)
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if err == repo2.ErrNotFound {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 		}
 
@@ -322,7 +322,7 @@ func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, cu
 
 	// 检查手机号是否绑定到其它账号
 	if u, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-		if err != repo.ErrNotFound {
+		if err != repo2.ErrNotFound {
 			log.WithFields(log.Fields{
 				"username": username,
 			}).Errorf("failed to get user: %s", err)
@@ -378,7 +378,7 @@ func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, cu
 	return webCtx.JSON(buildUserLoginRes(user, isNewUser, ctl.tk))
 }
 
-func (ctl *AuthController) resetPassword(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
+func (ctl *AuthController) resetPassword(ctx context.Context, webCtx web.Context, userRepo *repo2.UserRepo, rds *redis.Client) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名不能为空"), http.StatusBadRequest)
@@ -469,7 +469,7 @@ func (ctl *AuthController) resetPassword(ctx context.Context, webCtx web.Context
 }
 
 // sendEmailCode 发送邮件验证码
-func (ctl *AuthController) sendEmailCode(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
+func (ctl *AuthController) sendEmailCode(ctx context.Context, webCtx web.Context, userRepo *repo2.UserRepo, rds *redis.Client) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名不能为空"), http.StatusBadRequest)
@@ -506,7 +506,7 @@ func (ctl *AuthController) sendEmailCode(ctx context.Context, webCtx web.Context
 
 	// 检查用户是否存在
 	if _, err := userRepo.GetUserByEmail(ctx, username); err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
+		if errors.Is(err, repo2.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 		}
 
@@ -672,7 +672,7 @@ func (ctl *AuthController) resetPasswordSMSCode(ctx context.Context, webCtx web.
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if _, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-			if err == repo.ErrNotFound {
+			if err == repo2.ErrNotFound {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 			}
 
@@ -691,7 +691,7 @@ func (ctl *AuthController) bindPhoneSendSMSCode(ctx context.Context, webCtx web.
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if u, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-			if err != repo.ErrNotFound {
+			if err != repo2.ErrNotFound {
 				log.WithFields(log.Fields{
 					"username": username,
 				}).Errorf("failed to get user: %s", err)
@@ -735,7 +735,7 @@ func (ctl *AuthController) signUpSendEmailCode(ctx context.Context, webCtx web.C
 
 	// 检查用户是否存在
 	if u, err := ctl.userRepo.GetUserByEmail(ctx, username); err != nil {
-		if !errors.Is(err, repo.ErrNotFound) {
+		if !errors.Is(err, repo2.ErrNotFound) {
 			log.WithFields(log.Fields{
 				"username": username,
 			}).Errorf("failed to get user: %s", err)
@@ -828,7 +828,7 @@ func (ctl *AuthController) signUpWithPassword(ctx context.Context, webCtx web.Co
 	inviteCode := strings.TrimSpace(webCtx.Input("invite_code"))
 	if inviteCode != "" {
 		if err := ctl.verifyInviteCode(ctx, inviteCode); err != nil {
-			if err == repo.ErrNotFound {
+			if err == repo2.ErrNotFound {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "邀请码无效"), http.StatusBadRequest)
 			}
 
@@ -988,7 +988,7 @@ func appleSignIn(
 	ctx context.Context,
 	isIOS bool,
 	conf *config.Config,
-	userRepo *repo.UserRepo,
+	userRepo *repo2.UserRepo,
 	qu *queue.Queue,
 	authorizationCode string,
 	familyName, givenName string,

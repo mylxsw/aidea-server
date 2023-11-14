@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/asteria/log"
 	"strings"
 	"time"
@@ -57,7 +57,7 @@ func NewDalleCompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeDalleCompletion, data)
 }
 
-func BuildDalleCompletionHandler(client *openai.DalleImageClient, up *uploader.Uploader, rep *repo.Repository) TaskHandler {
+func BuildDalleCompletionHandler(client *openai.DalleImageClient, up *uploader.Uploader, rep *repo2.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload DalleCompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -65,7 +65,7 @@ func BuildDalleCompletionHandler(client *openai.DalleImageClient, up *uploader.U
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -76,8 +76,8 @@ func BuildDalleCompletionHandler(client *openai.DalleImageClient, up *uploader.U
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
-					Status: repo.CreativeStatusFailed,
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
+					Status: repo2.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -88,7 +88,7 @@ func BuildDalleCompletionHandler(client *openai.DalleImageClient, up *uploader.U
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -166,14 +166,14 @@ func BuildDalleCompletionHandler(client *openai.DalleImageClient, up *uploader.U
 			panic(err)
 		}
 
-		updateReq := repo.CreativeRecordUpdateRequest{
-			Status:    repo.CreativeStatusSuccess,
+		updateReq := repo2.CreativeRecordUpdateRequest{
+			Status:    repo2.CreativeStatusSuccess,
 			Answer:    string(retJson),
 			QuotaUsed: payload.GetQuota(),
 		}
 
 		if prompt != payload.Prompt {
-			ext := repo.CreativeRecordUpdateExtArgs{}
+			ext := repo2.CreativeRecordUpdateExtArgs{}
 			if prompt != payload.Prompt {
 				ext.RealPrompt = prompt
 			}
@@ -190,7 +190,7 @@ func BuildDalleCompletionHandler(client *openai.DalleImageClient, up *uploader.U
 			ctx,
 			payload.GetUID(),
 			payload.GetQuota(),
-			repo.NewQuotaUsedMeta("dalle", modelUsed...),
+			repo2.NewQuotaUsedMeta("dalle", modelUsed...),
 		); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
@@ -198,7 +198,7 @@ func BuildDalleCompletionHandler(client *openai.DalleImageClient, up *uploader.U
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			CompletionResult{
 				Resources:   resources,
 				ValidBefore: time.Now().Add(7 * 24 * time.Hour),

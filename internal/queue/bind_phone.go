@@ -3,12 +3,12 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"github.com/mylxsw/aidea-server/pkg/mail"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
 	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/mail"
-	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -50,7 +50,7 @@ func NewBindPhoneTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeBindPhone, data)
 }
 
-func BuildBindPhoneHandler(rep *repo.Repository, mailer *mail.Sender) TaskHandler {
+func BuildBindPhoneHandler(rep *repo2.Repository, mailer *mail.Sender) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload BindPhonePayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -72,7 +72,7 @@ func BuildBindPhoneHandler(rep *repo.Repository, mailer *mail.Sender) TaskHandle
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -80,7 +80,7 @@ func BuildBindPhoneHandler(rep *repo.Repository, mailer *mail.Sender) TaskHandle
 					log.With(task).Errorf("update queue status failed: %s", err)
 				}
 
-				if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo.EventStatusFailed); err != nil {
+				if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo2.EventStatusFailed); err != nil {
 					log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("update event status failed: %s", err)
 				}
 			}
@@ -89,7 +89,7 @@ func BuildBindPhoneHandler(rep *repo.Repository, mailer *mail.Sender) TaskHandle
 		// 查询事件记录
 		event, err := rep.Event.GetEvent(ctx, payload.EventID)
 		if err != nil {
-			if err == repo.ErrNotFound {
+			if err == repo2.ErrNotFound {
 				log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("event not found")
 				return nil
 			}
@@ -98,17 +98,17 @@ func BuildBindPhoneHandler(rep *repo.Repository, mailer *mail.Sender) TaskHandle
 			return err
 		}
 
-		if event.Status != repo.EventStatusWaiting {
+		if event.Status != repo2.EventStatusWaiting {
 			log.WithFields(log.Fields{"event_id": payload.EventID}).Warningf("event status is not waiting")
 			return nil
 		}
 
-		if event.EventType != repo.EventTypeUserPhoneBound {
+		if event.EventType != repo2.EventTypeUserPhoneBound {
 			log.With(payload).Errorf("event type is not user_phone_bound")
 			return nil
 		}
 
-		var eventPayload repo.UserBindEvent
+		var eventPayload repo2.UserBindEvent
 		if err := json.Unmarshal([]byte(event.Payload), &eventPayload); err != nil {
 			log.With(payload).Errorf("unmarshal event payload failed: %s", err)
 			return err
@@ -125,7 +125,7 @@ func BuildBindPhoneHandler(rep *repo.Repository, mailer *mail.Sender) TaskHandle
 		if payload.InviteCode != "" {
 			inviteByUser, err := rep.User.GetUserByInviteCode(ctx, payload.InviteCode)
 			if err != nil {
-				if err != repo.ErrNotFound {
+				if err != repo2.ErrNotFound {
 					log.With(payload).Errorf("通过邀请码查询用户失败: %s", err)
 				}
 			} else {
@@ -139,14 +139,14 @@ func BuildBindPhoneHandler(rep *repo.Repository, mailer *mail.Sender) TaskHandle
 		}
 
 		// 更新事件状态
-		if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo.EventStatusSucceed); err != nil {
+		if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo2.EventStatusSucceed); err != nil {
 			log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("update event status failed: %s", err)
 		}
 
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			EmptyResult{},
 		)
 	}

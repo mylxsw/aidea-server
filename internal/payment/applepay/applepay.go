@@ -3,11 +3,11 @@ package applepay
 import (
 	"context"
 	"errors"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"strconv"
 
 	"github.com/awa/go-iap/appstore"
-	"github.com/mylxsw/aidea-server/internal/misc"
-	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/asteria/log"
 )
 

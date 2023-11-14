@@ -2,13 +2,13 @@ package v2
 
 import (
 	"context"
-	"github.com/mylxsw/aidea-server/internal/ai/chat"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"net/http"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/misc"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/asteria/log"

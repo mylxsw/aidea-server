@@ -2,7 +2,7 @@ package auth
 
 import (
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/misc"
+	"github.com/mylxsw/aidea-server/pkg/misc"
 )
 
 type ClientInfo struct {

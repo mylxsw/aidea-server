@@ -3,13 +3,13 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/service"
 	"math/rand"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/ai/chat"
-	"github.com/mylxsw/aidea-server/internal/misc"
-	"github.com/mylxsw/aidea-server/internal/service"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/array"

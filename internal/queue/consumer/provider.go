@@ -2,26 +2,26 @@ package consumer
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
+	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
+	"github.com/mylxsw/aidea-server/pkg/ai/fromston"
+	"github.com/mylxsw/aidea-server/pkg/ai/getimgai"
+	"github.com/mylxsw/aidea-server/pkg/ai/leap"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
+	"github.com/mylxsw/aidea-server/pkg/dingding"
+	"github.com/mylxsw/aidea-server/pkg/mail"
+	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/sms"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/ai/chat"
-	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
-	"github.com/mylxsw/aidea-server/internal/ai/deepai"
-	"github.com/mylxsw/aidea-server/internal/ai/fromston"
-	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
-	"github.com/mylxsw/aidea-server/internal/ai/leap"
-	helper "github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/ai/stabilityai"
-	"github.com/mylxsw/aidea-server/internal/dingding"
-	"github.com/mylxsw/aidea-server/internal/mail"
 	"github.com/mylxsw/aidea-server/internal/queue"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/service"
-	"github.com/mylxsw/aidea-server/internal/sms"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 )
@@ -74,7 +74,7 @@ func loggingMiddleware(h asynq.Handler) asynq.Handler {
 func (p Provider) Boot(resolver infra.Resolver) {
 	resolver.MustResolve(func(
 		mux *asynq.ServeMux,
-		openaiClient helper.Client,
+		openaiClient openai.Client,
 		deepaiClient *deepai.DeepAI,
 		stabaiClient *stabilityai.StabilityAI,
 		getimgaiClient *getimgai.GetimgAI,
@@ -91,7 +91,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		ct chat.Chat,
 		conf *config.Config,
 		userSvc *service.UserService,
-		dalleClient *helper.DalleImageClient,
+		dalleClient *openai.DalleImageClient,
 	) {
 		log.Debugf("register all queue handlers")
 		mux.HandleFunc(queue.TypeOpenAICompletion, queue.BuildOpenAICompletionHandler(openaiClient, rep))

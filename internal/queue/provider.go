@@ -3,17 +3,17 @@ package queue
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/aidea-server/pkg/ai/fromston"
+	"github.com/mylxsw/aidea-server/pkg/ai/leap"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
-	"github.com/mylxsw/aidea-server/internal/ai/fromston"
-	"github.com/mylxsw/aidea-server/internal/ai/leap"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/service"
-	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/must"
@@ -42,7 +42,7 @@ func (Provider) Boot(app infra.Resolver) {
 		dashscopeClient *dashscope.DashScope,
 		up *uploader.Uploader,
 		queue *Queue,
-		rep *repo.Repository,
+		rep *repo2.Repository,
 		userSvc *service.UserService,
 		rds *redis.Client,
 	) {
@@ -52,9 +52,9 @@ func (Provider) Boot(app infra.Resolver) {
 		manager.Register(TypeDashscopeImageCompletion, dashscopeImageAsyncJobProcesser(queue, dashscopeClient, up, rep))
 
 		// 注册创作岛更新后，自动释放冻结的智慧果任务
-		rep.Creative.RegisterRecordStatusUpdateCallback(func(taskID string, userID int64, status repo.CreativeStatus) {
+		rep.Creative.RegisterRecordStatusUpdateCallback(func(taskID string, userID int64, status repo2.CreativeStatus) {
 			key := fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", userID, taskID)
-			if status == repo.CreativeStatusSuccess || status == repo.CreativeStatusFailed {
+			if status == repo2.CreativeStatusSuccess || status == repo2.CreativeStatusFailed {
 				freezedValue, err := rds.Get(context.TODO(), key).Int64()
 				if err != nil {
 					log.F(log.M{"task_id": taskID, "user_id": userID, "status": status}).Errorf("获取创作岛任务冻结的智慧果数量失败：%s", err)
@@ -147,11 +147,11 @@ type Payload interface {
 // Queue 任务队列
 type Queue struct {
 	client    *asynq.Client
-	queueRepo *repo.QueueRepo
+	queueRepo *repo2.QueueRepo
 }
 
 // NewQueue 创建一个任务队列
-func NewQueue(client *asynq.Client, queueRepo *repo.QueueRepo) *Queue {
+func NewQueue(client *asynq.Client, queueRepo *repo2.QueueRepo) *Queue {
 	return &Queue{client: client, queueRepo: queueRepo}
 }
 

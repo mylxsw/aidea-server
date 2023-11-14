@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/mylxsw/aidea-server/internal/youdao"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/mylxsw/glacier/web"
 )
 

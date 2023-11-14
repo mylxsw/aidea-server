@@ -4,6 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/rate"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/token"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"net/http"
 	"runtime/debug"
 	"strconv"
@@ -21,11 +26,6 @@ import (
 	v2 "github.com/mylxsw/aidea-server/server/controllers/v2"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/rate"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/service"
-	"github.com/mylxsw/aidea-server/internal/token"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/listener"
@@ -182,14 +182,14 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 					var user *auth.User
 					if u, err := userSrv.GetUserByID(ctx, claims.Int64Value("id"), false); err != nil {
 						if needAuth {
-							if errors.Is(err, repo.ErrNotFound) {
+							if errors.Is(err, repo2.ErrNotFound) {
 								return errors.New("invalid auth credential, user not found")
 							}
 
 							return err
 						}
 					} else {
-						if u.Status == repo.UserStatusDeleted {
+						if u.Status == repo2.UserStatusDeleted {
 							if needAuth {
 								return ErrUserDestroyed
 							}

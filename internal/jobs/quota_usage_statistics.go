@@ -3,9 +3,9 @@ package jobs
 import (
 	"context"
 	"database/sql"
+	model2 "github.com/mylxsw/aidea-server/pkg/repo/model"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/eloquent"
 	"github.com/mylxsw/eloquent/query"
 	"github.com/mylxsw/glacier/log"
@@ -22,10 +22,10 @@ func QuotaUsageStatistics(ctx context.Context, db *sql.DB, date time.Time) error
 	endTime := date.Format("2006-01-02") + " 00:00:00"
 
 	q := query.Builder().
-		Table(model.QuotaUsageTable()).
+		Table(model2.QuotaUsageTable()).
 		Select(query.Raw("DISTINCT user_id")).
-		Where(model.FieldQuotaUsageCreatedAt, ">=", startTime).
-		Where(model.FieldQuotaUsageCreatedAt, "<", endTime)
+		Where(model2.FieldQuotaUsageCreatedAt, ">=", startTime).
+		Where(model2.FieldQuotaUsageCreatedAt, "<", endTime)
 
 	userIds, err := eloquent.Query(ctx, db, q, func(row eloquent.Scanner) (int64, error) {
 		var userId int64
@@ -60,11 +60,11 @@ func processUserQuotaUsageStatistics(ctx context.Context, db *sql.DB, userId int
 	}()
 
 	q := query.Builder().
-		Table(model.QuotaUsageTable()).
+		Table(model2.QuotaUsageTable()).
 		Select(query.Raw("SUM(used)")).
-		Where(model.FieldQuotaUsageCreatedAt, ">=", startTime).
-		Where(model.FieldQuotaUsageCreatedAt, "<", endTime).
-		Where(model.FieldQuotaUsageUserId, userId)
+		Where(model2.FieldQuotaUsageCreatedAt, ">=", startTime).
+		Where(model2.FieldQuotaUsageCreatedAt, "<", endTime).
+		Where(model2.FieldQuotaUsageUserId, userId)
 
 	used, err := eloquent.Query(ctx, db, q, func(row eloquent.Scanner) (int64, error) {
 		var used int64
@@ -80,11 +80,11 @@ func processUserQuotaUsageStatistics(ctx context.Context, db *sql.DB, userId int
 	}
 
 	res := query.KV{
-		model.FieldQuotaStatisticsCalDate: statisticDate,
-		model.FieldQuotaStatisticsUserId:  userId,
-		model.FieldQuotaStatisticsUsed:    used[0],
+		model2.FieldQuotaStatisticsCalDate: statisticDate,
+		model2.FieldQuotaStatisticsUserId:  userId,
+		model2.FieldQuotaStatisticsUsed:    used[0],
 	}
-	if _, err := model.NewQuotaStatisticsModel(db).Create(ctx, res); err != nil {
+	if _, err := model2.NewQuotaStatisticsModel(db).Create(ctx, res); err != nil {
 		panic(err)
 	}
 

@@ -6,6 +6,11 @@ import (
 	"fmt"
 	"github.com/mylxsw/aidea-server/api/billing"
 	"github.com/mylxsw/aidea-server/api/openai"
+	"github.com/mylxsw/aidea-server/pkg/rate"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/token"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -13,11 +18,6 @@ import (
 
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/rate"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/service"
-	"github.com/mylxsw/aidea-server/internal/token"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
@@ -133,13 +133,13 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 				// 查询用户信息
 				var user *auth.User
 				if u, err := userSrv.GetUserByAPIKey(ctx, credential); err != nil {
-					if errors.Is(err, repo.ErrNotFound) {
+					if errors.Is(err, repo2.ErrNotFound) {
 						return errors.New("invalid auth credential, user not found")
 					}
 
 					return err
 				} else {
-					if u.Status == repo.UserStatusDeleted {
+					if u.Status == repo2.UserStatusDeleted {
 						return ErrUserDestroyed
 					}
 

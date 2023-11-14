@@ -2,11 +2,11 @@ package controllers
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/glacier/infra"
 
 	"github.com/mylxsw/aidea-server/server/controllers/common"

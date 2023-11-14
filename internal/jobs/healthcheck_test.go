@@ -3,13 +3,13 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/ai/stabilityai"
 	"github.com/mylxsw/go-utils/assert"
 )
 

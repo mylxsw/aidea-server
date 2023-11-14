@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,8 +17,6 @@ import (
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/aidea-server/internal/payment/alipay"
 	"github.com/mylxsw/aidea-server/internal/queue"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/asteria/log"
@@ -27,12 +27,12 @@ import (
 )
 
 type PaymentController struct {
-	translater youdao.Translater `autowire:"@"`
-	queue      *queue.Queue      `autowire:"@"`
-	payRepo    *repo.PaymentRepo `autowire:"@"`
-	alipay     alipay.Alipay     `autowire:"@"`
-	applepay   applepay.ApplePay `autowire:"@"`
-	conf       *config.Config    `autowire:"@"`
+	translater youdao.Translater  `autowire:"@"`
+	queue      *queue.Queue       `autowire:"@"`
+	payRepo    *repo2.PaymentRepo `autowire:"@"`
+	alipay     alipay.Alipay      `autowire:"@"`
+	applepay   applepay.ApplePay  `autowire:"@"`
+	conf       *config.Config     `autowire:"@"`
 }
 
 func NewPaymentController(resolver infra.Resolver) web.Controller {
@@ -186,14 +186,14 @@ func (ctl *PaymentController) AlipayClientConfirm(ctx context.Context, webCtx we
 
 	his, err := ctl.payRepo.GetPaymentHistory(ctx, user.ID, res.AlipayTradeAppPayResponse.OutTradeNo)
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if err == repo2.ErrNotFound {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 		}
 
 		log.WithFields(log.Fields{"err": err}).Error("get payment history failed")
 	}
 
-	if his.Status != int(repo.PaymentStatusSuccess) {
+	if his.Status != int(repo2.PaymentStatusSuccess) {
 		log.WithFields(log.Fields{
 			"his":    his,
 			"result": res,
@@ -210,7 +210,7 @@ func (ctl *PaymentController) QueryPaymentStatus(ctx context.Context, webCtx web
 	paymentId := webCtx.PathVar("id")
 	history, err := ctl.payRepo.GetPaymentHistory(ctx, user.ID, paymentId)
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if err == repo2.ErrNotFound {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrNotFound), http.StatusNotFound)
 		}
 
@@ -219,18 +219,18 @@ func (ctl *PaymentController) QueryPaymentStatus(ctx context.Context, webCtx web
 
 	var note string
 	switch history.Status {
-	case repo.PaymentStatusWaiting:
+	case repo2.PaymentStatusWaiting:
 		note = "等待支付"
-	case repo.PaymentStatusSuccess:
+	case repo2.PaymentStatusSuccess:
 		note = "支付成功"
-	case repo.PaymentStatusFailed:
+	case repo2.PaymentStatusFailed:
 		note = "支付失败"
-	case repo.PaymentStatusCanceled:
+	case repo2.PaymentStatusCanceled:
 		note = "支付已取消"
 	}
 
 	return webCtx.JSON(web.M{
-		"success": history.Status == repo.PaymentStatusSuccess,
+		"success": history.Status == repo2.PaymentStatusSuccess,
 		"note":    note,
 	})
 }
@@ -315,9 +315,9 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 	var status int64
 	var note string
 	if tradeStatus == "TRADE_SUCCESS" {
-		status = int64(repo.PaymentStatusSuccess)
+		status = int64(repo2.PaymentStatusSuccess)
 	} else {
-		status = int64(repo.PaymentStatusFailed)
+		status = int64(repo2.PaymentStatusFailed)
 		switch tradeStatus {
 		case "WAIT_BUYER_PAY":
 			note = "交易创建，等待买家付款"
@@ -330,7 +330,7 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 
 	product := coins.GetProduct(productId)
 
-	aliPay := repo.AlipayPayment{
+	aliPay := repo2.AlipayPayment{
 		ProductID:      productId,
 		BuyerID:        buyerId,
 		InvoiceAmount:  priceStrToInt64Penny(receiptAmount),
@@ -348,7 +348,7 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 	eventID, err := ctl.payRepo.CompleteAliPayment(ctx, int64(userId), paymentId, aliPay)
 	if err != nil {
 		// 如果已经处理过了，直接返回成功
-		if err == repo.ErrPaymentHasBeenProcessed {
+		if err == repo2.ErrPaymentHasBeenProcessed {
 			return webCtx.Raw(func(w http.ResponseWriter) {
 				w.Write([]byte("success"))
 			})
@@ -529,7 +529,7 @@ func (ctl *PaymentController) VerifyApplePayment(ctx context.Context, webCtx web
 			"verify":     resp,
 		}).Error("verify payment failed")
 
-		applePayment.Status = int64(repo.PaymentStatusFailed)
+		applePayment.Status = int64(repo2.PaymentStatusFailed)
 		if _, err := ctl.payRepo.CompleteApplePayment(ctx, user.ID, paymentId, applePayment); err != nil {
 			log.WithFields(log.Fields{
 				"err":           err.Error(),
@@ -551,7 +551,7 @@ func (ctl *PaymentController) VerifyApplePayment(ctx context.Context, webCtx web
 		}).Error("verify payment: product id not match")
 	}
 
-	applePayment.Status = int64(repo.PaymentStatusSuccess)
+	applePayment.Status = int64(repo2.PaymentStatusSuccess)
 	eventID, err := ctl.payRepo.CompleteApplePayment(ctx, user.ID, paymentId, applePayment)
 	if err != nil {
 		log.WithFields(log.Fields{

@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"context"
-	"github.com/mylxsw/aidea-server/internal/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/asteria/log"

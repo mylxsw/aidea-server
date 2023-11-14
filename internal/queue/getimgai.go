@@ -5,6 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/getimgai"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	uploader2 "github.com/mylxsw/aidea-server/pkg/uploader"
+	youdao2 "github.com/mylxsw/aidea-server/pkg/youdao"
 	"math/rand"
 	"os"
 	"strings"
@@ -13,12 +19,6 @@ import (
 	"github.com/mylxsw/go-utils/array"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
-	"github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/misc"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -70,7 +70,7 @@ func NewGetimgAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeGetimgAICompletion, data)
 }
 
-func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai openai.Client) TaskHandler {
+func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao2.Translater, up *uploader2.Uploader, rep *repo2.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload GetimgAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -78,7 +78,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -89,8 +89,8 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
-					Status: repo.CreativeStatusFailed,
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
+					Status: repo2.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -101,7 +101,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -114,7 +114,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 		// 下载远程图片（图生图）
 		var localImageBase64 string
 		if payload.Image != "" {
-			imagePath, err := uploader.DownloadRemoteFile(ctx, payload.Image)
+			imagePath, err := uploader2.DownloadRemoteFile(ctx, payload.Image)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"payload": payload,
@@ -220,14 +220,14 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 			panic(err)
 		}
 
-		updateReq := repo.CreativeRecordUpdateRequest{
-			Status:    repo.CreativeStatusSuccess,
+		updateReq := repo2.CreativeRecordUpdateRequest{
+			Status:    repo2.CreativeStatusSuccess,
 			Answer:    string(retJson),
 			QuotaUsed: payload.GetQuota(),
 		}
 
 		if prompt != payload.Prompt || negativePrompt != payload.NegativePrompt {
-			ext := repo.CreativeRecordUpdateExtArgs{}
+			ext := repo2.CreativeRecordUpdateExtArgs{}
 			if prompt != payload.Prompt {
 				ext.RealPrompt = prompt
 			}
@@ -248,7 +248,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 			ctx,
 			payload.GetUID(),
 			payload.GetQuota(),
-			repo.NewQuotaUsedMeta("getimageai", modelUsed...),
+			repo2.NewQuotaUsedMeta("getimageai", modelUsed...),
 		); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
@@ -256,7 +256,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			CompletionResult{
 				Resources:   []string{resources},
 				OriginImage: payload.Image,
@@ -277,7 +277,7 @@ type PromptResolverPayload struct {
 	Model          string
 }
 
-func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creativeRepo *repo.CreativeRepo, oai openai.Client, translator youdao.Translater) (string, string, bool) {
+func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creativeRepo *repo2.CreativeRepo, oai openai.Client, translator youdao2.Translater) (string, string, bool) {
 	prompt := payload.Prompt
 	negativePrompt := payload.NegativePrompt
 
@@ -327,7 +327,7 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 
 	if translator != nil {
 		if misc.IsChinese(prompt) {
-			translateRes, err := translator.Translate(ctx, youdao.LanguageAuto, youdao.LanguageEnglish, prompt)
+			translateRes, err := translator.Translate(ctx, youdao2.LanguageAuto, youdao2.LanguageEnglish, prompt)
 			if err != nil {
 				log.With(payload).Errorf("translate failed: %v", err)
 			} else {
@@ -336,7 +336,7 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 		}
 
 		if strings.TrimSpace(negativePrompt) != "" && misc.IsChinese(negativePrompt) {
-			translateRes, err := translator.Translate(ctx, youdao.LanguageAuto, youdao.LanguageEnglish, negativePrompt)
+			translateRes, err := translator.Translate(ctx, youdao2.LanguageAuto, youdao2.LanguageEnglish, negativePrompt)
 			if err != nil {
 				log.With(payload).Errorf("translate failed: %v", err)
 			} else {

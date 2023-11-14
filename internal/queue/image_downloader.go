@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -48,7 +48,7 @@ func NewImageDownloaderTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeImageDownloader, data)
 }
 
-func BuildImageDownloaderHandler(up *uploader.Uploader, rep *repo.Repository) TaskHandler {
+func BuildImageDownloaderHandler(up *uploader.Uploader, rep *repo2.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageDownloaderPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -72,7 +72,7 @@ func BuildImageDownloaderHandler(up *uploader.Uploader, rep *repo.Repository) Ta
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -124,7 +124,7 @@ func BuildImageDownloaderHandler(up *uploader.Uploader, rep *repo.Repository) Ta
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			EmptyResult{},
 		)
 	}

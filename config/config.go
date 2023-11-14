@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/coins"
 	"os"
 	"strings"
 
@@ -259,6 +260,10 @@ type VirtualModel struct {
 }
 
 func Register(ins *app.App) {
+	// 加载命令行选项
+	initCmdFlags(ins)
+
+	// 配置文件读取
 	ins.Singleton(func(ctx infra.FlagContext) *Config {
 		var appleSecret string
 		appleSecretFile := ctx.String("apple-secret")
@@ -269,6 +274,16 @@ func Register(ins *app.App) {
 			}
 
 			appleSecret = string(data)
+		}
+
+		// 加载价格表
+		priceTableFile := ctx.String("price-table-file")
+		if priceTableFile != "" {
+			if err := coins.LoadPriceInfo(priceTableFile); err != nil {
+				panic(fmt.Errorf("价格表加载失败: %w", err))
+			}
+
+			coins.DebugPrintPriceInfo()
 		}
 
 		return &Config{

@@ -2,14 +2,14 @@ package controllers
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	youdao2 "github.com/mylxsw/aidea-server/pkg/youdao"
 	"net/http"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/misc"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/asteria/log"
@@ -20,7 +20,7 @@ import (
 // TranslateController 翻译控制器
 type TranslateController struct {
 	conf       *config.Config
-	translater youdao.Translater `autowire:"@"`
+	translater youdao2.Translater `autowire:"@"`
 }
 
 // NewTranslateController create a new Translate Controller
@@ -37,7 +37,7 @@ func (ctl *TranslateController) Register(router web.Router) {
 }
 
 // Translate 翻译
-func (ctl *TranslateController) translate(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo, cacheRepo *repo.CacheRepo) web.Response {
+func (ctl *TranslateController) translate(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo2.QuotaRepo, cacheRepo *repo2.CacheRepo) web.Response {
 	text := strings.TrimSpace(webCtx.Input("text"))
 	if text == "" {
 		return webCtx.JSONError("text is required", http.StatusBadRequest)
@@ -53,7 +53,7 @@ func (ctl *TranslateController) translate(ctx context.Context, webCtx web.Contex
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
-	from := strings.TrimSpace(webCtx.InputWithDefault("from", youdao.LanguageAuto))
+	from := strings.TrimSpace(webCtx.InputWithDefault("from", youdao2.LanguageAuto))
 	target := strings.TrimSpace(webCtx.InputWithDefault("to", common.GetLanguage(webCtx)))
 
 	res, err := ctl.translater.Translate(ctx, from, target, text)
@@ -63,7 +63,7 @@ func (ctl *TranslateController) translate(ctx context.Context, webCtx web.Contex
 	}
 
 	defer func() {
-		if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo.NewQuotaUsedMeta("translate", "youdao")); err != nil {
+		if err := quotaRepo.QuotaConsume(ctx, user.ID, quotaConsumed, repo2.NewQuotaUsedMeta("translate", "youdao")); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
 	}()

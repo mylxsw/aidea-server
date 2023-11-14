@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
 	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/ai/chat"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/service"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/ternary"
 )
@@ -58,7 +58,7 @@ func NewGroupChatTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeGroupChat, data)
 }
 
-func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Repository, userSrv *service.UserService) TaskHandler {
+func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo2.Repository, userSrv *service.UserService) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload GroupChatPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -77,9 +77,9 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 			}
 			if err != nil {
 				// 更新消息状态为失败
-				msg := repo.ChatGroupMessageUpdate{
+				msg := repo2.ChatGroupMessageUpdate{
 					Message: err.Error(),
-					Status:  repo.MessageStatusFailed,
+					Status:  repo2.MessageStatusFailed,
 					Error:   err.Error(),
 				}
 				if err := rep.ChatGroup.UpdateChatMessage(ctx, payload.GroupID, payload.UserID, payload.MessageID, msg); err != nil {
@@ -90,7 +90,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -135,11 +135,11 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 		)
 
 		// 更新消息状态
-		msg := repo.ChatGroupMessageUpdate{
+		msg := repo2.ChatGroupMessageUpdate{
 			Message:       resp.Text,
 			TokenConsumed: tokenConsumed,
 			QuotaConsumed: quotaConsumed,
-			Status:        repo.MessageStatusSucceed,
+			Status:        repo2.MessageStatusSucceed,
 		}
 		if err := rep.ChatGroup.UpdateChatMessage(ctx, payload.GroupID, payload.UserID, payload.MessageID, msg); err != nil {
 			panic(fmt.Errorf("update chat message failed: %w", err))
@@ -152,7 +152,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 
 		// 扣除智慧果
 		if quotaConsumed > 0 {
-			if err := rep.Quota.QuotaConsume(ctx, payload.UserID, quotaConsumed, repo.NewQuotaUsedMeta("group_chat", req.Model)); err != nil {
+			if err := rep.Quota.QuotaConsume(ctx, payload.UserID, quotaConsumed, repo2.NewQuotaUsedMeta("group_chat", req.Model)); err != nil {
 				log.Errorf("used quota add failed: %s", err)
 			}
 		}
@@ -160,7 +160,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			EmptyResult{},
 		)
 	}

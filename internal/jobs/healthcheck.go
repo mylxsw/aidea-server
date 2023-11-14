@@ -3,11 +3,11 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
+	"github.com/mylxsw/aidea-server/pkg/dingding"
 	"time"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/ai/stabilityai"
-	"github.com/mylxsw/aidea-server/internal/dingding"
 	"github.com/mylxsw/asteria/log"
 )
 

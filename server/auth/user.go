@@ -1,12 +1,11 @@
 package auth
 
 import (
+	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/go-utils/array"
-
-	"github.com/mylxsw/aidea-server/internal/repo"
 )
 
 // User 用户信息

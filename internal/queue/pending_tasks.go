@@ -3,11 +3,11 @@ package queue
 import (
 	"context"
 	"errors"
+	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"sync"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/repo/model"
 	"github.com/mylxsw/asteria/log"
 )
 

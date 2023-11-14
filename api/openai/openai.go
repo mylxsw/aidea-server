@@ -3,7 +3,7 @@ package openai
 import (
 	"context"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/ai/chat"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
 	"github.com/mylxsw/go-utils/array"

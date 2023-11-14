@@ -4,21 +4,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	openaiHelper "github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	openaiHelper "github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/misc"
-	"github.com/mylxsw/aidea-server/internal/queue"
-	"github.com/mylxsw/aidea-server/internal/service"
-	"github.com/mylxsw/aidea-server/internal/youdao"
-
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/repo"
+	"github.com/mylxsw/aidea-server/internal/coins"
+	"github.com/mylxsw/aidea-server/internal/queue"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/asteria/log"
@@ -32,11 +31,11 @@ import (
 // CreativeIslandController 创作岛
 type CreativeIslandController struct {
 	conf         *config.Config
-	quotaRepo    *repo.QuotaRepo          `autowire:"@"`
+	quotaRepo    *repo2.QuotaRepo         `autowire:"@"`
 	queue        *queue.Queue             `autowire:"@"`
-	queueRepo    *repo.QueueRepo          `autowire:"@"`
+	queueRepo    *repo2.QueueRepo         `autowire:"@"`
 	trans        youdao.Translater        `autowire:"@"`
-	creativeRepo *repo.CreativeRepo       `autowire:"@"`
+	creativeRepo *repo2.CreativeRepo      `autowire:"@"`
 	securitySrv  *service.SecurityService `autowire:"@"`
 }
 
@@ -84,7 +83,7 @@ func (ctl *CreativeIslandController) gallery(ctx context.Context, webCtx web.Con
 	}
 
 	return webCtx.JSON(web.M{
-		"data": array.Map(items, func(item repo.CreativeHistoryItem, _ int) repo.CreativeHistoryItem {
+		"data": array.Map(items, func(item repo2.CreativeHistoryItem, _ int) repo2.CreativeHistoryItem {
 			if item.UserID != user.ID && userId != 0 {
 				// 客户端处理：如果用户ID为0，则该项目不可点击
 				item.UserID = 0
@@ -112,7 +111,7 @@ func (ctl *CreativeIslandController) histories(ctx context.Context, webCtx web.C
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	items, meta, err := ctl.creativeRepo.HistoryRecordPaginate(ctx, user.ID, repo.CreativeHistoryQuery{
+	items, meta, err := ctl.creativeRepo.HistoryRecordPaginate(ctx, user.ID, repo2.CreativeHistoryQuery{
 		Page:    page,
 		PerPage: perPage,
 		Mode:    mode,
@@ -123,10 +122,10 @@ func (ctl *CreativeIslandController) histories(ctx context.Context, webCtx web.C
 	}
 
 	return webCtx.JSON(web.M{
-		"data": array.Map(items, func(item repo.CreativeHistoryItem, _ int) repo.CreativeHistoryItem {
+		"data": array.Map(items, func(item repo2.CreativeHistoryItem, _ int) repo2.CreativeHistoryItem {
 			// 客户端目前不支持封禁状态展示，这里转换为失败
-			if item.Status == int64(repo.CreativeStatusForbid) {
-				item.Status = int64(repo.CreativeStatusFailed)
+			if item.Status == int64(repo2.CreativeStatusForbid) {
+				item.Status = int64(repo2.CreativeStatusFailed)
 			}
 
 			return item
@@ -144,7 +143,7 @@ func (ctl *CreativeIslandController) itemHistories(ctx context.Context, webCtx w
 	if id == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
-	items, _, err := ctl.creativeRepo.HistoryRecordPaginate(ctx, user.ID, repo.CreativeHistoryQuery{
+	items, _, err := ctl.creativeRepo.HistoryRecordPaginate(ctx, user.ID, repo2.CreativeHistoryQuery{
 		IslandId: id,
 		Page:     1,
 		PerPage:  100,
@@ -155,10 +154,10 @@ func (ctl *CreativeIslandController) itemHistories(ctx context.Context, webCtx w
 	}
 
 	return webCtx.JSON(web.M{
-		"data": array.Map(items, func(item repo.CreativeHistoryItem, _ int) repo.CreativeHistoryItem {
+		"data": array.Map(items, func(item repo2.CreativeHistoryItem, _ int) repo2.CreativeHistoryItem {
 			// 客户端目前不支持封禁状态展示，这里转换为失败
-			if item.Status == int64(repo.CreativeStatusForbid) {
-				item.Status = int64(repo.CreativeStatusFailed)
+			if item.Status == int64(repo2.CreativeStatusForbid) {
+				item.Status = int64(repo2.CreativeStatusFailed)
 			}
 
 			return item
@@ -180,7 +179,7 @@ func (ctl *CreativeIslandController) historyItem(ctx context.Context, webCtx web
 
 	item, err := ctl.creativeRepo.FindHistoryRecord(ctx, user.ID, int64(hid))
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if err == repo2.ErrNotFound {
 			return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrNotFound), http.StatusNotFound)
 		}
 
@@ -189,8 +188,8 @@ func (ctl *CreativeIslandController) historyItem(ctx context.Context, webCtx web
 	}
 
 	// 客户端目前不支持封禁状态展示，这里转换为失败
-	if item.Status == int64(repo.CreativeStatusForbid) {
-		item.Status = int64(repo.CreativeStatusFailed)
+	if item.Status == int64(repo2.CreativeStatusForbid) {
+		item.Status = int64(repo2.CreativeStatusFailed)
 	}
 
 	return webCtx.JSON(item)
@@ -235,7 +234,7 @@ func (ctl *CreativeIslandController) List(ctx context.Context, webCtx web.Contex
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	islands = array.Filter(islands, func(item repo.CreativeIsland, _ int) bool {
+	islands = array.Filter(islands, func(item repo2.CreativeIsland, _ int) bool {
 		if item.VersionMax == "" && item.VersionMin == "" {
 			return true
 		}
@@ -258,26 +257,26 @@ func (ctl *CreativeIslandController) List(ctx context.Context, webCtx web.Contex
 	switch mode {
 	case "creative-island":
 		categories = []string{"热门", "创作", "生活", "职场", "娱乐"}
-		islands = array.Filter(islands, func(item repo.CreativeIsland, _ int) bool {
+		islands = array.Filter(islands, func(item repo2.CreativeIsland, _ int) bool {
 			return !array.In(CreativeIslandModelType(item.ModelType), imageTypes)
 		})
-		items = array.Map(islands, func(item repo.CreativeIsland, _ int) CreativeIslandItem {
+		items = array.Map(islands, func(item repo2.CreativeIsland, _ int) CreativeIslandItem {
 			return CreativeIslandItemFromModel(item)
 		})
 	case "image-draw":
 		categories = []string{"图生图", "文生图"}
 		backgroundImage = "https://img.freepik.com/free-vector/modern-colorful-soft-watercolor-texture-background_1035-22725.jpg"
-		islands = array.Filter(islands, func(item repo.CreativeIsland, _ int) bool {
+		islands = array.Filter(islands, func(item repo2.CreativeIsland, _ int) bool {
 			return array.In(CreativeIslandModelType(item.ModelType), imageTypes)
 		})
-		items = array.Map(islands, func(item repo.CreativeIsland, _ int) CreativeIslandItem {
+		items = array.Map(islands, func(item repo2.CreativeIsland, _ int) CreativeIslandItem {
 			// 不能暴漏给客户端的字段
 			item.Extension.AIPrompt = ""
 			return CreativeIslandItemFromModel(item)
 		})
 	default:
 		categories = []string{"热门", "绘图", "创作", "生活", "职场", "娱乐"}
-		items = array.Map(islands, func(item repo.CreativeIsland, _ int) CreativeIslandItem {
+		items = array.Map(islands, func(item repo2.CreativeIsland, _ int) CreativeIslandItem {
 			// 不能暴漏给客户端的字段
 			item.Extension.AIPrompt = ""
 			return CreativeIslandItemFromModel(item)
@@ -298,7 +297,7 @@ func (ctl *CreativeIslandController) Item(ctx context.Context, webCtx web.Contex
 	id := webCtx.PathVar("id")
 	island, err := ctl.creativeRepo.Island(ctx, id)
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if err == repo2.ErrNotFound {
 			return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrNotFound), http.StatusNotFound)
 		}
 
@@ -472,21 +471,21 @@ func (ctl *CreativeIslandController) completionsDeepAI(ctx context.Context, webC
 	}
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
 
-	arguments, _ := json.Marshal(repo.CreativeRecordArguments{
+	arguments, _ := json.Marshal(repo2.CreativeRecordArguments{
 		NegativePrompt: negativePrompt,
 		Width:          int64(width),
 		Height:         int64(height),
 		StylePreset:    stylePreset,
 	})
 
-	creativeItem := repo.CreativeItem{
+	creativeItem := repo2.CreativeItem{
 		IslandId:    item.ID,
-		IslandType:  repo.IslandTypeImage,
+		IslandType:  repo2.IslandTypeImage,
 		IslandModel: stylePreset,
 		Arguments:   string(arguments),
 		Prompt:      prompt,
 		TaskId:      taskID,
-		Status:      repo.CreativeStatusPending,
+		Status:      repo2.CreativeStatusPending,
 	}
 
 	if _, err := ctl.creativeRepo.CreateRecord(ctx, user.ID, &creativeItem); err != nil {
@@ -607,7 +606,7 @@ func (ctl *CreativeIslandController) completionsStabilityAI(ctx context.Context,
 	}
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
 
-	arguments, _ := json.Marshal(repo.CreativeRecordArguments{
+	arguments, _ := json.Marshal(repo2.CreativeRecordArguments{
 		NegativePrompt: negativePrompt,
 		Width:          int64(width),
 		Height:         int64(height),
@@ -617,14 +616,14 @@ func (ctl *CreativeIslandController) completionsStabilityAI(ctx context.Context,
 		Image:          image,
 	})
 
-	creativeItem := repo.CreativeItem{
+	creativeItem := repo2.CreativeItem{
 		IslandId:    item.ID,
-		IslandType:  repo.IslandTypeImage,
+		IslandType:  repo2.IslandTypeImage,
 		IslandModel: item.Model,
 		Arguments:   string(arguments),
 		Prompt:      prompt,
 		TaskId:      taskID,
-		Status:      repo.CreativeStatusPending,
+		Status:      repo2.CreativeStatusPending,
 	}
 
 	if _, err := ctl.creativeRepo.CreateRecord(ctx, user.ID, &creativeItem); err != nil {
@@ -752,7 +751,7 @@ func (ctl *CreativeIslandController) completionsLeapAI(ctx context.Context, webC
 	}
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
 
-	arguments, _ := json.Marshal(repo.CreativeRecordArguments{
+	arguments, _ := json.Marshal(repo2.CreativeRecordArguments{
 		NegativePrompt: negativePrompt,
 		Width:          int64(width),
 		Height:         int64(height),
@@ -763,14 +762,14 @@ func (ctl *CreativeIslandController) completionsLeapAI(ctx context.Context, webC
 		UpscaleBy:      upscaleBy,
 	})
 
-	creativeItem := repo.CreativeItem{
+	creativeItem := repo2.CreativeItem{
 		IslandId:    item.ID,
-		IslandType:  repo.IslandTypeImage,
+		IslandType:  repo2.IslandTypeImage,
 		IslandModel: item.Model,
 		Arguments:   string(arguments),
 		Prompt:      prompt,
 		TaskId:      taskID,
-		Status:      repo.CreativeStatusPending,
+		Status:      repo2.CreativeStatusPending,
 	}
 
 	if _, err := ctl.creativeRepo.CreateRecord(ctx, user.ID, &creativeItem); err != nil {
@@ -871,14 +870,14 @@ func (ctl *CreativeIslandController) completionsOpenAI(ctx context.Context, webC
 		"word_count": wordCount,
 	})
 
-	creativeItem := repo.CreativeItem{
+	creativeItem := repo2.CreativeItem{
 		IslandId:    item.ID,
-		IslandType:  repo.IslandTypeText,
+		IslandType:  repo2.IslandTypeText,
 		IslandModel: item.Model,
 		Arguments:   string(arguments),
 		Prompt:      prompt,
 		TaskId:      taskID,
-		Status:      repo.CreativeStatusPending,
+		Status:      repo2.CreativeStatusPending,
 	}
 
 	if _, err := ctl.creativeRepo.CreateRecord(ctx, user.ID, &creativeItem); err != nil {
@@ -928,10 +927,10 @@ type CreativeIslandItem struct {
 	ShowImageStyleSelector bool                    `yaml:"show_image_style_selector,omitempty" json:"show_image_style_selector,omitempty"`
 	NoPrompt               bool                    `yaml:"no_prompt,omitempty" json:"no_prompt,omitempty"`
 
-	Extension repo.CreativeIslandExt `yaml:"extension" json:"extension"`
+	Extension repo2.CreativeIslandExt `yaml:"extension" json:"extension"`
 }
 
-func CreativeIslandItemFromModel(item repo.CreativeIsland) CreativeIslandItem {
+func CreativeIslandItemFromModel(item repo2.CreativeIsland) CreativeIslandItem {
 	wordCount := item.WordCount
 	if wordCount <= 0 {
 		wordCount = 1000

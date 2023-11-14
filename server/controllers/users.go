@@ -4,13 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/rate"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	service2 "github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"io"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/mylxsw/aidea-server/internal/ai/chat"
-	"github.com/mylxsw/aidea-server/internal/service"
 
 	"github.com/Timothylock/go-signin-with-apple/apple"
 	"github.com/go-redis/redis_rate/v10"
@@ -18,12 +22,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/misc"
 	"github.com/mylxsw/aidea-server/internal/queue"
-	"github.com/mylxsw/aidea-server/internal/rate"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/repo/model"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/asteria/log"
@@ -36,14 +35,14 @@ import (
 
 // UserController 用户控制器
 type UserController struct {
-	translater youdao.Translater        `autowire:"@"`
-	rds        *redis.Client            `autowire:"@"`
-	limiter    *rate.RateLimiter        `autowire:"@"`
-	queue      *queue.Queue             `autowire:"@"`
-	userRepo   *repo.UserRepo           `autowire:"@"`
-	conf       *config.Config           `autowire:"@"`
-	userSrv    *service.UserService     `autowire:"@"`
-	secSrv     *service.SecurityService `autowire:"@"`
+	translater youdao.Translater `autowire:"@"`
+	rds        *redis.Client     `autowire:"@"`
+	limiter    *rate.RateLimiter `autowire:"@"`
+	queue      *queue.Queue              `autowire:"@"`
+	userRepo   *repo2.UserRepo           `autowire:"@"`
+	conf       *config.Config            `autowire:"@"`
+	userSrv    *service2.UserService     `autowire:"@"`
+	secSrv     *service2.SecurityService `autowire:"@"`
 }
 
 // NewUserController 创建用户控制器
@@ -184,7 +183,7 @@ func (ctl *UserController) Destroy(ctx context.Context, webCtx web.Context, user
 
 	_ = ctl.rds.Del(ctx, fmt.Sprintf("auth:verify-code:%s:%s", verifyCodeId, user.Phone)).Err()
 
-	if err := ctl.userRepo.UpdateStatus(ctx, user.ID, repo.UserStatusDeleted); err != nil {
+	if err := ctl.userRepo.UpdateStatus(ctx, user.ID, repo2.UserStatusDeleted); err != nil {
 		log.With(user).Errorf("failed to update user status: %s", err)
 		return webCtx.JSONError("内部错误，请稍后再试", http.StatusInternalServerError)
 	}
@@ -264,7 +263,7 @@ func (ctl *UserController) SendResetPasswordSMSCode(ctx context.Context, webCtx 
 
 	// 业务检查
 	if _, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-		if err == repo.ErrNotFound {
+		if err == repo2.ErrNotFound {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 		}
 
@@ -330,7 +329,7 @@ func (ctl *UserController) SendResetPasswordSMSCode(ctx context.Context, webCtx 
 }
 
 // ResetPassword 重置密码
-func (ctl *UserController) ResetPassword(ctx context.Context, webCtx web.Context, user *auth.User, userRepo *repo.UserRepo, limiter *redis_rate.Limiter) web.Response {
+func (ctl *UserController) ResetPassword(ctx context.Context, webCtx web.Context, user *auth.User, userRepo *repo2.UserRepo, limiter *redis_rate.Limiter) web.Response {
 	password := strings.TrimSpace(webCtx.Input("password"))
 	if len(password) < 8 || len(password) > 20 {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "密码长度必须在 8-20 位之间"), http.StatusBadRequest)
@@ -393,7 +392,7 @@ func (ctl *UserController) ResetPassword(ctx context.Context, webCtx web.Context
 }
 
 // CurrentUser 获取当前用户信息
-func (ctl *UserController) CurrentUser(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
+func (ctl *UserController) CurrentUser(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo2.QuotaRepo) web.Response {
 	quota, err := ctl.userSrv.UserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
@@ -401,14 +400,14 @@ func (ctl *UserController) CurrentUser(ctx context.Context, webCtx web.Context, 
 
 	u, err := ctl.userSrv.GetUserByID(ctx, user.ID, true)
 	if err != nil {
-		if errors.Is(err, repo.ErrNotFound) {
+		if errors.Is(err, repo2.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusNotFound)
 		}
 
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "内部错误，请稍后再试"), http.StatusInternalServerError)
 	}
 
-	if u.Status == repo.UserStatusDeleted {
+	if u.Status == repo2.UserStatusDeleted {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusNotFound)
 	}
 
@@ -434,7 +433,7 @@ func (ctl *UserController) CurrentUser(ctx context.Context, webCtx web.Context, 
 }
 
 // UserQuota 获取当前用户配额详情
-func (ctl *UserController) UserQuota(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
+func (ctl *UserController) UserQuota(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo2.QuotaRepo) web.Response {
 	quotas, err := quotaRepo.GetUserQuotaDetails(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
@@ -462,7 +461,7 @@ type QuotaUsageStatistics struct {
 }
 
 // UserQuotaUsageStatistics 获取当前用户配额使用情况统计
-func (ctl *UserController) UserQuotaUsageStatistics(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
+func (ctl *UserController) UserQuotaUsageStatistics(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo2.QuotaRepo) web.Response {
 	usages, err := quotaRepo.GetQuotaStatisticsRecently(ctx, user.ID, 30)
 	if err != nil {
 		log.WithFields(log.Fields{"user_id": user.ID}).Debugf("get quota statistics failed: %s", err)
@@ -512,7 +511,7 @@ type QuotaUsageDetail struct {
 }
 
 // UserQuotaUsageDetails 获取当前用户配额使用情况详情
-func (ctl *UserController) UserQuotaUsageDetails(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
+func (ctl *UserController) UserQuotaUsageDetails(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo2.QuotaRepo) web.Response {
 	startAt, err := time.Parse("2006-01-02", webCtx.PathVar("date"))
 	if err != nil {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
@@ -527,7 +526,7 @@ func (ctl *UserController) UserQuotaUsageDetails(ctx context.Context, webCtx web
 	}
 
 	return webCtx.JSON(web.M{
-		"data": array.Map(usages, func(item repo.QuotaUsage, _ int) QuotaUsageDetail {
+		"data": array.Map(usages, func(item repo2.QuotaUsage, _ int) QuotaUsageDetail {
 			var typ string
 			switch item.QuotaMeta.Tag {
 			case "chat":
@@ -550,7 +549,7 @@ func (ctl *UserController) UserQuotaUsageDetails(ctx context.Context, webCtx web
 func (ctl *UserController) UserFreeChatCounts(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	freeModels := ctl.userSrv.FreeChatStatistics(ctx, user.ID)
 	if client.IsCNLocalMode(ctl.conf) {
-		freeModels = array.Filter(freeModels, func(m service.FreeChatState, _ int) bool {
+		freeModels = array.Filter(freeModels, func(m service2.FreeChatState, _ int) bool {
 			return !m.NonCN
 		})
 	}
@@ -568,8 +567,8 @@ func (ctl *UserController) UserFreeChatCountsForModel(ctx context.Context, webCt
 
 	res, err := ctl.userSrv.FreeChatStatisticsForModel(ctx, user.ID, modelID)
 	if err != nil {
-		if errors.Is(err, service.ErrorModelNotFree) {
-			return webCtx.JSON(service.FreeChatState{
+		if errors.Is(err, service2.ErrorModelNotFree) {
+			return webCtx.JSON(service2.FreeChatState{
 				ModelWithName: coins.ModelWithName{
 					Model: modelID,
 				},
