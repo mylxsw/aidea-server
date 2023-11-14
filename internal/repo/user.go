@@ -547,7 +547,9 @@ func (repo *UserRepo) GetUserByAPIKey(ctx context.Context, token string) (*model
 
 // GetAPIKeys 获取用户的 API Keys
 func (repo *UserRepo) GetAPIKeys(ctx context.Context, userID int64) ([]model.UserApiKey, error) {
-	keys, err := model.NewUserApiKeyModel(repo.db).Get(ctx, query.Builder().Where(model.FieldUserApiKeyUserId, userID))
+	q := query.Builder().Where(model.FieldUserApiKeyUserId, userID).
+		Where(model.FieldUserApiKeyStatus, UserAPiKeyStatusActive)
+	keys, err := model.NewUserApiKeyModel(repo.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -563,7 +565,8 @@ func (repo *UserRepo) GetAPIKeys(ctx context.Context, userID int64) ([]model.Use
 func (repo *UserRepo) GetAPIKey(ctx context.Context, userID int64, keyID int64) (*model.UserApiKey, error) {
 	key, err := model.NewUserApiKeyModel(repo.db).First(ctx, query.Builder().
 		Where(model.FieldUserApiKeyUserId, userID).
-		Where(model.FieldUserApiKeyId, keyID),
+		Where(model.FieldUserApiKeyId, keyID).
+		Where(model.FieldUserApiKeyStatus, UserAPiKeyStatusActive),
 	)
 	if err != nil {
 		if errors.Is(err, query.ErrNoResult) {
@@ -583,6 +586,7 @@ func (repo *UserRepo) CreateAPIKey(ctx context.Context, userID int64, name strin
 		UserId:      userID,
 		Name:        name,
 		ValidBefore: validBefore,
+		Status:      UserAPiKeyStatusActive,
 		Token:       fmt.Sprintf("sk-%s", misc.GenerateAPIToken(name, userID)),
 	}
 
@@ -590,6 +594,7 @@ func (repo *UserRepo) CreateAPIKey(ctx context.Context, userID int64, name strin
 		model.FieldUserApiKeyUserId,
 		model.FieldUserApiKeyName,
 		model.FieldUserApiKeyToken,
+		model.FieldUserApiKeyStatus,
 	}
 
 	if !validBefore.IsZero() {
@@ -607,10 +612,14 @@ func (repo *UserRepo) CreateAPIKey(ctx context.Context, userID int64, name strin
 
 // DeleteAPIKey 删除一个 API Key
 func (repo *UserRepo) DeleteAPIKey(ctx context.Context, userID int64, keyID int64) error {
-	_, err := model.NewUserApiKeyModel(repo.db).Delete(ctx, query.Builder().
-		Where(model.FieldUserApiKeyUserId, userID).
-		Where(model.FieldUserApiKeyId, keyID),
-	)
+	//_, err := model.NewUserApiKeyModel(repo.db).Delete(ctx, query.Builder().
+	//	Where(model.FieldUserApiKeyUserId, userID).
+	//	Where(model.FieldUserApiKeyId, keyID),
+	//)
 
+	q := query.Builder().Where(model.FieldUserApiKeyUserId, userID).Where(model.FieldUserApiKeyId, keyID)
+	update := query.KV{model.FieldUserApiKeyStatus: UserApiKeyStatusDisabled}
+
+	_, err := model.NewUserApiKeyModel(repo.db).UpdateFields(ctx, update, q)
 	return err
 }
