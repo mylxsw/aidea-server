@@ -55,5 +55,5 @@ func (Provider) Register(binder infra.Binder) {
 }
 
 func (Provider) ShouldLoad(conf *config.Config) bool {
-	return conf.Socks5Proxy != ""
+	return conf.Socks5Proxy != "" || conf.ProxyURL != ""
 }
