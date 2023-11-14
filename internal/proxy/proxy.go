@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/ternary"
 	"golang.org/x/net/proxy"
@@ -36,6 +37,7 @@ func (Provider) Register(binder infra.Binder) {
 				var err error
 				pp.Socks5, err = proxy.SOCKS5("tcp", conf.Socks5Proxy, nil, proxy.Direct)
 				if err != nil {
+					log.Errorf("invalid socks5 proxy url: %s", conf.Socks5Proxy)
 					return nil, err
 				}
 			}
@@ -45,6 +47,7 @@ func (Provider) Register(binder infra.Binder) {
 
 		p, err := url.Parse(conf.ProxyURL)
 		if err != nil {
+			log.Errorf("invalid proxy url: %s", conf.ProxyURL)
 			return nil, err
 		}
 
@@ -55,5 +58,5 @@ func (Provider) Register(binder infra.Binder) {
 }
 
 func (Provider) ShouldLoad(conf *config.Config) bool {
-	return conf.Socks5Proxy != ""
+	return conf.Socks5Proxy != "" || conf.ProxyURL != ""
 }
