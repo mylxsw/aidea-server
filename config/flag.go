@@ -7,6 +7,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("listen", ":8080", "Web 服务监听地址")
 	ins.AddStringFlag("api-listen", ":8081", "API 服务监听地址")
 
+	ins.AddStringFlag("base-url", "", "Web 服务的基础 URL，例如 https://web.aicode.cc")
 	ins.AddStringFlag("socks5-proxy", "", "socks5 proxy")
 	ins.AddStringFlag("proxy-url", "", "HTTP 代理放置，支持 http、https、socks5，代理类型由 URL schema 决定，如果 scheme 为空，则默认为 http")
 	ins.AddStringFlag("db-uri", "root:12345@tcp(127.0.0.1:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local", "database url")

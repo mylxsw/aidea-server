@@ -6,7 +6,9 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/redis/go-redis/v9"
 	"math/rand"
+	"net/http"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -22,6 +24,7 @@ import (
 type InfoController struct {
 	conf    *config.Config       `autowire:"@"`
 	userSvc *service.UserService `autowire:"@"`
+	rds     *redis.Client        `autowire:"@"`
 }
 
 // NewInfoController 创建信息控制器
@@ -42,6 +45,7 @@ func (ctl *InfoController) Register(router web.Router) {
 	router.Group("/share", func(router web.Router) {
 		router.Get("/info", ctl.shareInfo)
 	})
+	router.Any("/r/{key}", ctl.Redirect)
 }
 
 var qrCodes = []string{
@@ -69,7 +73,21 @@ func (ctl *InfoController) shareInfo(ctx web.Context, user *auth.UserOptional) w
 	return ctx.JSON(res)
 }
 
-const CurrentVersion = "1.0.7"
+func (ctl *InfoController) Redirect(ctx context.Context, webCtx web.Context) web.Response {
+	key := webCtx.PathVar("key")
+	if key == "" {
+		return webCtx.JSONError("invalid key", http.StatusBadRequest)
+	}
+
+	url, err := ctl.rds.Get(ctx, fmt.Sprintf("redirect:%s", key)).Result()
+	if err != nil {
+		return webCtx.JSONError("invalid key", http.StatusBadRequest)
+	}
+
+	return webCtx.HTML(fmt.Sprintf(`<html><body><div style="margin: 0; text-align: center; margin-top: 50px;"><a href="%s">NSFW</a></div></body></html>`, url))
+}
+
+const CurrentVersion = "1.0.8"
 
 func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 	clientVersion := ctx.Input("version")

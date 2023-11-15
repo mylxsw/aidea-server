@@ -2,10 +2,13 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	qiniuAuth "github.com/qiniu/go-sdk/v7/auth"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 	"strings"
 	"time"
@@ -25,6 +28,7 @@ type UploadController struct {
 	conf       *config.Config
 	uploader   *uploader.Uploader `autowire:"@"`
 	translater youdao.Translater  `autowire:"@"`
+	rds        *redis.Client      `autowire:"@"`
 }
 
 // NewUploadController 创建文件上传控制器
@@ -174,10 +178,17 @@ func (ctl *UploadController) AuditCallback(ctx context.Context, webCtx web.Conte
 	}
 
 	if ret.IsBlocked() {
+		blockedURL := ctl.uploader.MakePrivateURL(ret.InputKey, time.Second*3600*24)
+
+		key := misc.UUID()
+		if err := ctl.rds.Set(ctx, fmt.Sprintf("redirect:%s", key), blockedURL, time.Second*3600*24).Err(); err != nil {
+			log.F(log.M{"blocked_url": blockedURL}).Errorf("set redirect url failed: %s", err)
+		}
+
 		log.With(ret).Errorf(
 			"图片包含违禁内容：%s。\n\n![blocked-image](%s)",
 			strings.Join(ret.Labels(), "|"),
-			ctl.uploader.MakePrivateURL(ret.InputKey, time.Second*3600*24),
+			fmt.Sprintf("%s/r/%s", ctl.conf.BaseURL, key),
 		)
 	}
 

@@ -28,6 +28,9 @@ type Config struct {
 	// 是否启用 API Keys 功能
 	EnableAPIKeys bool `json:"enable_api_keys" yaml:"enable_api_keys"`
 
+	// BaseURL 服务的基础 URL
+	BaseURL string `json:"base_url" yaml:"base_url"`
+
 	// UniversalLinkConfig 通用链接配置
 	UniversalLinkConfig string `json:"universal_link_config" yaml:"universal_link_config"`
 
@@ -298,6 +301,8 @@ func Register(ins *app.App) {
 			EnableWebsocket:     ctx.Bool("enable-websocket"),
 			DebugWithSQL:        ctx.Bool("debug-with-sql"),
 			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
+
+			BaseURL: strings.TrimSuffix(ctx.String("base-url"), "/"),
 
 			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),
 			EnableCustomHomeModels: ctx.Bool("enable-custom-home-models"),

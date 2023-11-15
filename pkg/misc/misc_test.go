@@ -129,3 +129,10 @@ func TestWordTruncate(t *testing.T) {
 func TestGenerateAPIToken(t *testing.T) {
 	fmt.Println(misc.GenerateAPIToken("default", 11222233))
 }
+
+func TestUUID(t *testing.T) {
+	fmt.Println(misc.UUID())
+	fmt.Println(misc.UUID())
+	fmt.Println(misc.UUID())
+	fmt.Println(misc.UUID())
+}

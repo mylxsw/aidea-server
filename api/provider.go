@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/go-redis/redis_rate/v10"
 	"github.com/mylxsw/aidea-server/api/billing"
 	"github.com/mylxsw/aidea-server/api/openai"
 	"github.com/mylxsw/aidea-server/pkg/rate"
@@ -16,7 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-redis/redis_rate/v10"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/server/auth"
 	"github.com/mylxsw/aidea-server/server/controllers"
