@@ -1,5 +1,7 @@
 # 部署指南
 
+> 建议大家尽可能的自己去部署，遇到问题在 [GitHub Issues](https://github.com/mylxsw/aidea-server/issues) 提出，如果实在懒得搞，可以找我来帮你部署，详情参考 [服务器代部署说明](./deploy-vip.md)。
+> 
 > 由于时间仓促，文档可能尚未详尽，我将在后续逐步补充详细的说明文档。
 
 ## 架构草图
@@ -104,9 +106,4 @@ mysql> SOURCE /Users/mylxsw/Workspace/codes/ai/ai-server/migrate/2023092501-dml.
     ```
 5. 我不想自己安装，能否帮我部署一套？
     
-    建议大家尽可能的自己去部署，遇到问题在 [GitHub Issues](https://github.com/mylxsw/aidea-server/issues) 提出，如果实在懒得搞，可以找我来帮你部署，但是需要收费，费用暂定为 2000 RMB/次（不含在线支付功能，支付功能配置请 [参考文档](./alipay-configuration.md) 自行配置），如果有需要可以联系我，微信号：mylxsw。你需要自己准备以下资源
-    - 应用服务器（建议内存 1G 以上）
-    - MySQL 8.0+ 
-    - Redis 7.0+
-    - [项目依赖](#项目依赖) 中提到的第三方服务，我可以告诉你怎么去申请，因为涉及到给第三方服务付款以及实名认证等问题，还是要你自己去申请。
-   
+    建议大家尽可能的自己去部署，遇到问题在 [GitHub Issues](https://github.com/mylxsw/aidea-server/issues) 提出，如果实在懒得搞，可以找我来帮你部署，详情参考 [服务器代部署说明](./deploy-vip.md)。
