@@ -25,6 +25,8 @@ type Config struct {
 	EnableWebsocket bool `json:"enable_websocket" yaml:"enable_websocket"`
 	// 是否启用 SQL 调试
 	DebugWithSQL bool `json:"debug_with_sql" yaml:"debug_with_sql"`
+	// 是否启用 API Keys 功能
+	EnableAPIKeys bool `json:"enable_api_keys" yaml:"enable_api_keys"`
 
 	// UniversalLinkConfig 通用链接配置
 	UniversalLinkConfig string `json:"universal_link_config" yaml:"universal_link_config"`
@@ -299,6 +301,7 @@ func Register(ins *app.App) {
 
 			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),
 			EnableCustomHomeModels: ctx.Bool("enable-custom-home-models"),
+			EnableAPIKeys:          ctx.Bool("enable-api-keys"),
 
 			RedisHost:     ctx.String("redis-host"),
 			RedisPort:     ctx.Int("redis-port"),

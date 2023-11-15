@@ -31,6 +31,10 @@ var ErrUserDestroyed = errors.New("user is destroyed")
 
 type Provider struct{}
 
+func (Provider) ShouldLoad(c infra.FlagContext) bool {
+	return c.Bool("enable-api-keys")
+}
+
 // Aggregates 实现 infra.ProviderAggregate 接口
 func (Provider) Aggregates() []infra.Provider {
 	return []infra.Provider{

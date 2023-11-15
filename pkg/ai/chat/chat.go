@@ -69,6 +69,7 @@ func (ms Messages) Fix() Messages {
 
 // Request represents a request structure for chat completion API.
 type Request struct {
+	Stream    bool     `json:"stream,omitempty"`
 	Model     string   `json:"model"`
 	Messages  Messages `json:"messages"`
 	MaxTokens int      `json:"max_tokens,omitempty"`

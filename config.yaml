@@ -16,6 +16,10 @@ enable-websocket: false
 # 是否在日志中输出 SQL 语句
 debug-with-sql: false
 
+# 是否启用 API Keys 功能 【该功能尚未完成】
+# 该功能启用后，可以对外开放 OpenAI 兼容的 API，客户端也会显示 API Keys 管理界面
+enable-api-keys: false
+
 # Universal Link 配置，留空则使用以下默认值
 # universal-link-config: |
 #   {"applinks":{"apps":[],"details":[{"appID":"N95437SZ2A.cc.aicode.flutter.askaide.askaide","paths":["/wechat-login/*","/wechat-links/*"]}]}}
