@@ -27,10 +27,10 @@ enable-model-rate-limit: false
 enable-custom-home-models: false
 
 # 数据库配置 (账号:密码@tcp(数据库地址:端口)/数据库名?charset=utf8mb4&parseTime=True&loc=Local)
-db-uri: "root:123456@tcp(mysql-server.host:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local"
+db-uri: "root:123456@tcp(localhost:3306)/aidea_server?charset=utf8mb4&parseTime=True&loc=Local"
 
 # Redis 配置
-redis-host: redis-server.host
+redis-host: localhost
 redis-port: 6379
 redis-password: "123456"
 

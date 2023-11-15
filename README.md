@@ -50,37 +50,42 @@ https://aidea.aicode.cc
 
 代码结构如下
 
-| 目录 | 说明                                                                        |
-| --- |---------------------------------------------------------------------------|
-| api | 对外公开的 API 接口，控制器在这里实现                                                     |
-| config | 配置定义、管理                                                                   |
-| migrate | 数据库迁移文件，SQL 文件 |
-| internal/ai | 不同厂商的 AI 模型接口实现                                                           |
-| internal/ai/chat | 聊天模型抽象接口，所有聊天模型都在这里封装为兼容 OpenAI Chat Stream 协议的实现                         |
-| internal/aliyun | 阿里云短信、内容安全服务实现                                                            |
-| internal/coins | 服务定价、收费策略                                                                 |
-| internal/dingding | 钉钉通知机器人                                                                   |
-| internal/helper | 部分助手函数                                                                    |
-| internal/jobs | 定时任务，用户每日智慧果消耗额度统计等                                                       |
-| internal/mail | 邮件发送                                                                      |
-| internal/payment | 在线支付服务实现，如支付宝，Apple                                                       |
-| internal/proxy | Socks5 代理实现                                                               |
-| internal/queue | 任务队列实现，所有异步处理的任务都在这里定义                                                    |
-| internal/queue/consumer | 任务队列消费者                                                                   |
-| internal/rate | 流控实现                                                                      |
-| internal/redis | Redis 实例                                                                  |
-| internal/repo | 数据模型层，封装了对数据库的操作                                                          |
-| internal/repo/model | 数据模型定义，使用了 [mylxsw/eloquent](https://github.com/mylxsw/eloquent)  来创建数据模型 |
-| internal/service | Service 层，部分不适合放在 Controller 和 Repo 层的代码，在这里进行封装 |
-| internal/sms | 统一的短信服务封装，对上层业务屏蔽了底层的短信服务商实现 |
-| internal/tencent | 腾讯语音转文本、短信服务实现 |
-| internal/token | JWT Token |
-| internal/uploader | 基于七牛云存储实现的文件上传下载 |
-| internal/voice |  基于七牛云的文本转语音实现，暂时未启用 |
-| internal/youdao | 有道翻译服务 API 实现 |
-| config.yaml | 配置文件示例 |
-| nginx.conf | Nginx 配置示例 |
-| systemd.service | Systemd 服务配置示例 |
+| 目录               | 说明                                                                        |
+|------------------|---------------------------------------------------------------------------|
+| api              | OpenAI兼容的 API，这里的接口可供第三方支持 OpenAI API 协议的软件直接使用                           |
+| server           | 为 AIdea 客户端软件提供的的 API 接口                                                  |
+| config           | 配置定义、管理                                                                   |
+| migrate          | 数据库迁移文件，SQL 文件                                                            |
+| cmd | 程序入口 |
+| pkg              | 对外公开的包，其它项目可以直接引用                                                         |
+| ⌞ ai             | 不同厂商的 AI 模型接口实现                                                           |
+| ⌞ ai/chat        | 聊天模型抽象接口，所有聊天模型都在这里封装为兼容 OpenAI Chat Stream 协议的实现                         |
+| ⌞ aliyun         | 阿里云短信、内容安全服务实现                                                            |
+| ⌞ dingding       | 钉钉通知机器人                                                                   |
+| ⌞ misc           | 部分助手函数                                                                    |
+| ⌞ jobs           | 定时任务，用户每日智慧果消耗额度统计等                                                       |
+| ⌞ mail           | 邮件发送                                                                      |
+| ⌞ proxy          | Socks5 代理实现                                                               |
+| ⌞ rate           | 流控实现                                                                      |
+| ⌞ redis          | Redis 实例                                                                  |
+| ⌞ repo           | 数据模型层，封装了对数据库的操作                                                          |
+| ⌞ repo/model     | 数据模型定义，使用了 [mylxsw/eloquent](https://github.com/mylxsw/eloquent)  来创建数据模型 |
+| ⌞ service        | Service 层，部分不适合放在 Controller 和 Repo 层的代码，在这里进行封装                          |
+| ⌞ sms            | 统一的短信服务封装，对上层业务屏蔽了底层的短信服务商实现                                              |
+| ⌞ tencent        | 腾讯语音转文本、短信服务实现                                                            |
+| ⌞ token          | JWT Token                                                                 |
+| ⌞ uploader       | 基于七牛云存储实现的文件上传下载                                                          |
+| ⌞ voice          | 基于七牛云的文本转语音实现，暂时未启用                                                       |
+| ⌞ youdao         | 有道翻译服务 API 实现                                                             |
+| internal         | 内部包，只有本项目可用 |
+| ⌞ queue          | 任务队列实现，所有异步处理的任务都在这里定义                                                    |
+| ⌞ queue/consumer | 任务队列消费者                                                                   |
+| ⌞ payment        | 在线支付服务实现，如支付宝，Apple                                                       |
+| ⌞ coins          | 服务定价、收费策略                                                                 |
+| config.yaml      | 配置文件示例                                                                    |
+| coins-table.yaml | 价格表配置示例 |
+| nginx.conf       | Nginx 配置示例                                                                |
+| systemd.service  | Systemd 服务配置示例                                                            |
 
 项目编译：
 

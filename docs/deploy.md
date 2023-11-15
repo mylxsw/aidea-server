@@ -67,7 +67,10 @@ mysql> USE aidea_server;
 mysql> SOURCE /Users/mylxsw/Workspace/codes/ai/ai-server/migrate/2023090801-ddl.sql;
 mysql> SOURCE /Users/mylxsw/Workspace/codes/ai/ai-server/migrate/2023090802-dml.sql;
 mysql> SOURCE /Users/mylxsw/Workspace/codes/ai/ai-server/migrate/2023092501-dml.sql;
+...
 ```
+
+> 注意：在 migrate 目录中包含很多 `.sql` 的文件，你需要按照时间顺序依次执行所有的 SQL 文件，以完成数据库的初始化。
 
 ### 2. 创建配置文件
 
