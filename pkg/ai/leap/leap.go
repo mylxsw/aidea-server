@@ -176,7 +176,7 @@ type Image struct {
 }
 
 func (leap *LeapAI) TextToImage(ctx context.Context, model string, param *TextToImageRequest) (*TextToImageResponse, error) {
-	url := fmt.Sprintf("%s/server/v1/images/models/%s/inferences", leap.conf.LeapAIServers[0], model)
+	url := fmt.Sprintf("%s/api/v1/images/models/%s/inferences", leap.conf.LeapAIServers[0], model)
 
 	payload, err := json.Marshal(param)
 	if err != nil {
@@ -225,7 +225,7 @@ func (leap *LeapAI) TextToImage(ctx context.Context, model string, param *TextTo
 }
 
 func (leap *LeapAI) QueryTextToImageJobResult(ctx context.Context, model string, inferenceId string) (*TextToImageResponse, error) {
-	url := fmt.Sprintf("%s/server/v1/images/models/%s/inferences/%s", leap.conf.LeapAIServers[0], model, inferenceId)
+	url := fmt.Sprintf("%s/api/v1/images/models/%s/inferences/%s", leap.conf.LeapAIServers[0], model, inferenceId)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -341,7 +341,7 @@ func (resp *RemixImageResponse) UploadResources(ctx context.Context, up *uploade
 
 // RemixImageUpload remix image by upload file
 func (leap *LeapAI) RemixImageUpload(ctx context.Context, model string, param *RemixImageRequest) (*RemixImageResponse, error) {
-	url := fmt.Sprintf("%s/server/v1/images/models/%s/remix", leap.conf.LeapAIServers[0], model)
+	url := fmt.Sprintf("%s/api/v1/images/models/%s/remix", leap.conf.LeapAIServers[0], model)
 
 	formData := map[string]string{
 		"prompt": param.Prompt,
@@ -397,7 +397,7 @@ func (leap *LeapAI) RemixImageUpload(ctx context.Context, model string, param *R
 
 // RemixImageURL remix image
 func (leap *LeapAI) RemixImageURL(ctx context.Context, model string, param *RemixImageRequest) (*RemixImageResponse, error) {
-	url := fmt.Sprintf("%s/server/v1/images/models/%s/remix/url", leap.conf.LeapAIServers[0], model)
+	url := fmt.Sprintf("%s/api/v1/images/models/%s/remix/url", leap.conf.LeapAIServers[0], model)
 
 	payload, err := json.Marshal(param)
 	if err != nil {
@@ -446,7 +446,7 @@ func (leap *LeapAI) RemixImageURL(ctx context.Context, model string, param *Remi
 }
 
 func (leap *LeapAI) QueryRemixImageJobResult(ctx context.Context, model string, remixId string) (*RemixImageResponse, error) {
-	url := fmt.Sprintf("%s/server/v1/images/models/%s/remix/%s", leap.conf.LeapAIServers[0], model, remixId)
+	url := fmt.Sprintf("%s/api/v1/images/models/%s/remix/%s", leap.conf.LeapAIServers[0], model, remixId)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

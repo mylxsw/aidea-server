@@ -393,7 +393,7 @@ func (ctl *OpenAIController) handleChat(
 
 		// 内容违反内容安全策略
 		if errors.Is(err, chat2.ErrContentFilter) {
-			ctl.sendViolateContentPolicyResp(sw)
+			ctl.sendViolateContentPolicyResp(sw, "")
 			return "", ErrChatResponseHasSent
 		}
 
@@ -693,9 +693,9 @@ func (ctl *OpenAIController) contentSafety(req *chat2.Request, user *auth.User, 
 
 	content := req.Messages[len(req.Messages)-1].Content
 	if checkRes := ctl.securitySrv.ChatDetect(content); checkRes != nil {
-		if !checkRes.Safe {
-			log.F(log.M{"user_id": user.ID, "details": checkRes, "content": content}).Warningf("用户 %d 违规，违规内容：%s", user.ID, checkRes.Reason)
-			ctl.sendViolateContentPolicyResp(sw)
+		if checkRes.IsReallyUnSafe() {
+			log.F(log.M{"user_id": user.ID, "details": checkRes.ReasonDetail(), "content": content}).Warningf("用户 %d 违规，违规内容：%s", user.ID, checkRes.Reason)
+			ctl.sendViolateContentPolicyResp(sw, checkRes.ReasonDetail())
 			return errors.New("违规内容")
 		}
 	}
@@ -705,11 +705,16 @@ func (ctl *OpenAIController) contentSafety(req *chat2.Request, user *auth.User, 
 
 const violateContentPolicyMessage = "抱歉，您的请求因包含违规内容被系统拦截，如果您对此有任何疑问或想进一步了解详情，欢迎通过以下渠道与我们联系：\n\n服务邮箱：support@aicode.cc\n\n微博：@mylxsw\n\n客服微信：x-prometheus\n\n\n---\n\n> 本次请求不扣除智慧果。"
 
-func (ctl *OpenAIController) sendViolateContentPolicyResp(sw *streamwriter.StreamWriter) {
+func (ctl *OpenAIController) sendViolateContentPolicyResp(sw *streamwriter.StreamWriter, detail string) {
+	reason := violateContentPolicyMessage
+	if detail != "" {
+		reason += fmt.Sprintf("\n> \n> 原因：%s", detail)
+	}
+
 	misc.NoError(sw.WriteStream(fmt.Sprintf(
 		`{"id":"chatxxx1","object":"chat.completion.chunk","created":%d,"model":"gpt-3.5-turbo-0613","choices":[{"index":0,"delta":{"role":"assistant","content":%s},"finish_reason":null}]}`+"\n\n",
 		time.Now().Unix(),
-		strconv.Quote(violateContentPolicyMessage),
+		strconv.Quote(reason),
 	)))
 }
 

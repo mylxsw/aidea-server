@@ -102,7 +102,7 @@ func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploa
 		var resources []string
 		res, err := imageColorization(ctx, deepClient, up, payload.UserID, payload.Image)
 		if err != nil {
-			panic(fmt.Errorf("图片超分辨率失败: %w", err))
+			panic(fmt.Errorf("图片上色失败: %w", err))
 		}
 
 		resources = []string{res}

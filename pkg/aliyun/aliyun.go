@@ -122,6 +122,19 @@ type CheckResult struct {
 	Label  string `json:"label"`
 }
 
+func (res *CheckResult) IsReallyUnSafe() bool {
+	return !res.Safe && res.Reason.RiskWords != ""
+}
+
+func (res *CheckResult) ReasonDetail() string {
+	detail := res.Reason.RiskTips
+	if res.Reason.RiskWords != "" {
+		detail += fmt.Sprintf("（敏感词：%s）", res.Reason.RiskWords)
+	}
+
+	return detail
+}
+
 type Reason struct {
 	RiskTips  string `json:"risk_tips"`
 	RiskWords string `json:"risk_words"`
@@ -184,7 +197,7 @@ func (a *Aliyun) ContentDetect(checkType CheckType, content string) (*CheckResul
 	if strings.Contains(label, "sexual_content") {
 		tags := strings.Split(unsafeResult.Reason.RiskTips, ",")
 		for _, tag := range tags {
-			if str.In(tag, []string{"色情_性行为", "色情_性器官", "色情_涉黄产业", "色情_诱导生成色情内容", "色情_低俗", "色情_严重色情"}) {
+			if str.In(tag, []string{"色情_性行为", "色情_诱导生成色情内容", "色情_严重色情"}) {
 				return &unsafeResult, nil
 			}
 		}

@@ -92,7 +92,12 @@ func (ai *XFYunAI) ChatStream(ctx context.Context, model Model, messages []Messa
 	urlStr := ai.assembleAuthURL(host, ai.apiKey, ai.apiSecret)
 	conn, resp, err := ws.DialContext(ctx, urlStr, nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建 WS 连接失败：%w [%d %s]", err, resp.StatusCode, resp.Status)
+		detail := fmt.Sprintf(" 模型：%s", model)
+		if resp != nil {
+			detail += fmt.Sprintf(" [%d %s]", resp.StatusCode, resp.Status)
+		}
+
+		return nil, fmt.Errorf("[讯飞] 创建 WS 连接失败：%w%s", err, detail)
 	}
 
 	if resp.StatusCode != http.StatusSwitchingProtocols {

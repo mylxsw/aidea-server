@@ -759,14 +759,14 @@ func (ctl *CreativeIslandController) getStyleByModelID(ctx context.Context, mode
 }
 
 type VendorModel struct {
-	ID                string                    `json:"id"`
-	Name              string                    `json:"name"`
-	Vendor            string                    `json:"vendor,omitempty"`
-	Model             string                    `json:"-"`
-	Enabled           bool                      `json:"-"`
-	Upscale           bool                      `json:"upscale,omitempty"`
-	ShowStyle         bool                      `json:"show_style,omitempty"`
-	ShowImageStrength bool                      `json:"show_image_strength,omitempty"`
+	ID                string                     `json:"id"`
+	Name              string                     `json:"name"`
+	Vendor            string                     `json:"vendor,omitempty"`
+	Model             string                     `json:"-"`
+	Enabled           bool                       `json:"-"`
+	Upscale           bool                       `json:"upscale,omitempty"`
+	ShowStyle         bool                       `json:"show_style,omitempty"`
+	ShowImageStrength bool                       `json:"show_image_strength,omitempty"`
 	IntroURL          string                     `json:"intro_url,omitempty"`
 	RatioDimensions   map[string]repo2.Dimension `json:"-"`
 }
@@ -988,13 +988,13 @@ func (ctl *CreativeIslandController) Completions(ctx context.Context, webCtx web
 
 	// 内容安全检测
 	if checkRes := ctl.securitySrv.PromptDetect(req.Prompt); checkRes != nil {
-		if !checkRes.Safe {
+		if checkRes.IsReallyUnSafe() {
 			log.WithFields(log.Fields{
 				"user_id": user.ID,
-				"details": checkRes,
+				"details": checkRes.ReasonDetail(),
 				"content": req.Prompt,
 			}).Errorf("用户 %d 违规，违规内容：%s", user.ID, checkRes.Reason)
-			return webCtx.JSONError("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc", http.StatusNotAcceptable)
+			return webCtx.JSONError(fmt.Sprintf("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc\n\n原因：%s", checkRes.ReasonDetail()), http.StatusNotAcceptable)
 		}
 	}
 

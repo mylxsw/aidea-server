@@ -783,13 +783,13 @@ func (ctl *CreativeIslandController) completionsLeapAI(ctx context.Context, webC
 func (ctl *CreativeIslandController) securityCheck(webCtx web.Context, prompt string, userID int64) web.Response {
 	// 内容安全检测
 	if checkRes := ctl.securitySrv.PromptDetect(prompt); checkRes != nil {
-		if !checkRes.Safe {
+		if checkRes.IsReallyUnSafe() {
 			log.WithFields(log.Fields{
 				"user_id": userID,
-				"details": checkRes,
+				"details": checkRes.ReasonDetail(),
 				"content": prompt,
 			}).Warningf("用户 %d 违规，违规内容：%s", userID, checkRes.Reason)
-			return webCtx.JSONError("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc", http.StatusNotAcceptable)
+			return webCtx.JSONError(fmt.Sprintf("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc\n\n原因：%s", checkRes.ReasonDetail()), http.StatusNotAcceptable)
 		}
 	}
 

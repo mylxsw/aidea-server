@@ -35,9 +35,9 @@ import (
 
 // UserController 用户控制器
 type UserController struct {
-	translater youdao.Translater `autowire:"@"`
-	rds        *redis.Client     `autowire:"@"`
-	limiter    *rate.RateLimiter `autowire:"@"`
+	translater youdao.Translater         `autowire:"@"`
+	rds        *redis.Client             `autowire:"@"`
+	limiter    *rate.RateLimiter         `autowire:"@"`
 	queue      *queue.Queue              `autowire:"@"`
 	userRepo   *repo2.UserRepo           `autowire:"@"`
 	conf       *config.Config            `autowire:"@"`
@@ -113,10 +113,10 @@ func (ctl *UserController) UpdateRealname(ctx context.Context, webCtx web.Contex
 	}
 
 	checkRes := ctl.secSrv.NicknameDetect(realname)
-	if !checkRes.Safe {
+	if checkRes.IsReallyUnSafe() {
 		log.WithFields(log.Fields{
 			"user_id": user.ID,
-			"details": checkRes,
+			"details": checkRes.ReasonDetail(),
 			"content": realname,
 		}).Warningf("用户 %d 违规，违规内容：%s", user.ID, checkRes.Reason)
 		return webCtx.JSONError("内容违规，已被系统拦截，如有疑问邮件联系：support@aicode.cc", http.StatusNotAcceptable)
