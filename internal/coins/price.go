@@ -11,10 +11,10 @@ var coinTables = map[string]CoinTable{
 		"default": 20,
 		// 1024×1024           -> $0.040
 		// 1024×1792,1792×1024 -> $0.080
-		"dall-e-3": 100,
+		"dall-e-3": 50,
 		// 1024×1024           -> $0.080
 		// 1024×1792,1792×1024 -> $0.120
-		"dall-e-3:hd": 150,
+		"dall-e-3:hd": 80,
 		// 1024x1024 -> $0.020
 		// 512x512   -> $0.018
 		// 256x256   -> $0.016
@@ -23,15 +23,16 @@ var coinTables = map[string]CoinTable{
 
 	"openai": {
 		// 1000 Token 计费
-		"gpt-3.5-turbo":          3,  // valid $0.002/1K tokens -> ¥0.014/1K tokens
-		"gpt-3.5-turbo-0613":     3,  // valid $0.002/1K tokens -> ¥0.014/1K tokens
-		"gpt-3.5-turbo-16k":      5,  // valid $0.004/1K tokens -> ¥0.028/1K tokens
-		"gpt-3.5-turbo-16k-0613": 5,  // valid $0.004/1K tokens -> ¥0.028/1K tokens
-		"gpt-4":                  45, // valid $0.06/1K tokens  -> ¥0.42/1K tokens
-		"gpt-4-8k":               45, // $0.06/1K tokens        -> ¥0.42/1K tokens
-		"gpt-4-32k":              90, // $0.12/1K tokens        -> ¥0.84/1K tokens
-		// 每次计费
-		"DALL·E": 50,
+		"gpt-3.5-turbo":          3,   // valid $0.002/1K tokens -> ¥0.014/1K tokens
+		"gpt-3.5-turbo-0613":     3,   // valid $0.002/1K tokens -> ¥0.014/1K tokens
+		"gpt-3.5-turbo-1106":     3,   // valid $0.002/1K tokens -> ¥0.014/1K tokens
+		"gpt-3.5-turbo-16k":      5,   // valid $0.004/1K tokens -> ¥0.028/1K tokens
+		"gpt-3.5-turbo-16k-0613": 5,   // valid $0.004/1K tokens -> ¥0.028/1K tokens
+		"gpt-4":                  50,  // valid $0.06/1K tokens  -> ¥0.42/1K tokens
+		"gpt-4-8k":               50,  // $0.06/1K tokens        -> ¥0.42/1K tokens
+		"gpt-4-32k":              100, // $0.12/1K tokens        -> ¥0.84/1K tokens
+		"gpt-4-1106-preview":     30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
+		"gpt-4-vision-preview":   30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
 
 		// Anthropic
 		"claude-instant-1": 5,  // valid (input $1.63/million, output $5.51/million)  -> ¥0.039/1K tokens

@@ -44,7 +44,7 @@ func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web
 				return item
 			}
 
-			if client.IsCNLocalMode(ctl.conf) && item.IsSenstiveModel() {
+			if client.IsCNLocalMode(ctl.conf) && item.IsSensitiveModel() {
 				item.Disabled = true
 				return item
 			}
@@ -64,7 +64,7 @@ func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web
 			return false
 		}
 
-		return !(client.IsCNLocalMode(ctl.conf) && item.IsSenstiveModel())
+		return !(client.IsCNLocalMode(ctl.conf) && item.IsSensitiveModel())
 	})
 
 	return ctx.JSON(models)
