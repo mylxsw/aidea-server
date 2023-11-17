@@ -3,11 +3,13 @@ package uploader
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -57,8 +59,23 @@ const (
 	UploadUsageAvatar = "avatar"
 )
 
+type UploadCallback struct {
+	Key     string `json:"key"`
+	Hash    string `json:"hash"`
+	Fsize   int64  `json:"fsize"`
+	Bucket  string `json:"bucket"`
+	Name    string `json:"name"`
+	UID     int64  `json:"uid"`
+	Channel string `json:"channel"`
+}
+
+func (cb UploadCallback) ToJSON() string {
+	data, _ := json.Marshal(cb)
+	return string(data)
+}
+
 // Init 文件上传初始化，生成上传凭证
-func (u *Uploader) Init(filename string, uid int, usage string, maxSizeInMB int64, expireAfterDays int, enableCallback bool) UploadInit {
+func (u *Uploader) Init(filename string, uid int, usage string, maxSizeInMB int64, expireAfterDays int, enableCallback bool, channel string) UploadInit {
 	putPolicy := storage.PutPolicy{
 		Scope:           u.conf.StorageBucket,
 		FsizeLimit:      1024 * 1024 * maxSizeInMB,
@@ -68,7 +85,13 @@ func (u *Uploader) Init(filename string, uid int, usage string, maxSizeInMB int6
 	if enableCallback {
 		putPolicy.CallbackURL = u.conf.StorageCallback
 		putPolicy.CallbackBodyType = "application/json"
-		putPolicy.CallbackBody = fmt.Sprintf(`{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)","name":"$(x:name)","uid":%d,"usage":"%s"}`, uid, usage)
+		putPolicy.CallbackBody = fmt.Sprintf(
+			`{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)","name":%s,"uid":%d,"usage":"%s","channel":"%s"}`,
+			strconv.Quote(filename),
+			uid,
+			usage,
+			channel,
+		)
 	}
 
 	mac := qiniuAuth.New(u.conf.StorageAppKey, u.conf.StorageAppSecret)
@@ -169,6 +192,13 @@ func (u *Uploader) uploadStream(ctx context.Context, uid int, expireAfterDays in
 		FsizeLimit:      1024 * 1024 * 20,
 		DeleteAfterDays: expireAfterDays,
 	}
+
+	if u.conf.StorageCallback != "" {
+		putPolicy.CallbackURL = u.conf.StorageCallback
+		putPolicy.CallbackBodyType = "application/json"
+		putPolicy.CallbackBody = fmt.Sprintf(`{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)","name":"$(x:name)","uid":%d,"usage":"%s","channel":"server"}`, uid, "")
+	}
+
 	mac := qiniuAuth.New(u.conf.StorageAppKey, u.conf.StorageAppSecret)
 	upToken := putPolicy.UploadToken(mac)
 

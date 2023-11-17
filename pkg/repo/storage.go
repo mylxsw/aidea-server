@@ -34,6 +34,7 @@ func (repo *FileStorageRepo) Save(ctx context.Context, file model.StorageFile) (
 		model.FieldStorageFileUserId:   file.UserId,
 		model.FieldStorageFileNote:     file.Note,
 		model.FieldStorageFileStatus:   file.Status,
+		model.FieldStorageFileChannel:  file.Channel,
 	})
 }
 

@@ -88,7 +88,7 @@ func (ctl *UploadController) UploadInit(ctx context.Context, webCtx web.Context,
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
-	return webCtx.JSON(ctl.uploader.Init(name, int(user.ID), usage, 5, uploader.DefaultUploadExpireAfterDays, true))
+	return webCtx.JSON(ctl.uploader.Init(name, int(user.ID), usage, 5, uploader.DefaultUploadExpireAfterDays, true, "client"))
 }
 
 type ImageAuditCallback struct {
@@ -225,7 +225,7 @@ func (ctl *UploadController) UploadCallback(ctx context.Context, webCtx web.Cont
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "invalid callback"), http.StatusBadRequest)
 	}
 
-	var cb UploadCallback
+	var cb uploader.UploadCallback
 	if err := webCtx.Unmarshal(&cb); err != nil {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, err.Error()), http.StatusBadRequest)
 	}
@@ -244,19 +244,11 @@ func (ctl *UploadController) UploadCallback(ctx context.Context, webCtx web.Cont
 		FileSize: cb.Fsize,
 		Bucket:   cb.Bucket,
 		Status:   repo.StorageFileStatusEnabled,
+		Channel:  cb.Channel,
 	})
 	if err != nil {
 		log.With(cb).Errorf("save file info failed: %s", err)
 	}
 
 	return webCtx.JSON(web.M{})
-}
-
-type UploadCallback struct {
-	Key    string `json:"key"`
-	Hash   string `json:"hash"`
-	Fsize  int64  `json:"fsize"`
-	Bucket string `json:"bucket"`
-	Name   string `json:"name"`
-	UID    int64  `json:"uid"`
 }

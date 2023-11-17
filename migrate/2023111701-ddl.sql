@@ -1,4 +1,3 @@
-
 CREATE TABLE storage_file
 (
     id         INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
@@ -9,7 +8,8 @@ CREATE TABLE storage_file
     bucket     VARCHAR(100)    NULL,
     name       VARCHAR(255)    NULL,
     status     TINYINT         NOT NULL DEFAULT 1 COMMENT '状态：1-正常 2-禁用 3-REVIEW',
-    note       VARCHAR(255)    NULL,
+    note       VARCHAR(255)    NULL COMMENT '备注',
+    channel    VARCHAR(20)     NULL COMMENT '上传渠道',
     created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
