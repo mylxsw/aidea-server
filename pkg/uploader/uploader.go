@@ -4,11 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"io"
 	"net/http"
-	"path"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -77,10 +76,10 @@ func (u *Uploader) Init(filename string, uid int, usage string, maxSizeInMB int6
 	var publicUrl, key string
 	switch usage {
 	case UploadUsageAvatar:
-		key = fmt.Sprintf("ai-server/%d/avatar/ugc%s.%s", uid, must.Must(uuid.GenerateUUID()), fileExt(filename))
+		key = fmt.Sprintf("ai-server/%d/avatar/ugc%s%s", uid, must.Must(uuid.GenerateUUID()), misc.FileExt(filename))
 		publicUrl = fmt.Sprintf("%s/%s-avatar", u.baseURL, key)
 	default:
-		key = fmt.Sprintf("ai-server/%d/%s/ugc%s.%s", uid, time.Now().Format("20060102"), must.Must(uuid.GenerateUUID()), fileExt(filename))
+		key = fmt.Sprintf("ai-server/%d/%s/ugc%s%s", uid, time.Now().Format("20060102"), must.Must(uuid.GenerateUUID()), misc.FileExt(filename))
 		publicUrl = fmt.Sprintf("%s/%s", u.baseURL, key)
 	}
 
@@ -231,10 +230,6 @@ func (u *Uploader) RefreshCDN(ctx context.Context, urls []string) (cdn.RefreshRe
 
 	cdnManager := cdn.NewCdnManager(mac)
 	return cdnManager.RefreshUrls(urls)
-}
-
-func fileExt(filename string) string {
-	return strings.ToLower(path.Ext(filename))
 }
 
 // MakePrivateURL 生成私有文件访问 URL
