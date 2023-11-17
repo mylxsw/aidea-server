@@ -147,6 +147,12 @@ type Config struct {
 	GetimgAIServer    string `json:"getimgai_server" yaml:"getimgai_server"`
 	GetimgAIKey       string `json:"getimgai_key" yaml:"getimgai_key"`
 
+	// EnableLeptonAI 是否启用 Lepton AI
+	EnableLeptonAI    bool     `json:"enable_leptonai" yaml:"enable_leptonai"`
+	LeptonAIAutoProxy bool     `json:"leptonai_auto_proxy" yaml:"leptonai_auto_proxy"`
+	LeptonAIQRServers []string `json:"leptonai_qr_servers" yaml:"leptonai_qr_servers"`
+	LeptonAIKeys      []string `json:"leptonai_keys" yaml:"leptonai_keys"`
+
 	// DBURI 数据库连接地址
 	DBURI string `json:"db_uri" yaml:"db_uri"`
 	// Redis
@@ -397,6 +403,11 @@ func Register(ins *app.App) {
 			GetimgAIAutoProxy: ctx.Bool("getimgai-autoproxy"),
 			GetimgAIServer:    ctx.String("getimgai-server"),
 			GetimgAIKey:       ctx.String("getimgai-key"),
+
+			EnableLeptonAI:    ctx.Bool("enable-leptonai"),
+			LeptonAIAutoProxy: ctx.Bool("leptonai-autoproxy"),
+			LeptonAIQRServers: ctx.StringSlice("leptonai-qr-servers"),
+			LeptonAIKeys:      ctx.StringSlice("leptonai-keys"),
 
 			EnableFromstonAI: ctx.Bool("enable-fromstonai"),
 			FromstonServer:   ctx.String("fromston-server"),

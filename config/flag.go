@@ -1,6 +1,9 @@
 package config
 
-import "github.com/mylxsw/glacier/starter/app"
+import (
+	"github.com/mylxsw/glacier/starter/app"
+	"os"
+)
 
 func initCmdFlags(ins *app.App) {
 
@@ -108,6 +111,11 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("getimgai-autoproxy", "使用 socks5 代理访问 getimg.ai 服务")
 	ins.AddStringFlag("getimgai-server", "https://api.getimg.ai", "getimgai server")
 	ins.AddFlags(app.StringEnvFlag("getimgai-key", "", "getimgai key", "GETIMGAI_KEY"))
+
+	ins.AddBoolFlag("enable-leptonai", "是否启用 lepton.ai 的模型服务")
+	ins.AddBoolFlag("leptonai-autoproxy", "使用 socks5 代理访问 lepton.ai 服务")
+	ins.AddStringSliceFlag("leptonai-qr-servers", []string{"https://aiqr.lepton.run"}, "lepton.ai QR servers")
+	ins.AddStringSliceFlag("leptonai-keys", []string{os.Getenv("LEPTONAI_KEY")}, "lepton.ai keys")
 
 	ins.AddBoolFlag("enable-fromstonai", "是否启用 6pen 的文生图、图生图服务")
 	ins.AddStringFlag("fromston-server", "https://ston.6pen.art", "fromston server")
