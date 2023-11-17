@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	qiniuAuth "github.com/qiniu/go-sdk/v7/auth"
@@ -26,9 +27,10 @@ import (
 // UploadController 文件上传控制器
 type UploadController struct {
 	conf       *config.Config
-	uploader   *uploader.Uploader `autowire:"@"`
-	translater youdao.Translater  `autowire:"@"`
-	rds        *redis.Client      `autowire:"@"`
+	uploader   *uploader.Uploader    `autowire:"@"`
+	translater youdao.Translater     `autowire:"@"`
+	rds        *redis.Client         `autowire:"@"`
+	fs         *repo.FileStorageRepo `autowire:"@"`
 }
 
 // NewUploadController 创建文件上传控制器
@@ -112,11 +114,21 @@ func (cb ImageAuditCallback) IsBlocked() bool {
 	return false
 }
 
+func (cb ImageAuditCallback) ShouldReview() bool {
+	for _, item := range cb.Items {
+		if item.Result.Result.Suggestion == "review" {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (cb ImageAuditCallback) Labels() []string {
 	labels := make([]string, 0)
 	for _, item := range cb.Items {
 		for _, scene := range item.Result.Result.Scenes {
-			if scene.Suggestion != "block" {
+			if !array.In(scene.Suggestion, []string{"block", "review"}) {
 				continue
 			}
 
@@ -190,6 +202,16 @@ func (ctl *UploadController) AuditCallback(ctx context.Context, webCtx web.Conte
 			strings.Join(ret.Labels(), "|"),
 			fmt.Sprintf("%s/r/%s", ctl.conf.BaseURL, key),
 		)
+
+		err := ctl.fs.UpdateByKey(ctx, ret.InputKey, repo.StorageFileStatusDisabled, strings.Join(ret.Labels(), "|"))
+		if err != nil {
+			log.With(ret).Errorf("update file status failed: %s", err)
+		}
+	} else if ret.ShouldReview() {
+		err := ctl.fs.UpdateByKey(ctx, ret.InputKey, repo.StorageFileStatusReview, strings.Join(ret.Labels(), "|"))
+		if err != nil {
+			log.With(ret).Errorf("update file status failed: %s", err)
+		}
 	}
 
 	return webCtx.JSON(web.M{})
@@ -212,6 +234,19 @@ func (ctl *UploadController) UploadCallback(ctx context.Context, webCtx web.Cont
 
 	if err := quotaRepo.QuotaConsume(ctx, cb.UID, coins.GetUploadCoins(), repo.NewQuotaUsedMeta("upload", "qiniu")); err != nil {
 		log.With(cb).Errorf("used quota add failed: %s", err)
+	}
+
+	_, err := ctl.fs.Save(ctx, model.StorageFile{
+		UserId:   cb.UID,
+		Name:     cb.Name,
+		Hash:     cb.Hash,
+		FileKey:  cb.Key,
+		FileSize: cb.Fsize,
+		Bucket:   cb.Bucket,
+		Status:   repo.StorageFileStatusEnabled,
+	})
+	if err != nil {
+		log.With(cb).Errorf("save file info failed: %s", err)
 	}
 
 	return webCtx.JSON(web.M{})

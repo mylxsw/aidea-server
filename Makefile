@@ -17,7 +17,7 @@ build-linux:
 
 orm:
 	# https://github.com/mylxsw/eloquent
-	eloquent gen --source 'internal/repo/model/*.yaml'
-	gofmt -s -w internal/repo/model/*.go
+	eloquent gen --source 'pkg/repo/model/*.yaml'
+	gofmt -s -w pkg/repo/model/*.go
 
 .PHONY: build build-release orm build-linux
