@@ -66,7 +66,27 @@ func MessageTokenCount(messages Messages, model string) (numTokens int, err erro
 
 	for _, message := range messages {
 		numTokens += tokensPerMessage
-		numTokens += len(tkm.Encode(message.Content, nil, nil))
+		if len(message.MultipartContents) > 0 {
+			for _, content := range message.MultipartContents {
+				if content.Type == "image_url" {
+					if content.ImageURL.Detail == "low" {
+						numTokens += 65
+					} else {
+						// TODO 【价格昂贵，尽量避免】这里可能为 high 或者 auto，简单起见，auto 按照 high 处理
+						// 简单起见，这里假设 high 时大图为 2048x2048，切割为 16 个小图
+						//
+						// high will enable “high res” mode, which first allows the model to see the low res image
+						// and then creates detailed crops of input images as 512px squares based on the input image size.
+						// Each of the detailed crops uses twice the token budget (65 tokens) for a total of 129 tokens
+						numTokens += 129 * 16
+					}
+				} else {
+					numTokens += len(tkm.Encode(content.Text, nil, nil))
+				}
+			}
+		} else {
+			numTokens += len(tkm.Encode(message.Content, nil, nil))
+		}
 		numTokens += len(tkm.Encode(message.Role, nil, nil))
 	}
 	numTokens += 3
