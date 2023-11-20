@@ -232,6 +232,17 @@ getimgai-autoproxy: false
 getimgai-server: "https://api.getimg.ai"
 getimgai-key: ""
 
+######## lepton.ai ########
+
+# lepton.ai 的模型用来为 艺术字、艺术二维码 提供服务
+# API 申请：https://www.lepton.ai/
+enable-leptonai: false
+leptonai-autoproxy: false
+leptonai-qr-servers: ["https://aiqr.lepton.run"]
+leptonai-keys: [""]
+
+# 艺术字字体文件，只支持 ttf 格式
+font-path: "path/to/your/font/MaoKenShiJinHei-2.ttf"
 
 ######## 有道翻译配置 ########
 
@@ -385,3 +396,4 @@ virtual-model-beichou-prompt: ""
 # 指定该选项后，将以配置文件中的数据为准
 #price-table-file: /data/webroot/aidea-server/etc/coins-table.yaml
 price-table-file: ""
+

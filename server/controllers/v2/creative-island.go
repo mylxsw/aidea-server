@@ -80,6 +80,8 @@ func (ctl *CreativeIslandController) Register(router web.Router) {
 		router.Post("/completions/upscale", ctl.ImageUpscale)
 		// 图片上色
 		router.Post("/completions/colorize", ctl.ImageColorize)
+		// QR 生成、艺术字生成
+		router.Post("/completions/artistic-text", ctl.ArtisticText)
 	})
 }
 
@@ -93,7 +95,7 @@ type CreativeIslandItem struct {
 	Note         string `json:"note,omitempty"`
 }
 
-func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Context, client *auth.ClientInfo) web.Response {
+func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
 	items := []CreativeIslandItem{
 		{
 			ID:           "text-to-image",
@@ -102,15 +104,33 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-text-to-image.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create?mode=text-to-image&id=text-to-image",
 		},
-		{
-			ID:           "image-to-image",
-			Title:        "图生图",
-			TitleColor:   "FFFFFFFF",
-			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-image-to-image.jpeg-thumb1000",
-			RouteURI:     "/creative-draw/create?mode=image-to-image&id=image-to-image",
-			Tag:          ternary.If(client != nil && client.IsIOS(), "", "BETA"),
-		},
 	}
+
+	if client != nil && misc.VersionNewer(client.Version, "1.0.8") && ctl.conf.EnableLeptonAI && user.User != nil && user.User.InternalUser() {
+		items = append(items, CreativeIslandItem{
+			ID:           "artistic-text",
+			Title:        "艺术字",
+			TitleColor:   "FFFFFFFF",
+			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/art-text-bg.jpg-thumb1000",
+			RouteURI:     "/creative-draw/artistic-text?type=text&id=artistic-text",
+		})
+		items = append(items, CreativeIslandItem{
+			ID:           "artistic-qr",
+			Title:        "艺术二维码",
+			TitleColor:   "FFFFFFFF",
+			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/art-qr-bg.jpg-thumb1000",
+			RouteURI:     "/creative-draw/artistic-text?type=qr&id=artistic-qr",
+		})
+	}
+
+	items = append(items, CreativeIslandItem{
+		ID:           "image-to-image",
+		Title:        "图生图",
+		TitleColor:   "FFFFFFFF",
+		PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-image-to-image.jpeg-thumb1000",
+		RouteURI:     "/creative-draw/create?mode=image-to-image&id=image-to-image",
+		Tag:          ternary.If(client != nil && client.IsIOS(), "", "BETA"),
+	})
 
 	if client != nil && misc.VersionNewer(client.Version, "1.0.2") && ctl.conf.EnableDeepAI {
 		items = append(items, CreativeIslandItem{
@@ -138,18 +158,19 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 }
 
 type CreativeIslandCapacity struct {
-	ShowAIRewrite            bool          `json:"show_ai_rewrite,omitempty"`
-	ShowUpscaleBy            bool          `json:"show_upscale_by,omitempty"`
-	ShowNegativeText         bool          `json:"show_negative_text,omitempty"`
-	ShowStyle                bool          `json:"show_style,omitempty"`
-	ShowImageCount           bool          `json:"show_image_count,omitempty"`
-	ShowSeed                 bool          `json:"show_seed,omitempty"`
-	ShowPromptForImage2Image bool          `json:"show_prompt_for_image2image,omitempty"`
-	AllowRatios              []string      `json:"allow_ratios,omitempty"`
-	VendorModels             []VendorModel `json:"vendor_models,omitempty"`
-	Filters                  []ImageStyle  `json:"filters,omitempty"`
-	AllowUpscaleBy           []string      `json:"allow_upscale_by,omitempty"`
-	ShowImageStrength        bool          `json:"show_image_strength,omitempty"`
+	ShowAIRewrite            bool            `json:"show_ai_rewrite,omitempty"`
+	ShowUpscaleBy            bool            `json:"show_upscale_by,omitempty"`
+	ShowNegativeText         bool            `json:"show_negative_text,omitempty"`
+	ShowStyle                bool            `json:"show_style,omitempty"`
+	ShowImageCount           bool            `json:"show_image_count,omitempty"`
+	ShowSeed                 bool            `json:"show_seed,omitempty"`
+	ShowPromptForImage2Image bool            `json:"show_prompt_for_image2image,omitempty"`
+	AllowRatios              []string        `json:"allow_ratios,omitempty"`
+	VendorModels             []VendorModel   `json:"vendor_models,omitempty"`
+	Filters                  []ImageStyle    `json:"filters,omitempty"`
+	AllowUpscaleBy           []string        `json:"allow_upscale_by,omitempty"`
+	ShowImageStrength        bool            `json:"show_image_strength,omitempty"`
+	ArtisticStyles           []ArtisticStyle `json:"artistic_styles,omitempty"`
 }
 
 // Models 可用的模型列表
@@ -279,6 +300,17 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		})
 	}
 
+	artisticStyle := make([]ArtisticStyle, 0)
+	if ctl.conf.EnableLeptonAI {
+		// "realism", "anime", "comics", "dream", "prime", "2.5d"
+		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "realism", Name: "写实", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-realism.png-avatar"})
+		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "anime", Name: "动漫", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-anime.png-avatar"})
+		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "comics", Name: "漫画", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-comics.png-avatar"})
+		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "dream", Name: "梦幻", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-dream.png-avatar"})
+		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "prime", Name: "素描", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-prime.png-avatar"})
+		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "2.5d", Name: "2.5D", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-2.5d.png-avatar"})
+	}
+
 	return webCtx.JSON(CreativeIslandCapacity{
 		ShowAIRewrite:            true,
 		ShowUpscaleBy:            true,
@@ -292,6 +324,7 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		VendorModels:             models,
 		AllowUpscaleBy:           []string{"x1", "x2", "x4"},
 		ShowImageStrength:        user.InternalUser(),
+		ArtisticStyles:           artisticStyle,
 	})
 }
 
@@ -686,6 +719,12 @@ func (ctl *CreativeIslandController) getVendorModel(ctx context.Context, modelID
 	return nil
 }
 
+type ArtisticStyle struct {
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	PreviewImage string `json:"preview_image"`
+}
+
 type ImageStyle struct {
 	ID             int64    `json:"id,omitempty"`
 	Name           string   `json:"name,omitempty"`
@@ -955,6 +994,146 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 	return webCtx.JSON(web.M{
 		"task_id": taskID, // 任务 ID
 		"wait":    60,     // 等待时间
+	})
+}
+
+// ArtisticText 艺术字、QR 生成
+// 请求参数：
+// - text
+// - type: qr/text
+// - prompt
+// - negative_prompt
+// - style_preset
+func (ctl *CreativeIslandController) ArtisticText(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	text := webCtx.Input("text")
+	if text == "" {
+		return webCtx.JSONError("invalid text", http.StatusBadRequest)
+	}
+
+	optType := webCtx.Input("type")
+	if !str.In(optType, []string{"qr", "text"}) {
+		return webCtx.JSONError("invalid type", http.StatusBadRequest)
+	}
+
+	prompt := misc.WordTruncate(webCtx.Input("prompt"), 500)
+	if prompt == "" {
+		return webCtx.JSONError("invalid prompt", http.StatusBadRequest)
+	}
+
+	negativePrompt := misc.WordTruncate(webCtx.Input("negative_prompt"), 500)
+
+	stylePreset := webCtx.Input("style_preset")
+	if stylePreset == "" {
+		stylePreset = "realism"
+	}
+
+	if !str.In(stylePreset, []string{"realism", "anime", "comics", "dream", "prime", "2.5d"}) {
+		return webCtx.JSONError("invalid stylePreset", http.StatusBadRequest)
+	}
+
+	imageCount := webCtx.Int64Input("image_count", 1)
+	if imageCount < 1 || imageCount > 4 {
+		return webCtx.JSONError("invalid image count", http.StatusBadRequest)
+	}
+
+	steps := webCtx.IntInput("steps", 30)
+	if !array.In(steps, []int{30, 50, 100, 150}) {
+		return webCtx.JSONError("invalid steps", http.StatusBadRequest)
+	}
+
+	// 检查用户是否有足够的智慧果
+	quota, err := ctl.userSvc.UserQuota(ctx, user.ID)
+	if err != nil {
+		log.Errorf("get user quota failed: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	quotaConsume := int64(coins.GetUnifiedImageGenCoins("")) * imageCount
+	if quota.Rest-quota.Freezed < quotaConsume {
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
+	}
+
+	controlWeight := webCtx.Float64Input("control_weight", 1.35)
+	if controlWeight < 0.1 || controlWeight > 3 {
+		return webCtx.JSONError("invalid control_weight", http.StatusBadRequest)
+	}
+
+	controlImageRatio := webCtx.Float64Input("control_image_ratio", 0.8)
+	if controlImageRatio < 0.1 || controlImageRatio > 1 {
+		return webCtx.JSONError("invalid control_image_ratio", http.StatusBadRequest)
+	}
+
+	seed := webCtx.Int64Input("seed", -1)
+	if seed < 0 || seed > 2147483647 {
+		seed = -1
+	}
+
+	req := queue.ArtisticTextCompletionPayload{
+		Quota:     quotaConsume,
+		CreatedAt: time.Now(),
+
+		Text:           text,
+		Type:           optType,
+		ArtisticType:   stylePreset,
+		Prompt:         prompt,
+		NegativePrompt: negativePrompt,
+		AIRewrite:      webCtx.Input("ai_rewrite") == "true",
+		UID:            user.ID,
+		FreezedCoins:   quotaConsume,
+
+		ControlImageRatio: controlImageRatio,
+		ControlWeight:     controlWeight,
+		GuidanceStart:     0.3,
+		GuidanceEnd:       0.95,
+		Seed:              seed,
+		Steps:             int64(steps),
+		CfgScale:          7,
+		NumImages:         imageCount,
+
+		FontPath: ctl.conf.FontPath,
+	}
+
+	// 加入异步任务队列
+	taskID, err := ctl.queue.Enqueue(&req, queue.NewArtisticTextCompletionTask)
+	if err != nil {
+		log.Errorf("enqueue task failed: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
+	}
+	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
+
+	// 冻结智慧果
+	if err := ctl.userSvc.FreezeUserQuota(ctx, user.ID, req.Quota); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛冻结用户配额失败: %s", err)
+	}
+
+	if err := ctl.rds.SetEx(ctx, fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", user.ID, taskID), req.Quota, 5*time.Minute).Err(); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛用户配额已冻结，更新 Redis 任务与配额关系失败: %s", err)
+	}
+
+	creativeItem := repo2.CreativeItem{
+		IslandId:   AllInOneIslandID,
+		IslandType: repo2.IslandTypeArtisticText,
+		TaskId:     taskID,
+		Status:     repo2.CreativeStatusPending,
+		Prompt:     prompt,
+	}
+
+	arg := repo2.CreativeRecordArguments{
+		NegativePrompt: negativePrompt,
+		ArtisticType:   optType,
+		StylePreset:    stylePreset,
+		Text:           text,
+	}
+
+	// 保存历史记录
+	if _, err := ctl.creativeRepo.CreateRecordWithArguments(ctx, user.ID, &creativeItem, &arg); err != nil {
+		log.Errorf("create creative item failed: %v", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(web.M{
+		"task_id": taskID, // 任务 ID
+		"wait":    30,     // 等待时间
 	})
 }
 

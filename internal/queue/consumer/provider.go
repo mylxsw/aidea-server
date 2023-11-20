@@ -8,6 +8,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/fromston"
 	"github.com/mylxsw/aidea-server/pkg/ai/getimgai"
 	"github.com/mylxsw/aidea-server/pkg/ai/leap"
+	"github.com/mylxsw/aidea-server/pkg/ai/lepton"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
 	"github.com/mylxsw/aidea-server/pkg/dingding"
@@ -92,6 +93,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		conf *config.Config,
 		userSvc *service.UserService,
 		dalleClient *openai.DalleImageClient,
+		leptonClient *lepton.Lepton,
 	) {
 		log.Debugf("register all queue handlers")
 		mux.HandleFunc(queue.TypeOpenAICompletion, queue.BuildOpenAICompletionHandler(openaiClient, rep))
@@ -112,6 +114,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		mux.HandleFunc(queue.TypeImageColorization, queue.BuildImageColorizationHandler(deepaiClient, uploader, rep))
 		mux.HandleFunc(queue.TypeGroupChat, queue.BuildGroupChatHandler(conf, ct, rep, userSvc))
 		mux.HandleFunc(queue.TypeDalleCompletion, queue.BuildDalleCompletionHandler(dalleClient, uploader, rep))
+		mux.HandleFunc(queue.TypeArtisticTextCompletion, queue.BuildArtisticTextCompletionHandler(leptonClient, translater, uploader, rep, openaiClient))
 	})
 }
 

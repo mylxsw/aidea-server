@@ -110,7 +110,7 @@ func (resp ImageResponse) SaveToLocalFiles(ctx context.Context, savePath string)
 	return resources, nil
 }
 
-func (ai *Lepton) QRImageGenerate(ctx context.Context, req QRImageRequest) (*ImageResponse, error) {
+func (ai *Lepton) ImageGenerate(ctx context.Context, req QRImageRequest) (*ImageResponse, error) {
 	server, key := ai.client()
 	resp, err := ai.resty.R().
 		SetHeader("Authorization", "Bearer "+key).

@@ -84,7 +84,7 @@ func (ctl *InfoController) Redirect(ctx context.Context, webCtx web.Context) web
 		return webCtx.JSONError("invalid key", http.StatusBadRequest)
 	}
 
-	return webCtx.HTML(fmt.Sprintf(`<html><body><div style="margin: 0; text-align: center; margin-top: 50px;"><a href="%s">NSFW</a></div></body></html>`, url))
+	return webCtx.HTML(fmt.Sprintf(htmlTemplate, "Redirect", fmt.Sprintf(`<div style="margin: 0; text-align: center; margin-top: 50px;"><a href="%s">NSFW</a></div>`, url)))
 }
 
 const CurrentVersion = "1.0.8"

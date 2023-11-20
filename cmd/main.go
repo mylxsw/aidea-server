@@ -14,6 +14,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/getimgai"
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
 	"github.com/mylxsw/aidea-server/pkg/ai/leap"
+	"github.com/mylxsw/aidea-server/pkg/ai/lepton"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
@@ -135,6 +136,7 @@ func main() {
 		baichuan.Provider{},
 		gpt360.Provider{},
 		oneapi.Provider{},
+		lepton.Provider{},
 	)
 
 	app.MustRun(ins)

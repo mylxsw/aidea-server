@@ -91,6 +91,7 @@ const (
 	TypeSignup                   = "signup"
 	TypeBindPhone                = "bind_phone"
 	TypeGroupChat                = "group_chat"
+	TypeArtisticTextCompletion   = "artistic_text:completion"
 )
 
 func ResolveTaskType(category, model string) string {

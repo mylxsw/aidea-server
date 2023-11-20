@@ -200,7 +200,7 @@ func (ctl *UploadController) AuditCallback(ctx context.Context, webCtx web.Conte
 		log.With(ret).Errorf(
 			"图片包含违禁内容：%s。\n\n[访问地址](%s)",
 			strings.Join(ret.Labels(), "|"),
-			fmt.Sprintf("%s/r/%s", ctl.conf.BaseURL, key),
+			fmt.Sprintf("%s/public/r/%s", ctl.conf.BaseURL, key),
 		)
 
 		err := ctl.fs.UpdateByKey(ctx, ret.InputKey, repo.StorageFileStatusDisabled, strings.Join(ret.Labels(), "|"))

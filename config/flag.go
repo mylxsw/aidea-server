@@ -196,4 +196,6 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("virtual-model-beichou-prompt", "", "北丑大模型内置提示语")
 
 	ins.AddStringFlag("price-table-file", "", "价格表文件路径，留空则使用默认价格表")
+
+	ins.AddStringFlag("font-path", "", "字体文件路径")
 }

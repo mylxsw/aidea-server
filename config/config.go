@@ -237,6 +237,9 @@ type Config struct {
 	// 虚拟模型
 	EnableVirtualModel bool         `json:"enable_virtual_model" yaml:"enable_virtual_model"`
 	VirtualModel       VirtualModel `json:"virtual_model" yaml:"virtual_model"`
+
+	// 字体文件路径
+	FontPath string `json:"font_path" yaml:"font_path"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -489,6 +492,8 @@ func Register(ins *app.App) {
 				BeichouRel:     ctx.String("virtual-model-beichou-rel"),
 				BeichouPrompt:  strings.TrimSpace(ctx.String("virtual-model-beichou-prompt")),
 			},
+
+			FontPath: ctx.String("font-path"),
 		}
 	})
 }
