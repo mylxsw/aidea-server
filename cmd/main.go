@@ -89,6 +89,10 @@ func main() {
 	//	log.With(conf).Debugf("configuration loaded")
 	//})
 
+	ins.OnServerReady(func(conf *config.Config) {
+		log.Infof("service started successfully and is listening on %s", conf.Listen)
+	})
+
 	// 配置要加载的服务模块
 	ins.Provider(
 		api.Provider{},

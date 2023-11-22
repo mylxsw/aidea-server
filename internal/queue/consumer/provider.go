@@ -45,6 +45,7 @@ func (Provider) Register(binder infra.Binder) {
 					//"text":  conf.QueueWorkers / 3 * 2,
 					//"image": conf.QueueWorkers - conf.QueueWorkers/3*2,
 				},
+				Logger: Logger{},
 			},
 		)
 	})
