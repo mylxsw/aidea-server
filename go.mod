@@ -103,3 +103,5 @@ require (
 	golang.org/x/crypto v0.9.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+replace github.com/sashabaranov/go-openai => github.com/rkintzi/go-openai v0.0.0-20231115154728-152021253721

@@ -24,21 +24,21 @@ var (
 )
 
 type Message struct {
-	Role              string             `json:"role"`
-	Content           string             `json:"content"`
-	MultipartContents []MultipartContent `json:"multipart_content,omitempty"`
+	Role              string              `json:"role"`
+	Content           string              `json:"content"`
+	MultipartContents []*MultipartContent `json:"multipart_content,omitempty"`
 }
 
 type MultipartContent struct {
 	// Type 对于 OpenAI 来说， type 可选值为 image_url/text
-	Type     string   `json:"type"`
-	ImageURL ImageURL `json:"image_url,omitempty"`
-	Text     string   `json:"text,omitempty"`
+	Type     string    `json:"type"`
+	ImageURL *ImageURL `json:"image_url,omitempty"`
+	Text     string    `json:"text,omitempty"`
 }
 
 type ImageURL struct {
 	// URL Either a URL of the image or the base64 encoded image data.
-	URL string `json:"url"`
+	URL string `json:"url,omitempty"`
 	// Detail Specifies the detail level of the image
 	// Three options, low, high, or auto, you have control over how the model processes the image and generates its textual understanding.
 	// By default, the model will use the auto setting which will look at the image input size and decide if it should use the low or high setting
@@ -154,7 +154,21 @@ func (req Request) Fix(chat Chat, maxContextLength int64) (*Request, int64, erro
 		return nil, 0, errors.New("超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度")
 	}
 
-	req.Messages = append(systemMessages, messages...)
+	req.Messages = array.Map(append(systemMessages, messages...), func(item Message, _ int) Message {
+		if len(item.MultipartContents) > 0 {
+			item.MultipartContents = array.Map(item.MultipartContents, func(part *MultipartContent, _ int) *MultipartContent {
+				if part.ImageURL != nil && part.ImageURL.URL != "" && part.ImageURL.Detail == "" {
+					part.ImageURL.Detail = "low"
+				}
+
+				return part
+			})
+		}
+		return item
+	})
+
+	// TODO 这里是临时解决方案
+	req.MaxTokens = 4000
 
 	return &req, int64(inputTokens), nil
 }

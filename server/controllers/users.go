@@ -531,6 +531,12 @@ func (ctl *UserController) UserQuotaUsageDetails(ctx context.Context, webCtx web
 			switch item.QuotaMeta.Tag {
 			case "chat":
 				typ = "聊天"
+			case "text2voice":
+				typ = "语音合成"
+			case "upload":
+				typ = "文件上传"
+			case "openai-voice":
+				typ = "语音转文本"
 			default:
 				typ = "创作岛"
 			}

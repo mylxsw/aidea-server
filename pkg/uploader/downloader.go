@@ -2,7 +2,9 @@ package uploader
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
+	"github.com/mylxsw/go-utils/ternary"
 	"io"
 	"net/http"
 	"os"
@@ -18,7 +20,10 @@ var supportImages = []string{".jpg", ".jpeg", ".png", ".webp", ".gif"}
 
 // BuildImageURLWithFilter build image url with filter
 func BuildImageURLWithFilter(remoteURL string, filter, storageDomain string) string {
-	if !str.HasPrefixes(remoteURL, []string{"https://ssl.aicode.cc/", storageDomain}) {
+	if !str.HasPrefixes(remoteURL, []string{
+		"https://ssl.aicode.cc/",
+		ternary.If(storageDomain == "", "https://ssl.aicode.cc/", storageDomain),
+	}) {
 		return remoteURL
 	}
 
@@ -70,4 +75,30 @@ func DownloadRemoteFile(ctx context.Context, remoteURL string) (string, error) {
 	}
 
 	return savePath, nil
+}
+
+func DownloadRemoteFileAsBase64(ctx context.Context, remoteURL string) (string, error) {
+	if str.HasSuffixes(strings.ToLower(remoteURL), supportImages) {
+		remoteURL = remoteURL + "-thumb"
+	}
+
+	resp, err := http.Get(remoteURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		if resp.StatusCode == http.StatusForbidden {
+			return "", ErrFileForbidden
+		}
+		return "", fmt.Errorf("download remote file failed: [%d] %s", resp.StatusCode, resp.Status)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	mimeType := http.DetectContentType(data)
+	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
