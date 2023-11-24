@@ -93,6 +93,7 @@ type CreativeIslandItem struct {
 	RouteURI     string `json:"route_uri,omitempty"`
 	Tag          string `json:"tag,omitempty"`
 	Note         string `json:"note,omitempty"`
+	Size         string `json:"size,omitempty"`
 }
 
 func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
@@ -103,6 +104,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-text-to-image.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create?mode=text-to-image&id=text-to-image",
+			Size:         "large",
 		},
 	}
 
@@ -113,6 +115,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/art-text-bg.jpg-thumb1000",
 			RouteURI:     "/creative-draw/artistic-text?type=text&id=artistic-text",
+			Size:         "large",
 		})
 		items = append(items, CreativeIslandItem{
 			ID:           "artistic-qr",
@@ -120,6 +123,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/art-qr-bg.jpg-thumb1000",
 			RouteURI:     "/creative-draw/artistic-text?type=qr&id=artistic-qr",
+			Size:         "medium",
 		})
 	}
 
@@ -130,6 +134,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 		PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-image-to-image.jpeg-thumb1000",
 		RouteURI:     "/creative-draw/create?mode=image-to-image&id=image-to-image",
 		Tag:          ternary.If(client != nil && client.IsIOS(), "", "BETA"),
+		Size:         "medium",
 	})
 
 	if client != nil && misc.VersionNewer(client.Version, "1.0.2") && ctl.conf.EnableDeepAI {
@@ -140,6 +145,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/super-res.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-upscale",
 			Note:         "图片的高清修复功能能够把低分辨率的照片升级到高分辨率，让图片的清晰度得到明显提升。",
+			Size:         "medium",
 		})
 
 		items = append(items, CreativeIslandItem{
@@ -149,6 +155,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-colorizev2.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-colorize",
 			Note:         "图片上色功能能够把黑白照片变成彩色照片，让照片的色彩更加丰富。",
+			Size:         "medium",
 		})
 	}
 
