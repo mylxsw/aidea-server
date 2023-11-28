@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/go-utils/must"
+	"io"
 	"os"
 	"regexp"
 	"testing"
@@ -127,4 +129,20 @@ type PromptArg struct {
 	Prompt          string `json:"prompt,omitempty"`
 	NegativePrompt1 string `json:"negativePrompt,omitempty"`
 	NegativePrompt2 string `json:"negative_prompt,omitempty"`
+}
+
+func TestOpenAI_CreateSpeech(t *testing.T) {
+	openaiConf := openailib.DefaultConfig(os.Getenv("OPENAI_API_KEY"))
+	openaiConf.HTTPClient.Timeout = 300 * time.Second
+	openaiConf.APIType = openailib.APITypeOpenAI
+
+	client := openailib.NewClientWithConfig(openaiConf)
+
+	speech := must.Must(client.CreateSpeech(context.TODO(), openailib.CreateSpeechRequest{
+		Model: "tts-1",
+		Input: "你好，我是一名 AI 助手，我能够帮助你打工",
+		Voice: "nova",
+	}))
+
+	os.WriteFile("/tmp/speech.mp3", must.Must(io.ReadAll(speech)), 0644)
 }

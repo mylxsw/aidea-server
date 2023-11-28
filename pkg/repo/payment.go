@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/coins"
 	model2 "github.com/mylxsw/aidea-server/pkg/repo/model"
 	"time"
 
@@ -57,13 +58,21 @@ func (repo *PaymentRepo) CreateAliPayment(ctx context.Context, userID int64, pro
 		return "", fmt.Errorf("generate payment id failed: %w", err)
 	}
 
+	product := coins.GetProduct(productID)
+	if product == nil {
+		return "", fmt.Errorf("product %s not found", productID)
+	}
+
 	paymentID = fmt.Sprintf("%d-%s", userID, paymentID)
 	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
 		if _, err := model2.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
-			model2.FieldPaymentHistoryPaymentId: paymentID,
-			model2.FieldPaymentHistoryUserId:    userID,
-			model2.FieldPaymentHistorySource:    "alipay-" + source,
-			model2.FieldPaymentHistoryStatus:    PaymentStatusWaiting,
+			model2.FieldPaymentHistoryPaymentId:   paymentID,
+			model2.FieldPaymentHistoryUserId:      userID,
+			model2.FieldPaymentHistorySource:      "alipay-" + source,
+			model2.FieldPaymentHistoryStatus:      PaymentStatusWaiting,
+			model2.FieldPaymentHistoryRetailPrice: product.RetailPrice,
+			model2.FieldPaymentHistoryQuantity:    product.Quota,
+			model2.FieldPaymentHistoryValidUntil:  product.ExpiredAt(),
 		}); err != nil {
 			return fmt.Errorf("create payment history failed: %w", err)
 		}
@@ -177,13 +186,21 @@ func (repo *PaymentRepo) CreateApplePayment(ctx context.Context, userID int64, p
 		return "", fmt.Errorf("generate payment id failed: %w", err)
 	}
 
+	product := coins.GetProduct(productID)
+	if product == nil {
+		return "", fmt.Errorf("product %s not found", productID)
+	}
+
 	paymentID = fmt.Sprintf("%d-%s", userID, paymentID)
 	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
 		if _, err := model2.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
-			model2.FieldPaymentHistoryPaymentId: paymentID,
-			model2.FieldPaymentHistoryUserId:    userID,
-			model2.FieldPaymentHistorySource:    "apple",
-			model2.FieldPaymentHistoryStatus:    PaymentStatusWaiting,
+			model2.FieldPaymentHistoryPaymentId:   paymentID,
+			model2.FieldPaymentHistoryUserId:      userID,
+			model2.FieldPaymentHistorySource:      "apple",
+			model2.FieldPaymentHistoryStatus:      PaymentStatusWaiting,
+			model2.FieldPaymentHistoryRetailPrice: product.RetailPrice,
+			model2.FieldPaymentHistoryQuantity:    product.Quota,
+			model2.FieldPaymentHistoryValidUntil:  product.ExpiredAt(),
 		}); err != nil {
 			return fmt.Errorf("create payment history failed: %w", err)
 		}

@@ -92,6 +92,14 @@ var coinTables = map[string]CoinTable{
 		"tencent": 1, // valid
 	},
 
+	"speech": {
+		"default": 15,
+
+		// 1K 字符 0.15 元
+		"tts-1":    15,
+		"tts-1-hd": 30,
+	},
+
 	"translate": {
 		"youdao": 0,
 	},
@@ -173,6 +181,10 @@ func GetUnifiedImageGenCoins(model string) int {
 	return int(coinTables["image"]["default"])
 }
 
-func GetTextToVoiceCoins() int64 {
-	return 1
+func GetTextToVoiceCoins(model string, wordCount int) int64 {
+	if price, ok := coinTables["speech"][model]; ok {
+		return int64(math.Ceil(float64(price) * float64(wordCount) / 1000.0))
+	}
+
+	return int64(math.Ceil(float64(coinTables["speech"]["default"]) * float64(wordCount) / 1000.0))
 }

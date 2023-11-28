@@ -18,7 +18,7 @@ func TestModels(t *testing.T) {
 	models, err := createClient().Models(context.TODO(), "", "")
 	assert.NoError(t, err)
 
-	// type Model struct {
+	// type ArtisticType struct {
 	// 	ID             string          `json:"id,omitempty"`
 	// 	Name           string          `json:"name,omitempty"`
 	// 	Family         string          `json:"family,omitempty"`

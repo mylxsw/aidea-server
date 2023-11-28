@@ -27,6 +27,7 @@ const (
 	IslandTypeAudio             IslandType = 4
 	IslandTypeUpscale           IslandType = 5
 	IslandTypeImageColorization IslandType = 6
+	IslandTypeArtisticText      IslandType = 7
 )
 
 type IslandHistorySharedStatus int64
@@ -664,6 +665,8 @@ type CreativeRecordArguments struct {
 	FilterName         string   `json:"filter_name,omitempty"`
 	GalleryCopyID      int64    `json:"gallery_copy_id,omitempty"`
 	Seed               int64    `json:"seed,omitempty"`
+	Text               string   `json:"text,omitempty"`
+	ArtisticType       string   `json:"artistic_type,omitempty"`
 }
 
 func (arg CreativeRecordArguments) ToGalleryMeta() GalleryMeta {
@@ -679,6 +682,8 @@ func (arg CreativeRecordArguments) ToGalleryMeta() GalleryMeta {
 		ModelName:          arg.ModelName,
 		ModelID:            arg.ModelID,
 		FilterID:           arg.FilterID,
+		Text:               arg.Text,
+		ArtisticType:       arg.ArtisticType,
 	}
 }
 
@@ -762,6 +767,8 @@ type GalleryMeta struct {
 	ModelName          string `json:"model_name,omitempty"`
 	ModelID            string `json:"model_id,omitempty"`
 	FilterID           int64  `json:"filter_id,omitempty"`
+	Text               string `json:"text,omitempty"`
+	ArtisticType       string `json:"artistic_type,omitempty"`
 }
 
 func (r *CreativeRepo) ShareCreativeHistoryToGallery(ctx context.Context, userID int64, username string, id int64) error {

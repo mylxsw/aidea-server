@@ -26,6 +26,7 @@ type PaymentHistoryN struct {
 	Source      null.String `json:"source"`
 	SourceId    null.String `json:"source_id"`
 	Quantity    null.Int    `json:"quantity"`
+	RetailPrice null.Int    `json:"retail_price"`
 	ValidUntil  null.Time   `json:"valid_until"`
 	Status      null.Int    `json:"status"`
 	Environment null.String `json:"environment"`
@@ -53,6 +54,7 @@ type paymentHistoryOriginal struct {
 	Source      null.String
 	SourceId    null.String
 	Quantity    null.Int
+	RetailPrice null.Int
 	ValidUntil  null.Time
 	Status      null.Int
 	Environment null.String
@@ -85,6 +87,9 @@ func (inst *PaymentHistoryN) Staled(onlyFields ...string) bool {
 			return true
 		}
 		if inst.Quantity != inst.original.Quantity {
+			return true
+		}
+		if inst.RetailPrice != inst.original.RetailPrice {
 			return true
 		}
 		if inst.ValidUntil != inst.original.ValidUntil {
@@ -131,6 +136,10 @@ func (inst *PaymentHistoryN) Staled(onlyFields ...string) bool {
 				}
 			case "quantity":
 				if inst.Quantity != inst.original.Quantity {
+					return true
+				}
+			case "retail_price":
+				if inst.RetailPrice != inst.original.RetailPrice {
 					return true
 				}
 			case "valid_until":
@@ -193,6 +202,9 @@ func (inst *PaymentHistoryN) StaledKV(onlyFields ...string) query.KV {
 		if inst.Quantity != inst.original.Quantity {
 			kv["quantity"] = inst.Quantity
 		}
+		if inst.RetailPrice != inst.original.RetailPrice {
+			kv["retail_price"] = inst.RetailPrice
+		}
 		if inst.ValidUntil != inst.original.ValidUntil {
 			kv["valid_until"] = inst.ValidUntil
 		}
@@ -238,6 +250,10 @@ func (inst *PaymentHistoryN) StaledKV(onlyFields ...string) query.KV {
 			case "quantity":
 				if inst.Quantity != inst.original.Quantity {
 					kv["quantity"] = inst.Quantity
+				}
+			case "retail_price":
+				if inst.RetailPrice != inst.original.RetailPrice {
+					kv["retail_price"] = inst.RetailPrice
 				}
 			case "valid_until":
 				if inst.ValidUntil != inst.original.ValidUntil {
@@ -368,6 +384,7 @@ type PaymentHistory struct {
 	Source      string    `json:"source"`
 	SourceId    string    `json:"source_id"`
 	Quantity    int       `json:"quantity"`
+	RetailPrice int64     `json:"retail_price"`
 	ValidUntil  time.Time `json:"valid_until"`
 	Status      int       `json:"status"`
 	Environment string    `json:"environment"`
@@ -386,6 +403,7 @@ func (w PaymentHistory) ToPaymentHistoryN(allows ...string) PaymentHistoryN {
 			Source:      null.StringFrom(w.Source),
 			SourceId:    null.StringFrom(w.SourceId),
 			Quantity:    null.IntFrom(int64(w.Quantity)),
+			RetailPrice: null.IntFrom(int64(w.RetailPrice)),
 			ValidUntil:  null.TimeFrom(w.ValidUntil),
 			Status:      null.IntFrom(int64(w.Status)),
 			Environment: null.StringFrom(w.Environment),
@@ -411,6 +429,8 @@ func (w PaymentHistory) ToPaymentHistoryN(allows ...string) PaymentHistoryN {
 			res.SourceId = null.StringFrom(w.SourceId)
 		case "quantity":
 			res.Quantity = null.IntFrom(int64(w.Quantity))
+		case "retail_price":
+			res.RetailPrice = null.IntFrom(int64(w.RetailPrice))
 		case "valid_until":
 			res.ValidUntil = null.TimeFrom(w.ValidUntil)
 		case "status":
@@ -445,6 +465,7 @@ func (w *PaymentHistoryN) ToPaymentHistory() PaymentHistory {
 		Source:      w.Source.String,
 		SourceId:    w.SourceId.String,
 		Quantity:    int(w.Quantity.Int64),
+		RetailPrice: w.RetailPrice.Int64,
 		ValidUntil:  w.ValidUntil.Time,
 		Status:      int(w.Status.Int64),
 		Environment: w.Environment.String,
@@ -479,6 +500,7 @@ const (
 	FieldPaymentHistorySource      = "source"
 	FieldPaymentHistorySourceId    = "source_id"
 	FieldPaymentHistoryQuantity    = "quantity"
+	FieldPaymentHistoryRetailPrice = "retail_price"
 	FieldPaymentHistoryValidUntil  = "valid_until"
 	FieldPaymentHistoryStatus      = "status"
 	FieldPaymentHistoryEnvironment = "environment"
@@ -496,6 +518,7 @@ func PaymentHistoryFields() []string {
 		"source",
 		"source_id",
 		"quantity",
+		"retail_price",
 		"valid_until",
 		"status",
 		"environment",
@@ -638,6 +661,7 @@ func (m *PaymentHistoryModel) Get(ctx context.Context, builders ...query.SQLBuil
 			"source",
 			"source_id",
 			"quantity",
+			"retail_price",
 			"valid_until",
 			"status",
 			"environment",
@@ -664,6 +688,8 @@ func (m *PaymentHistoryModel) Get(ctx context.Context, builders ...query.SQLBuil
 		case "source_id":
 			selectFields = append(selectFields, f)
 		case "quantity":
+			selectFields = append(selectFields, f)
+		case "retail_price":
 			selectFields = append(selectFields, f)
 		case "valid_until":
 			selectFields = append(selectFields, f)
@@ -699,6 +725,8 @@ func (m *PaymentHistoryModel) Get(ctx context.Context, builders ...query.SQLBuil
 				scanFields = append(scanFields, &paymentHistoryVar.SourceId)
 			case "quantity":
 				scanFields = append(scanFields, &paymentHistoryVar.Quantity)
+			case "retail_price":
+				scanFields = append(scanFields, &paymentHistoryVar.RetailPrice)
 			case "valid_until":
 				scanFields = append(scanFields, &paymentHistoryVar.ValidUntil)
 			case "status":

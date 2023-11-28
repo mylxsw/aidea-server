@@ -1,0 +1,27 @@
+package: model
+
+models:
+  - name: notifications
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: title
+          type: string
+          tag: json:"title"
+        - name: content
+          type: string
+          tag: json:"content"
+        - name: article_id
+          type: int64
+          tag: json:"article_id"
+        - name: type
+          type: string
+          tag: json:"type,omitempty"
+        - name: createdAt
+          type: time.Time
+          tag: json:"created_at,omitempty"
+        - name: updatedAt
+          type: time.Time
+          tag: json:"updated_at,omitempty"

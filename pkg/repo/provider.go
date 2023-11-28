@@ -36,6 +36,8 @@ func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(NewPromptRepo)
 	binder.MustSingleton(NewChatGroupRepo)
 	binder.MustSingleton(NewFileStorageRepo)
+	binder.MustSingleton(NewArticleRepo)
+	binder.MustSingleton(NewNotificationRepo)
 
 	// MySQL 数据库连接
 	binder.MustSingleton(func(conf *config.Config) (*sql.DB, error) {
@@ -70,16 +72,18 @@ func (Provider) Boot(resolver infra.Resolver) {
 }
 
 type Repository struct {
-	Cache       *CacheRepo       `autowire:"@"`
-	Quota       *QuotaRepo       `autowire:"@"`
-	Queue       *QueueRepo       `autowire:"@"`
-	User        *UserRepo        `autowire:"@"`
-	Event       *EventRepo       `autowire:"@"`
-	Payment     *PaymentRepo     `autowire:"@"`
-	Room        *RoomRepo        `autowire:"@"`
-	Creative    *CreativeRepo    `autowire:"@"`
-	Message     *MessageRepo     `autowire:"@"`
-	Prompt      *PromptRepo      `autowire:"@"`
-	ChatGroup   *ChatGroupRepo   `autowire:"@"`
-	FileStorage *FileStorageRepo `autowire:"@"`
+	Cache        *CacheRepo        `autowire:"@"`
+	Quota        *QuotaRepo        `autowire:"@"`
+	Queue        *QueueRepo        `autowire:"@"`
+	User         *UserRepo         `autowire:"@"`
+	Event        *EventRepo        `autowire:"@"`
+	Payment      *PaymentRepo      `autowire:"@"`
+	Room         *RoomRepo         `autowire:"@"`
+	Creative     *CreativeRepo     `autowire:"@"`
+	Message      *MessageRepo      `autowire:"@"`
+	Prompt       *PromptRepo       `autowire:"@"`
+	ChatGroup    *ChatGroupRepo    `autowire:"@"`
+	FileStorage  *FileStorageRepo  `autowire:"@"`
+	Notification *NotificationRepo `autowire:"@"`
+	Article      *ArticleRepo      `autowire:"@"`
 }

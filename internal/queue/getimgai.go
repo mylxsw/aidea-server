@@ -354,27 +354,29 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 	}
 
 	// 查询模型信息
-	modelInDB, err := creativeRepo.Model(ctx, payload.Vendor, payload.Model)
-	if err != nil {
-		log.WithFields(log.Fields{"payload": payload}).Errorf("invalid model: %s", payload.Model)
-	} else {
-		if modelInDB.ImageMeta.ArtistStyle != "" {
-			artistStyles := array.Filter(
-				strings.Split(strings.ReplaceAll(modelInDB.ImageMeta.ArtistStyle, "，", ","), ","),
-				func(item string, _ int) bool { return strings.TrimSpace(item) != "" },
-			)
+	if payload.Model != "" {
+		modelInDB, err := creativeRepo.Model(ctx, payload.Vendor, payload.Model)
+		if err != nil {
+			log.WithFields(log.Fields{"payload": payload}).Errorf("invalid model: %s", payload.Model)
+		} else {
+			if modelInDB.ImageMeta.ArtistStyle != "" {
+				artistStyles := array.Filter(
+					strings.Split(strings.ReplaceAll(modelInDB.ImageMeta.ArtistStyle, "，", ","), ","),
+					func(item string, _ int) bool { return strings.TrimSpace(item) != "" },
+				)
 
-			if len(artistStyles) > 0 {
-				var hasStyle bool
-				for _, style := range artistStyles {
-					if strings.Contains(prompt, style) {
-						hasStyle = true
-						break
+				if len(artistStyles) > 0 {
+					var hasStyle bool
+					for _, style := range artistStyles {
+						if strings.Contains(prompt, style) {
+							hasStyle = true
+							break
+						}
 					}
-				}
 
-				if !hasStyle {
-					prompt = fmt.Sprintf("%s,%s", artistStyles[rand.Intn(len(artistStyles))], prompt)
+					if !hasStyle {
+						prompt = fmt.Sprintf("%s,%s", artistStyles[rand.Intn(len(artistStyles))], prompt)
+					}
 				}
 			}
 		}

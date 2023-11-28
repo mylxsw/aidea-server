@@ -5,6 +5,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/control"
 	"github.com/mylxsw/asteria/log"
 	"github.com/sashabaranov/go-openai"
+	"io"
 )
 
 type Client interface {
@@ -13,6 +14,7 @@ type Client interface {
 	ChatStream(ctx context.Context, request openai.ChatCompletionRequest) (<-chan ChatStreamResponse, error)
 	CreateImage(ctx context.Context, request openai.ImageRequest) (response openai.ImageResponse, err error)
 	CreateTranscription(ctx context.Context, request openai.AudioRequest) (response openai.AudioResponse, err error)
+	CreateSpeech(ctx context.Context, request openai.CreateSpeechRequest) (response io.ReadCloser, err error)
 	QuickAsk(ctx context.Context, prompt string, question string, maxTokenCount int) (string, error)
 }
 
@@ -125,6 +127,23 @@ func (proxy *ClientImpl) CreateTranscription(ctx context.Context, request openai
 
 	if proxy.backup != nil {
 		return proxy.backup.CreateTranscription(ctx, request)
+	}
+
+	panic("no openai client available")
+}
+
+func (proxy *ClientImpl) CreateSpeech(ctx context.Context, request openai.CreateSpeechRequest) (response io.ReadCloser, err error) {
+	ctl := control.FromContext(ctx)
+	if ctl.PreferBackup && proxy.backup != nil {
+		return proxy.backup.CreateSpeech(ctx, request)
+	}
+
+	if proxy.main != nil {
+		return proxy.main.CreateSpeech(ctx, request)
+	}
+
+	if proxy.backup != nil {
+		return proxy.backup.CreateSpeech(ctx, request)
 	}
 
 	panic("no openai client available")
