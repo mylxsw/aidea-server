@@ -114,7 +114,7 @@ func openAIModels(conf *config.Config) []Model {
 		{
 			ID:            "openai:gpt-4-vision-preview",
 			Name:          "GPT-4 Vision",
-			ShortName:     "GPT-4 Vision",
+			ShortName:     "GPT-4V",
 			Description:   "拥有视觉能力",
 			Category:      "openai",
 			IsChat:        true,

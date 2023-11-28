@@ -1,0 +1,24 @@
+package: model
+
+models:
+  - name: articles
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: title
+          type: string
+          tag: json:"title"
+        - name: content
+          type: string
+          tag: json:"content"
+        - name: author
+          type: string
+          tag: json:"author"
+        - name: createdAt
+          type: time.Time
+          tag: json:"created_at,omitempty"
+        - name: updatedAt
+          type: time.Time
+          tag: json:"updated_at,omitempty"

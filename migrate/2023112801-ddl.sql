@@ -1,0 +1,21 @@
+CREATE TABLE notifications
+(
+    id         INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    title      VARCHAR(255)    NOT NULL,
+    content    VARCHAR(255)    NOT NULL,
+    article_id INT             NOT NULL,
+    type       VARCHAR(255) NULL,
+    created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE articles
+(
+    id         INT PRIMARY KEY NOT NULL AUTO_INCREMENT,
+    title      VARCHAR(255)    NOT NULL,
+    content    TEXT            NOT NULL,
+    author     VARCHAR(255) NULL,
+    created_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
