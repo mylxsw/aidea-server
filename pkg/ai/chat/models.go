@@ -23,12 +23,14 @@ type Model struct {
 	Description string `json:"description"`
 	AvatarURL   string `json:"avatar_url,omitempty"`
 	Category    string `json:"category"`
-	IsChat      bool   `json:"is_chat"`
 	IsImage     bool   `json:"is_image"`
 	Disabled    bool   `json:"disabled"`
 	VersionMin  string `json:"version_min,omitempty"`
 	VersionMax  string `json:"version_max,omitempty"`
 	Tag         string `json:"tag,omitempty"`
+
+	IsChat        bool `json:"is_chat"`
+	SupportVision bool `json:"support_vision,omitempty"`
 }
 
 func (m Model) RealID() string {
@@ -108,6 +110,18 @@ func openAIModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableOpenAI,
 			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gpt4-preview.png",
+		},
+		{
+			ID:            "openai:gpt-4-vision-preview",
+			Name:          "GPT-4 Vision",
+			ShortName:     "GPT-4V",
+			Description:   "拥有视觉能力",
+			Category:      "openai",
+			IsChat:        true,
+			SupportVision: true,
+			Disabled:      !conf.EnableOpenAI,
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/gpt4-preview.png",
+			VersionMin:    "1.0.8",
 		},
 		{
 			ID:          "openai:gpt-4-32k",

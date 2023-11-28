@@ -291,6 +291,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		controllers.NewRoomController(resolver),
 		controllers.NewVoiceController(resolver),
 		controllers.NewNotificationController(resolver),
+		controllers.NewArticleController(resolver),
 	)
 
 	r.Controllers(

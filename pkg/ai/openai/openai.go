@@ -194,6 +194,10 @@ func (client *realClientImpl) CreateTranscription(ctx context.Context, request o
 	return client.client("audio").CreateTranscription(ctx, request)
 }
 
+func (client *realClientImpl) CreateSpeech(ctx context.Context, request openai.CreateSpeechRequest) (response io.ReadCloser, err error) {
+	return client.client("audio").CreateSpeech(ctx, request)
+}
+
 func (client *realClientImpl) QuickAsk(ctx context.Context, prompt string, question string, maxTokenCount int) (string, error) {
 	if client.conf != nil && !client.conf.Enable {
 		return question, nil

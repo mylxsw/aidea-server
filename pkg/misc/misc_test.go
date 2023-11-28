@@ -136,3 +136,7 @@ func TestUUID(t *testing.T) {
 	fmt.Println(misc.UUID())
 	fmt.Println(misc.UUID())
 }
+
+func TestFileExt(t *testing.T) {
+	fmt.Println(misc.FileExt("abc.jpg"))
+}

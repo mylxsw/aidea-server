@@ -84,7 +84,7 @@ func (ctl *InfoController) Redirect(ctx context.Context, webCtx web.Context) web
 		return webCtx.JSONError("invalid key", http.StatusBadRequest)
 	}
 
-	return webCtx.HTML(fmt.Sprintf(`<html><body><div style="margin: 0; text-align: center; margin-top: 50px;"><a href="%s">NSFW</a></div></body></html>`, url))
+	return webCtx.HTML(fmt.Sprintf(htmlTemplate, "Redirect", fmt.Sprintf(`<div style="margin: 0; text-align: center; margin-top: 50px;"><a href="%s">NSFW</a></div>`, url)))
 }
 
 const CurrentVersion = "1.0.8"
@@ -116,11 +116,12 @@ func (ctl *InfoController) Version(ctx web.Context) web.Response {
 
 // HomeModel 主页显示的模型
 type HomeModel struct {
-	Name     string `json:"name"`
-	ModelID  string `json:"model_id"`
-	Desc     string `json:"desc,omitempty"`
-	Color    string `json:"color,omitempty"`
-	Powerful bool   `json:"powerful,omitempty"`
+	Name          string `json:"name"`
+	ModelID       string `json:"model_id"`
+	Desc          string `json:"desc,omitempty"`
+	Color         string `json:"color,omitempty"`
+	Powerful      bool   `json:"powerful,omitempty"`
+	SupportVision bool   `json:"support_vision,omitempty"`
 }
 
 // Capabilities 获取 AI 平台的能力列表
@@ -181,6 +182,7 @@ func (ctl *InfoController) loadHomeModels(ctx context.Context, conf *config.Conf
 				if matched, ok := supportModels[m]; ok {
 					homeModels[i].ModelID = matched.RealID()
 					homeModels[i].Name = matched.ShortName
+					homeModels[i].SupportVision = matched.SupportVision
 				}
 			}
 		}

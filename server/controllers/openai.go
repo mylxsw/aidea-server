@@ -227,6 +227,13 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 	}
 
+	// 检查请求参数
+	// 上下文消息为空（含当前消息）
+	if len(req.Messages) == 0 {
+		misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest)), http.StatusBadRequest))
+		return
+	}
+
 	// 基于模型的流控，避免单一模型用户过度使用
 	if err := ctl.rateLimitPass(ctx, user, req, sw); err != nil {
 		return
@@ -688,6 +695,10 @@ func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int6
 func (ctl *OpenAIController) contentSafety(req *chat2.Request, user *auth.User, sw *streamwriter.StreamWriter) error {
 	// API 模式下，不进行内容安全检测
 	if ctl.apiMode {
+		return nil
+	}
+
+	if len(req.Messages) == 0 {
 		return nil
 	}
 

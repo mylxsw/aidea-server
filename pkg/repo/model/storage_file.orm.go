@@ -29,6 +29,7 @@ type StorageFileN struct {
 	Bucket    null.String `json:"bucket,omitempty"`
 	Status    null.Int    `json:"status,omitempty"`
 	Note      null.String `json:"note,omitempty"`
+	Channel   null.String `json:"channel,omitempty"`
 	CreatedAt null.Time
 	UpdatedAt null.Time
 }
@@ -55,6 +56,7 @@ type storageFileOriginal struct {
 	Bucket    null.String
 	Status    null.Int
 	Note      null.String
+	Channel   null.String
 	CreatedAt null.Time
 	UpdatedAt null.Time
 }
@@ -92,6 +94,9 @@ func (inst *StorageFileN) Staled(onlyFields ...string) bool {
 			return true
 		}
 		if inst.Note != inst.original.Note {
+			return true
+		}
+		if inst.Channel != inst.original.Channel {
 			return true
 		}
 		if inst.CreatedAt != inst.original.CreatedAt {
@@ -138,6 +143,10 @@ func (inst *StorageFileN) Staled(onlyFields ...string) bool {
 				}
 			case "note":
 				if inst.Note != inst.original.Note {
+					return true
+				}
+			case "channel":
+				if inst.Channel != inst.original.Channel {
 					return true
 				}
 			case "created_at":
@@ -193,6 +202,9 @@ func (inst *StorageFileN) StaledKV(onlyFields ...string) query.KV {
 		if inst.Note != inst.original.Note {
 			kv["note"] = inst.Note
 		}
+		if inst.Channel != inst.original.Channel {
+			kv["channel"] = inst.Channel
+		}
 		if inst.CreatedAt != inst.original.CreatedAt {
 			kv["created_at"] = inst.CreatedAt
 		}
@@ -238,6 +250,10 @@ func (inst *StorageFileN) StaledKV(onlyFields ...string) query.KV {
 			case "note":
 				if inst.Note != inst.original.Note {
 					kv["note"] = inst.Note
+				}
+			case "channel":
+				if inst.Channel != inst.original.Channel {
+					kv["channel"] = inst.Channel
 				}
 			case "created_at":
 				if inst.CreatedAt != inst.original.CreatedAt {
@@ -355,6 +371,7 @@ type StorageFile struct {
 	Bucket    string `json:"bucket,omitempty"`
 	Status    int64  `json:"status,omitempty"`
 	Note      string `json:"note,omitempty"`
+	Channel   string `json:"channel,omitempty"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
@@ -372,6 +389,7 @@ func (w StorageFile) ToStorageFileN(allows ...string) StorageFileN {
 			Bucket:    null.StringFrom(w.Bucket),
 			Status:    null.IntFrom(int64(w.Status)),
 			Note:      null.StringFrom(w.Note),
+			Channel:   null.StringFrom(w.Channel),
 			CreatedAt: null.TimeFrom(w.CreatedAt),
 			UpdatedAt: null.TimeFrom(w.UpdatedAt),
 		}
@@ -399,6 +417,8 @@ func (w StorageFile) ToStorageFileN(allows ...string) StorageFileN {
 			res.Status = null.IntFrom(int64(w.Status))
 		case "note":
 			res.Note = null.StringFrom(w.Note)
+		case "channel":
+			res.Channel = null.StringFrom(w.Channel)
 		case "created_at":
 			res.CreatedAt = null.TimeFrom(w.CreatedAt)
 		case "updated_at":
@@ -428,6 +448,7 @@ func (w *StorageFileN) ToStorageFile() StorageFile {
 		Bucket:    w.Bucket.String,
 		Status:    w.Status.Int64,
 		Note:      w.Note.String,
+		Channel:   w.Channel.String,
 		CreatedAt: w.CreatedAt.Time,
 		UpdatedAt: w.UpdatedAt.Time,
 	}
@@ -461,6 +482,7 @@ const (
 	FieldStorageFileBucket    = "bucket"
 	FieldStorageFileStatus    = "status"
 	FieldStorageFileNote      = "note"
+	FieldStorageFileChannel   = "channel"
 	FieldStorageFileCreatedAt = "created_at"
 	FieldStorageFileUpdatedAt = "updated_at"
 )
@@ -477,6 +499,7 @@ func StorageFileFields() []string {
 		"bucket",
 		"status",
 		"note",
+		"channel",
 		"created_at",
 		"updated_at",
 	}
@@ -618,6 +641,7 @@ func (m *StorageFileModel) Get(ctx context.Context, builders ...query.SQLBuilder
 			"bucket",
 			"status",
 			"note",
+			"channel",
 			"created_at",
 			"updated_at",
 		)
@@ -646,6 +670,8 @@ func (m *StorageFileModel) Get(ctx context.Context, builders ...query.SQLBuilder
 		case "status":
 			selectFields = append(selectFields, f)
 		case "note":
+			selectFields = append(selectFields, f)
+		case "channel":
 			selectFields = append(selectFields, f)
 		case "created_at":
 			selectFields = append(selectFields, f)
@@ -679,6 +705,8 @@ func (m *StorageFileModel) Get(ctx context.Context, builders ...query.SQLBuilder
 				scanFields = append(scanFields, &storageFileVar.Status)
 			case "note":
 				scanFields = append(scanFields, &storageFileVar.Note)
+			case "channel":
+				scanFields = append(scanFields, &storageFileVar.Channel)
 			case "created_at":
 				scanFields = append(scanFields, &storageFileVar.CreatedAt)
 			case "updated_at":

@@ -14,6 +14,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/getimgai"
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
 	"github.com/mylxsw/aidea-server/pkg/ai/leap"
+	"github.com/mylxsw/aidea-server/pkg/ai/lepton"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
@@ -88,6 +89,10 @@ func main() {
 	//	log.With(conf).Debugf("configuration loaded")
 	//})
 
+	ins.OnServerReady(func(conf *config.Config) {
+		log.Infof("service started successfully and is listening on %s", conf.Listen)
+	})
+
 	// 配置要加载的服务模块
 	ins.Provider(
 		api.Provider{},
@@ -135,6 +140,7 @@ func main() {
 		baichuan.Provider{},
 		gpt360.Provider{},
 		oneapi.Provider{},
+		lepton.Provider{},
 	)
 
 	app.MustRun(ins)

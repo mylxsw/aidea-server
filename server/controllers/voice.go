@@ -6,7 +6,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/voice"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
-	"math"
+	oai "github.com/sashabaranov/go-openai"
 	"net/http"
 	"strings"
 	"sync"
@@ -46,15 +46,13 @@ func (ctl *VoiceController) Text2Voice(ctx context.Context, webCtx web.Context, 
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "语音文本不能为空"), http.StatusBadRequest)
 	}
 
-	style := webCtx.Int64Input("style", 7)
+	voiceType := oai.SpeechVoice(webCtx.InputWithDefault("voice", string(oai.VoiceNova)))
 
-	// 把 text 以 200 个字符为单位分割
-	segments := misc.TextSplit(text, 200)
-
+	segments := misc.TextSplit(text, 4096)
 	// 优先检查缓存中是否存在之前生成的结果，每一段全部符合则返回，不再扣费
 	cachedResults := array.Filter(
 		array.Map(segments, func(segment string, _ int) string {
-			res, _ := ctl.voice.Text2VoiceOnlyCached(ctx, style, segment)
+			res, _ := ctl.voice.Text2VoiceOnlyCached(ctx, voiceType, segment)
 			return res
 		}),
 		func(result string, _ int) bool { return result != "" },
@@ -65,16 +63,13 @@ func (ctl *VoiceController) Text2Voice(ctx context.Context, webCtx web.Context, 
 		})
 	}
 
-	// 每 3 个 segment 一次性收费
-	payCount := int64(math.Ceil(float64(len(segments)) / 3.0))
-
 	quota, err := ctl.quotaRepo.GetUserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	if quota.Quota < quota.Used+coins.GetTextToVoiceCoins()*payCount {
+	if quota.Quota < quota.Used+coins.GetTextToVoiceCoins("tts-1", len(text)) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
@@ -86,10 +81,10 @@ func (ctl *VoiceController) Text2Voice(ctx context.Context, webCtx web.Context, 
 		go func(idx int, segment string) {
 			defer wg.Done()
 
-			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
 
-			result, err := ctl.voice.Text2VoiceCached(ctx, style, segment)
+			result, err := ctl.voice.Text2VoiceCached(ctx, voiceType, segment)
 			if err != nil {
 				log.Errorf("text to voice failed: %s", err)
 				return
@@ -102,7 +97,7 @@ func (ctl *VoiceController) Text2Voice(ctx context.Context, webCtx web.Context, 
 	wg.Wait()
 
 	// 扣除用户的配额
-	if err := ctl.quotaRepo.QuotaConsume(ctx, user.ID, coins.GetTextToVoiceCoins()*payCount, repo.NewQuotaUsedMeta("text2voice", "qiniu")); err != nil {
+	if err := ctl.quotaRepo.QuotaConsume(ctx, user.ID, coins.GetTextToVoiceCoins("tts-1", len(text)), repo.NewQuotaUsedMeta("text2voice", "tts-1")); err != nil {
 		log.WithFields(log.Fields{
 			"result":  results,
 			"user_id": user.ID,

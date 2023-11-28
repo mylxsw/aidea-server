@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -253,4 +254,8 @@ func GenerateAPIToken(name string, uid int64) string {
 func UUID() string {
 	ret, _ := uuid.GenerateUUID()
 	return ret
+}
+
+func FileExt(filename string) string {
+	return strings.ToLower(path.Ext(filename))
 }

@@ -2,11 +2,14 @@ package controllers
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
+	"net/http"
 )
 
 type NotificationController struct {
+	repo *repo.Repository `autowire:"@"`
 }
 
 func NewNotificationController(resolver infra.Resolver) web.Controller {
@@ -17,6 +20,7 @@ func NewNotificationController(resolver infra.Resolver) web.Controller {
 
 func (ctl *NotificationController) Register(router web.Router) {
 	router.Group("/notifications", func(router web.Router) {
+		router.Get("/", ctl.Notifications)
 		router.Get("/promotions", ctl.Promotion)
 	})
 }
@@ -70,5 +74,26 @@ func (ctl *NotificationController) Promotion(ctx context.Context, webCtx web.Con
 				Closeable:        true,
 			},
 		},
+	})
+}
+
+// Notifications 获取通知列表
+func (ctl *NotificationController) Notifications(ctx context.Context, webCtx web.Context) web.Response {
+	startID := webCtx.Int64Input("start_id", 0)
+	perPage := webCtx.Int64Input("per_page", 100)
+	if perPage < 1 || perPage > 300 {
+		perPage = 100
+	}
+
+	messages, lastID, err := ctl.repo.Notification.NotifyMessages(ctx, startID, perPage)
+	if err != nil {
+		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(web.M{
+		"data":     messages,
+		"start_id": startID,
+		"last_id":  lastID,
+		"per_page": perPage,
 	})
 }

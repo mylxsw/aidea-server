@@ -74,7 +74,7 @@ func (ctl *UploadController) UploadInit(ctx context.Context, webCtx web.Context,
 	}
 
 	usage := webCtx.Input("usage")
-	if usage != "" && !array.In(usage, []string{uploader.UploadUsageAvatar}) {
+	if usage != "" && !array.In(usage, []string{uploader.UploadUsageAvatar, uploader.UploadUsageChat}) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "文件用途不正确"), http.StatusBadRequest)
 	}
 
@@ -88,7 +88,14 @@ func (ctl *UploadController) UploadInit(ctx context.Context, webCtx web.Context,
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
 	}
 
-	return webCtx.JSON(ctl.uploader.Init(name, int(user.ID), usage, 5, uploader.DefaultUploadExpireAfterDays, true))
+	expireAfterDays := uploader.DefaultUploadExpireAfterDays
+	switch usage {
+	case uploader.UploadUsageChat:
+		// 聊天图片默认7天过期
+		expireAfterDays = 7
+	}
+
+	return webCtx.JSON(ctl.uploader.Init(name, int(user.ID), usage, 5, expireAfterDays, true, "client"))
 }
 
 type ImageAuditCallback struct {
@@ -200,7 +207,7 @@ func (ctl *UploadController) AuditCallback(ctx context.Context, webCtx web.Conte
 		log.With(ret).Errorf(
 			"图片包含违禁内容：%s。\n\n[访问地址](%s)",
 			strings.Join(ret.Labels(), "|"),
-			fmt.Sprintf("%s/r/%s", ctl.conf.BaseURL, key),
+			fmt.Sprintf("%s/public/r/%s", ctl.conf.BaseURL, key),
 		)
 
 		err := ctl.fs.UpdateByKey(ctx, ret.InputKey, repo.StorageFileStatusDisabled, strings.Join(ret.Labels(), "|"))
@@ -225,7 +232,7 @@ func (ctl *UploadController) UploadCallback(ctx context.Context, webCtx web.Cont
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "invalid callback"), http.StatusBadRequest)
 	}
 
-	var cb UploadCallback
+	var cb uploader.UploadCallback
 	if err := webCtx.Unmarshal(&cb); err != nil {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, err.Error()), http.StatusBadRequest)
 	}
@@ -244,19 +251,11 @@ func (ctl *UploadController) UploadCallback(ctx context.Context, webCtx web.Cont
 		FileSize: cb.Fsize,
 		Bucket:   cb.Bucket,
 		Status:   repo.StorageFileStatusEnabled,
+		Channel:  cb.Channel,
 	})
 	if err != nil {
 		log.With(cb).Errorf("save file info failed: %s", err)
 	}
 
 	return webCtx.JSON(web.M{})
-}
-
-type UploadCallback struct {
-	Key    string `json:"key"`
-	Hash   string `json:"hash"`
-	Fsize  int64  `json:"fsize"`
-	Bucket string `json:"bucket"`
-	Name   string `json:"name"`
-	UID    int64  `json:"uid"`
 }

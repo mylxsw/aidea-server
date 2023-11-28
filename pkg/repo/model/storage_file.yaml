@@ -31,3 +31,6 @@ models:
         - name: note
           type: string
           tag: json:"note,omitempty"
+        - name: channel
+          type: string
+          tag: json:"channel,omitempty"
