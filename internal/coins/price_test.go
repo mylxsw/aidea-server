@@ -98,3 +98,7 @@ func TestLoadCoinsTable(t *testing.T) {
 
 	fmt.Println(string(res))
 }
+
+func TestSpeechCoins(t *testing.T) {
+	fmt.Println(coins.GetTextToVoiceCoins("tts-1", 100))
+}

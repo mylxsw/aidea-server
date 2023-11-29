@@ -3,11 +3,11 @@ package applepay
 import (
 	"context"
 	"errors"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"strconv"
 
 	"github.com/awa/go-iap/appstore"
-	"github.com/mylxsw/aidea-server/internal/helper"
-	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -49,7 +49,7 @@ func (pay *ApplePayImpl) VerifyPayment(ctx context.Context, purchaseId string, s
 		}
 	}
 
-	purchaseAt, err := helper.ParseAppleDateTime(inApp.PurchaseDate.PurchaseDate)
+	purchaseAt, err := misc.ParseAppleDateTime(inApp.PurchaseDate.PurchaseDate)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err":           err.Error(),

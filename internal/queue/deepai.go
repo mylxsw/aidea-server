@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/ai/deepai"
-	"github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -29,7 +29,8 @@ type DeepAICompletionPayload struct {
 	CreatedAt      time.Time `json:"created_at,omitempty"`
 	FilterID       int64     `json:"filter_id,omitempty"`
 
-	AIRewrite bool `json:"ai_rewrite,omitempty"`
+	AIRewrite    bool  `json:"ai_rewrite,omitempty"`
+	FreezedCoins int64 `json:"freezed_coins,omitempty"`
 }
 
 func (payload *DeepAICompletionPayload) GetTitle() string {
@@ -57,20 +58,20 @@ func NewDeepAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeDeepAICompletion, data)
 }
 
-func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
+func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Translater, up *uploader.Uploader, rep *repo2.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload DeepAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 			return err
 		}
 
-		if err := rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusRunning, nil); err != nil {
+		if err := rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusRunning, nil); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("set task status to running failed: %s", err)
 			return err
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -81,8 +82,8 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
-					Status: repo.CreativeStatusFailed,
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
+					Status: repo2.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -93,7 +94,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -160,14 +161,14 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 			panic(err)
 		}
 
-		req := repo.CreativeRecordUpdateRequest{
-			Status:    repo.CreativeStatusSuccess,
+		req := repo2.CreativeRecordUpdateRequest{
+			Status:    repo2.CreativeStatusSuccess,
 			Answer:    string(retJson),
 			QuotaUsed: payload.GetQuota(),
 		}
 
 		if prompt != payload.Prompt || negativePrompt != payload.NegativePrompt {
-			ext := repo.CreativeRecordUpdateExtArgs{}
+			ext := repo2.CreativeRecordUpdateExtArgs{}
 			if prompt != payload.Prompt {
 				ext.RealPrompt = prompt
 			}
@@ -189,7 +190,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 			ctx,
 			payload.GetUID(),
 			payload.GetQuota(),
-			repo.NewQuotaUsedMeta("deepai", modelUsed...),
+			repo2.NewQuotaUsedMeta("deepai", modelUsed...),
 		); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
@@ -197,7 +198,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			CompletionResult{
 				Resources:   ret,
 				ValidBefore: time.Now().Add(7 * 24 * time.Hour),

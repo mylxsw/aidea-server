@@ -4,17 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	uploader2 "github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"os"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/ai/stabilityai"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -38,7 +38,8 @@ type StabilityAICompletionPayload struct {
 	ImageStrength  float64  `json:"image_strength,omitempty"`
 	FilterID       int64    `json:"filter_id,omitempty"`
 
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	FreezedCoins int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *StabilityAICompletionPayload) GetTitle() string {
@@ -66,7 +67,7 @@ func NewStabilityAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeStabilityAICompletion, data)
 }
 
-func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
+func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translator youdao.Translater, up *uploader2.Uploader, rep *repo2.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload StabilityAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -74,7 +75,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -85,8 +86,8 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
-					Status: repo.CreativeStatusFailed,
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
+					Status: repo2.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -97,7 +98,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -110,7 +111,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 		// 下载远程图片（图生图）
 		var localImagePath string
 		if payload.Image != "" {
-			imagePath, err := uploader.DownloadRemoteFile(ctx, payload.Image)
+			imagePath, err := uploader2.DownloadRemoteFile(ctx, payload.Image)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"payload": payload,
@@ -172,7 +173,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 		}
 
 		if err != nil {
-			log.With(payload).Errorf("create completion failed: %v", err)
+			log.With(payload).Errorf("[StabilityAI] 图片生成失败: %v", err)
 			panic(err)
 		}
 
@@ -201,14 +202,14 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 			panic(err)
 		}
 
-		updateReq := repo.CreativeRecordUpdateRequest{
-			Status:    repo.CreativeStatusSuccess,
+		updateReq := repo2.CreativeRecordUpdateRequest{
+			Status:    repo2.CreativeStatusSuccess,
 			Answer:    string(retJson),
 			QuotaUsed: payload.GetQuota(),
 		}
 
 		if prompt != payload.Prompt || negativePrompt != payload.NegativePrompt {
-			ext := repo.CreativeRecordUpdateExtArgs{}
+			ext := repo2.CreativeRecordUpdateExtArgs{}
 			if prompt != payload.Prompt {
 				ext.RealPrompt = prompt
 			}
@@ -229,7 +230,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 			ctx,
 			payload.GetUID(),
 			payload.GetQuota(),
-			repo.NewQuotaUsedMeta("stabilityai", modelUsed...),
+			repo2.NewQuotaUsedMeta("stabilityai", modelUsed...),
 		); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
@@ -237,7 +238,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			CompletionResult{
 				Resources:   resources,
 				OriginImage: payload.Image,
@@ -249,7 +250,7 @@ func BuildStabilityAICompletionHandler(client *stabilityai.StabilityAI, translat
 
 var stableDiffusionPrompt = `You are an artsy Stable Diffusion prompt assistant, and based on the theme I provided, you need to generate a prompt describing the image. Prompt consists of a series of comma-separated words or phrases, called tags. You can use parentheses and square brackets to adjust the strength of keywords. Prompt should include the main body of the picture, materials, additional details, image quality, art style, color tone and lighting, but should not contain paragraph descriptions, colons or periods. For human subjects, the eyes, nose, and lips must be described to avoid distortion of facial features. The number of Tags cannot exceed 40, and they must be arranged in order of importance from high to low. The number of words is limited to 60, and the prompt you reply must be in English.`
 
-func AIRewriteSDPrompt(ctx context.Context, oai *openai.OpenAI, userPrompt string) string {
+func AIRewriteSDPrompt(ctx context.Context, oai openai.Client, userPrompt string) string {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
@@ -311,7 +312,7 @@ type PromptArg struct {
 	NegativePrompt2 string `json:"negative_prompt,omitempty"`
 }
 
-func AIRewriteSDPromptEnhanced(ctx context.Context, oai *openai.OpenAI, userPrompt string) (string, string) {
+func AIRewriteSDPromptEnhanced(ctx context.Context, oai openai.Client, userPrompt string) (string, string) {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 

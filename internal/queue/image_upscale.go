@@ -4,17 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
+	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	uploader2 "github.com/mylxsw/aidea-server/pkg/uploader"
 	"image"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/ai/deepai"
-	"github.com/mylxsw/aidea-server/internal/ai/stabilityai"
-
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/asteria/log"
 
 	// image.DecodeConfig 需要引入相关的图像包
@@ -31,6 +30,7 @@ type ImageUpscalePayload struct {
 	UpscaleBy         string    `json:"upscale_by,omitempty"`
 	Quota             int64     `json:"quota,omitempty"`
 	CreatedAt         time.Time `json:"created_at,omitempty"`
+	FreezedCoins      int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *ImageUpscalePayload) GetTitle() string {
@@ -62,7 +62,7 @@ func NewImageUpscaleTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeImageUpscale, data)
 }
 
-func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.StabilityAI, up *uploader.Uploader, rep *repo.Repository) TaskHandler {
+func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.StabilityAI, up *uploader2.Uploader, rep *repo2.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageUpscalePayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -82,9 +82,9 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
-					Status: repo.CreativeStatusFailed,
+					Status: repo2.CreativeStatusFailed,
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 				}
@@ -94,7 +94,7 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -149,8 +149,8 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 
 			resources = []string{res}
 			retJson, _ := json.Marshal(resources)
-			updateReq := repo.CreativeRecordUpdateRequest{
-				Status:    repo.CreativeStatusSuccess,
+			updateReq := repo2.CreativeRecordUpdateRequest{
+				Status:    repo2.CreativeStatusSuccess,
 				Answer:    string(retJson),
 				QuotaUsed: payload.GetQuota(),
 			}
@@ -162,14 +162,14 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 		}
 
 		// 记录消耗
-		if err := rep.Quota.QuotaConsume(ctx, payload.GetUID(), payload.GetQuota(), repo.NewQuotaUsedMeta("upscale", "esrgan-v1-x2plus")); err != nil {
+		if err := rep.Quota.QuotaConsume(ctx, payload.GetUID(), payload.GetQuota(), repo2.NewQuotaUsedMeta("upscale", "esrgan-v1-x2plus")); err != nil {
 			log.With(payload).Errorf("used quota add failed: %s", err)
 		}
 
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			CompletionResult{
 				Resources:   resources,
 				OriginImage: payload.Image,
@@ -179,18 +179,18 @@ func BuildImageUpscaleHandler(deepClient *deepai.DeepAI, client *stabilityai.Sta
 	}
 }
 
-func upscaleBy(ctx context.Context, deepClient *deepai.DeepAI, client *stabilityai.StabilityAI, up *uploader.Uploader, userID int64, upscaleBy string, imageURL string) (string, error) {
+func upscaleBy(ctx context.Context, deepClient *deepai.DeepAI, client *stabilityai.StabilityAI, up *uploader2.Uploader, userID int64, upscaleBy string, imageURL string) (string, error) {
 	return upscaleByDeepAI(ctx, deepClient, up, userID, imageURL)
 	//return upscaleByStabilityAI(ctx, client, up, userID, upscaleBy, imageURL)
 }
 
-func upscaleByDeepAI(ctx context.Context, deepClient *deepai.DeepAI, up *uploader.Uploader, userID int64, imageURL string) (string, error) {
+func upscaleByDeepAI(ctx context.Context, deepClient *deepai.DeepAI, up *uploader2.Uploader, userID int64, imageURL string) (string, error) {
 	res, err := deepClient.Upscale(ctx, imageURL)
 	if err != nil {
 		return "", fmt.Errorf("图片超分辨率失败: %w", err)
 	}
 
-	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), false)
+	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader2.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), false)
 	if err != nil {
 		return "", fmt.Errorf("图片上传失败: %w", err)
 	}
@@ -202,8 +202,8 @@ func upscaleByDeepAI(ctx context.Context, deepClient *deepai.DeepAI, up *uploade
 	return uploaded, nil
 }
 
-func upscaleByStabilityAI(ctx context.Context, client *stabilityai.StabilityAI, up *uploader.Uploader, userID int64, upscaleBy string, imageURL string) (string, error) {
-	localPath, err := uploader.DownloadRemoteFile(ctx, imageURL)
+func upscaleByStabilityAI(ctx context.Context, client *stabilityai.StabilityAI, up *uploader2.Uploader, userID int64, upscaleBy string, imageURL string) (string, error) {
+	localPath, err := uploader2.DownloadRemoteFile(ctx, imageURL)
 	if err != nil {
 		return "", fmt.Errorf("图片下载失败: %w", err)
 	}

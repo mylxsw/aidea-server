@@ -3,25 +3,26 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	openai2 "github.com/mylxsw/aidea-server/pkg/ai/openai"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
 	"time"
 
 	"github.com/hibiken/asynq"
-	oai "github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
 	"github.com/sashabaranov/go-openai"
 )
 
 type OpenAICompletionPayload struct {
-	ID        string                         `json:"id,omitempty"`
-	Model     string                         `json:"model,omitempty"`
-	Quota     int64                          `json:"quota,omitempty"`
-	UID       int64                          `json:"uid,omitempty"`
-	Prompts   []openai.ChatCompletionMessage `json:"prompts,omitempty"`
-	WordCount int64                          `json:"word_count,omitempty"`
-	CreatedAt time.Time                      `json:"created_at,omitempty"`
+	ID           string                         `json:"id,omitempty"`
+	Model        string                         `json:"model,omitempty"`
+	Quota        int64                          `json:"quota,omitempty"`
+	UID          int64                          `json:"uid,omitempty"`
+	Prompts      []openai.ChatCompletionMessage `json:"prompts,omitempty"`
+	WordCount    int64                          `json:"word_count,omitempty"`
+	CreatedAt    time.Time                      `json:"created_at,omitempty"`
+	FreezedCoins int64                          `json:"freezed_coins,omitempty"`
 }
 
 func (payload *OpenAICompletionPayload) GetTitle() string {
@@ -54,7 +55,7 @@ func NewOpenAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeOpenAICompletion, data)
 }
 
-func BuildOpenAICompletionHandler(client *oai.OpenAI, rep *repo.Repository) TaskHandler {
+func BuildOpenAICompletionHandler(client openai2.Client, rep *repo2.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload OpenAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -66,13 +67,13 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, rep *repo.Repository) Task
 			return nil
 		}
 
-		if err := rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusRunning, nil); err != nil {
+		if err := rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusRunning, nil); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("set task status to running failed: %s", err)
 			return err
 		}
 
 		if payload.CreatedAt.Add(15 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -83,8 +84,8 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, rep *repo.Repository) Task
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
-					Status: repo.CreativeStatusFailed,
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
+					Status: repo2.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -95,7 +96,7 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, rep *repo.Repository) Task
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -105,14 +106,14 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, rep *repo.Repository) Task
 			}
 		}()
 
-		contextTokenCount, err := oai.NumTokensFromMessages(payload.Prompts, payload.Model)
+		contextTokenCount, err := openai2.NumTokensFromMessages(payload.Prompts, payload.Model)
 		if err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("get context token count failed: %s", err)
 			return err
 		}
 
 		req := openai.ChatCompletionRequest{
-			Model:       oai.SelectBestModel(payload.Model, contextTokenCount),
+			Model:       openai2.SelectBestModel(payload.Model, contextTokenCount),
 			MaxTokens:   int(payload.WordCount) * 2, // 假设一个汉字 = 2 token
 			Temperature: 1,
 			Messages:    payload.Prompts,
@@ -141,8 +142,8 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, rep *repo.Repository) Task
 		)
 
 		// 更新创作岛历史记录
-		updateReq := repo.CreativeRecordUpdateRequest{
-			Status:    repo.CreativeStatusSuccess,
+		updateReq := repo2.CreativeRecordUpdateRequest{
+			Status:    repo2.CreativeStatusSuccess,
 			Answer:    content,
 			QuotaUsed: payload.GetQuota(),
 		}
@@ -152,14 +153,14 @@ func BuildOpenAICompletionHandler(client *oai.OpenAI, rep *repo.Repository) Task
 		}
 
 		// 记录消耗
-		if err := rep.Quota.QuotaConsume(ctx, payload.UID, payload.Quota, repo.NewQuotaUsedMeta("openai", payload.Model)); err != nil {
+		if err := rep.Quota.QuotaConsume(ctx, payload.UID, payload.Quota, repo2.NewQuotaUsedMeta("openai", payload.Model)); err != nil {
 			log.With(payload).Errorf("used quota add failed: %s", err)
 		}
 
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			CompletionResult{Resources: []string{content}},
 		)
 	}

@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/mail"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/mail"
-	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -49,7 +49,7 @@ func NewMailTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeMailSend, data)
 }
 
-func BuildMailSendHandler(mailer *mail.Sender, rep *repo.Repository) TaskHandler {
+func BuildMailSendHandler(mailer *mail.Sender, rep *repo2.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload MailPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -71,7 +71,7 @@ func BuildMailSendHandler(mailer *mail.Sender, rep *repo.Repository) TaskHandler
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -89,7 +89,7 @@ func BuildMailSendHandler(mailer *mail.Sender, rep *repo.Repository) TaskHandler
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			EmptyResult{},
 		)
 	}

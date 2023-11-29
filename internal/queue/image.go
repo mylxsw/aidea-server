@@ -3,19 +3,19 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
+	"github.com/mylxsw/aidea-server/pkg/ai/fromston"
+	"github.com/mylxsw/aidea-server/pkg/ai/getimgai"
+	"github.com/mylxsw/aidea-server/pkg/ai/leap"
+	openai2 "github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
-	"github.com/mylxsw/aidea-server/internal/ai/deepai"
-	"github.com/mylxsw/aidea-server/internal/ai/fromston"
-	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
-	"github.com/mylxsw/aidea-server/internal/ai/leap"
-	"github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/ai/stabilityai"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -47,6 +47,8 @@ type ImageCompletionPayload struct {
 	FilterID       int64     `json:"filter_id,omitempty"`
 	FilterName     string    `json:"filter_name,omitempty"`
 	GalleryCopyID  int64     `json:"gallery_copy_id,omitempty"`
+
+	FreezedCoins int64 `json:"freezed_coins,omitempty"`
 }
 
 func (payload *ImageCompletionPayload) GetTitle() string {
@@ -101,8 +103,9 @@ func BuildImageCompletionHandler(
 	getimgaiClient *getimgai.GetimgAI,
 	translator youdao.Translater,
 	up *uploader.Uploader,
-	rep *repo.Repository,
-	oai *openai.OpenAI,
+	rep *repo2.Repository,
+	oai openai2.Client,
+	dalleClient *openai2.DalleImageClient,
 ) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageCompletionPayload
@@ -111,7 +114,7 @@ func BuildImageCompletionHandler(
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -129,6 +132,8 @@ func BuildImageCompletionHandler(
 			return BuildGetimgAICompletionHandler(getimgaiClient, translator, up, rep, oai)(ctx, task)
 		case "dashscope":
 			return BuildDashscopeImageCompletionHandler(dashscopeClient, up, rep, translator, oai)(ctx, task)
+		case "dalle":
+			return BuildDalleCompletionHandler(dalleClient, up, rep)(ctx, task)
 		default:
 			return nil
 		}

@@ -4,19 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/leap"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	uploader2 "github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"os"
 	"time"
 
 	"github.com/mylxsw/go-utils/ternary"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/ai/leap"
-	"github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/repo/model"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/str"
 )
@@ -42,7 +41,8 @@ type LeapAICompletionPayload struct {
 	AIRewrite bool   `json:"ai_rewrite,omitempty"`
 	FilterID  int64  `json:"filter_id,omitempty"`
 
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	FreezedCoins int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *LeapAICompletionPayload) GetTitle() string {
@@ -108,11 +108,11 @@ type LeapAIResponse interface {
 	GetState() string
 	IsFinished() bool
 	IsProcessing() bool
-	UploadResources(ctx context.Context, up *uploader.Uploader, uid int64) ([]string, error)
+	UploadResources(ctx context.Context, up *uploader2.Uploader, uid int64) ([]string, error)
 	GetImages() []string
 }
 
-func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
+func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Translater, up *uploader2.Uploader, rep *repo2.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload LeapAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -120,7 +120,7 @@ func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Transla
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -131,9 +131,9 @@ func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Transla
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
-					Status: repo.CreativeStatusFailed,
+					Status: repo2.CreativeStatusFailed,
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 				}
@@ -143,7 +143,7 @@ func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Transla
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -158,7 +158,7 @@ func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Transla
 		// 如果本地下载失败，则直接发送远程图片地址到 Leap
 		localImagePath := payload.Image
 		if payload.Image != "" {
-			imagePath, err := uploader.DownloadRemoteFile(ctx, payload.Image)
+			imagePath, err := uploader2.DownloadRemoteFile(ctx, payload.Image)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"payload": payload,
@@ -229,7 +229,7 @@ func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Transla
 		}
 
 		if prompt != payload.Prompt || negativePrompt != payload.NegativePrompt {
-			argUpdate := repo.CreativeRecordUpdateExtArgs{}
+			argUpdate := repo2.CreativeRecordUpdateExtArgs{}
 			if prompt != payload.Prompt {
 				argUpdate.RealPrompt = prompt
 			}
@@ -245,12 +245,12 @@ func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Transla
 
 		// 如果当前任务未完成，说明是异步任务，创建 Pending Task，后面检查结果生成后再更新状态
 		if !resp.IsFinished() {
-			if err := rep.Queue.CreatePendingTask(ctx, &repo.PendingTask{
+			if err := rep.Queue.CreatePendingTask(ctx, &repo2.PendingTask{
 				TaskID:        payload.GetID(),
 				TaskType:      TypeLeapAICompletion,
 				NextExecuteAt: time.Now().Add(15 * time.Second),
 				DeadlineAt:    time.Now().Add(30 * time.Minute),
-				Status:        repo.PendingTaskStatusProcessing,
+				Status:        repo2.PendingTaskStatusProcessing,
 				Payload:       LeapAIPendingTaskPayload{LeapTaskID: resp.GetID(), Payload: payload},
 			}); err != nil {
 				log.WithFields(log.Fields{"payload": payload}).Errorf("create pending task failed: %s", err)
@@ -260,7 +260,7 @@ func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Transla
 			return rep.Queue.Update(
 				context.TODO(),
 				payload.GetID(),
-				repo.QueueTaskStatusRunning,
+				repo2.QueueTaskStatusRunning,
 				nil,
 			)
 		}
@@ -269,8 +269,8 @@ func BuildLeapAICompletionHandler(client *leap.LeapAI, translator youdao.Transla
 	}
 }
 
-func leapAsyncJobProcesser(client *leap.LeapAI, up *uploader.Uploader, rep *repo.Repository) PendingTaskHandler {
-	return func(task *model.QueueTasksPending) (update *repo.PendingTaskUpdate, err error) {
+func leapAsyncJobProcesser(client *leap.LeapAI, up *uploader2.Uploader, rep *repo2.Repository) PendingTaskHandler {
+	return func(task *model.QueueTasksPending) (update *repo2.PendingTaskUpdate, err error) {
 		var payload LeapAIPendingTaskPayload
 		if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 			return nil, err
@@ -284,9 +284,9 @@ func leapAsyncJobProcesser(client *leap.LeapAI, up *uploader.Uploader, rep *repo
 		}
 		if err != nil {
 			log.With(payload).Errorf("query leap job result failed: %v", err)
-			return &repo.PendingTaskUpdate{
+			return &repo2.PendingTaskUpdate{
 				NextExecuteAt: time.Now().Add(10 * time.Second),
-				Status:        repo.PendingTaskStatusProcessing,
+				Status:        repo2.PendingTaskStatusProcessing,
 				ExecuteTimes:  task.ExecuteTimes + 1,
 			}, nil
 		}
@@ -297,21 +297,21 @@ func leapAsyncJobProcesser(client *leap.LeapAI, up *uploader.Uploader, rep *repo
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(context.TODO(), payload.Payload.GetUID(), payload.Payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(context.TODO(), payload.Payload.GetUID(), payload.Payload.GetID(), repo2.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
-					Status: repo.CreativeStatusFailed,
+					Status: repo2.CreativeStatusFailed,
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 				}
 
-				update = &repo.PendingTaskUpdate{Status: repo.PendingTaskStatusFailed}
+				update = &repo2.PendingTaskUpdate{Status: repo2.PendingTaskStatusFailed}
 			}
 
 			if err != nil {
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.Payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -325,13 +325,13 @@ func leapAsyncJobProcesser(client *leap.LeapAI, up *uploader.Uploader, rep *repo
 		if !resp.IsFinished() {
 			if !resp.IsProcessing() {
 				log.Warningf("task %s state is %s", payload.Payload.ID, resp.GetState())
-				update = &repo.PendingTaskUpdate{Status: repo.PendingTaskStatusFailed}
-				panic(fmt.Errorf("leap: invalid task status [%s]", resp.GetState()))
+				update = &repo2.PendingTaskUpdate{Status: repo2.PendingTaskStatusFailed}
+				panic(errors.New("任务处理失败，请重试"))
 			}
 
-			return &repo.PendingTaskUpdate{
+			return &repo2.PendingTaskUpdate{
 				NextExecuteAt: time.Now().Add(10 * time.Second),
-				Status:        repo.PendingTaskStatusProcessing,
+				Status:        repo2.PendingTaskStatusProcessing,
 				ExecuteTimes:  task.ExecuteTimes + 1,
 			}, nil
 		}
@@ -342,7 +342,7 @@ func leapAsyncJobProcesser(client *leap.LeapAI, up *uploader.Uploader, rep *repo
 			return nil, err
 		}
 
-		return &repo.PendingTaskUpdate{Status: repo.PendingTaskStatusSuccess}, nil
+		return &repo2.PendingTaskUpdate{Status: repo2.PendingTaskStatusSuccess}, nil
 	}
 }
 
@@ -357,8 +357,8 @@ type LeapTaskPayload interface {
 func handleLeapTask(
 	payload LeapTaskPayload,
 	resp LeapAIResponse,
-	up *uploader.Uploader,
-	rep *repo.Repository,
+	up *uploader2.Uploader,
+	rep *repo2.Repository,
 ) error {
 	// 图片资源上传云存储
 	resources, err := resp.UploadResources(context.TODO(), up, payload.GetUID())
@@ -386,10 +386,10 @@ func handleLeapTask(
 		panic(err)
 	}
 
-	req := repo.CreativeRecordUpdateRequest{
+	req := repo2.CreativeRecordUpdateRequest{
 		Answer:    string(retJson),
 		QuotaUsed: payload.GetQuota(),
-		Status:    repo.CreativeStatusSuccess,
+		Status:    repo2.CreativeStatusSuccess,
 	}
 	if err := rep.Creative.UpdateRecordByTaskID(context.TODO(), payload.GetUID(), payload.GetID(), req); err != nil {
 		log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -402,7 +402,7 @@ func handleLeapTask(
 		context.TODO(),
 		payload.GetUID(),
 		payload.GetQuota(),
-		repo.NewQuotaUsedMeta("leapai", modelUsed...),
+		repo2.NewQuotaUsedMeta("leapai", modelUsed...),
 	); err != nil {
 		log.Errorf("used quota add failed: %s", err)
 		return err
@@ -412,7 +412,7 @@ func handleLeapTask(
 	return rep.Queue.Update(
 		context.TODO(),
 		payload.GetID(),
-		repo.QueueTaskStatusSuccess,
+		repo2.QueueTaskStatusSuccess,
 		CompletionResult{
 			Resources:   resources,
 			OriginImage: payload.GetImage(),

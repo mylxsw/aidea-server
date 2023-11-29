@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/dingding"
+	"github.com/mylxsw/aidea-server/pkg/mail"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
 	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/dingding"
-	"github.com/mylxsw/aidea-server/internal/mail"
-	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -57,7 +57,7 @@ func NewPaymentTask(payload any) *asynq.Task {
 }
 
 func BuildPaymentHandler(
-	rep *repo.Repository,
+	rep *repo2.Repository,
 	mailer *mail.Sender,
 	que *Queue,
 	ding *dingding.Dingding,
@@ -78,7 +78,7 @@ func BuildPaymentHandler(
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -86,7 +86,7 @@ func BuildPaymentHandler(
 					log.With(task).Errorf("update queue status failed: %s", err)
 				}
 
-				if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo.EventStatusFailed); err != nil {
+				if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo2.EventStatusFailed); err != nil {
 					log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("update event status failed: %s", err)
 				}
 			}
@@ -95,7 +95,7 @@ func BuildPaymentHandler(
 		// 查询事件记录
 		event, err := rep.Event.GetEvent(ctx, payload.EventID)
 		if err != nil {
-			if err == repo.ErrNotFound {
+			if err == repo2.ErrNotFound {
 				log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("event not found")
 				return nil
 			}
@@ -104,12 +104,12 @@ func BuildPaymentHandler(
 			return err
 		}
 
-		if event.Status != repo.EventStatusWaiting {
+		if event.Status != repo2.EventStatusWaiting {
 			log.WithFields(log.Fields{"event_id": payload.EventID}).Warningf("event status is not waiting")
 			return nil
 		}
 
-		if event.EventType != repo.EventTypePaymentCompleted {
+		if event.EventType != repo2.EventTypePaymentCompleted {
 			log.With(payload).Errorf("event type is not payment_completed")
 			return nil
 		}
@@ -127,7 +127,7 @@ func BuildPaymentHandler(
 			return err
 		}
 
-		if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo.EventStatusSucceed); err != nil {
+		if err := rep.Event.UpdateEvent(ctx, payload.EventID, repo2.EventStatusSucceed); err != nil {
 			log.WithFields(log.Fields{"event_id": payload.EventID}).Errorf("update event status failed: %s", err)
 		}
 
@@ -136,7 +136,7 @@ func BuildPaymentHandler(
 			mailPayload := &MailPayload{
 				To:        []string{payload.Email},
 				Subject:   "充值已到账",
-				Body:      fmt.Sprintf("您充值的 %d 个智慧果已到账，有效期至 %s，请尽快使用。", product.Quota, repo.TimeInDate(expiredAt).Format(time.RFC3339)),
+				Body:      fmt.Sprintf("您充值的 %d 个智慧果已到账，有效期至 %s，请尽快使用。", product.Quota, repo2.TimeInDate(expiredAt).Format(time.RFC3339)),
 				CreatedAt: time.Now(),
 			}
 
@@ -148,7 +148,7 @@ func BuildPaymentHandler(
 		// 邀请人奖励
 		user, err := rep.User.GetUserByID(ctx, payload.UserID)
 		if err != nil {
-			if err != repo.ErrUserAccountDisabled {
+			if err != repo2.ErrUserAccountDisabled {
 				log.WithFields(log.Fields{"user_id": payload.UserID}).Errorf("引荐人奖励，查询用户信息失败: %s", err)
 			}
 		} else {
@@ -168,7 +168,7 @@ func BuildPaymentHandler(
 				`用户（ID：%d）充值了 %d 个智慧果，有效期至 %s，充值订单号为 %s，充值来源为 %s。`,
 				payload.UserID,
 				product.Quota,
-				repo.TimeInDate(expiredAt).Format("2006-01-02"),
+				repo2.TimeInDate(expiredAt).Format("2006-01-02"),
 				payload.PaymentID,
 				payload.Source,
 			)
@@ -180,7 +180,7 @@ func BuildPaymentHandler(
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			EmptyResult{},
 		)
 	}

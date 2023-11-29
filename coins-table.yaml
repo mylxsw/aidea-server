@@ -60,16 +60,21 @@ coin_tables:
   # 图片生成价格：文生图、图生图、超分辨率、上色
   image:
       default: 20
+      dall-e-3: 100
+      dall-e-3-hd: 150
+      dall-e-2: 20
   # 所有聊天模型都在这里配置，因为历史遗留原因，都归类到了 openai 下
   openai:
     # 百川大模型
     Baichuan2-53B: 3
+    baichuan2-7b-chat-v1: 2
     # Anthropic
     claude-2: 25
     claude-instant-1: 5
     # 讯飞星火
     general: 3
     generalv2: 5
+    generalv3: 5
     # OpenAI
     gpt-3.5-turbo: 3
     gpt-3.5-turbo-16k: 5
@@ -81,7 +86,8 @@ coin_tables:
     # 腾讯混元大模型
     hyllm: 15
     # 文心千帆
-    model_badiu_llama2_70b: 6
+    model_badiu_llama2_70b: 6 # 拼写错误，但是已经上线了，不能改了
+    model_baidu_llama2_13b: 2
     model_baidu_aquila_chat7b: 2
     model_baidu_bloomz_7b: 2
     model_baidu_chatglm2_6b_32k: 2
@@ -97,3 +103,5 @@ coin_tables:
     qwen-plus-v1: 20
     qwen-turbo: 3
     qwen-v1: 3
+    qwen-7b-chat: 2
+    qwen-14b-chat: 2

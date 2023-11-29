@@ -9,12 +9,19 @@ listen: 0.0.0.0:8080
 # 是否启用跨域支持
 enable-cors: false
 
+# 是否启用迁移，启用后，当数据结构有更新时，会自动更新数据库
+enable-migrate: true
+
 # 是否启用 Websocket 支持
 # 启用后，当客户端版本 >= 1.0.7 时，聊天协议使用 Websocket 代替 OpenAI 兼容的 SSE 协议
 enable-websocket: false
 
 # 是否在日志中输出 SQL 语句
 debug-with-sql: false
+
+# 是否启用 API Keys 功能 【该功能尚未完成】
+# 该功能启用后，可以对外开放 OpenAI 兼容的 API，客户端也会显示 API Keys 管理界面
+enable-api-keys: false
 
 # Universal Link 配置，留空则使用以下默认值
 # universal-link-config: |
@@ -27,16 +34,19 @@ enable-model-rate-limit: false
 enable-custom-home-models: false
 
 # 数据库配置 (账号:密码@tcp(数据库地址:端口)/数据库名?charset=utf8mb4&parseTime=True&loc=Local)
-db-uri: "root:123456@tcp(mysql-server.host:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local"
+db-uri: "root:123456@tcp(localhost:3306)/aidea_server?charset=utf8mb4&parseTime=True&loc=Local"
 
 # Redis 配置
-redis-host: redis-server.host
+redis-host: localhost
 redis-port: 6379
 redis-password: "123456"
 
 # 代理服务器
 # 如果启用了 xxx-autoproxy，则该选项必须
 socks5-proxy: 127.0.0.1:1080
+# HTTP 代理放置，支持 http、https、socks5，代理类型由 URL schema 决定，如果 scheme 为空，则默认为 http
+# 注意：配置 proxy-url 后， socks5-proxy 配置失效
+proxy-url: ""
 
 # 任务队列：用于处理图片生成、邮件发送、短信发送、用户注册等耗时任务
 # 这里指任务队列工作线程（Goroutine）数量，设置为 0 则不启用任务队列，该进程实例无法处理上述任务
@@ -66,6 +76,37 @@ openai-keys: [ "sk-xxxxxxxxxxxxxxxx" ]
 #openai-apiversion: "2023-05-15"
 #openai-servers: ["https://xxxx.openai.azure.com"]
 #openai-keys: ["xxxxxxxxxxxxxxxxxxxxxxx"]
+
+######## OpenAI 备用配置 ########
+# 当主 OpenAI 访问遇到一些问题时，切换备用配置继续尝试
+# 目前支持的切换问题为：内容风控
+
+# 是否启用备用 OpenAI 服务
+enable-fallback-openai: false
+# 是否使用备用的 Azure 的 OpenAI 服务
+fallback-openai-azure: false
+# Azure OpenAI 服务版本
+fallback-openai-apiversion: "2023-05-15"
+# 是否使用 Socks5 代理访问 OpenAI 服务
+fallback-openai-autoproxy: false
+# OpenAI 服务配置
+fallback-openai-organization: ""
+# 备用的 OpenAI 服务器地址，配置多个时会自动在多个服务之间平衡负载，不要忘记在在 URL 后面添加 /v1
+fallback-openai-servers: ["https://api.openai.com/v1"]
+# 备用的 OpenAI Keys，如果指定多个，会在多个服务之间平衡负载
+fallback-openai-keys: [""]
+
+######## OpenAI Dalle 配置 ########
+# OpenAI Dalle 服务配置，用于文生图
+enable-openai-dalle: false
+# 复用 OpenAI 配置
+dalle-using-openai-setting: true
+openai-dalle-autoproxy: false
+openai-dalle-azure: false
+openai-dalle-apiversion: "2023-05-15"
+openai-dalle-organization: ""
+openai-dalle-servers: ["https://api.openai.com/v1"]
+openai-dalle-keys: [""]
 
 ######## Anthropic #######
 
@@ -131,6 +172,16 @@ baichuan-secret: ""
 enable-gpt360: false
 gpt360-apikey: ""
 
+######## ONEAPI ########
+
+# https://github.com/songquanpeng/one-api
+
+# 支持的模型列表，当前支持：chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2
+oneapi-support-models: []
+enable-oneapi: false
+oneapi-server: ""
+oneapi-key: ""
+
 ######## DeepAI 配置 ########
 
 # 用于图片超分辨率、图片上色
@@ -184,6 +235,17 @@ getimgai-autoproxy: false
 getimgai-server: "https://api.getimg.ai"
 getimgai-key: ""
 
+######## lepton.ai ########
+
+# lepton.ai 的模型用来为 艺术字、艺术二维码 提供服务
+# API 申请：https://www.lepton.ai/
+enable-leptonai: false
+leptonai-autoproxy: false
+leptonai-qr-servers: ["https://aiqr.lepton.run"]
+leptonai-keys: [""]
+
+# 艺术字字体文件，只支持 ttf 格式
+font-path: "path/to/your/font/MaoKenShiJinHei-2.ttf"
 
 ######## 有道翻译配置 ########
 
@@ -201,6 +263,9 @@ storage-appkey: ""
 storage-secret: ""
 storage-bucket: "aicode"
 storage-callback: "https://ai-api.example.com/v1/callback/storage/qiniu"
+# 七牛云存储资源访问域名（也可以用 CDN 域名），例如 https://cdn.example.com
+storage-domain: https://cdn.example.com
+
 # 七牛云存储区域，可选值：
 # 华东 - z0
 # 华北 - z1
@@ -337,3 +402,4 @@ virtual-model-beichou-prompt: ""
 # 指定该选项后，将以配置文件中的数据为准
 #price-table-file: /data/webroot/aidea-server/etc/coins-table.yaml
 price-table-file: ""
+

@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	dashscope2 "github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
-	"github.com/mylxsw/aidea-server/internal/ai/openai"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/repo/model"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
 )
@@ -40,7 +40,8 @@ type DashscopeImageCompletionPayload struct {
 	ImageStrength float64 `json:"image_strength,omitempty"`
 	FilterID      int64   `json:"filter_id,omitempty"`
 
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	FreezedCoins int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *DashscopeImageCompletionPayload) GetTitle() string {
@@ -107,11 +108,11 @@ type DashscopeImageResponse interface {
 }
 
 func BuildDashscopeImageCompletionHandler(
-	client *dashscope.DashScope,
+	client *dashscope2.DashScope,
 	up *uploader.Uploader,
-	rep *repo.Repository,
+	rep *repo2.Repository,
 	translator youdao.Translater,
-	oai *openai.OpenAI,
+	oai openai.Client,
 ) TaskHandler {
 
 	return func(ctx context.Context, task *asynq.Task) (err error) {
@@ -121,7 +122,7 @@ func BuildDashscopeImageCompletionHandler(
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -132,9 +133,9 @@ func BuildDashscopeImageCompletionHandler(
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
-					Status: repo.CreativeStatusFailed,
+					Status: repo2.CreativeStatusFailed,
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 				}
@@ -144,7 +145,7 @@ func BuildDashscopeImageCompletionHandler(
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -172,14 +173,14 @@ func BuildDashscopeImageCompletionHandler(
 			translator,
 		)
 
-		var resp *dashscope.ImageGenerationResponse
+		var resp *dashscope2.ImageGenerationResponse
 		if payload.Image != "" {
 			// 图生图模式，调用人像风格重绘接口
-			req := dashscope.ImageGenerationRequest{
+			req := dashscope2.ImageGenerationRequest{
 				Model: payload.GetModel(),
-				Input: dashscope.ImageGenerationRequestInput{
+				Input: dashscope2.ImageGenerationRequestInput{
 					ImageURL:   payload.Image,
-					StyleIndex: dashscope.ImageStyleComic,
+					StyleIndex: dashscope2.ImageStyleComic,
 				},
 			}
 
@@ -191,13 +192,13 @@ func BuildDashscopeImageCompletionHandler(
 
 		} else {
 			// 文生图模式，调用 Stable Diffusion 接口
-			req := dashscope.StableDiffusionRequest{
+			req := dashscope2.StableDiffusionRequest{
 				Model: payload.GetModel(),
-				Input: dashscope.StableDiffusionInput{
+				Input: dashscope2.StableDiffusionInput{
 					Prompt:         prompt,
 					NegativePrompt: negativePrompt,
 				},
-				Parameters: dashscope.StableDiffusionParameters{
+				Parameters: dashscope2.StableDiffusionParameters{
 					Size:  fmt.Sprintf("%d*%d", payload.Width, payload.Height),
 					N:     int(payload.ImageCount),
 					Steps: int(payload.Steps),
@@ -213,7 +214,7 @@ func BuildDashscopeImageCompletionHandler(
 		}
 
 		if prompt != payload.Prompt || negativePrompt != payload.NegativePrompt {
-			argUpdate := repo.CreativeRecordUpdateExtArgs{}
+			argUpdate := repo2.CreativeRecordUpdateExtArgs{}
 			if prompt != payload.Prompt {
 				argUpdate.RealPrompt = prompt
 			}
@@ -227,12 +228,12 @@ func BuildDashscopeImageCompletionHandler(
 			}
 		}
 
-		if err := rep.Queue.CreatePendingTask(ctx, &repo.PendingTask{
+		if err := rep.Queue.CreatePendingTask(ctx, &repo2.PendingTask{
 			TaskID:        payload.GetID(),
 			TaskType:      TypeDashscopeImageCompletion,
 			NextExecuteAt: time.Now().Add(time.Duration(5) * time.Second),
 			DeadlineAt:    time.Now().Add(30 * time.Minute),
-			Status:        repo.PendingTaskStatusProcessing,
+			Status:        repo2.PendingTaskStatusProcessing,
 			Payload:       DashscopeImagePendingTaskPayload{DashscopeImageTaskID: resp.Output.TaskID, Payload: payload},
 		}); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("create pending task failed: %s", err)
@@ -242,14 +243,14 @@ func BuildDashscopeImageCompletionHandler(
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusRunning,
+			repo2.QueueTaskStatusRunning,
 			nil,
 		)
 	}
 }
 
-func dashscopeImageAsyncJobProcesser(que *Queue, client *dashscope.DashScope, up *uploader.Uploader, rep *repo.Repository) PendingTaskHandler {
-	return func(task *model.QueueTasksPending) (update *repo.PendingTaskUpdate, err error) {
+func dashscopeImageAsyncJobProcesser(que *Queue, client *dashscope2.DashScope, up *uploader.Uploader, rep *repo2.Repository) PendingTaskHandler {
+	return func(task *model.QueueTasksPending) (update *repo2.PendingTaskUpdate, err error) {
 		var payload DashscopeImagePendingTaskPayload
 		if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 			return nil, err
@@ -258,9 +259,9 @@ func dashscopeImageAsyncJobProcesser(que *Queue, client *dashscope.DashScope, up
 		taskRes, err := client.ImageTaskStatus(context.TODO(), payload.DashscopeImageTaskID)
 		if err != nil {
 			log.With(payload).Errorf("query fromston job result failed: %v", err)
-			return &repo.PendingTaskUpdate{
+			return &repo2.PendingTaskUpdate{
 				NextExecuteAt: time.Now().Add(5 * time.Second),
-				Status:        repo.PendingTaskStatusProcessing,
+				Status:        repo2.PendingTaskStatusProcessing,
 				ExecuteTimes:  task.ExecuteTimes + 1,
 			}, nil
 		}
@@ -271,21 +272,21 @@ func dashscopeImageAsyncJobProcesser(que *Queue, client *dashscope.DashScope, up
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(context.TODO(), payload.Payload.GetUID(), payload.Payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(context.TODO(), payload.Payload.GetUID(), payload.Payload.GetID(), repo2.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
-					Status: repo.CreativeStatusFailed,
+					Status: repo2.CreativeStatusFailed,
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 				}
 
-				update = &repo.PendingTaskUpdate{Status: repo.PendingTaskStatusFailed}
+				update = &repo2.PendingTaskUpdate{Status: repo2.PendingTaskStatusFailed}
 			}
 
 			if err != nil {
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.Payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -295,16 +296,16 @@ func dashscopeImageAsyncJobProcesser(que *Queue, client *dashscope.DashScope, up
 			}
 		}()
 
-		if taskRes.Output.TaskStatus == dashscope.TaskStatusPending || taskRes.Output.TaskStatus == dashscope.TaskStatusRunning {
-			return &repo.PendingTaskUpdate{
+		if taskRes.Output.TaskStatus == dashscope2.TaskStatusPending || taskRes.Output.TaskStatus == dashscope2.TaskStatusRunning {
+			return &repo2.PendingTaskUpdate{
 				NextExecuteAt: time.Now().Add(5 * time.Second),
-				Status:        repo.PendingTaskStatusProcessing,
+				Status:        repo2.PendingTaskStatusProcessing,
 				ExecuteTimes:  task.ExecuteTimes + 1,
 			}, nil
 		}
 
 		// 任务已经完成，开始处理结果
-		if taskRes.Output.TaskStatus == dashscope.TaskStatusFailed {
+		if taskRes.Output.TaskStatus == dashscope2.TaskStatusFailed {
 			log.WithFields(log.Fields{"payload": payload, "task": task}).Errorf("no success task found")
 			panic(errors.New("task failed: " + taskRes.Output.TaskStatus))
 		}
@@ -315,7 +316,7 @@ func dashscopeImageAsyncJobProcesser(que *Queue, client *dashscope.DashScope, up
 			return nil, err
 		}
 
-		return &repo.PendingTaskUpdate{Status: repo.PendingTaskStatusSuccess}, nil
+		return &repo2.PendingTaskUpdate{Status: repo2.PendingTaskStatusSuccess}, nil
 	}
 }
 
@@ -330,11 +331,11 @@ type DashscopeImageTaskPayload interface {
 func handleDashscopeImageTask(
 	que *Queue,
 	payload DashscopeImageTaskPayload,
-	tasks *dashscope.ImageTaskResponse,
+	tasks *dashscope2.ImageTaskResponse,
 	up *uploader.Uploader,
-	rep *repo.Repository,
+	rep *repo2.Repository,
 ) error {
-	resources := array.Map(tasks.Output.Results, func(item dashscope.ImageTaskOutputImage, _ int) string {
+	resources := array.Map(tasks.Output.Results, func(item dashscope2.ImageTaskOutputImage, _ int) string {
 		return item.URL
 	})
 	resources = array.Filter(resources, func(item string, _ int) bool { return item != "" })
@@ -355,12 +356,12 @@ func handleDashscopeImageTask(
 
 	// 重新计算配额消耗，以实际发生计算
 	// quotaConsumed := coins.GetDashscopeImageImageCoins(payload.GetModel(), isCsMode, width, height) * int64(len(resources))
-	quotaConsumed := int64(coins.GetUnifiedImageGenCoins() * len(resources))
+	quotaConsumed := int64(coins.GetUnifiedImageGenCoins("") * len(resources))
 
-	req := repo.CreativeRecordUpdateRequest{
+	req := repo2.CreativeRecordUpdateRequest{
 		Answer:    string(retJson),
 		QuotaUsed: quotaConsumed,
-		Status:    repo.CreativeStatusSuccess,
+		Status:    repo2.CreativeStatusSuccess,
 	}
 	if err := rep.Creative.UpdateRecordByTaskID(context.TODO(), payload.GetUID(), payload.GetID(), req); err != nil {
 		log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -373,7 +374,7 @@ func handleDashscopeImageTask(
 		context.TODO(),
 		payload.GetUID(),
 		payload.GetQuota(),
-		repo.NewQuotaUsedMeta("fromston", modelUsed...),
+		repo2.NewQuotaUsedMeta("fromston", modelUsed...),
 	); err != nil {
 		log.Errorf("used quota add failed: %s", err)
 		return err
@@ -396,7 +397,7 @@ func handleDashscopeImageTask(
 	return rep.Queue.Update(
 		context.TODO(),
 		payload.GetID(),
-		repo.QueueTaskStatusSuccess,
+		repo2.QueueTaskStatusSuccess,
 		CompletionResult{
 			OriginImage: payload.GetImage(),
 			Resources:   resources,

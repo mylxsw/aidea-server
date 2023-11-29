@@ -2,26 +2,27 @@ package consumer
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
+	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
+	"github.com/mylxsw/aidea-server/pkg/ai/fromston"
+	"github.com/mylxsw/aidea-server/pkg/ai/getimgai"
+	"github.com/mylxsw/aidea-server/pkg/ai/leap"
+	"github.com/mylxsw/aidea-server/pkg/ai/lepton"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
+	"github.com/mylxsw/aidea-server/pkg/dingding"
+	"github.com/mylxsw/aidea-server/pkg/mail"
+	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/sms"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/ai/chat"
-	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
-	"github.com/mylxsw/aidea-server/internal/ai/deepai"
-	"github.com/mylxsw/aidea-server/internal/ai/fromston"
-	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
-	"github.com/mylxsw/aidea-server/internal/ai/leap"
-	helper "github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/ai/stabilityai"
-	"github.com/mylxsw/aidea-server/internal/dingding"
-	"github.com/mylxsw/aidea-server/internal/mail"
 	"github.com/mylxsw/aidea-server/internal/queue"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/service"
-	"github.com/mylxsw/aidea-server/internal/sms"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 )
@@ -44,6 +45,7 @@ func (Provider) Register(binder infra.Binder) {
 					//"text":  conf.QueueWorkers / 3 * 2,
 					//"image": conf.QueueWorkers - conf.QueueWorkers/3*2,
 				},
+				Logger: Logger{},
 			},
 		)
 	})
@@ -61,12 +63,12 @@ func loggingMiddleware(h asynq.Handler) asynq.Handler {
 		log.Debugf("Start processing %q", t.Type())
 		err := h.ProcessTask(ctx, t)
 		if err != nil {
-			log.Errorf("Error processing %q: %v", t.Type(), err)
+			log.Warningf("task process failed: %q, %v", t.Type(), err)
 			// 失败后不再进行重试
 			return asynq.SkipRetry
 		}
 
-		log.Debugf("Finished processing %q: Elapsed Time = %v", t.Type(), time.Since(start))
+		log.Debugf("finished processing %q: elapsed time = %v", t.Type(), time.Since(start))
 		return nil
 	})
 }
@@ -74,7 +76,7 @@ func loggingMiddleware(h asynq.Handler) asynq.Handler {
 func (p Provider) Boot(resolver infra.Resolver) {
 	resolver.MustResolve(func(
 		mux *asynq.ServeMux,
-		openaiClient *helper.OpenAI,
+		openaiClient openai.Client,
 		deepaiClient *deepai.DeepAI,
 		stabaiClient *stabilityai.StabilityAI,
 		getimgaiClient *getimgai.GetimgAI,
@@ -91,6 +93,8 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		ct chat.Chat,
 		conf *config.Config,
 		userSvc *service.UserService,
+		dalleClient *openai.DalleImageClient,
+		leptonClient *lepton.Lepton,
 	) {
 		log.Debugf("register all queue handlers")
 		mux.HandleFunc(queue.TypeOpenAICompletion, queue.BuildOpenAICompletionHandler(openaiClient, rep))
@@ -102,7 +106,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		mux.HandleFunc(queue.TypeSignup, queue.BuildSignupHandler(rep, mailer, ding))
 		mux.HandleFunc(queue.TypePayment, queue.BuildPaymentHandler(rep, mailer, que, ding))
 		mux.HandleFunc(queue.TypeBindPhone, queue.BuildBindPhoneHandler(rep, mailer))
-		mux.HandleFunc(queue.TypeImageGenCompletion, queue.BuildImageCompletionHandler(leapClient, stabaiClient, deepaiClient, fromstonClient, dashscopeClient, getimgaiClient, translater, uploader, rep, openaiClient))
+		mux.HandleFunc(queue.TypeImageGenCompletion, queue.BuildImageCompletionHandler(leapClient, stabaiClient, deepaiClient, fromstonClient, dashscopeClient, getimgaiClient, translater, uploader, rep, openaiClient, dalleClient))
 		mux.HandleFunc(queue.TypeFromStonCompletion, queue.BuildFromStonCompletionHandler(fromstonClient, uploader, rep))
 		mux.HandleFunc(queue.TypeDashscopeImageCompletion, queue.BuildDashscopeImageCompletionHandler(dashscopeClient, uploader, rep, translater, openaiClient))
 		mux.HandleFunc(queue.TypeGetimgAICompletion, queue.BuildGetimgAICompletionHandler(getimgaiClient, translater, uploader, rep, openaiClient))
@@ -110,6 +114,8 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		mux.HandleFunc(queue.TypeImageUpscale, queue.BuildImageUpscaleHandler(deepaiClient, stabaiClient, uploader, rep))
 		mux.HandleFunc(queue.TypeImageColorization, queue.BuildImageColorizationHandler(deepaiClient, uploader, rep))
 		mux.HandleFunc(queue.TypeGroupChat, queue.BuildGroupChatHandler(conf, ct, rep, userSvc))
+		mux.HandleFunc(queue.TypeDalleCompletion, queue.BuildDalleCompletionHandler(dalleClient, uploader, rep))
+		mux.HandleFunc(queue.TypeArtisticTextCompletion, queue.BuildArtisticTextCompletionHandler(leptonClient, translater, uploader, rep, openaiClient))
 	})
 }
 

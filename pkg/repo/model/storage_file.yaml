@@ -1,0 +1,36 @@
+package: model
+
+models:
+  - name: storage_file
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: name
+          type: string
+          tag: json:"name,omitempty"
+        - name: user_id
+          type: int64
+          tag: json:"user_id,omitempty"
+        - name: file_key
+          type: string
+          tag: json:"file_key,omitempty"
+        - name: hash
+          type: string
+          tag: json:"hash,omitempty"
+        - name: file_size
+          type: int64
+          tag: json:"file_size,omitempty"
+        - name: bucket
+          type: string
+          tag: json:"bucket,omitempty"
+        - name: status
+          type: int64
+          tag: json:"status,omitempty"
+        - name: note
+          type: string
+          tag: json:"note,omitempty"
+        - name: channel
+          type: string
+          tag: json:"channel,omitempty"

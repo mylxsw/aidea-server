@@ -2,18 +2,22 @@ package queue
 
 import (
 	"context"
+	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/aidea-server/pkg/ai/fromston"
+	"github.com/mylxsw/aidea-server/pkg/ai/leap"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/ai/dashscope"
-	"github.com/mylxsw/aidea-server/internal/ai/fromston"
-	"github.com/mylxsw/aidea-server/internal/ai/leap"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/must"
+	"github.com/redis/go-redis/v9"
 )
 
 type Provider struct{}
@@ -38,12 +42,33 @@ func (Provider) Boot(app infra.Resolver) {
 		dashscopeClient *dashscope.DashScope,
 		up *uploader.Uploader,
 		queue *Queue,
-		rep *repo.Repository,
+		rep *repo2.Repository,
+		userSvc *service.UserService,
+		rds *redis.Client,
 	) {
 		// 注册异步 PendingTask 任务处理器
 		manager.Register(TypeLeapAICompletion, leapAsyncJobProcesser(leapClient, up, rep))
 		manager.Register(TypeFromStonCompletion, fromStonAsyncJobProcesser(queue, fromstonClient, up, rep))
 		manager.Register(TypeDashscopeImageCompletion, dashscopeImageAsyncJobProcesser(queue, dashscopeClient, up, rep))
+
+		// 注册创作岛更新后，自动释放冻结的智慧果任务
+		rep.Creative.RegisterRecordStatusUpdateCallback(func(taskID string, userID int64, status repo2.CreativeStatus) {
+			key := fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", userID, taskID)
+			if status == repo2.CreativeStatusSuccess || status == repo2.CreativeStatusFailed {
+				freezedValue, err := rds.Get(context.TODO(), key).Int64()
+				if err != nil {
+					log.F(log.M{"task_id": taskID, "user_id": userID, "status": status}).Errorf("获取创作岛任务冻结的智慧果数量失败：%s", err)
+					return
+				}
+
+				if freezedValue > 0 {
+					if err := userSvc.UnfreezeUserQuota(context.TODO(), userID, freezedValue); err != nil {
+						log.F(log.M{"task_id": taskID, "user_id": userID, "status": status}).Errorf("释放创作岛任务冻结的智慧果失败：%s", err)
+						return
+					}
+				}
+			}
+		})
 	})
 }
 
@@ -55,6 +80,7 @@ const (
 	TypeFromStonCompletion       = "fromston:completion"
 	TypeImageGenCompletion       = "imagegen:completion"
 	TypeGetimgAICompletion       = "getimgai:completion"
+	TypeDalleCompletion          = "dalle:completion"
 	TypeDashscopeImageCompletion = "dashscope-image:completion"
 	TypeMailSend                 = "mail:send"
 	TypeImageDownloader          = "image:downloader"
@@ -65,6 +91,7 @@ const (
 	TypeSignup                   = "signup"
 	TypeBindPhone                = "bind_phone"
 	TypeGroupChat                = "group_chat"
+	TypeArtisticTextCompletion   = "artistic_text:completion"
 )
 
 func ResolveTaskType(category, model string) string {
@@ -81,6 +108,8 @@ func ResolveTaskType(category, model string) string {
 		return TypeGetimgAICompletion
 	case "dashscope":
 		return TypeDashscopeImageCompletion
+	case "dalle":
+		return TypeDalleCompletion
 	}
 
 	return ""
@@ -119,11 +148,11 @@ type Payload interface {
 // Queue 任务队列
 type Queue struct {
 	client    *asynq.Client
-	queueRepo *repo.QueueRepo
+	queueRepo *repo2.QueueRepo
 }
 
 // NewQueue 创建一个任务队列
-func NewQueue(client *asynq.Client, queueRepo *repo.QueueRepo) *Queue {
+func NewQueue(client *asynq.Client, queueRepo *repo2.QueueRepo) *Queue {
 	return &Queue{client: client, queueRepo: queueRepo}
 }
 

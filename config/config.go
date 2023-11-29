@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/coins"
 	"os"
 	"strings"
 
@@ -24,6 +25,11 @@ type Config struct {
 	EnableWebsocket bool `json:"enable_websocket" yaml:"enable_websocket"`
 	// 是否启用 SQL 调试
 	DebugWithSQL bool `json:"debug_with_sql" yaml:"debug_with_sql"`
+	// 是否启用 API Keys 功能
+	EnableAPIKeys bool `json:"enable_api_keys" yaml:"enable_api_keys"`
+
+	// BaseURL 服务的基础 URL
+	BaseURL string `json:"base_url" yaml:"base_url"`
 
 	// UniversalLinkConfig 通用链接配置
 	UniversalLinkConfig string `json:"universal_link_config" yaml:"universal_link_config"`
@@ -43,6 +49,24 @@ type Config struct {
 	OpenAIOrganization string   `json:"openai_organization" yaml:"openai_organization"`
 	OpenAIServers      []string `json:"openai_servers" yaml:"openai_servers"`
 	OpenAIKeys         []string `json:"openai_keys" yaml:"openai_keys"`
+
+	EnableOpenAIDalle       bool     `json:"enable_openai_dalle" yaml:"enable_openai_dalle"`
+	DalleUsingOpenAISetting bool     `json:"dalle_using_openai_setting" yaml:"dalle_using_openai_setting"`
+	OpenAIDalleAzure        bool     `json:"openai_dalle_azure" yaml:"openai_dalle_azure"`
+	OpenAIDalleAPIVersion   string   `json:"openai_dalle_api_version" yaml:"openai_dalle_api_version"`
+	OpenAIDalleAutoProxy    bool     `json:"openai_dalle_auto_proxy" yaml:"openai_dalle_auto_proxy"`
+	OpenAIDalleOrganization string   `json:"openai_dalle_organization" yaml:"openai_dalle_organization"`
+	OpenAIDalleServers      []string `json:"openai_dalle_servers" yaml:"openai_dalle_servers"`
+	OpenAIDalleKeys         []string `json:"openai_dalle_keys" yaml:"openai_dalle_keys"`
+
+	// OpenAI Fallback 配置
+	EnableFallbackOpenAI       bool     `json:"enable_fallback_openai" yaml:"enable_fallback_openai"`
+	FallbackOpenAIAzure        bool     `json:"fallback_openai_azure" yaml:"fallback_openai_azure"`
+	FallbackOpenAIServers      []string `json:"fallback_openai_servers" yaml:"fallback_openai_servers"`
+	FallbackOpenAIKeys         []string `json:"fallback_openai_keys" yaml:"fallback_openai_keys"`
+	FallbackOpenAIOrganization string   `json:"fallback_openai_organization" yaml:"fallback_openai_organization"`
+	FallbackOpenAIAPIVersion   string   `json:"fallback_openai_api_version" yaml:"fallback_openai_api_version"`
+	FallbackOpenAIAutoProxy    bool     `json:"fallback_openai_auto_proxy" yaml:"fallback_openai_auto_proxy"`
 
 	// Anthropic 配置
 	EnableAnthropic    bool   `json:"enable_anthropic" yaml:"enable_anthropic"`
@@ -80,8 +104,17 @@ type Config struct {
 	EnableGPT360 bool   `json:"enable_gpt360" yaml:"enable_gpt360"`
 	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
 
+	// OneAPI 支持的模型列表
+	// one-server: https://github.com/songquanpeng/one-api
+	OneAPISupportModels []string `json:"oneapi_support_models" yaml:"oneapi_support_models"`
+	EnableOneAPI        bool     `json:"enable_oneapi" yaml:"enable_oneapi"`
+	OneAPIServer        string   `json:"oneapi_server" yaml:"oneapi_server"`
+	OneAPIKey           string   `json:"one_api_key" yaml:"one_api_key"`
+
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
+	// ProxyURL 代理地址，该值会覆盖 Socks5Proxy 配置
+	ProxyURL string `json:"proxy_url" yaml:"proxy_url"`
 
 	// DeepAIKey 配置
 	EnableDeepAI    bool     `json:"enable_deepai" yaml:"enable_deepai"`
@@ -113,6 +146,12 @@ type Config struct {
 	GetimgAIAutoProxy bool   `json:"getimgai_auto_proxy" yaml:"getimgai_auto_proxy"`
 	GetimgAIServer    string `json:"getimgai_server" yaml:"getimgai_server"`
 	GetimgAIKey       string `json:"getimgai_key" yaml:"getimgai_key"`
+
+	// EnableLeptonAI 是否启用 Lepton AI
+	EnableLeptonAI    bool     `json:"enable_leptonai" yaml:"enable_leptonai"`
+	LeptonAIAutoProxy bool     `json:"leptonai_auto_proxy" yaml:"leptonai_auto_proxy"`
+	LeptonAIQRServers []string `json:"leptonai_qr_servers" yaml:"leptonai_qr_servers"`
+	LeptonAIKeys      []string `json:"leptonai_keys" yaml:"leptonai_keys"`
 
 	// DBURI 数据库连接地址
 	DBURI string `json:"db_uri" yaml:"db_uri"`
@@ -198,6 +237,13 @@ type Config struct {
 	// 虚拟模型
 	EnableVirtualModel bool         `json:"enable_virtual_model" yaml:"enable_virtual_model"`
 	VirtualModel       VirtualModel `json:"virtual_model" yaml:"virtual_model"`
+
+	// 字体文件路径
+	FontPath string `json:"font_path" yaml:"font_path"`
+}
+
+func (conf *Config) SupportProxy() bool {
+	return conf.Socks5Proxy != "" || conf.ProxyURL != ""
 }
 
 type Mail struct {
@@ -228,6 +274,10 @@ type VirtualModel struct {
 }
 
 func Register(ins *app.App) {
+	// 加载命令行选项
+	initCmdFlags(ins)
+
+	// 配置文件读取
 	ins.Singleton(func(ctx infra.FlagContext) *Config {
 		var appleSecret string
 		appleSecretFile := ctx.String("apple-secret")
@@ -238,6 +288,16 @@ func Register(ins *app.App) {
 			}
 
 			appleSecret = string(data)
+		}
+
+		// 加载价格表
+		priceTableFile := ctx.String("price-table-file")
+		if priceTableFile != "" {
+			if err := coins.LoadPriceInfo(priceTableFile); err != nil {
+				panic(fmt.Errorf("价格表加载失败: %w", err))
+			}
+
+			coins.DebugPrintPriceInfo()
 		}
 
 		return &Config{
@@ -251,8 +311,11 @@ func Register(ins *app.App) {
 			DebugWithSQL:        ctx.Bool("debug-with-sql"),
 			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
 
+			BaseURL: strings.TrimSuffix(ctx.String("base-url"), "/"),
+
 			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),
 			EnableCustomHomeModels: ctx.Bool("enable-custom-home-models"),
+			EnableAPIKeys:          ctx.Bool("enable-api-keys"),
 
 			RedisHost:     ctx.String("redis-host"),
 			RedisPort:     ctx.Int("redis-port"),
@@ -268,6 +331,23 @@ func Register(ins *app.App) {
 			OpenAIOrganization: ctx.String("openai-organization"),
 			OpenAIServers:      ctx.StringSlice("openai-servers"),
 			OpenAIKeys:         ctx.StringSlice("openai-keys"),
+
+			EnableOpenAIDalle:       ctx.Bool("enable-openai-dalle"),
+			DalleUsingOpenAISetting: ctx.Bool("dalle-using-openai-setting"),
+			OpenAIDalleAzure:        ctx.Bool("openai-dalle-azure"),
+			OpenAIDalleAPIVersion:   ctx.String("openai-dalle-apiversion"),
+			OpenAIDalleAutoProxy:    ctx.Bool("openai-dalle-autoproxy"),
+			OpenAIDalleOrganization: ctx.String("openai-dalle-organization"),
+			OpenAIDalleServers:      ctx.StringSlice("openai-dalle-servers"),
+			OpenAIDalleKeys:         ctx.StringSlice("openai-dalle-keys"),
+
+			EnableFallbackOpenAI:       ctx.Bool("enable-fallback-openai"),
+			FallbackOpenAIAzure:        ctx.Bool("fallback-openai-azure"),
+			FallbackOpenAIServers:      ctx.StringSlice("fallback-openai-servers"),
+			FallbackOpenAIKeys:         ctx.StringSlice("fallback-openai-keys"),
+			FallbackOpenAIOrganization: ctx.String("fallback-openai-organization"),
+			FallbackOpenAIAPIVersion:   ctx.String("fallback-openai-apiversion"),
+			FallbackOpenAIAutoProxy:    ctx.Bool("fallback-openai-autoproxy"),
 
 			EnableAnthropic:    ctx.Bool("enable-anthropic"),
 			AnthropicAutoProxy: ctx.Bool("anthropic-autoproxy"),
@@ -298,7 +378,13 @@ func Register(ins *app.App) {
 			EnableGPT360: ctx.Bool("enable-gpt360"),
 			GPT360APIKey: ctx.String("gpt360-apikey"),
 
+			OneAPISupportModels: ctx.StringSlice("oneapi-support-models"),
+			EnableOneAPI:        ctx.Bool("enable-oneapi"),
+			OneAPIServer:        ctx.String("oneapi-server"),
+			OneAPIKey:           ctx.String("oneapi-key"),
+
 			Socks5Proxy: ctx.String("socks5-proxy"),
+			ProxyURL:    ctx.String("proxy-url"),
 
 			EnableDeepAI:    ctx.Bool("enable-deepai"),
 			DeepAIAutoProxy: ctx.Bool("deepai-autoproxy"),
@@ -320,6 +406,11 @@ func Register(ins *app.App) {
 			GetimgAIAutoProxy: ctx.Bool("getimgai-autoproxy"),
 			GetimgAIServer:    ctx.String("getimgai-server"),
 			GetimgAIKey:       ctx.String("getimgai-key"),
+
+			EnableLeptonAI:    ctx.Bool("enable-leptonai"),
+			LeptonAIAutoProxy: ctx.Bool("leptonai-autoproxy"),
+			LeptonAIQRServers: ctx.StringSlice("leptonai-qr-servers"),
+			LeptonAIKeys:      ctx.StringSlice("leptonai-keys"),
 
 			EnableFromstonAI: ctx.Bool("enable-fromstonai"),
 			FromstonServer:   ctx.String("fromston-server"),
@@ -401,6 +492,8 @@ func Register(ins *app.App) {
 				BeichouRel:     ctx.String("virtual-model-beichou-rel"),
 				BeichouPrompt:  strings.TrimSpace(ctx.String("virtual-model-beichou-prompt")),
 			},
+
+			FontPath: ctx.String("font-path"),
 		}
 	})
 }

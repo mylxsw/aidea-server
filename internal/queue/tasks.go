@@ -2,13 +2,13 @@ package queue
 
 import (
 	"context"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/repo"
 	"github.com/mylxsw/glacier/log"
 )
 
-func ClearExpiredTaskJob(ctx context.Context, queueRepo *repo.QueueRepo) error {
+func ClearExpiredTaskJob(ctx context.Context, queueRepo *repo2.QueueRepo) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
@@ -25,7 +25,7 @@ func ClearExpiredTaskJob(ctx context.Context, queueRepo *repo.QueueRepo) error {
 	return nil
 }
 
-func ClearExpiredCacheJob(ctx context.Context, cacheRepo *repo.CacheRepo) error {
+func ClearExpiredCacheJob(ctx context.Context, cacheRepo *repo2.CacheRepo) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 

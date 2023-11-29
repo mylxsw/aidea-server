@@ -82,7 +82,7 @@ func (ap Product) ExpiredAt() time.Time {
 
 func buildDescription(quota int64) string {
 	multiple := float64(quota) / 100.0
-	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4 约 %.0f 次），或创作 %d 张图片", 30*multiple, 2*multiple, quota/int64(GetUnifiedImageGenCoins()))
+	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4 约 %.0f 次），或创作 %d 张图片", 30*multiple, 2*multiple, quota/int64(GetUnifiedImageGenCoins("")))
 }
 
 func GetProduct(productId string) *Product {

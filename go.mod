@@ -9,6 +9,7 @@ require (
 	github.com/alibabacloud-go/green-20220302 v1.0.6
 	github.com/alibabacloud-go/tea v1.1.19
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.1
+	github.com/fogleman/gg v1.3.0
 	github.com/fvbommel/sortorder v1.1.0
 	github.com/go-pay/gopay v1.5.94
 	github.com/go-redis/redis_rate/v10 v10.0.1
@@ -16,11 +17,12 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/mylxsw/asteria v1.0.1
-	github.com/mylxsw/eloquent v0.0.2-0.20230528030952-90014b5782ec
-	github.com/mylxsw/glacier v1.1.4-0.20230425093359-8b073ae5b7af
+	github.com/mylxsw/eloquent v0.0.2-0.20231129035241-c08e054b0632
+	github.com/mylxsw/glacier v1.1.4-0.20231112080120-114e547468b0
 	github.com/redis/go-redis/v9 v9.0.3
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/sashabaranov/go-openai v1.12.0
+	github.com/sashabaranov/go-openai v1.17.7
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/speps/go-hashids/v2 v2.0.1
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/aiart v1.0.727
 	github.com/tideland/gorest v2.15.5+incompatible
@@ -47,6 +49,7 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2 v1.8.1 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
@@ -66,9 +69,10 @@ require (
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/tideland/golib v4.24.2+incompatible // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
+	golang.org/x/image v0.14.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
-	golang.org/x/text v0.9.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
@@ -99,3 +103,5 @@ require (
 	golang.org/x/crypto v0.9.0
 	gopkg.in/yaml.v3 v3.0.1
 )
+
+replace github.com/sashabaranov/go-openai => github.com/rkintzi/go-openai v0.0.0-20231115154728-152021253721

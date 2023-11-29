@@ -3,11 +3,11 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/sms"
 	"time"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/sms"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -47,7 +47,7 @@ func NewSMSVerifyCodeTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeSMSVerifyCodeSend, data)
 }
 
-func BuildSMSVerifyCodeSendHandler(sender *sms.Client, rep *repo.Repository) TaskHandler {
+func BuildSMSVerifyCodeSendHandler(sender *sms.Client, rep *repo2.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload SMSVerifyCodePayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -69,7 +69,7 @@ func BuildSMSVerifyCodeSendHandler(sender *sms.Client, rep *repo.Repository) Tas
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -87,7 +87,7 @@ func BuildSMSVerifyCodeSendHandler(sender *sms.Client, rep *repo.Repository) Tas
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			EmptyResult{},
 		)
 	}

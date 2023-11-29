@@ -4,14 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"path/filepath"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/ai/deepai"
-
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
 	"github.com/mylxsw/asteria/log"
 
 	// image.DecodeConfig 需要引入相关的图像包
@@ -21,11 +20,12 @@ import (
 )
 
 type ImageColorizationPayload struct {
-	ID        string    `json:"id,omitempty"`
-	Image     string    `json:"image,omitempty"`
-	UserID    int64     `json:"user_id,omitempty"`
-	Quota     int64     `json:"quota,omitempty"`
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	ID           string    `json:"id,omitempty"`
+	Image        string    `json:"image,omitempty"`
+	UserID       int64     `json:"user_id,omitempty"`
+	Quota        int64     `json:"quota,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	FreezedCoins int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *ImageColorizationPayload) GetTitle() string {
@@ -57,7 +57,7 @@ func NewImageColorizationTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeImageColorization, data)
 }
 
-func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploader, rep *repo.Repository) TaskHandler {
+func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploader, rep *repo2.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageColorizationPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -77,9 +77,9 @@ func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploa
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
-					Status: repo.CreativeStatusFailed,
+					Status: repo2.CreativeStatusFailed,
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 				}
@@ -89,7 +89,7 @@ func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploa
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -102,13 +102,13 @@ func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploa
 		var resources []string
 		res, err := imageColorization(ctx, deepClient, up, payload.UserID, payload.Image)
 		if err != nil {
-			panic(fmt.Errorf("图片超分辨率失败: %w", err))
+			panic(fmt.Errorf("图片上色失败: %w", err))
 		}
 
 		resources = []string{res}
 		retJson, _ := json.Marshal(resources)
-		updateReq := repo.CreativeRecordUpdateRequest{
-			Status:    repo.CreativeStatusSuccess,
+		updateReq := repo2.CreativeRecordUpdateRequest{
+			Status:    repo2.CreativeStatusSuccess,
 			Answer:    string(retJson),
 			QuotaUsed: payload.GetQuota(),
 		}
@@ -119,14 +119,14 @@ func BuildImageColorizationHandler(deepClient *deepai.DeepAI, up *uploader.Uploa
 		}
 
 		// 记录消耗
-		if err := rep.Quota.QuotaConsume(ctx, payload.GetUID(), payload.GetQuota(), repo.NewQuotaUsedMeta("upscale", "esrgan-v1-x2plus")); err != nil {
+		if err := rep.Quota.QuotaConsume(ctx, payload.GetUID(), payload.GetQuota(), repo2.NewQuotaUsedMeta("upscale", "esrgan-v1-x2plus")); err != nil {
 			log.With(payload).Errorf("used quota add failed: %s", err)
 		}
 
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			CompletionResult{
 				Resources:   resources,
 				OriginImage: payload.Image,

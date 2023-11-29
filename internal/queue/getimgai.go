@@ -5,6 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/getimgai"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	uploader2 "github.com/mylxsw/aidea-server/pkg/uploader"
+	youdao2 "github.com/mylxsw/aidea-server/pkg/youdao"
 	"math/rand"
 	"os"
 	"strings"
@@ -13,12 +19,6 @@ import (
 	"github.com/mylxsw/go-utils/array"
 
 	"github.com/hibiken/asynq"
-	"github.com/mylxsw/aidea-server/internal/ai/getimgai"
-	"github.com/mylxsw/aidea-server/internal/ai/openai"
-	"github.com/mylxsw/aidea-server/internal/helper"
-	"github.com/mylxsw/aidea-server/internal/repo"
-	"github.com/mylxsw/aidea-server/internal/uploader"
-	"github.com/mylxsw/aidea-server/internal/youdao"
 	"github.com/mylxsw/asteria/log"
 )
 
@@ -41,7 +41,8 @@ type GetimgAICompletionPayload struct {
 	UpscaleBy      string   `json:"upscale_by,omitempty"`
 	FilterID       int64    `json:"filter_id,omitempty"`
 
-	CreatedAt time.Time `json:"created_at,omitempty"`
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	FreezedCoins int64     `json:"freezed_coins,omitempty"`
 }
 
 func (payload *GetimgAICompletionPayload) GetTitle() string {
@@ -69,7 +70,7 @@ func NewGetimgAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeGetimgAICompletion, data)
 }
 
-func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai *openai.OpenAI) TaskHandler {
+func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao2.Translater, up *uploader2.Uploader, rep *repo2.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload GetimgAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -77,7 +78,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -88,8 +89,8 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
-					Status: repo.CreativeStatusFailed,
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
+					Status: repo2.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -100,7 +101,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo.QueueTaskStatusFailed,
+					repo2.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -113,7 +114,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 		// 下载远程图片（图生图）
 		var localImageBase64 string
 		if payload.Image != "" {
-			imagePath, err := uploader.DownloadRemoteFile(ctx, payload.Image)
+			imagePath, err := uploader2.DownloadRemoteFile(ctx, payload.Image)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"payload": payload,
@@ -121,7 +122,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 				panic(err)
 			}
 
-			localImageBase64, err = helper.ImageToRawBase64(imagePath)
+			localImageBase64, err = misc.ImageToRawBase64(imagePath)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"payload": payload,
@@ -219,14 +220,14 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 			panic(err)
 		}
 
-		updateReq := repo.CreativeRecordUpdateRequest{
-			Status:    repo.CreativeStatusSuccess,
+		updateReq := repo2.CreativeRecordUpdateRequest{
+			Status:    repo2.CreativeStatusSuccess,
 			Answer:    string(retJson),
 			QuotaUsed: payload.GetQuota(),
 		}
 
 		if prompt != payload.Prompt || negativePrompt != payload.NegativePrompt {
-			ext := repo.CreativeRecordUpdateExtArgs{}
+			ext := repo2.CreativeRecordUpdateExtArgs{}
 			if prompt != payload.Prompt {
 				ext.RealPrompt = prompt
 			}
@@ -247,7 +248,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 			ctx,
 			payload.GetUID(),
 			payload.GetQuota(),
-			repo.NewQuotaUsedMeta("getimageai", modelUsed...),
+			repo2.NewQuotaUsedMeta("getimageai", modelUsed...),
 		); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
@@ -255,7 +256,7 @@ func BuildGetimgAICompletionHandler(client *getimgai.GetimgAI, translator youdao
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo.QueueTaskStatusSuccess,
+			repo2.QueueTaskStatusSuccess,
 			CompletionResult{
 				Resources:   []string{resources},
 				OriginImage: payload.Image,
@@ -276,7 +277,7 @@ type PromptResolverPayload struct {
 	Model          string
 }
 
-func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creativeRepo *repo.CreativeRepo, oai *openai.OpenAI, translator youdao.Translater) (string, string, bool) {
+func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creativeRepo *repo2.CreativeRepo, oai openai.Client, translator youdao2.Translater) (string, string, bool) {
 	prompt := payload.Prompt
 	negativePrompt := payload.NegativePrompt
 
@@ -310,7 +311,7 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 	if prompt == "" {
 		// 如果没有输入 prompt，则使用默认的 prompt
 		// 注意，要停用 AI 自动改写，避免改写出奇怪的东西
-		prompt = "best quality, animation effect"
+		prompt = "a character from Anime style"
 		payload.AIRewrite = false
 	}
 
@@ -325,8 +326,8 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 	}
 
 	if translator != nil {
-		if helper.IsChinese(prompt) {
-			translateRes, err := translator.Translate(ctx, youdao.LanguageAuto, youdao.LanguageEnglish, prompt)
+		if misc.IsChinese(prompt) {
+			translateRes, err := translator.Translate(ctx, youdao2.LanguageAuto, youdao2.LanguageEnglish, prompt)
 			if err != nil {
 				log.With(payload).Errorf("translate failed: %v", err)
 			} else {
@@ -334,8 +335,8 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 			}
 		}
 
-		if strings.TrimSpace(negativePrompt) != "" && helper.IsChinese(negativePrompt) {
-			translateRes, err := translator.Translate(ctx, youdao.LanguageAuto, youdao.LanguageEnglish, negativePrompt)
+		if strings.TrimSpace(negativePrompt) != "" && misc.IsChinese(negativePrompt) {
+			translateRes, err := translator.Translate(ctx, youdao2.LanguageAuto, youdao2.LanguageEnglish, negativePrompt)
 			if err != nil {
 				log.With(payload).Errorf("translate failed: %v", err)
 			} else {
@@ -349,31 +350,33 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 	}
 
 	if strings.TrimSpace(negativePrompt) == "" {
-		negativePrompt = "out of frame, lowres, text, error, cropped, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, username, watermark, signature"
+		negativePrompt = "NSFW, out of frame, lowres, text, error, cropped, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, out of frame, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck, username, watermark, signature"
 	}
 
 	// 查询模型信息
-	modelInDB, err := creativeRepo.Model(ctx, payload.Vendor, payload.Model)
-	if err != nil {
-		log.WithFields(log.Fields{"payload": payload}).Errorf("invalid model: %s", payload.Model)
-	} else {
-		if modelInDB.ImageMeta.ArtistStyle != "" {
-			artistStyles := array.Filter(
-				strings.Split(strings.ReplaceAll(modelInDB.ImageMeta.ArtistStyle, "，", ","), ","),
-				func(item string, _ int) bool { return strings.TrimSpace(item) != "" },
-			)
+	if payload.Model != "" {
+		modelInDB, err := creativeRepo.Model(ctx, payload.Vendor, payload.Model)
+		if err != nil {
+			log.WithFields(log.Fields{"payload": payload}).Errorf("invalid model: %s", payload.Model)
+		} else {
+			if modelInDB.ImageMeta.ArtistStyle != "" {
+				artistStyles := array.Filter(
+					strings.Split(strings.ReplaceAll(modelInDB.ImageMeta.ArtistStyle, "，", ","), ","),
+					func(item string, _ int) bool { return strings.TrimSpace(item) != "" },
+				)
 
-			if len(artistStyles) > 0 {
-				var hasStyle bool
-				for _, style := range artistStyles {
-					if strings.Contains(prompt, style) {
-						hasStyle = true
-						break
+				if len(artistStyles) > 0 {
+					var hasStyle bool
+					for _, style := range artistStyles {
+						if strings.Contains(prompt, style) {
+							hasStyle = true
+							break
+						}
 					}
-				}
 
-				if !hasStyle {
-					prompt = fmt.Sprintf("%s,%s", artistStyles[rand.Intn(len(artistStyles))], prompt)
+					if !hasStyle {
+						prompt = fmt.Sprintf("%s,%s", artistStyles[rand.Intn(len(artistStyles))], prompt)
+					}
 				}
 			}
 		}

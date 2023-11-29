@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/dingding"
 	"time"
 
-	"github.com/mylxsw/aidea-server/internal/dingding"
 	"github.com/mylxsw/asteria/log"
 	"github.com/redis/go-redis/v9"
 	"gopkg.in/guregu/null.v3"
