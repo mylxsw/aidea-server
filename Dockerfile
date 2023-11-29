@@ -1,5 +1,5 @@
 # build stage
-FROM golang:1.21 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.21 AS builder
 ENV GOPROXY=https://goproxy.io,direct
 WORKDIR /data
 COPY go.mod go.sum ./
