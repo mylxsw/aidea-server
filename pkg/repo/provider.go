@@ -3,9 +3,11 @@ package repo
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/asteria/log"
+	"time"
 
 	"github.com/mylxsw/eloquent/event"
 	"github.com/mylxsw/glacier/infra"
@@ -41,7 +43,19 @@ func (Provider) Register(binder infra.Binder) {
 
 	// MySQL 数据库连接
 	binder.MustSingleton(func(conf *config.Config) (*sql.DB, error) {
-		return sql.Open("mysql", conf.DBURI)
+		conn, err := sql.Open("mysql", conf.DBURI)
+		if err != nil {
+			// 第一次连接失败，等待 5 秒后重试
+			// docker-compose 模式下，数据库可能还未完全初始化完成
+			time.Sleep(time.Second * 5)
+			conn, err = sql.Open("mysql", conf.DBURI)
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("数据库连接失败: %w", err)
+		}
+
+		return conn, nil
 	})
 
 	binder.MustSingleton(func(resolver infra.Resolver) *Repository {
