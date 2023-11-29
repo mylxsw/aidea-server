@@ -17,7 +17,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/mylxsw/asteria v1.0.1
-	github.com/mylxsw/eloquent v0.0.2-0.20230528030952-90014b5782ec
+	github.com/mylxsw/eloquent v0.0.2-0.20231129035241-c08e054b0632
 	github.com/mylxsw/glacier v1.1.4-0.20231112080120-114e547468b0
 	github.com/redis/go-redis/v9 v9.0.3
 	github.com/robfig/cron/v3 v3.0.1

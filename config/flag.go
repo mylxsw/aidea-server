@@ -9,6 +9,7 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("listen", ":8080", "Web 服务监听地址")
 	ins.AddStringFlag("api-listen", ":8081", "API 服务监听地址")
+	ins.AddBoolFlag("enable-migrate", "是否启用迁移，启用后，当数据结构有更新时，会自动更新数据库")
 
 	ins.AddStringFlag("base-url", "", "Web 服务的基础 URL，例如 https://web.aicode.cc")
 	ins.AddStringFlag("socks5-proxy", "", "socks5 proxy")

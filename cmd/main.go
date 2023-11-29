@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/api"
+	"github.com/mylxsw/aidea-server/migrate"
 	"github.com/mylxsw/aidea-server/pkg/ai/anthropic"
 	"github.com/mylxsw/aidea-server/pkg/ai/baichuan"
 	"github.com/mylxsw/aidea-server/pkg/ai/baidu"
@@ -90,7 +91,7 @@ func main() {
 	//})
 
 	ins.OnServerReady(func(conf *config.Config) {
-		log.Infof("service started successfully and is listening on %s", conf.Listen)
+		log.Infof("服务启动成功，监听地址为 %s", conf.Listen)
 	})
 
 	// 配置要加载的服务模块
@@ -107,6 +108,7 @@ func main() {
 		jobs.Provider{},
 		chat.Provider{},
 		proxy.Provider{},
+		migrate.Provider{},
 	)
 
 	// 普通云服务商

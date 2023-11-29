@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/sashabaranov/go-openai"
 )
@@ -79,8 +78,6 @@ func NewOpenAIClient(conf *Config, pp *proxy.Proxy) Client {
 			}
 		}
 	}
-
-	log.Debugf("create %d openai clients", len(clients))
 
 	return New(conf, clients)
 }
