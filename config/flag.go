@@ -199,4 +199,5 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("price-table-file", "", "价格表文件路径，留空则使用默认价格表")
 
 	ins.AddStringFlag("font-path", "", "字体文件路径")
+	ins.AddStringFlag("service-status-page", "", "服务状态页面，留空则不启用服务状态页面")
 }

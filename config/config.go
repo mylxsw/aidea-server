@@ -240,6 +240,8 @@ type Config struct {
 
 	// 字体文件路径
 	FontPath string `json:"font_path" yaml:"font_path"`
+	// 服务状态页面
+	ServiceStatusPage string `json:"service_status_page" yaml:"service_status_page"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -493,7 +495,8 @@ func Register(ins *app.App) {
 				BeichouPrompt:  strings.TrimSpace(ctx.String("virtual-model-beichou-prompt")),
 			},
 
-			FontPath: ctx.String("font-path"),
+			FontPath:          ctx.String("font-path"),
+			ServiceStatusPage: ctx.String("service-status-page"),
 		}
 	})
 }
