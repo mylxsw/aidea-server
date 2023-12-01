@@ -166,6 +166,8 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 		"support_websocket": ctl.conf.EnableWebsocket,
 		// 是否支持 API Keys 配置
 		"support_api_keys": ctl.conf.EnableAPIKeys,
+		// 服务状态页
+		"service_status_page": ctl.conf.ServiceStatusPage,
 	})
 }
 
