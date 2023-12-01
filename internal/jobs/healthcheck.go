@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/getimgai"
 	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
 	"github.com/mylxsw/aidea-server/pkg/dingding"
 	"time"
@@ -11,7 +12,13 @@ import (
 	"github.com/mylxsw/asteria/log"
 )
 
-func HealthCheckJob(ctx context.Context, conf *config.Config, ding *dingding.Dingding, stab *stabilityai.StabilityAI) error {
+func HealthCheckJob(
+	ctx context.Context,
+	conf *config.Config,
+	ding *dingding.Dingding,
+	stab *stabilityai.StabilityAI,
+	getimg *getimgai.GetimgAI,
+) error {
 	// TODO  这里添加一些检查任务，如接口的余额查询，通知
 
 	// Stability.ai 账号余额不足预警
@@ -30,6 +37,22 @@ func HealthCheckJob(ctx context.Context, conf *config.Config, ding *dingding.Din
 		}
 	}
 
+	// Getimg.ai 账号余额不足预警
+	if conf.EnableGetimgAI {
+		balance, err := queryGetimgAIBalance(ctx, getimg)
+		if err != nil {
+			log.Errorf("查询 Getimg.ai 账号余额失败: %v", err)
+		} else {
+			if balance <= 1 {
+				title := "Getimg.ai 账号余额不足，请及时充值"
+				content := fmt.Sprintf("Getimg.ai 当前账户余额 $%.2f，已低于预警值 $1，请及时充值", balance)
+				if err := ding.Send(dingding.NewMarkdownMessage(title, content, []string{})); err != nil {
+					log.WithFields(log.Fields{"content": content}).Errorf("send dingding message failed: %s", err)
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -38,4 +61,11 @@ func queryStabilityAIBalance(ctx context.Context, stab *stabilityai.StabilityAI)
 	defer cancel()
 
 	return stab.AccountBalance(ctx)
+}
+
+func queryGetimgAIBalance(ctx context.Context, getimg *getimgai.GetimgAI) (float64, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	return getimg.AccountBalance(ctx)
 }
