@@ -6,6 +6,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/go-utils/ternary"
 	"github.com/redis/go-redis/v9"
 	"math/rand"
 	"net/http"
@@ -41,6 +42,7 @@ func (ctl *InfoController) Register(router web.Router) {
 		router.Get("/privacy-policy", ctl.PrivacyPolicy)
 		router.Get("/terms-of-user", ctl.TermsOfUser)
 		router.Any("/version-check", ctl.VersionCheck)
+		router.Get("/free-chat-counts", ctl.FreeChatCounts)
 	})
 	router.Group("/share", func(router web.Router) {
 		router.Get("/info", ctl.shareInfo)
@@ -55,6 +57,21 @@ var qrCodes = []string{
 	"https://ssl.aicode.cc/ai-server/assets/qr-4.png",
 	"https://ssl.aicode.cc/ai-server/assets/qr-5.png",
 	"https://ssl.aicode.cc/ai-server/assets/qr-6.png",
+}
+
+// FreeChatCounts 免费聊天额度统计
+func (ctl *InfoController) FreeChatCounts(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
+	userID := ternary.IfLazy(user.User != nil, func() int64 { return user.User.ID }, func() int64 { return 0 })
+	freeModels := ctl.userSvc.FreeChatStatistics(ctx, userID)
+	if client.IsCNLocalMode(ctl.conf) {
+		freeModels = array.Filter(freeModels, func(m service.FreeChatState, _ int) bool {
+			return !m.NonCN
+		})
+	}
+
+	return webCtx.JSON(web.M{
+		"data": freeModels,
+	})
 }
 
 func (ctl *InfoController) shareInfo(ctx web.Context, user *auth.UserOptional) web.Response {

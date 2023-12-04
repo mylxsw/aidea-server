@@ -99,8 +99,9 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v1/admin",           // 管理员接口
 
 		// v2 版本
-		"/v2/creative-island", // 创作岛
-		"/v2/rooms",           // 数字人管理
+		"/v2/creative-island/histories",   // 创作岛历史记录
+		"/v2/creative-island/completions", // 创作岛生成操作
+		"/v2/rooms",                       // 数字人管理
 	}
 
 	// Prometheus 监控指标
@@ -113,6 +114,16 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 
 	// 添加 web 中间件
 	resolver.MustResolve(func(tk *token.Token, userSrv *service.UserService, limiter *redis_rate.Limiter, translater youdao.Translater) {
+		mws = append(mws, func(handler web.WebHandler) web.WebHandler {
+			return func(ctx web.Context) web.Response {
+				ctx.Response().Header("aidea-global-alert-id", "20231204")
+				//ctx.Response().Header("aidea-global-alert-type", "info")
+				//ctx.Response().Header("aidea-global-alert-pages", "")
+				//ctx.Response().Header("aidea-global-alert-msg", base64.StdEncoding.EncodeToString([]byte("服务器正在维护中，预计 2023 年 11 月 12 日 00:00:00 恢复，[查看详情](https://status.aicode.cc/status/aidea)。")))
+
+				return handler(ctx)
+			}
+		})
 		mws = append(mws, mw.BeforeInterceptor(func(webCtx web.Context) web.Response {
 			// 跨域请求处理，OPTIONS 请求直接返回
 			if webCtx.Method() == http.MethodOptions {

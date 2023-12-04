@@ -61,27 +61,30 @@ func (ctl *CreativeIslandController) Register(router web.Router) {
 	})
 
 	router.Group("/creative-island", func(router web.Router) {
-		router.Get("/histories", ctl.Histories)
-		router.Get("/histories/{hid}", ctl.HistoryItem)
-		router.Delete("/histories/{hid}", ctl.DeleteHistoryItem)
-
-		router.Post("/histories/{hid}/share", ctl.ShareHistoryItem)
-		router.Delete("/histories/{hid}/share", ctl.CancelShareHistoryItem)
-
 		router.Get("/capacity", ctl.Capacity)
 		router.Get("/models", ctl.Models)
 		router.Get("/filters", ctl.ImageStyles)
 
-		// 文生图、图生图
-		router.Post("/completions", ctl.Completions)
-		router.Post("/completions/evaluate", ctl.CompletionsEvaluate)
+		router.Group("/histories", func(router web.Router) {
+			router.Get("/", ctl.Histories)
+			router.Get("/{hid}", ctl.HistoryItem)
+			router.Delete("/{hid}", ctl.DeleteHistoryItem)
+			router.Post("/{hid}/share", ctl.ShareHistoryItem)
+			router.Delete("/{hid}/share", ctl.CancelShareHistoryItem)
+		})
 
-		// 图片放大
-		router.Post("/completions/upscale", ctl.ImageUpscale)
-		// 图片上色
-		router.Post("/completions/colorize", ctl.ImageColorize)
-		// QR 生成、艺术字生成
-		router.Post("/completions/artistic-text", ctl.ArtisticText)
+		router.Group("/completions", func(router web.Router) {
+			// 文生图、图生图
+			router.Post("/", ctl.Completions)
+			router.Post("/evaluate", ctl.CompletionsEvaluate)
+
+			// 图片放大
+			router.Post("/upscale", ctl.ImageUpscale)
+			// 图片上色
+			router.Post("/colorize", ctl.ImageColorize)
+			// QR 生成、艺术字生成
+			router.Post("/artistic-text", ctl.ArtisticText)
+		})
 	})
 }
 
@@ -269,7 +272,7 @@ func (ctl *CreativeIslandController) ImageStyles(ctx context.Context, webCtx web
 }
 
 // Capacity 文生图、图生图支持的能力，用于控制客户端显示哪些允许用户配置的参数
-func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Context, user *auth.UserOptional) web.Response {
 	mode := webCtx.InputWithDefault("mode", "text-to-image")
 	id := webCtx.Input("id")
 
@@ -303,7 +306,7 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 	)
 
 	var models []VendorModel
-	if user.InternalUser() {
+	if user.User != nil && user.User.InternalUser() {
 		models = array.Sort(array.Filter(ctl.getAllModels(ctx), func(v VendorModel, _ int) bool { return v.Enabled }), func(v1, v2 VendorModel) bool {
 			if v1.Vendor == v2.Vendor {
 				return sortorder.NaturalLess(v1.Name, v2.Name)
@@ -313,7 +316,7 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		})
 
 		models = array.Map(models, func(item VendorModel, _ int) VendorModel {
-			if !user.InternalUser() {
+			if !user.User.InternalUser() {
 				item.Vendor = ""
 			}
 
@@ -338,13 +341,13 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		AllowRatios:              []string{"1:1" /*"4:3", "3:4",*/, "3:2", "2:3" /*"16:9"*/},
 		ShowStyle:                true,
 		ShowNegativeText:         true,
-		ShowSeed:                 user.InternalUser(),
-		ShowImageCount:           user.InternalUser(),
+		ShowSeed:                 user.User != nil && user.User.InternalUser(),
+		ShowImageCount:           user.User != nil && user.User.InternalUser(),
 		ShowPromptForImage2Image: true,
 		Filters:                  filters,
 		VendorModels:             models,
 		AllowUpscaleBy:           []string{"x1", "x2", "x4"},
-		ShowImageStrength:        user.InternalUser(),
+		ShowImageStrength:        user.User != nil && user.User.InternalUser(),
 		ArtisticStyles:           artisticStyle,
 	})
 }
