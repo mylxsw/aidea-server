@@ -1,11 +1,15 @@
 # build stage
 FROM --platform=$BUILDPLATFORM golang:1.21 AS builder
+ARG TARGETOS
+ARG TARGETARCH
 ENV GOPROXY=https://goproxy.io,direct
 WORKDIR /data
+
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN go build -ldflags "-s -w" -o /data/bin/aidea-server cmd/main.go
+
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -ldflags "-s -w" -o /data/bin/aidea-server cmd/main.go
 
 # final stage
 FROM ubuntu:22.04

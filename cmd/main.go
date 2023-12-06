@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"path/filepath"
+	"time"
+
 	"github.com/mylxsw/aidea-server/api"
 	"github.com/mylxsw/aidea-server/migrate"
 	"github.com/mylxsw/aidea-server/pkg/ai/anthropic"
@@ -36,9 +40,6 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/aidea-server/pkg/voice"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
-	"math/rand"
-	"path/filepath"
-	"time"
 
 	"github.com/mylxsw/aidea-server/internal/jobs"
 	"github.com/mylxsw/aidea-server/internal/payment/alipay"
@@ -81,6 +82,12 @@ func main() {
 			log.All().LogWriter(writer.NewDefaultRotatingFileWriter(context.TODO(), func(le level.Level, module string) string {
 				return filepath.Join(f.String("log-path"), fmt.Sprintf("%s.%s.log", le.GetLevelName(), time.Now().Format("20060102")))
 			}))
+		}
+
+		startDelay := f.Duration("start-delay")
+		if startDelay > 0 {
+			log.Infof("服务延迟 %s 后启动", startDelay)
+			time.Sleep(startDelay)
 		}
 
 		return nil
