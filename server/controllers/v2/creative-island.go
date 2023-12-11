@@ -116,7 +116,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 		},
 	}
 
-	if client != nil && misc.VersionNewer(client.Version, "1.0.8") && ctl.conf.EnableLeptonAI && user.User != nil && user.User.InternalUser() {
+	if client != nil && misc.VersionNewer(client.Version, "1.0.8") && ctl.conf.EnableLeptonAI {
 		items = append(items, CreativeIslandItem{
 			ID:           "artistic-text",
 			Title:        "艺术字",
