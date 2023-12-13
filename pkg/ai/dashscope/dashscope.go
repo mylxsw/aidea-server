@@ -32,6 +32,12 @@ const (
 	ModelQWenTurbo = "qwen-turbo"
 	// ModelQWenPlus 模型支持 8k tokens上下文，为了保障正常使用和正常输出，API限定用户输入为6k Tokens
 	ModelQWenPlus = "qwen-plus"
+	// ModelQWenMax 模型支持 8k tokens上下文，为了保障正常的使用和输出，API限定用户输入为6k tokens
+	ModelQWenMax = "qwen-max"
+	// ModelQWenMaxLongContext 模型支持 30k tokens上下文，为了保障正常的使用和输出，API限定用户输入为 28k tokens
+	ModelQWenMaxLongContext = "qwen-max-longcontext"
+	// ModelQWenVLPlus 通义千问VL plus支持灵活的交互方式，包括多图、多轮问答、创作等能力的模型，大幅提升了图片文字处理能力，增加可处理分辨率范围，增强视觉推理和决策能力
+	ModelQWenVLPlus = "qwen-vl-plus"
 
 	// 通义千问7B
 	ModelQWen7BV1     = "qwen-7b-v1"

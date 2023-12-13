@@ -283,7 +283,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-turbo.jpeg",
 		})
 		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelQWenPlus,
@@ -294,7 +294,29 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-plus.jpeg",
+		})
+		models = append(models, Model{
+			ID:          "灵积:" + dashscope.ModelQWenMax,
+			Name:        "通义千问 Max",
+			ShortName:   "千问 Max",
+			Description: "通义千问超大规模语言模型增强版，支持中文英文等不同语言输入",
+			Category:    "灵积",
+			IsChat:      true,
+			Disabled:    !conf.EnableDashScopeAI,
+			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-max.jpeg",
+		})
+		models = append(models, Model{
+			ID:          "灵积:" + dashscope.ModelQWenMaxLongContext,
+			Name:        "通义千问 Max+",
+			ShortName:   "千问 Max+",
+			Description: "通义千问 Max Long Context 版本，支持 30K 上下文",
+			Category:    "灵积",
+			IsChat:      true,
+			Disabled:    !conf.EnableDashScopeAI,
+			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-max-longcontext.jpeg",
 		})
 		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelQWen7BChat,
@@ -305,7 +327,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-osc-2.jpeg",
 		})
 		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelQWen14BChat,
@@ -316,7 +338,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-osc-1.jpeg",
 		})
 		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelBaiChuan7BChatV1,

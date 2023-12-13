@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/go-utils/str"
 	"strings"
 
 	"github.com/mylxsw/go-utils/array"
@@ -69,6 +70,9 @@ func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
 		}
 	}
 
+	// 并不是所有模型都支持搜索，目前没有找到文档记载
+	enableSearch := str.In(req.Model, []string{dashscope.ModelQWenPlus})
+
 	return dashscope.ChatRequest{
 		Model: strings.TrimPrefix(req.Model, "灵积:"),
 		Input: dashscope.ChatInput{
@@ -76,7 +80,7 @@ func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
 			History: array.Reverse(histories),
 		},
 		Parameters: dashscope.ChatParameters{
-			EnableSearch: true,
+			EnableSearch: enableSearch,
 		},
 	}
 }
@@ -147,9 +151,14 @@ func (ds *DashScopeChat) ChatStream(ctx context.Context, req Request) (<-chan Re
 
 func (ds *DashScopeChat) MaxContextLength(model string) int {
 	switch model {
-	case dashscope.ModelQWenV1, dashscope.ModelQWenTurbo, dashscope.ModelQWenPlusV1, dashscope.ModelQWenPlus, dashscope.ModelQWen7BChat, dashscope.ModelQWen14BChat:
+	case dashscope.ModelQWenV1, dashscope.ModelQWenTurbo, dashscope.ModelQWenVLPlus,
+		dashscope.ModelQWenPlusV1, dashscope.ModelQWenPlus, dashscope.ModelQWenMax,
+		dashscope.ModelQWen7BChat, dashscope.ModelQWen14BChat:
 		// https://help.aliyun.com/zh/dashscope/developer-reference/api-details?disableWebsiteRedirect=true
 		return 6000
+	case dashscope.ModelQWenMaxLongContext:
+		// https://help.aliyun.com/zh/dashscope/developer-reference/api-details?spm=a2c4g.11186623.0.0.1a8e6ffdMzDGXm
+		return 25000
 	}
 
 	return 4000

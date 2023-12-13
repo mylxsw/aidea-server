@@ -20,7 +20,7 @@ func TestDashscopeChat_Chat(t *testing.T) {
 	client := createDashScopeChatClient()
 
 	response, err := client.Chat(context.TODO(), chat2.Request{
-		Model: dashscope.ModelQWenV1,
+		Model: dashscope.ModelQWenMaxLongContext,
 		Messages: []chat2.Message{
 			{
 				Role:    "system",
