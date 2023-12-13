@@ -26,8 +26,9 @@ func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
 
 	for _, msg := range req.Messages {
 		m := Message{
-			Role:    msg.Role,
-			Content: msg.Content,
+			Role:              msg.Role,
+			Content:           msg.Content,
+			MultipartContents: msg.MultipartContents,
 		}
 
 		if msg.Role == "system" {
@@ -55,30 +56,65 @@ func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
 		contextMessages = append(finalSystemMessages, contextMessages...)
 	}
 
-	histories := make([]dashscope.ChatHistory, 0)
-	history := dashscope.ChatHistory{}
-	for i, msg := range array.Reverse(contextMessages[:len(contextMessages)-1]) {
-		if msg.Role == "user" {
-			history.User = msg.Content
-		} else {
-			history.Bot = msg.Content
+	input := dashscope.ChatInput{}
+
+	if req.Model == dashscope.ModelQWenVLPlus {
+		input.Messages = array.Map(contextMessages, func(msg Message, _ int) dashscope.Message {
+			contents := make([]dashscope.MessageContent, 0)
+			if len(msg.MultipartContents) == 0 {
+				contents = append(contents, dashscope.MessageContent{
+					Text: msg.Content,
+				})
+			} else {
+				for _, ct := range msg.MultipartContents {
+					if ct.Text != "" {
+						contents = append(contents, dashscope.MessageContent{
+							Text: ct.Text,
+						})
+					} else if ct.ImageURL != nil {
+						imageURL := ct.ImageURL.URL
+						if strings.HasPrefix(imageURL, "data:") {
+							// TODO 替换为图片 URL
+						}
+
+						contents = append(contents, dashscope.MessageContent{
+							Image: imageURL,
+						})
+					}
+				}
+			}
+
+			return dashscope.Message{
+				Role:    msg.Role,
+				Content: contents,
+			}
+		})
+	} else {
+		histories := make([]dashscope.ChatHistory, 0)
+		history := dashscope.ChatHistory{}
+		for i, msg := range array.Reverse(contextMessages[:len(contextMessages)-1]) {
+			if msg.Role == "user" {
+				history.User = msg.Content
+			} else {
+				history.Bot = msg.Content
+			}
+
+			if i%2 == 1 {
+				histories = append(histories, history)
+				history = dashscope.ChatHistory{}
+			}
 		}
 
-		if i%2 == 1 {
-			histories = append(histories, history)
-			history = dashscope.ChatHistory{}
-		}
+		input.Prompt = contextMessages[len(req.Messages)-1].Content
+		input.History = array.Reverse(histories)
 	}
 
 	// 并不是所有模型都支持搜索，目前没有找到文档记载
-	enableSearch := str.In(req.Model, []string{dashscope.ModelQWenPlus})
+	enableSearch := str.In(req.Model, []string{dashscope.ModelQWenPlus, dashscope.ModelQWenMax, dashscope.ModelQWenMaxLongContext})
 
 	return dashscope.ChatRequest{
 		Model: strings.TrimPrefix(req.Model, "灵积:"),
-		Input: dashscope.ChatInput{
-			Prompt:  req.Messages[len(req.Messages)-1].Content,
-			History: array.Reverse(histories),
-		},
+		Input: input,
 		Parameters: dashscope.ChatParameters{
 			EnableSearch: enableSearch,
 		},
