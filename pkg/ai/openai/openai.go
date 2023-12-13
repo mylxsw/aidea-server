@@ -32,20 +32,20 @@ func SelectBestModel(model string, tokenCount int) string {
 func ModelMaxContextSize(model string) int {
 	switch model {
 	case "gpt-3.5-turbo", "gpt-3.5-turbo-0613", "gpt-3.5-turbo-instruct":
-		return 4000
+		return 3500
 	case "gpt-3.5-turbo-16k", "gpt-3.5-turbo-16k-0613":
-		return 4000 * 4
+		return 3500 * 4
 	case "gpt-4", "gpt-4-0613":
-		return 8000
+		return 7500
 	case "gpt-4-32k", "gpt-4-32k-0613":
-		return 4000 * 8
+		return 3500 * 8
 	case "gpt-3.5-turbo-1106":
 		return 16385 - 4096
 	case "gpt-4-1106-preview", "gpt-4-vision-preview":
 		return 128000 - 4096
 	}
 
-	return 4000
+	return 3500
 }
 
 // ReduceChatCompletionMessages 递归减少对话上下文
