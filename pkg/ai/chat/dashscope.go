@@ -4,18 +4,23 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/aidea-server/pkg/file"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/str"
 	"strings"
+	"time"
 
 	"github.com/mylxsw/go-utils/array"
 )
 
 type DashScopeChat struct {
 	dashscope *dashscope.DashScope
+	file      *file.File
 }
 
-func NewDashScopeChat(dashscope *dashscope.DashScope) *DashScopeChat {
-	return &DashScopeChat{dashscope: dashscope}
+func NewDashScopeChat(dashscope *dashscope.DashScope, file *file.File) *DashScopeChat {
+	return &DashScopeChat{dashscope: dashscope, file: file}
 }
 
 func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
@@ -66,6 +71,9 @@ func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
 					Text: msg.Content,
 				})
 			} else {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+
 				for _, ct := range msg.MultipartContents {
 					if ct.Text != "" {
 						contents = append(contents, dashscope.MessageContent{
@@ -74,12 +82,25 @@ func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
 					} else if ct.ImageURL != nil {
 						imageURL := ct.ImageURL.URL
 						if strings.HasPrefix(imageURL, "data:") {
-							// TODO 替换为图片 URL
+							// 替换为图片 URL
+							imageData, imageExt, err := misc.DecodeBase64Image(imageURL)
+							if err == nil {
+								res, err := ds.file.UploadTempFileData(ctx, imageData, strings.TrimPrefix(imageExt, "."), 7)
+								if err != nil {
+									log.Errorf("upload temp file failed: %v", err)
+								} else {
+									imageURL = res
+								}
+							} else {
+								log.Errorf("decode base64 image failed: %v", err)
+							}
 						}
 
-						contents = append(contents, dashscope.MessageContent{
-							Image: imageURL,
-						})
+						if !strings.HasPrefix(imageURL, "data:") {
+							contents = append(contents, dashscope.MessageContent{
+								Image: imageURL,
+							})
+						}
 					}
 				}
 			}

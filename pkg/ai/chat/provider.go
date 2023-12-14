@@ -12,6 +12,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
+	"github.com/mylxsw/aidea-server/pkg/file"
 	"github.com/mylxsw/glacier/infra"
 )
 
@@ -30,12 +31,13 @@ func (Provider) Register(binder infra.Binder) {
 		baichuanai *baichuan.BaichuanAI,
 		g360 *gpt360.GPT360,
 		one *oneapi.OneAPI,
+		file *file.File,
 	) Chat {
 		return NewChat(
 			conf,
 			NewOpenAIChat(oai),
 			NewBaiduAIChat(bai),
-			NewDashScopeChat(ds),
+			NewDashScopeChat(ds, file),
 			NewXFYunChat(xf),
 			NewSenseNovaChat(sn),
 			NewTencentAIChat(tai),

@@ -7,6 +7,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/mylxsw/asteria/log"
 	"math/rand"
+	"mime"
 	"net/http"
 	"os"
 	"path"
@@ -256,6 +257,36 @@ func UUID() string {
 	return ret
 }
 
+// FileExt 获取文件扩展名
 func FileExt(filename string) string {
 	return strings.ToLower(path.Ext(filename))
+}
+
+// Sha1 计算 sha1 值
+func Sha1(data []byte) string {
+	return fmt.Sprintf("%x", sha1.Sum(data))
+}
+
+// DecodeBase64Image 解码 base64 图片
+func DecodeBase64Image(base64Image string) (data []byte, ext string, err error) {
+	// Remove data:image/jpeg;base64, if exist
+	d := strings.SplitN(base64Image, ",", 2)
+	if len(d) == 2 {
+		base64Image = d[1]
+	}
+
+	// Decode the base64 image
+	decodedData, err := base64.StdEncoding.DecodeString(base64Image)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Detect the content type to get the file extension
+	contentType := http.DetectContentType(decodedData)
+	exts, _ := mime.ExtensionsByType(contentType)
+	if len(exts) > 0 {
+		return decodedData, exts[0], nil
+	}
+
+	return decodedData, ".png", nil
 }

@@ -13,7 +13,7 @@ import (
 )
 
 func createDashScopeChatClient() chat2.Chat {
-	return chat2.NewDashScopeChat(dashscope.New(os.Getenv("ALI_LINGJI_API_KEY")))
+	return chat2.NewDashScopeChat(dashscope.New(os.Getenv("ALI_LINGJI_API_KEY")), nil)
 }
 
 func TestDashscopeChat_Chat(t *testing.T) {

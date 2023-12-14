@@ -319,6 +319,18 @@ func chinaModels(conf *config.Config) []Model {
 			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-max-longcontext.jpeg",
 		})
 		models = append(models, Model{
+			ID:            "灵积:" + dashscope.ModelQWenVLPlus,
+			Name:          "通义千问（视觉）",
+			ShortName:     "千问 VL",
+			Description:   "通义千问 VL 具备通用 OCR、视觉推理、中文文本理解基础能力，还能处理各种分辨率和规格的图像，甚至能“看图做题”",
+			Category:      "灵积",
+			IsChat:        true,
+			Disabled:      !conf.EnableDashScopeAI,
+			VersionMin:    "1.0.8",
+			SupportVision: true,
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-vlplus.jpeg",
+		})
+		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelQWen7BChat,
 			Name:        "通义千问 7B",
 			ShortName:   "千问 7B",

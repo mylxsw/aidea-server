@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/file"
 	"math/rand"
 	"path/filepath"
 	"time"
@@ -115,6 +116,7 @@ func main() {
 		jobs.Provider{},
 		chat.Provider{},
 		proxy.Provider{},
+		file.Provider{},
 		migrate.Provider{},
 	)
 
