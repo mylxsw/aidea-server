@@ -167,9 +167,6 @@ func (req Request) Fix(chat Chat, maxContextLength int64) (*Request, int64, erro
 		return item
 	})
 
-	// TODO 这里是临时解决方案
-	req.MaxTokens = 4000
-
 	return &req, int64(inputTokens), nil
 }
 
