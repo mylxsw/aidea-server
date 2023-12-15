@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/file"
 	"math/rand"
 	"path/filepath"
@@ -152,6 +153,7 @@ func main() {
 		gpt360.Provider{},
 		oneapi.Provider{},
 		lepton.Provider{},
+		google.Provider{},
 	)
 
 	app.MustRun(ins)

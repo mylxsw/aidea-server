@@ -74,6 +74,12 @@ type Config struct {
 	AnthropicServer    string `json:"anthropic_server" yaml:"anthropic_server"`
 	AnthropicAPIKey    string `json:"anthropic_api_key" yaml:"anthropic_api_key"`
 
+	// Google Gemini 配置
+	EnableGoogleAI    bool   `json:"enable_googleai" yaml:"enable_googleai"`
+	GoogleAIAutoProxy bool   `json:"googleai_auto_proxy" yaml:"googleai_auto_proxy"`
+	GoogleAIServer    string `json:"googleai_server" yaml:"googleai_server"`
+	GoogleAIKey       string `json:"googleai_key" yaml:"googleai_key"`
+
 	// 百度文心大模型配置
 	EnableBaiduWXAI bool   `json:"enable_baiduwx_ai" yaml:"enable_baiduwx_ai"`
 	BaiduWXKey      string `json:"baidu_ai_key" yaml:"baidu_ai_key"`
@@ -355,6 +361,11 @@ func Register(ins *app.App) {
 			AnthropicAutoProxy: ctx.Bool("anthropic-autoproxy"),
 			AnthropicServer:    ctx.String("anthropic-server"),
 			AnthropicAPIKey:    ctx.String("anthropic-apikey"),
+
+			EnableGoogleAI:    ctx.Bool("enable-googleai"),
+			GoogleAIAutoProxy: ctx.Bool("googleai-autoproxy"),
+			GoogleAIServer:    ctx.String("googleai-server"),
+			GoogleAIKey:       ctx.String("googleai-key"),
 
 			EnableBaiduWXAI: ctx.Bool("enable-baiduwxai"),
 			BaiduWXKey:      ctx.String("baiduwx-key"),

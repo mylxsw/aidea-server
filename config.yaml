@@ -122,6 +122,20 @@ anthropic-server: "https://api.anthropic.com"
 # Anthropic API Key
 anthropic-apikey: ""
 
+######## Google AI ########
+
+# API 申请：https://ai.google.dev/
+
+# 是否启用 Google AI
+enable-googleai: false
+
+# 是否启用 Google AI 代理，依赖于 socks5-proxy 配置
+googleai-autoproxy: false
+# Google AI 服务地址
+googleai-server: "https://generativelanguage.googleapis.com"
+# Google AI API Key
+googleai-key: ""
+
 ######## 百度文心大模型 ########
 
 # API 申请：https://cloud.baidu.com/product/wenxinworkshop

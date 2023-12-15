@@ -7,9 +7,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bcicen/jstream"
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/proxy"
+	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/array"
+	"gopkg.in/resty.v1"
+	"io"
 	"net/http"
+	"time"
 )
 
 const (
@@ -17,9 +23,37 @@ const (
 	RoleModel = "model"
 )
 
+const (
+	ModelGeminiPro       = "gemini-pro"
+	ModelGeminiProVision = "gemini-pro-vision"
+)
+
 type GoogleAI struct {
 	serverURL string
 	apiKey    string
+
+	client *http.Client
+	resty  *resty.Client
+}
+
+func newGoogleAI(resolver infra.Resolver, conf *config.Config) *GoogleAI {
+	client := &http.Client{Timeout: 180 * time.Second}
+	restyClient := misc.RestyClient(2).SetTimeout(180 * time.Second)
+
+	if conf.SupportProxy() && conf.GoogleAIAutoProxy {
+		resolver.MustResolve(func(pp *proxy.Proxy) {
+			transport := pp.BuildTransport()
+			client.Transport = transport
+			restyClient.SetTransport(transport)
+		})
+	}
+
+	return &GoogleAI{
+		serverURL: conf.GoogleAIServer,
+		apiKey:    conf.GoogleAIKey,
+		client:    client,
+		resty:     restyClient,
+	}
 }
 
 func NewGoogleAI(serverURL string, apiKey string) *GoogleAI {
@@ -30,6 +64,8 @@ func NewGoogleAI(serverURL string, apiKey string) *GoogleAI {
 	return &GoogleAI{
 		serverURL: serverURL,
 		apiKey:    apiKey,
+		client:    http.DefaultClient,
+		resty:     misc.RestyClient(2).SetTimeout(180 * time.Second),
 	}
 }
 
@@ -37,6 +73,18 @@ type Request struct {
 	Contents         []Message         `json:"contents,omitempty"`
 	SafetySettings   []SafetySetting   `json:"safetySettings,omitempty"`
 	GenerationConfig *GenerationConfig `json:"generationConfig,omitempty"`
+}
+
+func (req *Request) HasImage() bool {
+	for _, content := range req.Contents {
+		for _, part := range content.Parts {
+			if part.InlineData != nil {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 type SafetySetting struct {
@@ -105,13 +153,13 @@ type ErrorResponse struct {
 	Status  string `json:"status,omitempty"`
 }
 
-func (ai *GoogleAI) GeminiChat(ctx context.Context, req Request) (*Response, error) {
-	resp, err := misc.RestyClient(2).R().
+func (ai *GoogleAI) Chat(ctx context.Context, model string, req Request) (*Response, error) {
+	resp, err := ai.resty.R().
 		SetQueryParam("key", ai.apiKey).
 		SetHeader("Content-Type", "application/json").
 		SetBody(req).
 		SetContext(ctx).
-		Post(ai.serverURL + "/v1beta/models/gemini-pro:generateContent")
+		Post(fmt.Sprintf("%s/v1beta/models/%s:generateContent", ai.serverURL, model))
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +178,7 @@ func (ai *GoogleAI) GeminiChat(ctx context.Context, req Request) (*Response, err
 	return &chatResponse, nil
 }
 
-func (ai *GoogleAI) GeminiChatStream(ctx context.Context, req Request) (<-chan Response, error) {
+func (ai *GoogleAI) ChatStream(ctx context.Context, model string, req Request) (<-chan Response, error) {
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -139,7 +187,7 @@ func (ai *GoogleAI) GeminiChatStream(ctx context.Context, req Request) (<-chan R
 	httpReq, err := http.NewRequestWithContext(
 		ctx,
 		"POST",
-		fmt.Sprintf("%s/v1beta/models/gemini-pro:streamGenerateContent?key=%s", ai.serverURL, ai.apiKey),
+		fmt.Sprintf("%s/v1beta/models/%s:streamGenerateContent?key=%s", ai.serverURL, model, ai.apiKey),
 		bytes.NewReader(body),
 	)
 	if err != nil {
@@ -151,13 +199,23 @@ func (ai *GoogleAI) GeminiChatStream(ctx context.Context, req Request) (<-chan R
 	httpReq.Header.Set("Cache-Control", "no-cache")
 	httpReq.Header.Set("Connection", "keep-alive")
 
-	httpResp, err := http.DefaultClient.Do(httpReq)
+	httpResp, err := ai.client.Do(httpReq)
 	if err != nil {
 		return nil, err
 	}
 
 	if httpResp.StatusCode < http.StatusOK || httpResp.StatusCode >= http.StatusBadRequest {
-		return nil, fmt.Errorf("chat failed, status code: %d", httpResp.StatusCode)
+		respBody, _ := io.ReadAll(httpResp.Body)
+		var chatResponse []Response
+		if err := json.Unmarshal(respBody, &chatResponse); err != nil {
+			return nil, err
+		}
+
+		if len(chatResponse) == 0 {
+			return nil, fmt.Errorf("chat failed, status code: %d", httpResp.StatusCode)
+		}
+
+		return nil, fmt.Errorf("chat failed, status code: %d, %s", httpResp.StatusCode, chatResponse[0].Error.Message)
 	}
 
 	res := make(chan Response)

@@ -65,6 +65,11 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("anthropic-server", "https://api.anthropic.com", "anthropic server")
 	ins.AddStringFlag("anthropic-apikey", "", "anthropic server key")
 
+	ins.AddBoolFlag("enable-googleai", "是否启用 GoogleAI")
+	ins.AddBoolFlag("googleai-autoproxy", "使用 socks5 代理访问 GoogleAI 服务")
+	ins.AddStringFlag("googleai-server", "https://generativelanguage.googleapis.com", "googleai server")
+	ins.AddStringFlag("googleai-key", "", "googleai server key")
+
 	ins.AddBoolFlag("enable-baiduwxai", "是否启用百度文心千帆大模型")
 	ins.AddStringFlag("baiduwx-key", "", "百度文心大模型 Key")
 	ins.AddStringFlag("baiduwx-secret", "", "百度文心大模型 Secret")

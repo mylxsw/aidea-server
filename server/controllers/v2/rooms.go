@@ -62,7 +62,7 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 		cnLocalMode := client.IsCNLocalMode(ctl.conf)
 		suggests = array.Filter(suggests, func(item repo.GalleryRoom, _ int) bool {
 			// 如果启用了国产化模式，则过滤掉 openai 和 Anthropic 的模型
-			if cnLocalMode && item.RoomType == "system" && array.In(item.Vendor, []string{"openai", "Anthropic"}) {
+			if cnLocalMode && item.RoomType == "system" && array.In(item.Vendor, []string{"openai", "Anthropic", "google"}) {
 				return false
 			}
 
@@ -100,6 +100,10 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 			}
 
 			if !ctl.conf.EnableGPT360 && item.Vendor == "360智脑" {
+				return false
+			}
+
+			if !ctl.conf.EnableGoogleAI && item.Vendor == "google" {
 				return false
 			}
 

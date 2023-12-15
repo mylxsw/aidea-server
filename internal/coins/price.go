@@ -89,6 +89,9 @@ var coinTables = map[string]CoinTable{
 		"chatglm_lite":  1, // valid ¥0.004/1K tokens
 		// Google
 		"PaLM-2": 3, // valid ¥0.0148/1K tokens
+		//https://ai.google.dev/pricing?hl=zh-cn
+		"gemini-pro":        3, // 临时价格
+		"gemini-pro-vision": 5, // 临时价格
 	},
 
 	"voice-recognition": {
