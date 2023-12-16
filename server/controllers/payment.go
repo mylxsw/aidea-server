@@ -44,15 +44,18 @@ func NewPaymentController(resolver infra.Resolver) web.Controller {
 
 func (p *PaymentController) Register(router web.Router) {
 	router.Group("/payment", func(router web.Router) {
+		// 可以公开访问的可购买产品列表
+		router.Get("/products", p.AppleProducts)
+		router.Get("/others/products", p.AppleProducts) // @deprecated(since 1.0.9)
+		router.Get("/apple/products", p.AppleProducts)  // @deprecated(since 1.0.9)
+		router.Get("/alipay/products", p.AppleProducts) // @deprecated(since 1.0.8)
+
 		// Apple 应用内支付
-		router.Get("/apple/products", p.AppleProducts)
 		router.Post("/apple", p.CreateApplePayment)
 		router.Put("/apple/{id}", p.UpdateApplePayment)
 		router.Delete("/apple/{id}", p.CancelApplePayment)
 		router.Post("/apple/{id}/verify", p.VerifyApplePayment)
 
-		// 支付宝支付 @deprecated(since 1.0.8)
-		router.Get("/alipay/products", p.AppleProducts)
 		// 支付宝支付 @deprecated(since 1.0.8)
 		router.Group("/alipay", func(router web.Router) {
 			router.Post("/", p.CreateAlipay)
@@ -60,7 +63,6 @@ func (p *PaymentController) Register(router web.Router) {
 		})
 
 		// 支付宝支付别名(IOS 完全去支付宝，避免审核被拒)
-		router.Get("/others/products", p.AppleProducts)
 		router.Group("/others", func(router web.Router) {
 			router.Post("/", p.CreateAlipay)
 			router.Post("/client-confirm", p.AlipayClientConfirm)
@@ -385,7 +387,7 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 }
 
 // AppleProducts 支付产品清单
-func (ctl *PaymentController) AppleProducts(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
+func (ctl *PaymentController) AppleProducts(ctx context.Context, webCtx web.Context, client *auth.ClientInfo) web.Response {
 	products := array.Map(coins.Products, func(product coins.Product, _ int) coins.Product {
 		product.ExpirePolicyText = product.GetExpirePolicyText()
 		if product.RetailPrice == 0 {
