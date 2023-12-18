@@ -104,7 +104,7 @@ func (ctl *InfoController) Redirect(ctx context.Context, webCtx web.Context) web
 	return webCtx.HTML(fmt.Sprintf(htmlTemplate, "Redirect", fmt.Sprintf(`<div style="margin: 0; text-align: center; margin-top: 50px;"><a href="%s">NSFW</a></div>`, url)))
 }
 
-const CurrentVersion = "1.0.8"
+const CurrentVersion = "1.0.9"
 
 func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 	clientVersion := ctx.Input("version")
@@ -239,8 +239,8 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 			Powerful: false,
 		},
 		{
-			Name:     "GPT-4",
-			ModelID:  "gpt-4",
+			Name:     "GPT-4V",
+			ModelID:  "gpt-4-vision-preview",
 			Desc:     "能力强，更精准",
 			Color:    "FF714BD7",
 			Powerful: true,
