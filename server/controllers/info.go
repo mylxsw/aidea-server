@@ -239,8 +239,8 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 			Powerful: false,
 		},
 		{
-			Name:     "GPT-4V",
-			ModelID:  "gpt-4-vision-preview",
+			Name:     "GPT-4",
+			ModelID:  "gpt-4",
 			Desc:     "能力强，更精准",
 			Color:    "FF714BD7",
 			Powerful: true,

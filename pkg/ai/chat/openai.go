@@ -71,6 +71,11 @@ func (chat *OpenAIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 	//	req.MaxTokens = 1024
 	//}
 
+	// TODO: 临时解决方案，后续需要优化
+	if req.Model == "gpt-4-vision-preview " {
+		req.MaxTokens = 1024
+	}
+
 	msgs, tokenCount, err := openai2.ReduceChatCompletionMessages(
 		contextMessages,
 		req.Model,

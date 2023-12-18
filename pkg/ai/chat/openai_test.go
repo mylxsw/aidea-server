@@ -49,17 +49,22 @@ func TestOpenAIChat_ChatStream(t *testing.T) {
 	defer cancel()
 
 	response, err := chatClient.ChatStream(ctx, chat2.Request{
-		Model: "gpt-4",
+		Model: "gpt-4-vision-preview",
 		Messages: []chat2.Message{
 			{
-				Role:    "system",
-				Content: "假如你是鲁迅，请使用批判性，略带讽刺的语言来回答我的问题，语言要风趣，幽默，略带调侃",
+				Role: "system",
+				MultipartContents: []*chat2.MultipartContent{
+					{Text: "假如你是鲁迅，请使用批判性，略带讽刺的语言来回答我的问题，语言要风趣，幽默，略带调侃", Type: "text"},
+				},
 			},
 			{
-				Role:    "user",
-				Content: "老铁，最近怎么样？",
+				Role: "user",
+				MultipartContents: []*chat2.MultipartContent{
+					{Text: "老铁，最近怎么样？", Type: "text"},
+				},
 			},
 		},
+		MaxTokens: 4096,
 	})
 
 	assert.NoError(t, err)
