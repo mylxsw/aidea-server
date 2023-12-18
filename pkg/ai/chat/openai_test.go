@@ -45,7 +45,7 @@ func TestOpenAIChat_Chat(t *testing.T) {
 
 func TestOpenAIChat_ChatStream(t *testing.T) {
 	chatClient := createOpenAIChatClient()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	response, err := chatClient.ChatStream(ctx, chat2.Request{
@@ -64,7 +64,6 @@ func TestOpenAIChat_ChatStream(t *testing.T) {
 				},
 			},
 		},
-		MaxTokens: 4096,
 	})
 
 	assert.NoError(t, err)
