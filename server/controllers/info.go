@@ -63,7 +63,7 @@ var qrCodes = []string{
 func (ctl *InfoController) FreeChatCounts(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
 	userID := ternary.IfLazy(user.User != nil, func() int64 { return user.User.ID }, func() int64 { return 0 })
 	freeModels := ctl.userSvc.FreeChatStatistics(ctx, userID)
-	if client.IsCNLocalMode(ctl.conf) {
+	if client.IsCNLocalMode(ctl.conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		freeModels = array.Filter(freeModels, func(m service.FreeChatState, _ int) bool {
 			return !m.NonCN
 		})

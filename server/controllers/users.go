@@ -554,7 +554,7 @@ func (ctl *UserController) UserQuotaUsageDetails(ctx context.Context, webCtx web
 // UserFreeChatCounts 用户免费聊天次数统计
 func (ctl *UserController) UserFreeChatCounts(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	freeModels := ctl.userSrv.FreeChatStatistics(ctx, user.ID)
-	if client.IsCNLocalMode(ctl.conf) {
+	if client.IsCNLocalMode(ctl.conf) && !user.ExtraPermissionUser() {
 		freeModels = array.Filter(freeModels, func(m service2.FreeChatState, _ int) bool {
 			return !m.NonCN
 		})
