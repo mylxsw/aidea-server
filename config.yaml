@@ -196,6 +196,17 @@ enable-oneapi: false
 oneapi-server: ""
 oneapi-key: ""
 
+######## OpenRouter ########
+
+# https://openrouter.ai/
+
+# 支持的模型列表，
+openrouter-support-models: ["01-ai/yi-34b-chat"]
+openrouter-autoproxy: false
+enable-openrouter: false
+openrouter-server: "https://openrouter.ai/api/v1"
+openrouter-key: ""
+
 ######## DeepAI 配置 ########
 
 # 用于图片超分辨率、图片上色

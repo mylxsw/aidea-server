@@ -482,6 +482,20 @@ func chinaModels(conf *config.Config) []Model {
 		})
 	}
 
+	if conf.EnableOpenRouter {
+		models = append(models, Model{
+			ID:          "openrouter:01-ai.yi-34b-chat",
+			Name:        "零一万物 Yi 34B",
+			ShortName:   "Yi",
+			Description: "零一万物打造的开源大语言模型，在多项评测中全球领跑，MMLU 等评测取得了多项 SOTA 国际最佳性能指标表现，以更小模型尺寸评测超越 LLaMA2-70B、Falcon-180B 等大尺寸开源模型",
+			Category:    "openrouter",
+			IsChat:      true,
+			Disabled:    !str.In("01-ai/yi-34b-chat", conf.OpenRouterSupportModels),
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/yi34b.png",
+		})
+	}
+
 	return models
 }
 

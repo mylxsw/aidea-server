@@ -113,6 +113,14 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 			return false
 		}
 
+		if !ctl.conf.EnableOneAPI && item.Vendor == "oneapi" {
+			return false
+		}
+
+		if !ctl.conf.EnableOpenRouter && item.Vendor == "openrouter" {
+			return false
+		}
+
 		// 检查版本是否满足条件
 		if item.VersionMax == "" && item.VersionMin == "" {
 			return true

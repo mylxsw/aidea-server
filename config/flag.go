@@ -99,6 +99,12 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("oneapi-server", "", "one-server server")
 	ins.AddStringFlag("oneapi-key", "", "one-server key")
 
+	ins.AddStringSliceFlag("openrouter-support-models", []string{"01-ai/yi-34b-chat"}, "openrouter 支持的模型")
+	ins.AddBoolFlag("enable-openrouter", "是否启用 OpenRouter")
+	ins.AddBoolFlag("openrouter-autoproxy", "使用 socks5 代理访问 OpenRouter 服务")
+	ins.AddStringFlag("openrouter-server", "https://openrouter.ai/api/v1", "openrouter server")
+	ins.AddStringFlag("openrouter-key", "", "openrouter key")
+
 	ins.AddBoolFlag("enable-stabilityai", "是否启用 StabilityAI 文生图、图生图服务")
 	ins.AddBoolFlag("stabilityai-autoproxy", "使用 socks5 代理访问 StabilityAI 服务")
 	ins.AddStringFlag("stabilityai-organization", "", "stabilityai organization")

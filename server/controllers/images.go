@@ -135,6 +135,7 @@ func (ctl *ImageController) Avatar(ctx context.Context, webCtx web.Context) web.
 			"https://ssl.aicode.cc/ai-server/assets/avatar/gemini.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-instant.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-2.png-avatar",
+			"https://ssl.aicode.cc/ai-server/assets/avatar/yi34b.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/nanxian.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/beichou.png-avatar",
 		},

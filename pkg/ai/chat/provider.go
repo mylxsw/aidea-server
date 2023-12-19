@@ -10,6 +10,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
@@ -33,6 +34,7 @@ func (Provider) Register(binder infra.Binder) {
 		g360 *gpt360.GPT360,
 		one *oneapi.OneAPI,
 		gai *google.GoogleAI,
+		openRouter *openrouter.OpenRouter,
 		file *file.File,
 	) Chat {
 		return NewChat(
@@ -48,6 +50,7 @@ func (Provider) Register(binder infra.Binder) {
 			NewGPT360Chat(g360),
 			NewOneAPIChat(one),
 			NewGoogleChat(gai),
+			NewOpenRouterChat(openRouter),
 		)
 	})
 }

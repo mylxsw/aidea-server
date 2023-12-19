@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
+	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/file"
 	"math/rand"
 	"path/filepath"
@@ -154,6 +155,7 @@ func main() {
 		oneapi.Provider{},
 		lepton.Provider{},
 		google.Provider{},
+		openrouter.Provider{},
 	)
 
 	app.MustRun(ins)

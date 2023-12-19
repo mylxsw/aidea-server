@@ -92,6 +92,9 @@ var coinTables = map[string]CoinTable{
 		//https://ai.google.dev/pricing?hl=zh-cn
 		"gemini-pro":        3, // 临时价格
 		"gemini-pro-vision": 5, // 临时价格
+
+		// OpenRouter
+		"01-ai.yi-34b-chat": 1, // valid ¥0.006/1K tokens
 	},
 
 	"voice-recognition": {

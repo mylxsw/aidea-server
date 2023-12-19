@@ -10,6 +10,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
+	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
@@ -235,6 +236,7 @@ type Imp struct {
 	virtual     *VirtualChat
 	one         *OneAPIChat
 	gai         *GoogleChat
+	openrouter  *OpenRouterChat
 }
 
 func NewChat(
@@ -250,9 +252,11 @@ func NewChat(
 	g360 *GPT360Chat,
 	one *OneAPIChat,
 	gai *GoogleChat,
+	openr *OpenRouterChat,
 ) Chat {
 	var virtualImpl Chat
-	switch strings.ToLower(conf.VirtualModel.Implementation) {
+	impLowercase := strings.ToLower(conf.VirtualModel.Implementation)
+	switch impLowercase {
 	case "openai":
 		virtualImpl = openAI
 	case "baidu", "文心千帆":
@@ -276,7 +280,11 @@ func NewChat(
 	case "google":
 		virtualImpl = gai
 	default:
-		virtualImpl = openAI
+		if openrouter.SupportModel(impLowercase) {
+			virtualImpl = openr
+		} else {
+			virtualImpl = openAI
+		}
 	}
 
 	return &Imp{
@@ -292,6 +300,7 @@ func NewChat(
 		virtual:     NewVirtualChat(virtualImpl, conf.VirtualModel),
 		one:         one,
 		gai:         gai,
+		openrouter:  openr,
 	}
 }
 
@@ -340,6 +349,10 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.gai
 	}
 
+	if strings.HasPrefix(model, "openrouter:") {
+		return ai.openrouter
+	}
+
 	// TODO 根据模型名称判断使用哪个 AI
 	switch model {
 	case string(baidu.ModelErnieBot),
@@ -386,6 +399,10 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.one
 	case google.ModelGeminiPro, google.ModelGeminiProVision:
 		return ai.gai
+	default:
+		if openrouter.SupportModel(model) {
+			return ai.openrouter
+		}
 	}
 
 	return ai.openAI

@@ -117,6 +117,14 @@ type Config struct {
 	OneAPIServer        string   `json:"oneapi_server" yaml:"oneapi_server"`
 	OneAPIKey           string   `json:"one_api_key" yaml:"one_api_key"`
 
+	// OpenRouter 支持的模型列表
+	// open-router: https://openrouter.ai
+	OpenRouterSupportModels []string `json:"openrouter_support_models" yaml:"openrouter_support_models"`
+	EnableOpenRouter        bool     `json:"enable_openrouter" yaml:"enable_openrouter"`
+	OpenRouterAutoProxy     bool     `json:"openrouter_auto_proxy" yaml:"openrouter_auto_proxy"`
+	OpenRouterServer        string   `json:"openrouter_server" yaml:"openrouter_server"`
+	OpenRouterKey           string   `json:"openrouter_key" yaml:"openrouter_key"`
+
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
 	// ProxyURL 代理地址，该值会覆盖 Socks5Proxy 配置
@@ -395,6 +403,12 @@ func Register(ins *app.App) {
 			EnableOneAPI:        ctx.Bool("enable-oneapi"),
 			OneAPIServer:        ctx.String("oneapi-server"),
 			OneAPIKey:           ctx.String("oneapi-key"),
+
+			OpenRouterSupportModels: ctx.StringSlice("openrouter-support-models"),
+			EnableOpenRouter:        ctx.Bool("enable-openrouter"),
+			OpenRouterAutoProxy:     ctx.Bool("openrouter-autoproxy"),
+			OpenRouterServer:        ctx.String("openrouter-server"),
+			OpenRouterKey:           ctx.String("openrouter-key"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
 			ProxyURL:    ctx.String("proxy-url"),

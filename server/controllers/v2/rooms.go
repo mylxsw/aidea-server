@@ -107,6 +107,14 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 				return false
 			}
 
+			if !ctl.conf.EnableOneAPI && item.Vendor == "oneapi" {
+				return false
+			}
+
+			if !ctl.conf.EnableOpenRouter && item.Vendor == "openrouter" {
+				return false
+			}
+
 			if item.VersionMax == "" && item.VersionMin == "" {
 				return true
 			}
