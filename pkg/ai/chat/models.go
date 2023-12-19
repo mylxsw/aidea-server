@@ -492,7 +492,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !str.In("01-ai/yi-34b-chat", conf.OpenRouterSupportModels),
 			VersionMin:  "1.0.5",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/yi34b.png",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/yi-01.png",
 		})
 	}
 
