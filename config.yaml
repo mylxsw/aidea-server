@@ -122,6 +122,20 @@ anthropic-server: "https://api.anthropic.com"
 # Anthropic API Key
 anthropic-apikey: ""
 
+######## Google AI ########
+
+# API 申请：https://ai.google.dev/
+
+# 是否启用 Google AI
+enable-googleai: false
+
+# 是否启用 Google AI 代理，依赖于 socks5-proxy 配置
+googleai-autoproxy: false
+# Google AI 服务地址
+googleai-server: "https://generativelanguage.googleapis.com"
+# Google AI API Key
+googleai-key: ""
+
 ######## 百度文心大模型 ########
 
 # API 申请：https://cloud.baidu.com/product/wenxinworkshop
@@ -166,6 +180,13 @@ enable-baichuan: false
 baichuan-apikey: ""
 baichuan-secret: ""
 
+######## 天工 ########
+
+# API 申请 https://model-platform.tiangong.cn
+enable-sky: false
+sky-appkey: ""
+sky-appsecret: ""
+
 ######## 360 智脑 ########
 
 # API 申请 https://ai.360.com
@@ -181,6 +202,17 @@ oneapi-support-models: []
 enable-oneapi: false
 oneapi-server: ""
 oneapi-key: ""
+
+######## OpenRouter ########
+
+# https://openrouter.ai/
+
+# 支持的模型列表，
+openrouter-support-models: ["01-ai/yi-34b-chat"]
+openrouter-autoproxy: false
+enable-openrouter: false
+openrouter-server: "https://openrouter.ai/api/v1"
+openrouter-key: ""
 
 ######## DeepAI 配置 ########
 

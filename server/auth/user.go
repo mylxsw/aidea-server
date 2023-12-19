@@ -29,7 +29,7 @@ func (u User) InternalUser() bool {
 }
 
 func (u User) ExtraPermissionUser() bool {
-	return u.UserType == repo.UserTypeExtraPermission
+	return u.UserType == repo.UserTypeExtraPermission || u.InternalUser()
 }
 
 // UserOptional 用户信息，可选，如果用户未登录，则为 User 为 nil

@@ -102,3 +102,28 @@ func DownloadRemoteFileAsBase64(ctx context.Context, remoteURL string) (string, 
 	mimeType := http.DetectContentType(data)
 	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
+
+func DownloadRemoteFileAsBase64Raw(ctx context.Context, remoteURL string) (imageData string, mimeType string, err error) {
+	if str.HasSuffixes(strings.ToLower(remoteURL), supportImages) {
+		remoteURL = remoteURL + "-thumb"
+	}
+
+	resp, err := http.Get(remoteURL)
+	if err != nil {
+		return "", "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		if resp.StatusCode == http.StatusForbidden {
+			return "", "", ErrFileForbidden
+		}
+		return "", "", fmt.Errorf("download remote file failed: [%d] %s", resp.StatusCode, resp.Status)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), http.DetectContentType(data), nil
+}

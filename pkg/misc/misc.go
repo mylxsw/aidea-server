@@ -1,8 +1,10 @@
 package misc
 
 import (
+	"crypto/md5"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"github.com/hashicorp/go-uuid"
 	"github.com/mylxsw/asteria/log"
@@ -227,6 +229,58 @@ func ImageToBase64Image(imagePath string) (string, error) {
 	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
+// ImageToBase64ImageWithMime 把图片转换为 base64 编码图片
+func ImageToBase64ImageWithMime(imagePath string) (encoded string, mimeType string, err error) {
+	data, err := os.ReadFile(imagePath)
+	if err != nil {
+		return "", "", err
+	}
+
+	mimeType = http.DetectContentType(data)
+	return base64.StdEncoding.EncodeToString(data), mimeType, nil
+}
+
+// DecodeBase64Image 解码 base64 图片
+func DecodeBase64Image(base64Image string) (data []byte, ext string, err error) {
+	// Remove data:image/jpeg;base64, if exist
+	d := strings.SplitN(base64Image, ",", 2)
+	if len(d) == 2 {
+		base64Image = d[1]
+	}
+
+	// Decode the base64 image
+	decodedData, err := base64.StdEncoding.DecodeString(base64Image)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// Detect the content type to get the file extension
+	contentType := http.DetectContentType(decodedData)
+	exts, _ := mime.ExtensionsByType(contentType)
+	if len(exts) > 0 {
+		return decodedData, exts[0], nil
+	}
+
+	return decodedData, ".png", nil
+}
+
+// DecodeBase64ImageWithMime 解码 base64 图片
+func DecodeBase64ImageWithMime(base64Image string) (data []byte, mimeType string, err error) {
+	// Remove data:image/jpeg;base64, if exist
+	d := strings.SplitN(base64Image, ",", 2)
+	if len(d) == 2 {
+		base64Image = d[1]
+	}
+
+	// Decode the base64 image
+	decodedData, err := base64.StdEncoding.DecodeString(base64Image)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return decodedData, http.DetectContentType(decodedData), nil
+}
+
 // TodayRemainTimeSeconds 获取今日剩余时间
 func TodayRemainTimeSeconds() float64 {
 	now := time.Now()
@@ -267,26 +321,9 @@ func Sha1(data []byte) string {
 	return fmt.Sprintf("%x", sha1.Sum(data))
 }
 
-// DecodeBase64Image 解码 base64 图片
-func DecodeBase64Image(base64Image string) (data []byte, ext string, err error) {
-	// Remove data:image/jpeg;base64, if exist
-	d := strings.SplitN(base64Image, ",", 2)
-	if len(d) == 2 {
-		base64Image = d[1]
-	}
-
-	// Decode the base64 image
-	decodedData, err := base64.StdEncoding.DecodeString(base64Image)
-	if err != nil {
-		return nil, "", err
-	}
-
-	// Detect the content type to get the file extension
-	contentType := http.DetectContentType(decodedData)
-	exts, _ := mime.ExtensionsByType(contentType)
-	if len(exts) > 0 {
-		return decodedData, exts[0], nil
-	}
-
-	return decodedData, ".png", nil
+// Md5 计算 md5 值
+func Md5(data []byte) string {
+	h := md5.New()
+	h.Write(data)
+	return hex.EncodeToString(h.Sum(nil))
 }
