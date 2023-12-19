@@ -58,17 +58,17 @@ func (ctl *RoomController) Register(router web.Router) {
 const RoomsQueryLimit = 100
 
 // Galleries 系统预置数字人列表
-func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, client *auth.ClientInfo) web.Response {
+func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, client *auth.ClientInfo, user *auth.UserOptional) web.Response {
 	rooms, err := ctl.roomRepo.Galleries(ctx)
 	if err != nil {
 		log.Errorf("query rooms galleries failed: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	cnLocalMode := client.IsCNLocalMode(ctl.conf)
+	cnLocalMode := client.IsCNLocalMode(ctl.conf) && (user.User == nil || !user.User.ExtraPermissionUser())
 	rooms = array.Filter(rooms, func(item repo2.GalleryRoom, _ int) bool {
 		// 如果启用了国产化模式，则过滤掉 openai 和 Anthropic 的模型
-		if cnLocalMode && item.RoomType == "system" && array.In(item.Vendor, []string{"openai", "Anthropic"}) {
+		if cnLocalMode && item.RoomType == "system" && array.In(item.Vendor, []string{"openai", "Anthropic", "google"}) {
 			return false
 		}
 
@@ -106,6 +106,22 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 		}
 
 		if !ctl.conf.EnableGPT360 && item.Vendor == "360智脑" {
+			return false
+		}
+
+		if !ctl.conf.EnableGoogleAI && item.Vendor == "google" {
+			return false
+		}
+
+		if !ctl.conf.EnableOneAPI && item.Vendor == "oneapi" {
+			return false
+		}
+
+		if !ctl.conf.EnableOpenRouter && item.Vendor == "openrouter" {
+			return false
+		}
+
+		if !ctl.conf.EnableSky && item.Vendor == "sky" {
 			return false
 		}
 
@@ -193,7 +209,7 @@ func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Conte
 
 	// 启用国产化模式时，如果内置的模型为 GPT 系列，替换为国产模型
 	var replaceVendor, replaceModel string
-	if client.IsCNLocalMode(ctl.conf) {
+	if client.IsCNLocalMode(ctl.conf) && !user.ExtraPermissionUser() {
 		replaceVendor, replaceModel = ctl.conf.CNLocalVendor, ctl.conf.CNLocalModel
 	}
 

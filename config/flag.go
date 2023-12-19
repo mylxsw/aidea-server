@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/mylxsw/glacier/starter/app"
 	"os"
+
+	"github.com/mylxsw/glacier/starter/app"
 )
 
 func initCmdFlags(ins *app.App) {
@@ -10,6 +11,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("listen", ":8080", "Web 服务监听地址")
 	ins.AddStringFlag("api-listen", ":8081", "API 服务监听地址")
 	ins.AddBoolFlag("enable-migrate", "是否启用迁移，启用后，当数据结构有更新时，会自动更新数据库")
+	ins.AddDurationFlag("start-delay", 0, "服务启动延迟时间，用于在服务启动前做一些初始化工作，例如 Docker 环境下等待初始化数据库等")
 
 	ins.AddStringFlag("base-url", "", "Web 服务的基础 URL，例如 https://web.aicode.cc")
 	ins.AddStringFlag("socks5-proxy", "", "socks5 proxy")
@@ -63,6 +65,11 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("anthropic-server", "https://api.anthropic.com", "anthropic server")
 	ins.AddStringFlag("anthropic-apikey", "", "anthropic server key")
 
+	ins.AddBoolFlag("enable-googleai", "是否启用 GoogleAI")
+	ins.AddBoolFlag("googleai-autoproxy", "使用 socks5 代理访问 GoogleAI 服务")
+	ins.AddStringFlag("googleai-server", "https://generativelanguage.googleapis.com", "googleai server")
+	ins.AddStringFlag("googleai-key", "", "googleai server key")
+
 	ins.AddBoolFlag("enable-baiduwxai", "是否启用百度文心千帆大模型")
 	ins.AddStringFlag("baiduwx-key", "", "百度文心大模型 Key")
 	ins.AddStringFlag("baiduwx-secret", "", "百度文心大模型 Secret")
@@ -84,6 +91,10 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("baichuan-apikey", "", "百川大模型 API Key")
 	ins.AddStringFlag("baichuan-secret", "", "百川大模型 API Secret")
 
+	ins.AddBoolFlag("enable-sky", "是否启用天工 AI")
+	ins.AddStringFlag("sky-appkey", "", "天工 AI APP Key")
+	ins.AddStringFlag("sky-appsecret", "", "天工 AI APP Secret")
+
 	ins.AddBoolFlag("enable-gpt360", "是否启用 360 智脑大模型")
 	ins.AddStringFlag("gpt360-apikey", "", "360 智脑大模型 API Key")
 
@@ -91,6 +102,12 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("enable-oneapi", "是否启用 OneAPI")
 	ins.AddStringFlag("oneapi-server", "", "one-server server")
 	ins.AddStringFlag("oneapi-key", "", "one-server key")
+
+	ins.AddStringSliceFlag("openrouter-support-models", []string{"01-ai/yi-34b-chat"}, "openrouter 支持的模型")
+	ins.AddBoolFlag("enable-openrouter", "是否启用 OpenRouter")
+	ins.AddBoolFlag("openrouter-autoproxy", "使用 socks5 代理访问 OpenRouter 服务")
+	ins.AddStringFlag("openrouter-server", "https://openrouter.ai/api/v1", "openrouter server")
+	ins.AddStringFlag("openrouter-key", "", "openrouter key")
 
 	ins.AddBoolFlag("enable-stabilityai", "是否启用 StabilityAI 文生图、图生图服务")
 	ins.AddBoolFlag("stabilityai-autoproxy", "使用 socks5 代理访问 StabilityAI 服务")

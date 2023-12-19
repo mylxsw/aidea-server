@@ -99,9 +99,17 @@ coin_tables:
     nova-ptc-xl-v1: 3
     nova-ptc-xs-v1: 2
     # 通义千问（模型服务灵积）
-    qwen-plus: 20
-    qwen-plus-v1: 20
-    qwen-turbo: 3
-    qwen-v1: 3
-    qwen-7b-chat: 2
-    qwen-14b-chat: 2
+    qwen-plus: 3
+    qwen-plus-v1: 3
+    qwen-turbo: 1
+    qwen-v1: 1
+    qwen-max: 1
+    qwen-max-longcontext: 1
+    qwen-vl-plus: 1
+    # Google
+    gemini-pro: 3
+    gemini-pro-vision: 5
+    # OpenRouter
+    "01-ai.yi-34b-chat": 1
+    # 天工
+    SkyChat-MegaVerse: 2

@@ -3,6 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/google"
+	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
+	"github.com/mylxsw/aidea-server/pkg/ai/sky"
+	"github.com/mylxsw/aidea-server/pkg/file"
+	"math/rand"
+	"path/filepath"
+	"time"
+
 	"github.com/mylxsw/aidea-server/api"
 	"github.com/mylxsw/aidea-server/migrate"
 	"github.com/mylxsw/aidea-server/pkg/ai/anthropic"
@@ -36,9 +44,6 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/aidea-server/pkg/voice"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
-	"math/rand"
-	"path/filepath"
-	"time"
 
 	"github.com/mylxsw/aidea-server/internal/jobs"
 	"github.com/mylxsw/aidea-server/internal/payment/alipay"
@@ -83,6 +88,12 @@ func main() {
 			}))
 		}
 
+		startDelay := f.Duration("start-delay")
+		if startDelay > 0 {
+			log.Infof("服务延迟 %s 后启动", startDelay)
+			time.Sleep(startDelay)
+		}
+
 		return nil
 	})
 
@@ -108,6 +119,7 @@ func main() {
 		jobs.Provider{},
 		chat.Provider{},
 		proxy.Provider{},
+		file.Provider{},
 		migrate.Provider{},
 	)
 
@@ -143,6 +155,9 @@ func main() {
 		gpt360.Provider{},
 		oneapi.Provider{},
 		lepton.Provider{},
+		google.Provider{},
+		openrouter.Provider{},
+		sky.Provider{},
 	)
 
 	app.MustRun(ins)

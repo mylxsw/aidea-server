@@ -13,14 +13,14 @@ import (
 )
 
 func createDashScopeChatClient() chat2.Chat {
-	return chat2.NewDashScopeChat(dashscope.New(os.Getenv("ALI_LINGJI_API_KEY")))
+	return chat2.NewDashScopeChat(dashscope.New(os.Getenv("ALI_LINGJI_API_KEY")), nil)
 }
 
 func TestDashscopeChat_Chat(t *testing.T) {
 	client := createDashScopeChatClient()
 
 	response, err := client.Chat(context.TODO(), chat2.Request{
-		Model: dashscope.ModelQWenV1,
+		Model: dashscope.ModelQWenMaxLongContext,
 		Messages: []chat2.Message{
 			{
 				Role:    "system",
@@ -41,19 +41,28 @@ func TestDashscopeChat_Chat(t *testing.T) {
 func TestDashscopeChat_ChatStream(t *testing.T) {
 	chatClient := createDashScopeChatClient()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	response, err := chatClient.ChatStream(ctx, chat2.Request{
-		Model: dashscope.ModelQWenV1,
+		Model: dashscope.ModelQWenVLPlus,
 		Messages: []chat2.Message{
 			{
 				Role:    "system",
 				Content: "假如你是鲁迅，请使用批判性，略带讽刺的语言来回答我的问题，语言要风趣，幽默，略带调侃",
 			},
 			{
-				Role:    "user",
-				Content: "老铁，最近怎么样？",
+				Role: "user",
+				MultipartContents: []*chat2.MultipartContent{
+					{
+						ImageURL: &chat2.ImageURL{
+							URL: "https://stable-diffusion-art.com/wp-content/uploads/2023/05/image-161.png",
+						},
+					},
+					{
+						Text: "这是啥？",
+					},
+				},
 			},
 		},
 	})

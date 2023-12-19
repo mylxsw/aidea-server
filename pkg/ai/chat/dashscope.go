@@ -4,17 +4,23 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/aidea-server/pkg/file"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/go-utils/str"
 	"strings"
+	"time"
 
 	"github.com/mylxsw/go-utils/array"
 )
 
 type DashScopeChat struct {
 	dashscope *dashscope.DashScope
+	file      *file.File
 }
 
-func NewDashScopeChat(dashscope *dashscope.DashScope) *DashScopeChat {
-	return &DashScopeChat{dashscope: dashscope}
+func NewDashScopeChat(dashscope *dashscope.DashScope, file *file.File) *DashScopeChat {
+	return &DashScopeChat{dashscope: dashscope, file: file}
 }
 
 func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
@@ -25,8 +31,9 @@ func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
 
 	for _, msg := range req.Messages {
 		m := Message{
-			Role:    msg.Role,
-			Content: msg.Content,
+			Role:              msg.Role,
+			Content:           msg.Content,
+			MultipartContents: msg.MultipartContents,
 		}
 
 		if msg.Role == "system" {
@@ -54,29 +61,83 @@ func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
 		contextMessages = append(finalSystemMessages, contextMessages...)
 	}
 
-	histories := make([]dashscope.ChatHistory, 0)
-	history := dashscope.ChatHistory{}
-	for i, msg := range array.Reverse(contextMessages[:len(contextMessages)-1]) {
-		if msg.Role == "user" {
-			history.User = msg.Content
-		} else {
-			history.Bot = msg.Content
+	input := dashscope.ChatInput{}
+
+	if req.Model == dashscope.ModelQWenVLPlus {
+		input.Messages = array.Map(contextMessages, func(msg Message, _ int) dashscope.Message {
+			contents := make([]dashscope.MessageContent, 0)
+			if len(msg.MultipartContents) == 0 {
+				contents = append(contents, dashscope.MessageContent{
+					Text: msg.Content,
+				})
+			} else {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+
+				for _, ct := range msg.MultipartContents {
+					if ct.Text != "" {
+						contents = append(contents, dashscope.MessageContent{
+							Text: ct.Text,
+						})
+					} else if ct.ImageURL != nil {
+						imageURL := ct.ImageURL.URL
+						if strings.HasPrefix(imageURL, "data:") {
+							// 替换为图片 URL
+							imageData, imageExt, err := misc.DecodeBase64Image(imageURL)
+							if err == nil {
+								res, err := ds.file.UploadTempFileData(ctx, imageData, strings.TrimPrefix(imageExt, "."), 7)
+								if err != nil {
+									log.Errorf("upload temp file failed: %v", err)
+								} else {
+									imageURL = res
+								}
+							} else {
+								log.Errorf("decode base64 image failed: %v", err)
+							}
+						}
+
+						if !strings.HasPrefix(imageURL, "data:") {
+							contents = append(contents, dashscope.MessageContent{
+								Image: imageURL,
+							})
+						}
+					}
+				}
+			}
+
+			return dashscope.Message{
+				Role:    msg.Role,
+				Content: contents,
+			}
+		})
+	} else {
+		histories := make([]dashscope.ChatHistory, 0)
+		history := dashscope.ChatHistory{}
+		for i, msg := range array.Reverse(contextMessages[:len(contextMessages)-1]) {
+			if msg.Role == "user" {
+				history.User = msg.Content
+			} else {
+				history.Bot = msg.Content
+			}
+
+			if i%2 == 1 {
+				histories = append(histories, history)
+				history = dashscope.ChatHistory{}
+			}
 		}
 
-		if i%2 == 1 {
-			histories = append(histories, history)
-			history = dashscope.ChatHistory{}
-		}
+		input.Prompt = contextMessages[len(req.Messages)-1].Content
+		input.History = array.Reverse(histories)
 	}
+
+	// 并不是所有模型都支持搜索，目前没有找到文档记载
+	enableSearch := str.In(req.Model, []string{dashscope.ModelQWenPlus, dashscope.ModelQWenMax, dashscope.ModelQWenMaxLongContext})
 
 	return dashscope.ChatRequest{
 		Model: strings.TrimPrefix(req.Model, "灵积:"),
-		Input: dashscope.ChatInput{
-			Prompt:  req.Messages[len(req.Messages)-1].Content,
-			History: array.Reverse(histories),
-		},
+		Input: input,
 		Parameters: dashscope.ChatParameters{
-			EnableSearch: true,
+			EnableSearch: enableSearch,
 		},
 	}
 }
@@ -147,9 +208,14 @@ func (ds *DashScopeChat) ChatStream(ctx context.Context, req Request) (<-chan Re
 
 func (ds *DashScopeChat) MaxContextLength(model string) int {
 	switch model {
-	case dashscope.ModelQWenV1, dashscope.ModelQWenTurbo, dashscope.ModelQWenPlusV1, dashscope.ModelQWenPlus, dashscope.ModelQWen7BChat, dashscope.ModelQWen14BChat:
+	case dashscope.ModelQWenV1, dashscope.ModelQWenTurbo, dashscope.ModelQWenVLPlus,
+		dashscope.ModelQWenPlusV1, dashscope.ModelQWenPlus, dashscope.ModelQWenMax,
+		dashscope.ModelQWen7BChat, dashscope.ModelQWen14BChat:
 		// https://help.aliyun.com/zh/dashscope/developer-reference/api-details?disableWebsiteRedirect=true
 		return 6000
+	case dashscope.ModelQWenMaxLongContext:
+		// https://help.aliyun.com/zh/dashscope/developer-reference/api-details?spm=a2c4g.11186623.0.0.1a8e6ffdMzDGXm
+		return 25000
 	}
 
 	return 4000

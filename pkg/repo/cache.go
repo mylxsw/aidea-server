@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"time"
 
@@ -30,11 +31,11 @@ func (repo *CacheRepo) Get(ctx context.Context, key string) (string, error) {
 			Where(model.FieldCacheKey, key).
 			Where(model.FieldCacheValidUntil, ">", time.Now()),
 	)
-	if err != nil && err != query.ErrNoResult {
+	if err != nil && !errors.Is(err, query.ErrNoResult) {
 		return "", err
 	}
 
-	if err == query.ErrNoResult {
+	if errors.Is(err, query.ErrNoResult) {
 		return "", ErrNotFound
 	}
 

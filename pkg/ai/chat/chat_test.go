@@ -69,7 +69,7 @@ func TestMessages_Fix(t *testing.T) {
 }
 
 func TestDashscopeChat_InitRequest(t *testing.T) {
-	client := NewDashScopeChat(nil)
+	client := NewDashScopeChat(nil, nil)
 	{
 		messages := Messages{
 			{Role: "system", Content: "假如你是鲁迅，请使用批判性，略带讽刺的语言来回答我的问题，语言要风趣，幽默，略带调侃"},

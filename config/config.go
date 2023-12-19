@@ -74,6 +74,12 @@ type Config struct {
 	AnthropicServer    string `json:"anthropic_server" yaml:"anthropic_server"`
 	AnthropicAPIKey    string `json:"anthropic_api_key" yaml:"anthropic_api_key"`
 
+	// Google Gemini 配置
+	EnableGoogleAI    bool   `json:"enable_googleai" yaml:"enable_googleai"`
+	GoogleAIAutoProxy bool   `json:"googleai_auto_proxy" yaml:"googleai_auto_proxy"`
+	GoogleAIServer    string `json:"googleai_server" yaml:"googleai_server"`
+	GoogleAIKey       string `json:"googleai_key" yaml:"googleai_key"`
+
 	// 百度文心大模型配置
 	EnableBaiduWXAI bool   `json:"enable_baiduwx_ai" yaml:"enable_baiduwx_ai"`
 	BaiduWXKey      string `json:"baidu_ai_key" yaml:"baidu_ai_key"`
@@ -100,6 +106,11 @@ type Config struct {
 	BaichuanAPIKey string `json:"baichuan_api_key" yaml:"baichuan_api_key"`
 	BaichuanSecret string `json:"-" yaml:"-"`
 
+	// 天工大模型
+	EnableSky    bool   `json:"enable_sky" yaml:"enable_sky"`
+	SkyAppKey    string `json:"sky_app_key" yaml:"sky_app_key"`
+	SkyAppSecret string `json:"-" yaml:"-"`
+
 	// 360 智脑
 	EnableGPT360 bool   `json:"enable_gpt360" yaml:"enable_gpt360"`
 	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
@@ -110,6 +121,14 @@ type Config struct {
 	EnableOneAPI        bool     `json:"enable_oneapi" yaml:"enable_oneapi"`
 	OneAPIServer        string   `json:"oneapi_server" yaml:"oneapi_server"`
 	OneAPIKey           string   `json:"one_api_key" yaml:"one_api_key"`
+
+	// OpenRouter 支持的模型列表
+	// open-router: https://openrouter.ai
+	OpenRouterSupportModels []string `json:"openrouter_support_models" yaml:"openrouter_support_models"`
+	EnableOpenRouter        bool     `json:"enable_openrouter" yaml:"enable_openrouter"`
+	OpenRouterAutoProxy     bool     `json:"openrouter_auto_proxy" yaml:"openrouter_auto_proxy"`
+	OpenRouterServer        string   `json:"openrouter_server" yaml:"openrouter_server"`
+	OpenRouterKey           string   `json:"openrouter_key" yaml:"openrouter_key"`
 
 	// Proxy
 	Socks5Proxy string `json:"socks5_proxy" yaml:"socks5_proxy"`
@@ -356,6 +375,11 @@ func Register(ins *app.App) {
 			AnthropicServer:    ctx.String("anthropic-server"),
 			AnthropicAPIKey:    ctx.String("anthropic-apikey"),
 
+			EnableGoogleAI:    ctx.Bool("enable-googleai"),
+			GoogleAIAutoProxy: ctx.Bool("googleai-autoproxy"),
+			GoogleAIServer:    ctx.String("googleai-server"),
+			GoogleAIKey:       ctx.String("googleai-key"),
+
 			EnableBaiduWXAI: ctx.Bool("enable-baiduwxai"),
 			BaiduWXKey:      ctx.String("baiduwx-key"),
 			BaiduWXSecret:   ctx.String("baiduwx-secret"),
@@ -377,6 +401,10 @@ func Register(ins *app.App) {
 			BaichuanAPIKey: ctx.String("baichuan-apikey"),
 			BaichuanSecret: ctx.String("baichuan-secret"),
 
+			EnableSky:    ctx.Bool("enable-sky"),
+			SkyAppKey:    ctx.String("sky-appkey"),
+			SkyAppSecret: ctx.String("sky-appsecret"),
+
 			EnableGPT360: ctx.Bool("enable-gpt360"),
 			GPT360APIKey: ctx.String("gpt360-apikey"),
 
@@ -384,6 +412,12 @@ func Register(ins *app.App) {
 			EnableOneAPI:        ctx.Bool("enable-oneapi"),
 			OneAPIServer:        ctx.String("oneapi-server"),
 			OneAPIKey:           ctx.String("oneapi-key"),
+
+			OpenRouterSupportModels: ctx.StringSlice("openrouter-support-models"),
+			EnableOpenRouter:        ctx.Bool("enable-openrouter"),
+			OpenRouterAutoProxy:     ctx.Bool("openrouter-autoproxy"),
+			OpenRouterServer:        ctx.String("openrouter-server"),
+			OpenRouterKey:           ctx.String("openrouter-key"),
 
 			Socks5Proxy: ctx.String("socks5-proxy"),
 			ProxyURL:    ctx.String("proxy-url"),

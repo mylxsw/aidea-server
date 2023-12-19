@@ -27,7 +27,7 @@ func (ctl *ModelController) Register(router web.Router) {
 }
 
 // Models 获取模型列表
-func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web.Response {
+func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo, user *auth.UserOptional) web.Response {
 	if client.Version == "" || misc.VersionNewer(client.Version, "1.0.6") {
 		models := array.Map(chat.Models(ctl.conf, true), func(item chat.Model, _ int) chat.Model {
 			if item.Disabled {
@@ -44,7 +44,7 @@ func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web
 				return item
 			}
 
-			if client.IsCNLocalMode(ctl.conf) && item.IsSensitiveModel() {
+			if client.IsCNLocalMode(ctl.conf) && item.IsSensitiveModel() && (user.User == nil || !user.User.ExtraPermissionUser()) {
 				item.Disabled = true
 				return item
 			}
@@ -64,7 +64,7 @@ func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo) web
 			return false
 		}
 
-		return !(client.IsCNLocalMode(ctl.conf) && item.IsSensitiveModel())
+		return !(client.IsCNLocalMode(ctl.conf) && item.IsSensitiveModel() && (user.User == nil || !user.User.ExtraPermissionUser()))
 	})
 
 	return ctx.JSON(models)

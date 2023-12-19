@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/go-utils/ternary"
 	"io"
 	"math/rand"
 	"net/http"
@@ -32,6 +33,12 @@ const (
 	ModelQWenTurbo = "qwen-turbo"
 	// ModelQWenPlus 模型支持 8k tokens上下文，为了保障正常使用和正常输出，API限定用户输入为6k Tokens
 	ModelQWenPlus = "qwen-plus"
+	// ModelQWenMax 模型支持 8k tokens上下文，为了保障正常的使用和输出，API限定用户输入为6k tokens
+	ModelQWenMax = "qwen-max"
+	// ModelQWenMaxLongContext 模型支持 30k tokens上下文，为了保障正常的使用和输出，API限定用户输入为 28k tokens
+	ModelQWenMaxLongContext = "qwen-max-longcontext"
+	// ModelQWenVLPlus 通义千问VL plus支持灵活的交互方式，包括多图、多轮问答、创作等能力的模型，大幅提升了图片文字处理能力，增加可处理分辨率范围，增强视觉推理和决策能力
+	ModelQWenVLPlus = "qwen-vl-plus"
 
 	// 通义千问7B
 	ModelQWen7BV1     = "qwen-7b-v1"
@@ -68,6 +75,19 @@ type ChatInput struct {
 	Prompt string `json:"prompt,omitempty"`
 	// History 用户与模型的对话历史，list中的每个元素是形式为{"user":"用户输入","bot":"模型输出"}的一轮对话，多轮对话按时间正序排列。
 	History []ChatHistory `json:"history,omitempty"`
+
+	// 以下为新版本格式，目前只适配了 qwen-vl-plus 模型
+	Messages []Message `json:"messages,omitempty"`
+}
+
+type Message struct {
+	Role    string           `json:"role,omitempty"`
+	Content []MessageContent `json:"content,omitempty"`
+}
+
+type MessageContent struct {
+	Text  string `json:"text,omitempty"`
+	Image string `json:"image,omitempty"`
 }
 
 type ChatParameters struct {
@@ -112,6 +132,13 @@ type ChatOutput struct {
 	//	生成结束时如果由于停止token导致则为 stop
 	//	生成结束时如果因为生成长度过长导致则为 length
 	FinishReason string `json:"finish_reason,omitempty"`
+
+	// 以下为新版本格式，目前只适配了 qwen-vl-plus 模型
+	Choices []Choice `json:"choices,omitempty"`
+}
+
+type Choice struct {
+	Message Message `json:"message,omitempty"`
 }
 
 const (
@@ -167,7 +194,13 @@ func (ds *DashScope) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 		return nil, err
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+"/api/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
+	endpoint := ternary.IfElse(
+		req.Model == ModelQWenVLPlus,
+		"/api/v1/services/aigc/multimodal-generation/generation",
+		"/api/v1/services/aigc/text-generation/generation",
+	)
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+endpoint, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -231,6 +264,12 @@ func (ds *DashScope) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 				case res <- ChatResponse{Message: fmt.Sprintf("unmarshal stream data failed: %v", err), Code: "UNMARSHAL_STREAM_DATA_FAILED"}:
 				}
 				return
+			}
+
+			if len(chatResponse.Output.Choices) > 0 && chatResponse.Output.Text == "" {
+				if len(chatResponse.Output.Choices[0].Message.Content) > 0 {
+					chatResponse.Output.Text = chatResponse.Output.Choices[0].Message.Content[0].Text
+				}
 			}
 
 			select {

@@ -5,6 +5,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/baichuan"
 	"github.com/mylxsw/aidea-server/pkg/ai/baidu"
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
+	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
@@ -39,7 +40,7 @@ func (m Model) RealID() string {
 }
 
 func (m Model) IsSensitiveModel() bool {
-	return m.Category == "openai" || m.Category == "Anthropic"
+	return m.Category == "openai" || m.Category == "Anthropic" || m.Category == "google"
 }
 
 func (m Model) IsVirtualModel() bool {
@@ -50,7 +51,7 @@ func Models(conf *config.Config, returnAll bool) []Model {
 	var models []Model
 	models = append(models, openAIModels(conf)...)
 	models = append(models, anthropicModels(conf)...)
-	models = append(models, googleModels()...)
+	models = append(models, googleModels(conf)...)
 	models = append(models, chinaModels(conf)...)
 	models = append(models, aideaModels(conf)...)
 
@@ -113,7 +114,7 @@ func openAIModels(conf *config.Config) []Model {
 		},
 		{
 			ID:            "openai:gpt-4-vision-preview",
-			Name:          "GPT-4 Vision",
+			Name:          "GPT-4V（视觉）",
 			ShortName:     "GPT-4V",
 			Description:   "拥有视觉能力",
 			Category:      "openai",
@@ -140,7 +141,7 @@ func chinaModels(conf *config.Config) []Model {
 
 	models = append(models, Model{
 		ID:          "讯飞星火:" + string(xfyun.ModelGeneralV1_5),
-		Name:        "星火大模型V1.5",
+		Name:        "星火大模型 v1.5",
 		ShortName:   "星火 1.5",
 		Description: "科大讯飞研发的认知大模型，支持语言理解、知识问答、代码编写、逻辑推理、数学解题等多元能力，服务已内嵌联网搜索功能",
 		Category:    "讯飞星火",
@@ -152,7 +153,7 @@ func chinaModels(conf *config.Config) []Model {
 
 	models = append(models, Model{
 		ID:          "讯飞星火:" + string(xfyun.ModelGeneralV2),
-		Name:        "星火大模型V2.0",
+		Name:        "星火大模型 v2.0",
 		ShortName:   "星火 2.0",
 		Description: "科大讯飞研发的认知大模型，V2.0 在 V1.5 基础上全面升级，并在代码、数学场景进行专项升级，服务已内嵌联网搜索、日期查询、天气查询、股票查询、诗词查询、字词理解等功能",
 		Category:    "讯飞星火",
@@ -164,7 +165,7 @@ func chinaModels(conf *config.Config) []Model {
 
 	models = append(models, Model{
 		ID:          "讯飞星火:" + string(xfyun.ModelGeneralV3),
-		Name:        "星火大模型V3.0",
+		Name:        "星火大模型 v3.0",
 		ShortName:   "星火 3.0",
 		Description: "科大讯飞研发的认知大模型，V3.0 能力全面升级，在数学、代码、医疗、教育等场景进行了专项优化，让大模型更懂你所需",
 		Category:    "讯飞星火",
@@ -283,7 +284,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-turbo.jpeg",
 		})
 		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelQWenPlus,
@@ -294,7 +295,41 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-plus.jpeg",
+		})
+		models = append(models, Model{
+			ID:          "灵积:" + dashscope.ModelQWenMax,
+			Name:        "通义千问 Max",
+			ShortName:   "千问 Max",
+			Description: "通义千问超大规模语言模型增强版，支持中文英文等不同语言输入",
+			Category:    "灵积",
+			IsChat:      true,
+			Disabled:    !conf.EnableDashScopeAI,
+			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-max.jpeg",
+		})
+		models = append(models, Model{
+			ID:          "灵积:" + dashscope.ModelQWenMaxLongContext,
+			Name:        "通义千问 Max+",
+			ShortName:   "千问 Max+",
+			Description: "通义千问 Max Long Context 版本，支持 30K 上下文",
+			Category:    "灵积",
+			IsChat:      true,
+			Disabled:    !conf.EnableDashScopeAI,
+			VersionMin:  "1.0.3",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-max-longcontext.jpeg",
+		})
+		models = append(models, Model{
+			ID:            "灵积:" + dashscope.ModelQWenVLPlus,
+			Name:          "通义千问（视觉）",
+			ShortName:     "千问 VL",
+			Description:   "通义千问 VL 具备通用 OCR、视觉推理、中文文本理解基础能力，还能处理各种分辨率和规格的图像，甚至能“看图做题”",
+			Category:      "灵积",
+			IsChat:        true,
+			Disabled:      !conf.EnableDashScopeAI,
+			VersionMin:    "1.0.8",
+			SupportVision: true,
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-vlplus.jpeg",
 		})
 		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelQWen7BChat,
@@ -305,7 +340,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-osc-2.jpeg",
 		})
 		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelQWen14BChat,
@@ -316,7 +351,7 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableDashScopeAI,
 			VersionMin:  "1.0.3",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/creative/tongyiqianwenv2.jpeg",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/qwen-osc-1.jpeg",
 		})
 		models = append(models, Model{
 			ID:          "灵积:" + dashscope.ModelBaiChuan7BChatV1,
@@ -436,7 +471,7 @@ func chinaModels(conf *config.Config) []Model {
 		})
 		models = append(models, Model{
 			ID:          "oneapi:PaLM-2",
-			Name:        "Google PaLM-2",
+			Name:        "Google PaLM-2（英文版）",
 			ShortName:   "PaLM-2",
 			Description: "PaLM 2 是谷歌的下一代大规模语言模型",
 			Category:    "oneapi",
@@ -447,18 +482,58 @@ func chinaModels(conf *config.Config) []Model {
 		})
 	}
 
+	if conf.EnableOpenRouter {
+		models = append(models, Model{
+			ID:          "openrouter:01-ai.yi-34b-chat",
+			Name:        "零一万物 Yi 34B",
+			ShortName:   "Yi",
+			Description: "零一万物打造的开源大语言模型，在多项评测中全球领跑，MMLU 等评测取得了多项 SOTA 国际最佳性能指标表现，以更小模型尺寸评测超越 LLaMA2-70B、Falcon-180B 等大尺寸开源模型",
+			Category:    "openrouter",
+			IsChat:      true,
+			Disabled:    !str.In("01-ai/yi-34b-chat", conf.OpenRouterSupportModels),
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/yi-01.png",
+		})
+	}
+
+	if conf.EnableSky {
+		models = append(models, Model{
+			ID:          "sky:SkyChat-MegaVerse",
+			Name:        "天工 MegaVerse",
+			ShortName:   "天工",
+			Description: "昆仑万维研发的大语言模型，具备强大的中文创作能力，复杂语境下的逻辑推理能力，以及可靠的任务执行能力",
+			Category:    "sky",
+			IsChat:      true,
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/sky.png",
+		})
+	}
+
 	return models
 }
 
-func googleModels() []Model {
+func googleModels(conf *config.Config) []Model {
 	return []Model{
 		{
-			ID:          "google:bard",
-			Name:        "Bard",
-			Description: "As a creative and helpful collaborator, Bard can supercharge your imagination, boost your productivity, and help you bring your ideas to life-whether you want help planning the perfect birthday party and drafting the invitation, creating a pro & con list for a big decision, or understanding really complex topics simply.",
+			ID:          "google:" + google.ModelGeminiPro,
+			Name:        "Google Gemini Pro",
+			Description: "Google 最新推出的 Gemini Pro 大语言模型",
 			Category:    "google",
 			IsChat:      true,
-			Disabled:    true,
+			Disabled:    !conf.EnableGoogleAI,
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gemini.png",
+		},
+		{
+			ID:            "google:" + google.ModelGeminiProVision,
+			Name:          "Google Gemini Pro（视觉）",
+			Description:   "Google 最新推出的 Gemini Pro 大语言模型，该版本为视觉版，支持图片输入，但是不支持多轮对话",
+			Category:      "google",
+			IsChat:        true,
+			SupportVision: true,
+			Disabled:      !conf.EnableGoogleAI,
+			VersionMin:    "1.0.8",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/gemini.png",
 		},
 	}
 }
@@ -512,7 +587,7 @@ func aideaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableVirtualModel,
 			VersionMin:  "1.0.5",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/beichou.png",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/nanxian.png",
 		},
 	}
 }
