@@ -106,6 +106,11 @@ type Config struct {
 	BaichuanAPIKey string `json:"baichuan_api_key" yaml:"baichuan_api_key"`
 	BaichuanSecret string `json:"-" yaml:"-"`
 
+	// 天工大模型
+	EnableSky    bool   `json:"enable_sky" yaml:"enable_sky"`
+	SkyAppKey    string `json:"sky_app_key" yaml:"sky_app_key"`
+	SkyAppSecret string `json:"-" yaml:"-"`
+
 	// 360 智脑
 	EnableGPT360 bool   `json:"enable_gpt360" yaml:"enable_gpt360"`
 	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
@@ -395,6 +400,10 @@ func Register(ins *app.App) {
 			EnableBaichuan: ctx.Bool("enable-baichuan"),
 			BaichuanAPIKey: ctx.String("baichuan-apikey"),
 			BaichuanSecret: ctx.String("baichuan-secret"),
+
+			EnableSky:    ctx.Bool("enable-sky"),
+			SkyAppKey:    ctx.String("sky-appkey"),
+			SkyAppSecret: ctx.String("sky-appsecret"),
 
 			EnableGPT360: ctx.Bool("enable-gpt360"),
 			GPT360APIKey: ctx.String("gpt360-apikey"),

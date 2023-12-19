@@ -496,6 +496,19 @@ func chinaModels(conf *config.Config) []Model {
 		})
 	}
 
+	if conf.EnableSky {
+		models = append(models, Model{
+			ID:          "sky:SkyChat-MegaVerse",
+			Name:        "天工 MegaVerse",
+			ShortName:   "天工",
+			Description: "昆仑万维研发的大语言模型，具备强大的中文创作能力，复杂语境下的逻辑推理能力，以及可靠的任务执行能力",
+			Category:    "sky",
+			IsChat:      true,
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/sky.png",
+		})
+	}
+
 	return models
 }
 

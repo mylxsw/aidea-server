@@ -91,6 +91,10 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("baichuan-apikey", "", "百川大模型 API Key")
 	ins.AddStringFlag("baichuan-secret", "", "百川大模型 API Secret")
 
+	ins.AddBoolFlag("enable-sky", "是否启用天工 AI")
+	ins.AddStringFlag("sky-appkey", "", "天工 AI APP Key")
+	ins.AddStringFlag("sky-appsecret", "", "天工 AI APP Secret")
+
 	ins.AddBoolFlag("enable-gpt360", "是否启用 360 智脑大模型")
 	ins.AddStringFlag("gpt360-apikey", "", "360 智脑大模型 API Key")
 

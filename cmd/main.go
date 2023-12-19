@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
+	"github.com/mylxsw/aidea-server/pkg/ai/sky"
 	"github.com/mylxsw/aidea-server/pkg/file"
 	"math/rand"
 	"path/filepath"
@@ -156,6 +157,7 @@ func main() {
 		lepton.Provider{},
 		google.Provider{},
 		openrouter.Provider{},
+		sky.Provider{},
 	)
 
 	app.MustRun(ins)

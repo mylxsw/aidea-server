@@ -95,6 +95,9 @@ var coinTables = map[string]CoinTable{
 
 		// OpenRouter
 		"01-ai.yi-34b-chat": 1, // valid ¥0.006/1K tokens
+
+		// 天工 https://model-platform.tiangong.cn/pricing
+		"SkyChat-MegaVerse": 2, // valid ¥0.01/1K tokens
 	},
 
 	"voice-recognition": {

@@ -12,6 +12,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
+	"github.com/mylxsw/aidea-server/pkg/ai/sky"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
 	"strings"
@@ -237,6 +238,7 @@ type Imp struct {
 	one         *OneAPIChat
 	gai         *GoogleChat
 	openrouter  *OpenRouterChat
+	sky         *SkyChat
 }
 
 func NewChat(
@@ -253,6 +255,7 @@ func NewChat(
 	one *OneAPIChat,
 	gai *GoogleChat,
 	openr *OpenRouterChat,
+	sky *SkyChat,
 ) Chat {
 	var virtualImpl Chat
 	impLowercase := strings.ToLower(conf.VirtualModel.Implementation)
@@ -279,6 +282,8 @@ func NewChat(
 		virtualImpl = one
 	case "google":
 		virtualImpl = gai
+	case "sky":
+		virtualImpl = sky
 	default:
 		if openrouter.SupportModel(impLowercase) {
 			virtualImpl = openr
@@ -301,6 +306,7 @@ func NewChat(
 		one:         one,
 		gai:         gai,
 		openrouter:  openr,
+		sky:         sky,
 	}
 }
 
@@ -353,6 +359,10 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.openrouter
 	}
 
+	if strings.HasPrefix(model, "sky:") {
+		return ai.sky
+	}
+
 	// TODO 根据模型名称判断使用哪个 AI
 	switch model {
 	case string(baidu.ModelErnieBot),
@@ -399,6 +409,8 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.one
 	case google.ModelGeminiPro, google.ModelGeminiProVision:
 		return ai.gai
+	case sky.ModelSkyChatMegaVerse:
+		return ai.sky
 	default:
 		if openrouter.SupportModel(model) {
 			return ai.openrouter

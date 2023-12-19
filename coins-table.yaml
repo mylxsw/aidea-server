@@ -111,3 +111,5 @@ coin_tables:
     gemini-pro-vision: 5
     # OpenRouter
     "01-ai.yi-34b-chat": 1
+    # 天工
+    SkyChat-MegaVerse: 2

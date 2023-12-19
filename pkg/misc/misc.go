@@ -1,8 +1,10 @@
 package misc
 
 import (
+	"crypto/md5"
 	"crypto/sha1"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"github.com/hashicorp/go-uuid"
 	"github.com/mylxsw/asteria/log"
@@ -317,4 +319,11 @@ func FileExt(filename string) string {
 // Sha1 计算 sha1 值
 func Sha1(data []byte) string {
 	return fmt.Sprintf("%x", sha1.Sum(data))
+}
+
+// Md5 计算 md5 值
+func Md5(data []byte) string {
+	h := md5.New()
+	h.Write(data)
+	return hex.EncodeToString(h.Sum(nil))
 }

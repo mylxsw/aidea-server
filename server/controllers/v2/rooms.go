@@ -115,6 +115,10 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 				return false
 			}
 
+			if !ctl.conf.EnableSky && item.Vendor == "sky" {
+				return false
+			}
+
 			if item.VersionMax == "" && item.VersionMin == "" {
 				return true
 			}

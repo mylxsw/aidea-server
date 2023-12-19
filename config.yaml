@@ -180,6 +180,13 @@ enable-baichuan: false
 baichuan-apikey: ""
 baichuan-secret: ""
 
+######## 天工 ########
+
+# API 申请 https://model-platform.tiangong.cn
+enable-sky: false
+sky-appkey: ""
+sky-appsecret: ""
+
 ######## 360 智脑 ########
 
 # API 申请 https://ai.360.com

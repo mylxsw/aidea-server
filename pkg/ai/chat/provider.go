@@ -12,6 +12,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
+	"github.com/mylxsw/aidea-server/pkg/ai/sky"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
 	"github.com/mylxsw/aidea-server/pkg/file"
@@ -35,6 +36,7 @@ func (Provider) Register(binder infra.Binder) {
 		one *oneapi.OneAPI,
 		gai *google.GoogleAI,
 		openRouter *openrouter.OpenRouter,
+		skyChat *sky.Sky,
 		file *file.File,
 	) Chat {
 		return NewChat(
@@ -51,6 +53,7 @@ func (Provider) Register(binder infra.Binder) {
 			NewOneAPIChat(one),
 			NewGoogleChat(gai),
 			NewOpenRouterChat(openRouter),
+			NewSkyChat(skyChat),
 		)
 	})
 }
