@@ -110,7 +110,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo2.Reposit
 		req, _, err := (chat.Request{
 			Model:    payload.ModelID,
 			Messages: payload.ContextMessages,
-		}).Init().Fix(ct, 5)
+		}).Init().Fix(ct, 5, 1024*200)
 		if err != nil {
 			panic(fmt.Errorf("fix chat request failed: %w", err))
 		}

@@ -11,6 +11,7 @@ import (
 )
 
 var ErrRateLimitExceeded = errors.New("请求频率过高，请稍后再试")
+var ErrDailyFreeLimitExceeded = errors.New("超过每日免费次数")
 
 func NewLimiter(rdb *redis.Client) *redis_rate.Limiter {
 	return redis_rate.NewLimiter(rdb)

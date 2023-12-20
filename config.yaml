@@ -435,3 +435,12 @@ virtual-model-beichou-prompt: ""
 #price-table-file: /data/webroot/aidea-server/etc/coins-table.yaml
 price-table-file: ""
 
+######## 免费模型 ########
+# 是否启用免费聊天功能，启用后，未登录可以免费使用部分模型
+free-chat-enabled: false
+# 每日免费次数，基于客户端 IP 限制
+free-chat-daily-limit: 5
+# 每日全局免费次数，总的限制次数，不管是哪个 IP
+free-chat-daily-global-limit: 1000
+# 免费模型，所有的请求都会被替换为该模型
+free-chat-model: gpt-3.5-turbo

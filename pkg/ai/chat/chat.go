@@ -161,10 +161,16 @@ func (req Request) Init() Request {
 }
 
 // Fix 修复请求内容，注意：上下文长度修复后，最终的上下文数量不包含 system 消息和用户最后一条消息
-func (req Request) Fix(chat Chat, maxContextLength int64) (*Request, int64, error) {
+func (req Request) Fix(chat Chat, maxContextLength int64, maxTokenCount int) (*Request, int64, error) {
 	// 自动缩减上下文长度至满足模型要求的最大长度，尽可能避免出现超过模型上下文长度的问题
 	systemMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
 	systemMessageLen, _ := MessageTokenCount(systemMessages, req.Model)
+
+	// 模型允许的 Tokens 数量和请求参数指定的 Tokens 数量，取最小值
+	modelTokenLimit := chat.MaxContextLength(req.Model) - systemMessageLen
+	if modelTokenLimit < maxTokenCount {
+		maxTokenCount = modelTokenLimit
+	}
 
 	messages, inputTokens, err := ReduceMessageContext(
 		ReduceMessageContextUpToContextWindow(
@@ -172,7 +178,7 @@ func (req Request) Fix(chat Chat, maxContextLength int64) (*Request, int64, erro
 			int(maxContextLength),
 		),
 		req.Model,
-		chat.MaxContextLength(req.Model)-systemMessageLen,
+		maxTokenCount,
 	)
 	if err != nil {
 		return nil, 0, errors.New("超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度")

@@ -79,8 +79,8 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 
 	// 需要鉴权的 URLs
 	needAuthPrefix := []string{
-		"/v1/chat",            // OpenAI chat
 		"/v1/audio",           // OpenAI audio to text
+		"/v1/images",          // OpenAI image generation
 		"/v1/group-chat",      // 群聊
 		"/v1/users",           // 用户管理
 		"/v1/api-keys",        // API Key 管理
@@ -411,6 +411,11 @@ func BuildCounterVec(namespace, name, help string, tags []string) *prometheus.Co
 func readFromWebContext(webCtx web.Context, key string) string {
 	val := webCtx.Input(key)
 	if val != "" {
+		// TODO 临时处理，从请求参数中读取 Authorization 头需要添加 Bearer 前缀，否则后续的一些鉴权逻辑会有问题
+		if strings.ToLower(key) == "authorization" {
+			return "Bearer " + val
+		}
+		
 		return val
 	}
 
