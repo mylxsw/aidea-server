@@ -37,8 +37,20 @@ func New(serverURL, apiKey string, client *http.Client) *Anthropic {
 	return &Anthropic{apiKey: apiKey, serverURL: serverURL, client: client}
 }
 
+func (ai *Anthropic) resolveModel(model Model) Model {
+	switch model {
+	case "claude-instant-1":
+		return "claude-instant-1.2"
+	case "claude-2":
+		return "claude-2.1"
+	default:
+		return model
+	}
+}
+
 func (ai *Anthropic) Chat(ctx context.Context, req Request) (*Response, error) {
 	req.Stream = false
+	req.Model = ai.resolveModel(req.Model)
 	if req.MaxTokensToSample <= 0 {
 		req.MaxTokensToSample = 4000
 	}
@@ -79,6 +91,7 @@ func (ai *Anthropic) Chat(ctx context.Context, req Request) (*Response, error) {
 
 func (ai *Anthropic) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	req.Stream = true
+	req.Model = ai.resolveModel(req.Model)
 	if req.MaxTokensToSample <= 0 {
 		req.MaxTokensToSample = 4000
 	}

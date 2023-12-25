@@ -553,7 +553,7 @@ func anthropicModels(conf *config.Config) []Model {
 		},
 		{
 			ID:          "Anthropic:" + string(anthropic.ModelClaude2),
-			Name:        "Claude 2.0",
+			Name:        "Claude 2.1",
 			ShortName:   "Claude2",
 			Description: "Anthropic's most powerful model. Particularly good at creative writing.",
 			Category:    "Anthropic",
