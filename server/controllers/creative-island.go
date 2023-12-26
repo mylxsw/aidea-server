@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	openaiHelper "github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/misc"
@@ -297,7 +298,7 @@ func (ctl *CreativeIslandController) Item(ctx context.Context, webCtx web.Contex
 	id := webCtx.PathVar("id")
 	island, err := ctl.creativeRepo.Island(ctx, id)
 	if err != nil {
-		if err == repo2.ErrNotFound {
+		if errors.Is(err, repo2.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrNotFound), http.StatusNotFound)
 		}
 

@@ -6,7 +6,8 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/fromston"
 	"github.com/mylxsw/aidea-server/pkg/ai/leap"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"time"
@@ -40,9 +41,10 @@ func (Provider) Boot(app infra.Resolver) {
 		leapClient *leap.LeapAI,
 		fromstonClient *fromston.Fromston,
 		dashscopeClient *dashscope.DashScope,
+		stabilityClient *stabilityai.StabilityAI,
 		up *uploader.Uploader,
 		queue *Queue,
-		rep *repo2.Repository,
+		rep *repo.Repository,
 		userSvc *service.UserService,
 		rds *redis.Client,
 	) {
@@ -50,11 +52,12 @@ func (Provider) Boot(app infra.Resolver) {
 		manager.Register(TypeLeapAICompletion, leapAsyncJobProcesser(leapClient, up, rep))
 		manager.Register(TypeFromStonCompletion, fromStonAsyncJobProcesser(queue, fromstonClient, up, rep))
 		manager.Register(TypeDashscopeImageCompletion, dashscopeImageAsyncJobProcesser(queue, dashscopeClient, up, rep))
+		manager.Register(TypeImageToVideoCompletion, imageToVideoJobProcesser(queue, stabilityClient, up, rep))
 
 		// 注册创作岛更新后，自动释放冻结的智慧果任务
-		rep.Creative.RegisterRecordStatusUpdateCallback(func(taskID string, userID int64, status repo2.CreativeStatus) {
+		rep.Creative.RegisterRecordStatusUpdateCallback(func(taskID string, userID int64, status repo.CreativeStatus) {
 			key := fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", userID, taskID)
-			if status == repo2.CreativeStatusSuccess || status == repo2.CreativeStatusFailed {
+			if status == repo.CreativeStatusSuccess || status == repo.CreativeStatusFailed {
 				freezedValue, err := rds.Get(context.TODO(), key).Int64()
 				if err != nil {
 					log.F(log.M{"task_id": taskID, "user_id": userID, "status": status}).Errorf("获取创作岛任务冻结的智慧果数量失败：%s", err)
@@ -92,6 +95,7 @@ const (
 	TypeBindPhone                = "bind_phone"
 	TypeGroupChat                = "group_chat"
 	TypeArtisticTextCompletion   = "artistic_text:completion"
+	TypeImageToVideoCompletion   = "image_to_video:completion"
 )
 
 func ResolveTaskType(category, model string) string {
@@ -101,6 +105,10 @@ func ResolveTaskType(category, model string) string {
 	case "deepai":
 		return TypeDeepAICompletion
 	case "stabilityai":
+		if model == "stability-image-to-video" {
+			return TypeImageToVideoCompletion
+		}
+		
 		return TypeStabilityAICompletion
 	case "fromston":
 		return TypeFromStonCompletion
@@ -148,11 +156,11 @@ type Payload interface {
 // Queue 任务队列
 type Queue struct {
 	client    *asynq.Client
-	queueRepo *repo2.QueueRepo
+	queueRepo *repo.QueueRepo
 }
 
 // NewQueue 创建一个任务队列
-func NewQueue(client *asynq.Client, queueRepo *repo2.QueueRepo) *Queue {
+func NewQueue(client *asynq.Client, queueRepo *repo.QueueRepo) *Queue {
 	return &Queue{client: client, queueRepo: queueRepo}
 }
 

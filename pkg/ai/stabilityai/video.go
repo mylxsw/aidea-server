@@ -108,6 +108,7 @@ func (ai *StabilityAI) ImageToVideo(ctx context.Context, imageToVideoReq VideoRe
 	h.Set("Content-Type", "image/png")
 
 	imageWriter, _ := writer.CreatePart(h)
+	
 	imageFile, imageErr := os.Open(imageToVideoReq.ImagePath)
 	if imageErr != nil {
 		_ = writer.Close()

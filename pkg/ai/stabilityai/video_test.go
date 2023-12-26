@@ -17,7 +17,7 @@ func TestStabilityAI_ImageToVideo(t *testing.T) {
 	}
 
 	req := stabilityai.VideoRequest{
-		ImagePath: "/Users/mylxsw/Downloads/94967c86e10b16829dd4d63cd16b79f5.png",
+		ImagePath: "/Users/mylxsw/Downloads/IMG_8649.png",
 	}
 
 	st := stabilityai.NewStabilityAIWithClient(&conf, &http.Client{Timeout: 60 * time.Second})
@@ -36,15 +36,7 @@ func TestStabilityAI_ImageToVideo(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		t.Log(res)
-
-		if res.Status == "in-progress" {
-			t.Log("in progress")
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		if res.FinishReason == "SUCCESS" {
+		if res.Video != "" {
 			filepath, err := res.SaveToLocalFiles(context.TODO(), "/tmp")
 			if err != nil {
 				t.Fatal(err)
@@ -52,6 +44,12 @@ func TestStabilityAI_ImageToVideo(t *testing.T) {
 
 			t.Logf("saved as %s", filepath)
 			break
+		}
+
+		if res.Status == "in-progress" {
+			t.Log("in progress")
+			time.Sleep(5 * time.Second)
+			continue
 		}
 
 		t.Log("unknown status")
