@@ -1311,7 +1311,21 @@ func (ctl *CreativeIslandController) ImageToVideo(ctx context.Context, webCtx we
 		return webCtx.JSONError("invalid image", http.StatusBadRequest)
 	}
 
-	image = uploader.BuildImageURLWithFilter(image, "resize1024x576", ctl.conf.StorageDomain)
+	imageFilter := "resize1024x576"
+
+	// 查询图片信息
+	info, err := uploader.QueryImageInfo(image)
+	if err == nil {
+		if info.Width == info.Height {
+			imageFilter = "resize768x768"
+		} else if info.Width > info.Height {
+			imageFilter = "resize1024x576"
+		} else {
+			imageFilter = "resize576x1024"
+		}
+	}
+
+	image = uploader.BuildImageURLWithFilter(image, imageFilter, ctl.conf.StorageDomain)
 
 	// 检查用户是否有足够的智慧果
 	quota, err := ctl.userSvc.UserQuota(ctx, user.ID)
