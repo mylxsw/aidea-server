@@ -198,6 +198,18 @@ func GetUnifiedImageGenCoins(model string) int {
 	return int(coinTables["image"]["default"])
 }
 
+// GetImageGenCoinsExcept 获取除了指定价格的所有图片生成模型
+func GetImageGenCoinsExcept(coins int64) map[string]int64 {
+	coinsTable := make(map[string]int64)
+	for model, price := range coinTables["image"] {
+		if price != coins {
+			coinsTable[model] = price
+		}
+	}
+
+	return coinsTable
+}
+
 // GetUnifiedVideoGenCoins 统一的视频生成计费
 func GetUnifiedVideoGenCoins(model string) int {
 	if price, ok := coinTables["video"][model]; ok {

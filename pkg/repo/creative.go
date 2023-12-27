@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/misc"
-	model2 "github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"strings"
 	"time"
 
@@ -177,7 +177,7 @@ type CreativeIsland struct {
 	Extension CreativeIslandExt `json:"extension,omitempty"`
 }
 
-func buildCreativeIslandFromModel(item model2.CreativeIslandN) CreativeIsland {
+func buildCreativeIslandFromModel(item model.CreativeIslandN) CreativeIsland {
 	var ext CreativeIslandExt
 	if !item.Ext.IsZero() && item.Ext.String != "" {
 		if err := json.Unmarshal([]byte(item.Ext.ValueOrZero()), &ext); err != nil {
@@ -220,22 +220,22 @@ func buildCreativeIslandFromModel(item model2.CreativeIslandN) CreativeIsland {
 
 func (r *CreativeRepo) Islands(ctx context.Context) ([]CreativeIsland, error) {
 	q := query.Builder().
-		Where(model2.FieldCreativeIslandStatus, int64(IslandStatusEnabled)).
-		OrderBy(model2.FieldCreativeIslandPriority, "DESC").
-		OrderBy(model2.FieldCreativeIslandId, "ASC")
-	items, err := model2.NewCreativeIslandModel(r.db).Get(ctx, q)
+		Where(model.FieldCreativeIslandStatus, int64(IslandStatusEnabled)).
+		OrderBy(model.FieldCreativeIslandPriority, "DESC").
+		OrderBy(model.FieldCreativeIslandId, "ASC")
+	items, err := model.NewCreativeIslandModel(r.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 
-	return array.Map(items, func(item model2.CreativeIslandN, _ int) CreativeIsland {
+	return array.Map(items, func(item model.CreativeIslandN, _ int) CreativeIsland {
 		return buildCreativeIslandFromModel(item)
 	}), nil
 }
 
 func (r *CreativeRepo) Island(ctx context.Context, islandId string) (*CreativeIsland, error) {
-	q := query.Builder().Where(model2.FieldCreativeIslandIslandId, islandId)
-	item, err := model2.NewCreativeIslandModel(r.db).First(ctx, q)
+	q := query.Builder().Where(model.FieldCreativeIslandIslandId, islandId)
+	item, err := model.NewCreativeIslandModel(r.db).First(ctx, q)
 	if err != nil {
 		if err == query.ErrNoResult {
 			return nil, ErrNotFound
@@ -248,16 +248,16 @@ func (r *CreativeRepo) Island(ctx context.Context, islandId string) (*CreativeIs
 }
 
 func (r *CreativeRepo) CreateRecord(ctx context.Context, userId int64, item *CreativeItem) (int64, error) {
-	return model2.NewCreativeHistoryModel(r.db).Create(ctx, query.KV{
-		model2.FieldCreativeHistoryUserId:      userId,
-		model2.FieldCreativeHistoryIslandId:    item.IslandId,
-		model2.FieldCreativeHistoryIslandType:  int64(item.IslandType),
-		model2.FieldCreativeHistoryIslandModel: item.IslandModel,
-		model2.FieldCreativeHistoryArguments:   item.Arguments,
-		model2.FieldCreativeHistoryPrompt:      item.Prompt,
-		model2.FieldCreativeHistoryAnswer:      item.Answer,
-		model2.FieldCreativeHistoryTaskId:      item.TaskId,
-		model2.FieldCreativeHistoryStatus:      int64(item.Status),
+	return model.NewCreativeHistoryModel(r.db).Create(ctx, query.KV{
+		model.FieldCreativeHistoryUserId:      userId,
+		model.FieldCreativeHistoryIslandId:    item.IslandId,
+		model.FieldCreativeHistoryIslandType:  int64(item.IslandType),
+		model.FieldCreativeHistoryIslandModel: item.IslandModel,
+		model.FieldCreativeHistoryArguments:   item.Arguments,
+		model.FieldCreativeHistoryPrompt:      item.Prompt,
+		model.FieldCreativeHistoryAnswer:      item.Answer,
+		model.FieldCreativeHistoryTaskId:      item.TaskId,
+		model.FieldCreativeHistoryStatus:      int64(item.Status),
 	})
 }
 
@@ -267,16 +267,16 @@ func (r *CreativeRepo) CreateRecordWithArguments(ctx context.Context, userId int
 		item.Arguments = string(arguments)
 	}
 
-	id, err := model2.NewCreativeHistoryModel(r.db).Create(ctx, query.KV{
-		model2.FieldCreativeHistoryUserId:      userId,
-		model2.FieldCreativeHistoryIslandId:    item.IslandId,
-		model2.FieldCreativeHistoryIslandType:  int64(item.IslandType),
-		model2.FieldCreativeHistoryIslandModel: item.IslandModel,
-		model2.FieldCreativeHistoryArguments:   item.Arguments,
-		model2.FieldCreativeHistoryPrompt:      item.Prompt,
-		model2.FieldCreativeHistoryAnswer:      item.Answer,
-		model2.FieldCreativeHistoryTaskId:      item.TaskId,
-		model2.FieldCreativeHistoryStatus:      int64(item.Status),
+	id, err := model.NewCreativeHistoryModel(r.db).Create(ctx, query.KV{
+		model.FieldCreativeHistoryUserId:      userId,
+		model.FieldCreativeHistoryIslandId:    item.IslandId,
+		model.FieldCreativeHistoryIslandType:  int64(item.IslandType),
+		model.FieldCreativeHistoryIslandModel: item.IslandModel,
+		model.FieldCreativeHistoryArguments:   item.Arguments,
+		model.FieldCreativeHistoryPrompt:      item.Prompt,
+		model.FieldCreativeHistoryAnswer:      item.Answer,
+		model.FieldCreativeHistoryTaskId:      item.TaskId,
+		model.FieldCreativeHistoryStatus:      int64(item.Status),
 	})
 	if err != nil {
 		return 0, err
@@ -294,10 +294,10 @@ func (r *CreativeRepo) CreateRecordWithArguments(ctx context.Context, userId int
 }
 
 func (r *CreativeRepo) UpdateRecordByID(ctx context.Context, userId, id int64, answer string, quotaUsed int64, status CreativeStatus) error {
-	q := query.Builder().Where(model2.FieldCreativeHistoryId, id).
-		Where(model2.FieldCreativeHistoryUserId, userId)
+	q := query.Builder().Where(model.FieldCreativeHistoryId, id).
+		Where(model.FieldCreativeHistoryUserId, userId)
 
-	_, err := model2.NewCreativeHistoryModel(r.db).Update(ctx, q, model2.CreativeHistoryN{
+	_, err := model.NewCreativeHistoryModel(r.db).Update(ctx, q, model.CreativeHistoryN{
 		Answer:    null.StringFrom(answer),
 		Status:    null.IntFrom(int64(status)),
 		QuotaUsed: null.IntFrom(quotaUsed),
@@ -306,8 +306,8 @@ func (r *CreativeRepo) UpdateRecordByID(ctx context.Context, userId, id int64, a
 }
 
 func (r *CreativeRepo) UpdateRecordStatusByID(ctx context.Context, id int64, answer string, status CreativeStatus) error {
-	q := query.Builder().Where(model2.FieldCreativeHistoryId, id)
-	_, err := model2.NewCreativeHistoryModel(r.db).Update(ctx, q, model2.CreativeHistoryN{
+	q := query.Builder().Where(model.FieldCreativeHistoryId, id)
+	_, err := model.NewCreativeHistoryModel(r.db).Update(ctx, q, model.CreativeHistoryN{
 		Status: null.IntFrom(int64(status)),
 		Answer: null.StringFrom(answer),
 	})
@@ -315,20 +315,20 @@ func (r *CreativeRepo) UpdateRecordStatusByID(ctx context.Context, id int64, ans
 }
 
 func (r *CreativeRepo) UpdateRecordAnswerByTaskID(ctx context.Context, userId int64, taskID string, answer string) error {
-	q := query.Builder().Where(model2.FieldCreativeHistoryTaskId, taskID).
-		Where(model2.FieldCreativeHistoryUserId, userId)
+	q := query.Builder().Where(model.FieldCreativeHistoryTaskId, taskID).
+		Where(model.FieldCreativeHistoryUserId, userId)
 
-	_, err := model2.NewCreativeHistoryModel(r.db).Update(ctx, q, model2.CreativeHistoryN{
+	_, err := model.NewCreativeHistoryModel(r.db).Update(ctx, q, model.CreativeHistoryN{
 		Answer: null.StringFrom(answer),
 	})
 	return err
 }
 
 func (r *CreativeRepo) UpdateRecordAnswerByID(ctx context.Context, userId int64, historyID int64, answer string) error {
-	q := query.Builder().Where(model2.FieldCreativeHistoryId, historyID).
-		Where(model2.FieldCreativeHistoryUserId, userId)
+	q := query.Builder().Where(model.FieldCreativeHistoryId, historyID).
+		Where(model.FieldCreativeHistoryUserId, userId)
 
-	_, err := model2.NewCreativeHistoryModel(r.db).Update(ctx, q, model2.CreativeHistoryN{
+	_, err := model.NewCreativeHistoryModel(r.db).Update(ctx, q, model.CreativeHistoryN{
 		Answer: null.StringFrom(answer),
 	})
 	return err
@@ -347,10 +347,10 @@ type CreativeRecordUpdateExtArgs struct {
 }
 
 func (r *CreativeRepo) UpdateRecordArgumentsByTaskID(ctx context.Context, userId int64, taskID string, ext CreativeRecordUpdateExtArgs) error {
-	q := query.Builder().Where(model2.FieldCreativeHistoryTaskId, taskID).
-		Where(model2.FieldCreativeHistoryUserId, userId)
+	q := query.Builder().Where(model.FieldCreativeHistoryTaskId, taskID).
+		Where(model.FieldCreativeHistoryUserId, userId)
 
-	original, err := model2.NewCreativeHistoryModel(r.db).First(ctx, q)
+	original, err := model.NewCreativeHistoryModel(r.db).First(ctx, q)
 	if err != nil {
 		return err
 	}
@@ -371,11 +371,11 @@ func (r *CreativeRepo) UpdateRecordArgumentsByTaskID(ctx context.Context, userId
 	}
 
 	argData, _ := json.Marshal(arg)
-	update := model2.CreativeHistoryN{
+	update := model.CreativeHistoryN{
 		Arguments: null.StringFrom(string(argData)),
 	}
 
-	_, err = model2.NewCreativeHistoryModel(r.db).Update(ctx, q, update)
+	_, err = model.NewCreativeHistoryModel(r.db).Update(ctx, q, update)
 	return err
 }
 
@@ -394,17 +394,17 @@ func (r *CreativeRepo) UpdateRecordByTaskID(ctx context.Context, userId int64, t
 		}
 	}()
 
-	q := query.Builder().Where(model2.FieldCreativeHistoryTaskId, taskID).
-		Where(model2.FieldCreativeHistoryUserId, userId)
+	q := query.Builder().Where(model.FieldCreativeHistoryTaskId, taskID).
+		Where(model.FieldCreativeHistoryUserId, userId)
 
-	update := model2.CreativeHistoryN{
+	update := model.CreativeHistoryN{
 		Answer:    null.StringFrom(req.Answer),
 		Status:    null.IntFrom(int64(req.Status)),
 		QuotaUsed: null.IntFrom(req.QuotaUsed),
 	}
 
 	if req.ExtArguments != nil {
-		original, err := model2.NewCreativeHistoryModel(r.db).First(ctx, q)
+		original, err := model.NewCreativeHistoryModel(r.db).First(ctx, q)
 		if err != nil {
 			return err
 		}
@@ -428,17 +428,17 @@ func (r *CreativeRepo) UpdateRecordByTaskID(ctx context.Context, userId int64, t
 		update.Arguments = null.StringFrom(string(argData))
 	}
 
-	_, err := model2.NewCreativeHistoryModel(r.db).Update(ctx, q, update)
+	_, err := model.NewCreativeHistoryModel(r.db).Update(ctx, q, update)
 	return err
 }
 
-func (r *CreativeRepo) FindHistoryRecordByTaskId(ctx context.Context, userId int64, taskId string) (*model2.CreativeHistory, error) {
+func (r *CreativeRepo) FindHistoryRecordByTaskId(ctx context.Context, userId int64, taskId string) (*model.CreativeHistory, error) {
 	q := query.Builder().
-		Where(model2.FieldCreativeHistoryUserId, userId).
-		Where(model2.FieldCreativeHistoryTaskId, taskId).
-		OrderBy(model2.FieldCreativeHistoryId, "DESC")
+		Where(model.FieldCreativeHistoryUserId, userId).
+		Where(model.FieldCreativeHistoryTaskId, taskId).
+		OrderBy(model.FieldCreativeHistoryId, "DESC")
 
-	item, err := model2.NewCreativeHistoryModel(r.db).First(ctx, q)
+	item, err := model.NewCreativeHistoryModel(r.db).First(ctx, q)
 	if err != nil {
 		if err == query.ErrNoResult {
 			return nil, ErrNotFound
@@ -452,13 +452,13 @@ func (r *CreativeRepo) FindHistoryRecordByTaskId(ctx context.Context, userId int
 
 func (r *CreativeRepo) FindHistoryRecord(ctx context.Context, userId, id int64) (*CreativeHistoryItem, error) {
 	q := query.Builder().
-		Where(model2.FieldCreativeHistoryId, id)
+		Where(model.FieldCreativeHistoryId, id)
 
 	if userId > 0 {
-		q = q.Where(model2.FieldCreativeHistoryUserId, userId)
+		q = q.Where(model.FieldCreativeHistoryUserId, userId)
 	}
 
-	item, err := model2.NewCreativeHistoryModel(r.db).First(ctx, q)
+	item, err := model.NewCreativeHistoryModel(r.db).First(ctx, q)
 	if err != nil {
 		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
@@ -510,40 +510,40 @@ type CreativeHistoryQuery struct {
 
 func (r *CreativeRepo) HistoryRecordPaginate(ctx context.Context, userId int64, req CreativeHistoryQuery) ([]CreativeHistoryItem, query.PaginateMeta, error) {
 	q := query.Builder().
-		OrderBy(model2.FieldCreativeHistoryId, "DESC")
+		OrderBy(model.FieldCreativeHistoryId, "DESC")
 
 	if userId > 0 {
-		q = q.Where(model2.FieldCreativeHistoryUserId, userId)
+		q = q.Where(model.FieldCreativeHistoryUserId, userId)
 	}
 
 	switch req.Mode {
 	case "creative-island":
-		q = q.Where(model2.FieldCreativeHistoryIslandType, int64(IslandTypeText))
+		q = q.Where(model.FieldCreativeHistoryIslandType, int64(IslandTypeText))
 	case "image-draw":
-		q = q.Where(model2.FieldCreativeHistoryIslandType, int64(IslandTypeImage))
+		q = q.Where(model.FieldCreativeHistoryIslandType, int64(IslandTypeImage))
 	default:
 	}
 
 	if req.IslandId != "" {
-		q = q.Where(model2.FieldCreativeHistoryIslandId, req.IslandId)
+		q = q.Where(model.FieldCreativeHistoryIslandId, req.IslandId)
 	}
 
 	if req.IslandModel != "" {
-		q = q.Where(model2.FieldCreativeHistoryIslandModel, req.IslandModel)
+		q = q.Where(model.FieldCreativeHistoryIslandModel, req.IslandModel)
 	}
 
-	items, meta, err := model2.NewCreativeHistoryModel(r.db).Paginate(ctx, req.Page, req.PerPage, q)
+	items, meta, err := model.NewCreativeHistoryModel(r.db).Paginate(ctx, req.Page, req.PerPage, q)
 	if err != nil {
 		return nil, query.PaginateMeta{}, err
 	}
 
 	islandIDNames := make(map[string]string)
-	islandQ := query.Builder().Select(model2.FieldCreativeIslandIslandId, model2.FieldCreativeIslandTitle)
+	islandQ := query.Builder().Select(model.FieldCreativeIslandIslandId, model.FieldCreativeIslandTitle)
 	if req.IslandId != "" {
-		islandQ = islandQ.Where(model2.FieldCreativeIslandIslandId, req.IslandId)
+		islandQ = islandQ.Where(model.FieldCreativeIslandIslandId, req.IslandId)
 	}
 
-	islands, err := model2.NewCreativeIslandModel(r.db).Get(
+	islands, err := model.NewCreativeIslandModel(r.db).Get(
 		ctx,
 		islandQ,
 	)
@@ -553,7 +553,7 @@ func (r *CreativeRepo) HistoryRecordPaginate(ctx context.Context, userId int64, 
 		}
 	}
 
-	ret := array.Map(items, func(item model2.CreativeHistoryN, _ int) CreativeHistoryItem {
+	ret := array.Map(items, func(item model.CreativeHistoryN, _ int) CreativeHistoryItem {
 		answer := item.Answer.ValueOrZero()
 		if item.IslandType.ValueOrZero() == int64(IslandTypeText) {
 			answer = misc.SubString(answer, 100)
@@ -581,53 +581,61 @@ func (r *CreativeRepo) HistoryRecordPaginate(ctx context.Context, userId int64, 
 
 func (r *CreativeRepo) DeleteHistoryRecord(ctx context.Context, userId, id int64) error {
 	q := query.Builder().
-		Where(model2.FieldCreativeHistoryId, id).
-		Where(model2.FieldCreativeHistoryUserId, userId)
+		Where(model.FieldCreativeHistoryId, id).
+		Where(model.FieldCreativeHistoryUserId, userId)
 
-	_, err := model2.NewCreativeHistoryModel(r.db).Delete(ctx, q)
+	_, err := model.NewCreativeHistoryModel(r.db).Delete(ctx, q)
 	return err
 }
 
 func (r *CreativeRepo) UserGallery(ctx context.Context, userID int64, islandModel string, limit int64) ([]CreativeHistoryItem, error) {
 	q := query.Builder().
 		// Where(model.FieldCreativeHistoryStatus, int64(CreativeStatusSuccess)).
-		Where(model2.FieldCreativeHistoryIslandType, int64(IslandTypeImage)).
-		Select(
-			model2.FieldCreativeHistoryId,
-			model2.FieldCreativeHistoryIslandId,
-			model2.FieldCreativeHistoryIslandType,
-			model2.FieldCreativeHistoryAnswer,
-			model2.FieldCreativeHistoryStatus,
-			model2.FieldCreativeHistoryUserId,
-			model2.FieldCreativeHistoryCreatedAt,
-			model2.FieldCreativeHistoryUpdatedAt,
+		WhereIn(
+			model.FieldCreativeHistoryIslandType,
+			int64(IslandTypeImage),
+			int64(IslandTypeArtisticText),
+			int64(IslandTypeImageColorization),
+			int64(IslandTypeUpscale),
+			int64(IslandTypeVideo),
 		).
-		OrderBy(model2.FieldCreativeHistoryId, "DESC").
+		Select(
+			model.FieldCreativeHistoryId,
+			model.FieldCreativeHistoryIslandId,
+			model.FieldCreativeHistoryIslandType,
+			model.FieldCreativeHistoryAnswer,
+			model.FieldCreativeHistoryArguments,
+			model.FieldCreativeHistoryStatus,
+			model.FieldCreativeHistoryUserId,
+			model.FieldCreativeHistoryCreatedAt,
+			model.FieldCreativeHistoryUpdatedAt,
+		).
+		OrderBy(model.FieldCreativeHistoryId, "DESC").
 		Limit(limit)
 
 	if islandModel != "" {
-		q = q.Where(model2.FieldCreativeHistoryIslandModel, islandModel)
+		q = q.Where(model.FieldCreativeHistoryIslandModel, islandModel)
 	}
 
 	if userID != 0 {
-		q = q.Where(model2.FieldCreativeHistoryUserId, userID)
+		q = q.Where(model.FieldCreativeHistoryUserId, userID)
 	}
 
-	items, err := model2.NewCreativeHistoryModel(r.db).Get(ctx, q)
+	items, err := model.NewCreativeHistoryModel(r.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 
-	islandIDNames := make(map[string]string)
-	islandQ := query.Builder().Select(model2.FieldCreativeIslandIslandId, model2.FieldCreativeIslandTitle)
-	islands, err := model2.NewCreativeIslandModel(r.db).Get(ctx, islandQ)
-	if err == nil {
-		for _, island := range islands {
-			islandIDNames[island.IslandId.ValueOrZero()] = island.Title.ValueOrZero()
-		}
+	islandTypeNames := map[int64]string{
+		int64(IslandTypeImage):             "图片生成",
+		int64(IslandTypeVideo):             "视频合成",
+		int64(IslandTypeAudio):             "语音合成",
+		int64(IslandTypeUpscale):           "超分辨率",
+		int64(IslandTypeImageColorization): "图片上色",
+		int64(IslandTypeArtisticText):      "艺术字",
 	}
 
-	ret := array.Map(items, func(item model2.CreativeHistoryN, _ int) CreativeHistoryItem {
+	ret := array.Map(items, func(item model.CreativeHistoryN, _ int) CreativeHistoryItem {
 		return CreativeHistoryItem{
 			Id:         item.Id.ValueOrZero(),
 			IslandId:   item.IslandId.ValueOrZero(),
@@ -637,7 +645,8 @@ func (r *CreativeRepo) UserGallery(ctx context.Context, userID int64, islandMode
 			UpdatedAt:  item.UpdatedAt.ValueOrZero(),
 			Status:     item.Status.ValueOrZero(),
 			UserID:     item.UserId.ValueOrZero(),
-			IslandName: islandIDNames[item.IslandId.ValueOrZero()],
+			Arguments:  item.Arguments.ValueOrZero(),
+			IslandName: islandTypeNames[item.IslandType.ValueOrZero()],
 		}
 	})
 
@@ -694,55 +703,55 @@ const (
 	CreativeGalleryStatusDeleted = 3
 )
 
-func (r *CreativeRepo) Gallery(ctx context.Context, page, perPage int64) ([]model2.CreativeGallery, query.PaginateMeta, error) {
-	ids, meta, err := model2.NewCreativeGalleryRandomModel(r.db).Paginate(ctx, page, perPage, query.Builder())
+func (r *CreativeRepo) Gallery(ctx context.Context, page, perPage int64) ([]model.CreativeGallery, query.PaginateMeta, error) {
+	ids, meta, err := model.NewCreativeGalleryRandomModel(r.db).Paginate(ctx, page, perPage, query.Builder())
 	if err != nil {
 		return nil, meta, err
 	}
 
-	randomIds := array.Map(ids, func(item model2.CreativeGalleryRandomN, _ int) any {
+	randomIds := array.Map(ids, func(item model.CreativeGalleryRandomN, _ int) any {
 		return item.GalleryId.ValueOrZero()
 	})
 
 	if len(randomIds) == 0 {
 		meta.LastPage = 1
-		return []model2.CreativeGallery{}, meta, nil
+		return []model.CreativeGallery{}, meta, nil
 	}
 
 	q := query.Builder().
-		WhereIn(model2.FieldCreativeGalleryId, randomIds).
+		WhereIn(model.FieldCreativeGalleryId, randomIds).
 		Select(
-			model2.FieldCreativeGalleryId,
-			model2.FieldCreativeGalleryUserId,
-			model2.FieldCreativeGalleryUsername,
-			model2.FieldCreativeGalleryCreativeType,
-			model2.FieldCreativeGalleryPrompt,
-			model2.FieldCreativeGalleryAnswer,
-			model2.FieldCreativeGalleryTags,
-			model2.FieldCreativeGalleryRefCount,
-			model2.FieldCreativeGalleryStarLevel,
-			model2.FieldCreativeGalleryHotValue,
-			model2.FieldCreativeGalleryCreatedAt,
-			model2.FieldCreativeGalleryUpdatedAt,
+			model.FieldCreativeGalleryId,
+			model.FieldCreativeGalleryUserId,
+			model.FieldCreativeGalleryUsername,
+			model.FieldCreativeGalleryCreativeType,
+			model.FieldCreativeGalleryPrompt,
+			model.FieldCreativeGalleryAnswer,
+			model.FieldCreativeGalleryTags,
+			model.FieldCreativeGalleryRefCount,
+			model.FieldCreativeGalleryStarLevel,
+			model.FieldCreativeGalleryHotValue,
+			model.FieldCreativeGalleryCreatedAt,
+			model.FieldCreativeGalleryUpdatedAt,
 		).
-		OrderBy(model2.FieldCreativeGalleryHotValue, "DESC").
+		OrderBy(model.FieldCreativeGalleryHotValue, "DESC").
 		OrderByRaw("RAND()")
 
-	items, err := model2.NewCreativeGalleryModel(r.db).Get(ctx, q)
+	items, err := model.NewCreativeGalleryModel(r.db).Get(ctx, q)
 	if err != nil {
 		return nil, meta, err
 	}
 
-	return array.Map(items, func(item model2.CreativeGalleryN, _ int) model2.CreativeGallery {
+	return array.Map(items, func(item model.CreativeGalleryN, _ int) model.CreativeGallery {
 		return item.ToCreativeGallery()
 	}), meta, err
 }
 
-func (r *CreativeRepo) GalleryByID(ctx context.Context, id int64) (*model2.CreativeGallery, error) {
+func (r *CreativeRepo) GalleryByID(ctx context.Context, id int64) (*model.CreativeGallery, error) {
 	q := query.Builder().
-		Where(model2.FieldCreativeGalleryId, id)
+		Where(model.FieldCreativeGalleryId, id)
 
-	item, err := model2.NewCreativeGalleryModel(r.db).First(ctx, q)
+	item, err := model.NewCreativeGalleryModel(r.db).First(ctx, q)
 	if err != nil {
 		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
@@ -775,10 +784,10 @@ func (r *CreativeRepo) ShareCreativeHistoryToGallery(ctx context.Context, userID
 	return eloquent.Transaction(r.db, func(tx query.Database) error {
 		// 查询创作岛历史纪录信息
 		q := query.Builder().
-			Where(model2.FieldCreativeHistoryId, id).
-			Where(model2.FieldCreativeHistoryUserId, userID)
+			Where(model.FieldCreativeHistoryId, id).
+			Where(model.FieldCreativeHistoryUserId, userID)
 
-		item, err := model2.NewCreativeHistoryModel(tx).First(ctx, q)
+		item, err := model.NewCreativeHistoryModel(tx).First(ctx, q)
 		if err != nil {
 			if errors.Is(err, query.ErrNoResult) {
 				return ErrNotFound
@@ -788,9 +797,9 @@ func (r *CreativeRepo) ShareCreativeHistoryToGallery(ctx context.Context, userID
 		}
 
 		// 查询是否已经在 Gallery 中
-		existItem, err := model2.NewCreativeGalleryModel(tx).First(
+		existItem, err := model.NewCreativeGalleryModel(tx).First(
 			ctx,
-			query.Builder().Where(model2.FieldCreativeGalleryCreativeHistoryId, id),
+			query.Builder().Where(model.FieldCreativeGalleryCreativeHistoryId, id),
 		)
 		if err != nil && !errors.Is(err, query.ErrNoResult) {
 			return err
@@ -800,19 +809,19 @@ func (r *CreativeRepo) ShareCreativeHistoryToGallery(ctx context.Context, userID
 			// 已经存在，且已经删除，则恢复
 			if existItem.Status.ValueOrZero() == CreativeGalleryStatusDeleted {
 				item.Shared = null.IntFrom(int64(IslandHistorySharedStatusShared))
-				if err := item.Save(ctx, model2.FieldCreativeHistoryShared); err != nil {
+				if err := item.Save(ctx, model.FieldCreativeHistoryShared); err != nil {
 					return err
 				}
 
 				existItem.Status = null.IntFrom(CreativeGalleryStatusOK)
-				return existItem.Save(ctx, model2.FieldCreativeGalleryStatus)
+				return existItem.Save(ctx, model.FieldCreativeGalleryStatus)
 			}
 
 			return nil
 		}
 
 		item.Shared = null.IntFrom(int64(IslandHistorySharedStatusShared))
-		if err := item.Save(ctx, model2.FieldCreativeHistoryShared); err != nil {
+		if err := item.Save(ctx, model.FieldCreativeHistoryShared); err != nil {
 			return err
 		}
 
@@ -830,16 +839,16 @@ func (r *CreativeRepo) ShareCreativeHistoryToGallery(ctx context.Context, userID
 		}
 
 		meta, _ := json.Marshal(arg.ToGalleryMeta())
-		_, err = model2.NewCreativeGalleryModel(tx).Create(ctx, query.KV{
-			model2.FieldCreativeGalleryUserId:            userID,
-			model2.FieldCreativeGalleryUsername:          username,
-			model2.FieldCreativeGalleryCreativeHistoryId: id,
-			model2.FieldCreativeGalleryCreativeType:      item.IslandType.ValueOrZero(),
-			model2.FieldCreativeGalleryPrompt:            prompt,
-			model2.FieldCreativeGalleryAnswer:            item.Answer.ValueOrZero(),
-			model2.FieldCreativeGalleryStatus:            CreativeGalleryStatusOK,
-			model2.FieldCreativeGalleryNegativePrompt:    arg.NegativePrompt,
-			model2.FieldCreativeGalleryMeta:              string(meta),
+		_, err = model.NewCreativeGalleryModel(tx).Create(ctx, query.KV{
+			model.FieldCreativeGalleryUserId:            userID,
+			model.FieldCreativeGalleryUsername:          username,
+			model.FieldCreativeGalleryCreativeHistoryId: id,
+			model.FieldCreativeGalleryCreativeType:      item.IslandType.ValueOrZero(),
+			model.FieldCreativeGalleryPrompt:            prompt,
+			model.FieldCreativeGalleryAnswer:            item.Answer.ValueOrZero(),
+			model.FieldCreativeGalleryStatus:            CreativeGalleryStatusOK,
+			model.FieldCreativeGalleryNegativePrompt:    arg.NegativePrompt,
+			model.FieldCreativeGalleryMeta:              string(meta),
 		})
 		return err
 	})
@@ -848,12 +857,12 @@ func (r *CreativeRepo) ShareCreativeHistoryToGallery(ctx context.Context, userID
 func (r *CreativeRepo) CancelCreativeHistoryShare(ctx context.Context, userID int64, historyID int64) error {
 	return eloquent.Transaction(r.db, func(tx query.Database) error {
 		q := query.Builder().
-			Where(model2.FieldCreativeGalleryCreativeHistoryId, historyID)
+			Where(model.FieldCreativeGalleryCreativeHistoryId, historyID)
 		if userID > 0 {
-			q = q.Where(model2.FieldCreativeGalleryUserId, userID)
+			q = q.Where(model.FieldCreativeGalleryUserId, userID)
 		}
 
-		item, err := model2.NewCreativeGalleryModel(tx).First(ctx, q)
+		item, err := model.NewCreativeGalleryModel(tx).First(ctx, q)
 		if err != nil {
 			if errors.Is(err, query.ErrNoResult) {
 				return nil
@@ -862,11 +871,11 @@ func (r *CreativeRepo) CancelCreativeHistoryShare(ctx context.Context, userID in
 			return err
 		}
 
-		historyItem, err := model2.NewCreativeHistoryModel(tx).First(
+		historyItem, err := model.NewCreativeHistoryModel(tx).First(
 			ctx,
 			query.Builder().
-				Where(model2.FieldCreativeHistoryId, historyID).
-				Where(model2.FieldCreativeHistoryUserId, item.UserId),
+				Where(model.FieldCreativeHistoryId, historyID).
+				Where(model.FieldCreativeHistoryUserId, item.UserId),
 		)
 		if err != nil && !errors.Is(err, query.ErrNoResult) {
 			return err
@@ -874,18 +883,18 @@ func (r *CreativeRepo) CancelCreativeHistoryShare(ctx context.Context, userID in
 
 		if historyItem != nil {
 			historyItem.Shared = null.IntFrom(int64(IslandHistorySharedStatusNotShared))
-			if err := historyItem.Save(ctx, model2.FieldCreativeHistoryShared); err != nil {
+			if err := historyItem.Save(ctx, model.FieldCreativeHistoryShared); err != nil {
 				return err
 			}
 		}
 
 		item.Status = null.IntFrom(CreativeGalleryStatusDeleted)
-		return item.Save(ctx, model2.FieldCreativeGalleryStatus)
+		return item.Save(ctx, model.FieldCreativeGalleryStatus)
 	})
 }
 
 type ImageModel struct {
-	model2.ImageModel
+	model.ImageModel
 	ImageMeta ImageModelMeta `json:"image_meta"`
 }
 
@@ -905,8 +914,8 @@ type Dimension struct {
 }
 
 func (r *CreativeRepo) Model(ctx context.Context, vendor, realModel string) (*ImageModel, error) {
-	q := query.Builder().Where(model2.FieldImageModelVendor, vendor).Where(model2.FieldImageModelRealModel, realModel)
-	mod, err := model2.NewImageModelModel(r.db).First(ctx, q)
+	q := query.Builder().Where(model.FieldImageModelVendor, vendor).Where(model.FieldImageModelRealModel, realModel)
+	mod, err := model.NewImageModelModel(r.db).First(ctx, q)
 	if err != nil {
 		if err == query.ErrNoResult {
 			return nil, ErrNotFound
@@ -929,16 +938,16 @@ func (r *CreativeRepo) Model(ctx context.Context, vendor, realModel string) (*Im
 
 func (r *CreativeRepo) Models(ctx context.Context) ([]ImageModel, error) {
 	q := query.Builder().
-		Where(model2.FieldImageModelStatus, 1).
-		OrderBy(model2.FieldImageModelVendor, "ASC").
-		OrderBy(model2.FieldImageModelModelName, "ASC")
+		Where(model.FieldImageModelStatus, 1).
+		OrderBy(model.FieldImageModelVendor, "ASC").
+		OrderBy(model.FieldImageModelModelName, "ASC")
 
-	items, err := model2.NewImageModelModel(r.db).Get(ctx, q)
+	items, err := model.NewImageModelModel(r.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 
-	return array.Map(items, func(item model2.ImageModelN, _ int) ImageModel {
+	return array.Map(items, func(item model.ImageModelN, _ int) ImageModel {
 		m := item.ToImageModel()
 		var meta ImageModelMeta
 		if m.Meta != "" {
@@ -954,7 +963,7 @@ func (r *CreativeRepo) Models(ctx context.Context) ([]ImageModel, error) {
 }
 
 type ImageFilter struct {
-	model2.ImageFilter
+	model.ImageFilter
 	Vendor    string          `json:"-"`
 	ImageMeta ImageFilterMeta `json:"meta"`
 }
@@ -998,10 +1007,10 @@ func (meta ImageFilterMeta) ShouldUseTemplate(prompt string) bool {
 // modelVendors 查询所有的模型（模型 id->模型服务商）
 func (r *CreativeRepo) modelVendors(ctx context.Context) (map[string]string, error) {
 	q := query.Builder().
-		Where(model2.FieldImageModelStatus, 1).
-		Select(model2.FieldImageModelModelId, model2.FieldImageModelVendor)
+		Where(model.FieldImageModelStatus, 1).
+		Select(model.FieldImageModelModelId, model.FieldImageModelVendor)
 
-	items, err := model2.NewImageModelModel(r.db).Get(ctx, q)
+	items, err := model.NewImageModelModel(r.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -1016,10 +1025,10 @@ func (r *CreativeRepo) modelVendors(ctx context.Context) (map[string]string, err
 
 func (r *CreativeRepo) Filters(ctx context.Context) ([]ImageFilter, error) {
 	q := query.Builder().
-		Where(model2.FieldImageFilterStatus, 1).
-		OrderBy(model2.FieldImageFilterId, "DESC")
+		Where(model.FieldImageFilterStatus, 1).
+		OrderBy(model.FieldImageFilterId, "DESC")
 
-	items, err := model2.NewImageFilterModel(r.db).Get(ctx, q)
+	items, err := model.NewImageFilterModel(r.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}
@@ -1027,14 +1036,14 @@ func (r *CreativeRepo) Filters(ctx context.Context) ([]ImageFilter, error) {
 	modelVenders, err := r.modelVendors(ctx)
 	if err == nil {
 		// 过滤掉模型不存在的风格
-		items = array.Filter(items, func(item model2.ImageFilterN, _ int) bool {
+		items = array.Filter(items, func(item model.ImageFilterN, _ int) bool {
 			return modelVenders[item.ModelId.ValueOrZero()] != ""
 		})
 	} else {
 		log.Errorf("get model venders failed: %v", err)
 	}
 
-	return array.Map(items, func(item model2.ImageFilterN, _ int) ImageFilter {
+	return array.Map(items, func(item model.ImageFilterN, _ int) ImageFilter {
 		m := item.ToImageFilter()
 		var meta ImageFilterMeta
 		if m.Meta != "" {
@@ -1053,12 +1062,12 @@ func (r *CreativeRepo) Filters(ctx context.Context) ([]ImageFilter, error) {
 
 func (r *CreativeRepo) Filter(ctx context.Context, id int64) (*ImageFilter, error) {
 	q := query.Builder().
-		Where(model2.FieldImageFilterStatus, 1).
-		Where(model2.FieldImageFilterId, id)
+		Where(model.FieldImageFilterStatus, 1).
+		Where(model.FieldImageFilterId, id)
 
-	item, err := model2.NewImageFilterModel(r.db).First(ctx, q)
+	item, err := model.NewImageFilterModel(r.db).First(ctx, q)
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 

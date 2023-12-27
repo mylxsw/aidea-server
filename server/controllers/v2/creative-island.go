@@ -106,6 +106,22 @@ const (
 )
 
 func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
+	imageCost := int64(coins.GetUnifiedImageGenCoins(""))
+	videoCost := int64(coins.GetUnifiedVideoGenCoins("stability-image-to-video"))
+
+	imageModelsCost := coins.GetImageGenCoinsExcept(imageCost)
+	imageModelsCostNote := ""
+	if len(imageModelsCost) > 0 {
+		ns := make([]string, 0)
+		for mod, cost := range imageModelsCost {
+			ns = append(ns, fmt.Sprintf("%s %d/张", strings.ToUpper(mod), cost))
+		}
+
+		if len(ns) > 0 {
+			imageModelsCostNote = fmt.Sprintf("（以下模型除外，%s）", strings.Join(ns, "，"))
+		}
+	}
+
 	items := []CreativeIslandItem{
 		{
 			ID:           "text-to-image",
@@ -113,18 +129,19 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-text-to-image.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create?mode=text-to-image&id=text-to-image",
+			Note:         fmt.Sprintf("生成每张图片将消耗 %d 智慧果%s。", imageCost, imageModelsCostNote),
 			Size:         SizeLarge,
 		},
 	}
 
-	if client != nil && misc.VersionNewer(client.Version, "1.0.9") && ctl.conf.EnableStabilityAI {
+	if client != nil && misc.VersionNewer(client.Version, "1.0.10") && ctl.conf.EnableStabilityAI {
 		items = append(items, CreativeIslandItem{
 			ID:           "image-to-video",
 			Title:        "图生视频",
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-to-video-dark.jpg-thumb1000",
 			RouteURI:     "/creative-draw/create-video",
-			Note:         "每次生成视频将消耗 200 智慧果",
+			Note:         fmt.Sprintf("图生视频功能能够将静态的图片转换为动态的视频，转换后的视频时长为 2s。生成每个视频将消耗 %d 智慧果。", videoCost),
 			Size:         SizeLarge,
 		})
 	}
@@ -136,6 +153,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/art-text-bg.jpg-thumb1000",
 			RouteURI:     "/creative-draw/artistic-text?type=text&id=artistic-text",
+			Note:         fmt.Sprintf("生成每张图片将消耗 %d 智慧果。", imageCost),
 			Size:         SizeLarge,
 		})
 		items = append(items, CreativeIslandItem{
@@ -144,6 +162,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/art-qr-bg.jpg-thumb1000",
 			RouteURI:     "/creative-draw/artistic-text?type=qr&id=artistic-qr",
+			Note:         fmt.Sprintf("生成每张图片将消耗 %d 智慧果。", imageCost),
 			Size:         SizeMedium,
 		})
 	}
@@ -155,6 +174,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 		PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-image-to-image.jpeg-thumb1000",
 		RouteURI:     "/creative-draw/create?mode=image-to-image&id=image-to-image",
 		Tag:          ternary.If(client != nil && client.IsIOS(), "", "BETA"),
+		Note:         fmt.Sprintf("生成每张图片将消耗 %d 智慧果。", imageCost),
 		Size:         SizeMedium,
 	})
 
@@ -165,7 +185,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/super-res.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-upscale",
-			Note:         "图片的高清修复功能能够把低分辨率的照片升级到高分辨率，让图片的清晰度得到明显提升。",
+			Note:         fmt.Sprintf("图片的高清修复功能能够把低分辨率的照片升级到高分辨率，让图片的清晰度得到明显提升。\n生成每张图片将消耗 %d 智慧果。", imageCost),
 			Size:         SizeMedium,
 		})
 
@@ -175,7 +195,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-colorizev2.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-colorize",
-			Note:         "图片上色功能能够把黑白照片变成彩色照片，让照片的色彩更加丰富。",
+			Note:         fmt.Sprintf("图片上色功能能够把黑白照片变成彩色照片，让照片的色彩更加丰富。\n生成每张图片将消耗 %d 智慧果。", imageCost),
 			Size:         SizeMedium,
 		})
 	}
