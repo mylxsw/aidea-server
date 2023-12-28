@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/misc"
-	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/proxy"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/glacier/infra"
@@ -112,7 +113,22 @@ type DeepAIImageGeneratorResponse struct {
 func (ai *DeepAI) Upscale(ctx context.Context, imageURL string) (*DeepAIImageGeneratorResponse, error) {
 	selectedServerURL := ai.lb()
 
-	resp, err := misc.RestyClient(2).R().
+	reclient := misc.RestyClient(2)
+	var proxy string
+	if ai.conf.SupportProxy() && ai.conf.DeepAIAutoProxy {
+		if ai.conf.Socks5Proxy != "" {
+			if !strings.HasPrefix(ai.conf.Socks5Proxy, "http://") {
+				proxy = "http://" + ai.conf.Socks5Proxy
+			}
+		} else {
+			if !strings.HasPrefix(ai.conf.ProxyURL, "http://") {
+				proxy = "http://" + ai.conf.ProxyURL
+			}
+		}
+		reclient.SetProxy(proxy)
+	}
+	// resp, err := misc.RestyClient(2).R().
+	resp, err := reclient.R().
 		SetFormData(map[string]string{"image": imageURL}).
 		SetHeader("api-key", ai.conf.DeepAIKey).
 		SetContext(ctx).
@@ -141,7 +157,23 @@ func (ai *DeepAI) Upscale(ctx context.Context, imageURL string) (*DeepAIImageGen
 // DrawColor 图片上色
 func (ai *DeepAI) DrawColor(ctx context.Context, imageURL string) (*DeepAIImageGeneratorResponse, error) {
 	selectedServerURL := ai.lb()
-	resp, err := misc.RestyClient(2).R().
+
+	reclient := misc.RestyClient(2)
+	var proxy string
+	if ai.conf.SupportProxy() && ai.conf.DeepAIAutoProxy {
+		if ai.conf.Socks5Proxy != "" {
+			if !strings.HasPrefix(ai.conf.Socks5Proxy, "http://") {
+				proxy = "http://" + ai.conf.Socks5Proxy
+			}
+		} else {
+			if !strings.HasPrefix(ai.conf.ProxyURL, "http://") {
+				proxy = "http://" + ai.conf.ProxyURL
+			}
+		}
+		reclient.SetProxy(proxy)
+	}
+	// resp, err := misc.RestyClient(2).R().
+	resp, err := reclient.R().
 		SetFormData(map[string]string{"image": imageURL}).
 		SetHeader("api-key", ai.conf.DeepAIKey).
 		SetContext(ctx).

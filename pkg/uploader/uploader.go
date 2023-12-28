@@ -5,12 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/misc"
-	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/proxy"
+
+	clientUrl "net/url"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/mylxsw/aidea-server/config"
@@ -155,7 +159,26 @@ func (u *Uploader) UploadRemoteFile(ctx context.Context, url string, uid int, ex
 }
 
 func (u *Uploader) uploadRemoteFile(ctx context.Context, url string, uid int, expiredAfterDays int, ext string, breakWall bool) (string, error) {
-	client := ternary.If(breakWall, u.httpClient, &http.Client{Timeout: 120 * time.Second})
+	var proxy string
+	var upclient *http.Client
+	if u.conf.SupportProxy() && u.conf.DeepAIAutoProxy {
+		if u.conf.Socks5Proxy != "" {
+			if !strings.HasPrefix(u.conf.Socks5Proxy, "http://") {
+				proxy = "http://" + u.conf.Socks5Proxy
+			}
+		} else {
+			if !strings.HasPrefix(u.conf.ProxyURL, "http://") {
+				proxy = "http://" + u.conf.ProxyURL
+			}
+		}
+		proxyURL, _ := clientUrl.Parse(proxy)
+		upclient = &http.Client{Timeout: 120 * time.Second, Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+	} else {
+		upclient = &http.Client{Timeout: 120 * time.Second}
+	}
+
+	// client := ternary.If(breakWall, u.httpClient, &http.Client{Timeout: 120 * time.Second})
+	client := ternary.If(breakWall, u.httpClient, upclient)
 	resp, err := client.Get(url)
 	if err != nil {
 		time.Sleep(500 * time.Millisecond)
