@@ -36,7 +36,7 @@ type VideoRequest struct {
 	// CfgScale How strongly the video sticks to the original image.
 	// Use lower values to allow the model more freedom to make changes and higher values to correct motion distortions.
 	// number [ 0 .. 10 ], default 2.5
-	CfgScale int `json:"cfg_scale,omitempty"`
+	CfgScale float64 `json:"cfg_scale,omitempty"`
 	// MotionBucketID Lower values generally result in less motion in the output video,
 	// while higher values generally result in more motion.
 	// This parameter corresponds to the motion_bucket_id parameter from the paper.
@@ -108,7 +108,7 @@ func (ai *StabilityAI) ImageToVideo(ctx context.Context, imageToVideoReq VideoRe
 	h.Set("Content-Type", "image/png")
 
 	imageWriter, _ := writer.CreatePart(h)
-	
+
 	imageFile, imageErr := os.Open(imageToVideoReq.ImagePath)
 	if imageErr != nil {
 		_ = writer.Close()
@@ -122,7 +122,7 @@ func (ai *StabilityAI) ImageToVideo(ctx context.Context, imageToVideoReq VideoRe
 	}
 
 	if imageToVideoReq.CfgScale > 0 {
-		_ = writer.WriteField("cfg_scale", strconv.Itoa(imageToVideoReq.CfgScale))
+		_ = writer.WriteField("cfg_scale", strconv.FormatFloat(imageToVideoReq.CfgScale, 'f', 2, 64))
 	}
 
 	if imageToVideoReq.MotionBucketID > 0 {

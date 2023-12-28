@@ -24,6 +24,19 @@ type ImageToVideoCompletionPayload struct {
 	Seed  int64  `json:"seed,omitempty"`
 	Image string `json:"image,omitempty"`
 
+	Width  int64 `json:"width,omitempty"`
+	Height int64 `json:"height,omitempty"`
+
+	// CfgScale How strongly the video sticks to the original image.
+	// Use lower values to allow the model more freedom to make changes and higher values to correct motion distortions.
+	// number [ 0 .. 10 ], default 2.5
+	CfgScale float64 `json:"cfg_scale,omitempty"`
+	// MotionBucketID Lower values generally result in less motion in the output video,
+	// while higher values generally result in more motion.
+	// This parameter corresponds to the motion_bucket_id parameter from the paper.
+	// number [ 1 .. 255 ], default 40
+	MotionBucketID int `json:"motion_bucket_id,omitempty"`
+
 	CreatedAt time.Time `json:"created_at,omitempty"`
 }
 
@@ -81,15 +94,6 @@ func (p ImageToVideoPendingTaskPayload) GetModel() string {
 	return p.Payload.GetModel()
 }
 
-type ImageToVideoResponse interface {
-	GetID() string
-	GetState() string
-	IsFinished() bool
-	IsProcessing() bool
-	UploadResources(ctx context.Context, up *uploader.Uploader, uid int64) ([]string, error)
-	GetImages() []string
-}
-
 func BuildImageToVideoCompletionHandler(
 	client *stabilityai.StabilityAI,
 	rep *repo.Repository,
@@ -142,8 +146,10 @@ func BuildImageToVideoCompletionHandler(
 		defer os.Remove(targetImage)
 
 		req := stabilityai.VideoRequest{
-			ImagePath: targetImage,
-			Seed:      int(payload.Seed),
+			ImagePath:      targetImage,
+			Seed:           int(payload.Seed),
+			CfgScale:       payload.CfgScale,
+			MotionBucketID: payload.MotionBucketID,
 		}
 		resp, err := client.ImageToVideo(ctx, req)
 		if err != nil {
@@ -172,7 +178,7 @@ func BuildImageToVideoCompletionHandler(
 	}
 }
 
-func imageToVideoJobProcesser(que *Queue, client *stabilityai.StabilityAI, up *uploader.Uploader, rep *repo.Repository) PendingTaskHandler {
+func imageToVideoJobProcesser(client *stabilityai.StabilityAI, up *uploader.Uploader, rep *repo.Repository) PendingTaskHandler {
 	return func(task *model.QueueTasksPending) (update *repo.PendingTaskUpdate, err error) {
 		var payload ImageToVideoPendingTaskPayload
 		if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
@@ -234,7 +240,7 @@ func imageToVideoJobProcesser(que *Queue, client *stabilityai.StabilityAI, up *u
 
 		// 任务已经完成，开始处理结果
 		// 更新创作岛历史记录
-		if err := handleImageToVideoTask(que, payload, taskRes, up, rep); err != nil {
+		if err := handleImageToVideoTask(&payload, taskRes, up, rep); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 			return nil, err
 		}
@@ -243,17 +249,8 @@ func imageToVideoJobProcesser(que *Queue, client *stabilityai.StabilityAI, up *u
 	}
 }
 
-type ImageToVideoTaskPayload interface {
-	GetID() string
-	GetUID() int64
-	GetQuota() int64
-	GetModel() string
-	GetImage() string
-}
-
 func handleImageToVideoTask(
-	que *Queue,
-	payload ImageToVideoTaskPayload,
+	payload *ImageToVideoPendingTaskPayload,
 	tasks *stabilityai.VideoResponse,
 	up *uploader.Uploader,
 	rep *repo.Repository,
@@ -314,6 +311,8 @@ func handleImageToVideoTask(
 			OriginImage: payload.GetImage(),
 			Resources:   resources,
 			ValidBefore: time.Now().Add(7 * 24 * time.Hour),
+			Width:       payload.Payload.Width,
+			Height:      payload.Payload.Height,
 		},
 	)
 }

@@ -1311,21 +1311,21 @@ func (ctl *CreativeIslandController) ImageToVideo(ctx context.Context, webCtx we
 		return webCtx.JSONError("invalid image", http.StatusBadRequest)
 	}
 
-	imageFilter := "resize1024x576"
+	width, height := int64(1024), int64(576)
 
 	// 查询图片信息
 	info, err := uploader.QueryImageInfo(image)
 	if err == nil {
 		if info.Width == info.Height {
-			imageFilter = "resize768x768"
+			width, height = 768, 768
 		} else if info.Width > info.Height {
-			imageFilter = "resize1024x576"
+			width, height = 1024, 576
 		} else {
-			imageFilter = "resize576x1024"
+			width, height = 576, 1024
 		}
 	}
 
-	image = uploader.BuildImageURLWithFilter(image, imageFilter, ctl.conf.StorageDomain)
+	image = uploader.BuildImageURLWithFilter(image, fmt.Sprintf("resize%dx%d", width, height), ctl.conf.StorageDomain)
 
 	// 检查用户是否有足够的智慧果
 	quota, err := ctl.userSvc.UserQuota(ctx, user.ID)
@@ -1344,12 +1344,30 @@ func (ctl *CreativeIslandController) ImageToVideo(ctx context.Context, webCtx we
 		seed = -1
 	}
 
+	// How strongly the video sticks to the original image.
+	// Use lower values to allow the model more freedom to make changes and higher values to correct motion distortions.
+	cfgScale := webCtx.Float64Input("cfg_scale", 2.5)
+	if cfgScale < 1 || cfgScale > 10 {
+		cfgScale = 2.5
+	}
+
+	// Lower values generally result in less motion in the output video,
+	// while higher values generally result in more motion
+	motionBucketID := webCtx.IntInput("motion_bucket_id", 40)
+	if motionBucketID < 1 || motionBucketID > 255 {
+		motionBucketID = 40
+	}
+
 	req := queue.ImageToVideoCompletionPayload{
-		Quota:     quotaConsume,
-		CreatedAt: time.Now(),
-		Image:     image,
-		UID:       user.ID,
-		Seed:      seed,
+		Quota:          quotaConsume,
+		CreatedAt:      time.Now(),
+		Image:          image,
+		UID:            user.ID,
+		Seed:           seed,
+		CfgScale:       cfgScale,
+		MotionBucketID: motionBucketID,
+		Width:          width,
+		Height:         height,
 	}
 
 	// 加入异步任务队列
@@ -1377,7 +1395,12 @@ func (ctl *CreativeIslandController) ImageToVideo(ctx context.Context, webCtx we
 	}
 
 	arg := repo.CreativeRecordArguments{
-		Image: image,
+		Image:          image,
+		Width:          width,
+		Height:         height,
+		Seed:           seed,
+		MotionBucketID: motionBucketID,
+		CfgScale:       cfgScale,
 	}
 
 	// 保存历史记录

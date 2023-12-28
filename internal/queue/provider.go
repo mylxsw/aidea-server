@@ -52,7 +52,7 @@ func (Provider) Boot(app infra.Resolver) {
 		manager.Register(TypeLeapAICompletion, leapAsyncJobProcesser(leapClient, up, rep))
 		manager.Register(TypeFromStonCompletion, fromStonAsyncJobProcesser(queue, fromstonClient, up, rep))
 		manager.Register(TypeDashscopeImageCompletion, dashscopeImageAsyncJobProcesser(queue, dashscopeClient, up, rep))
-		manager.Register(TypeImageToVideoCompletion, imageToVideoJobProcesser(queue, stabilityClient, up, rep))
+		manager.Register(TypeImageToVideoCompletion, imageToVideoJobProcesser(stabilityClient, up, rep))
 
 		// 注册创作岛更新后，自动释放冻结的智慧果任务
 		rep.Creative.RegisterRecordStatusUpdateCallback(func(taskID string, userID int64, status repo.CreativeStatus) {
@@ -108,7 +108,7 @@ func ResolveTaskType(category, model string) string {
 		if model == "stability-image-to-video" {
 			return TypeImageToVideoCompletion
 		}
-		
+
 		return TypeStabilityAICompletion
 	case "fromston":
 		return TypeFromStonCompletion
@@ -128,6 +128,8 @@ type CompletionResult struct {
 	Resources   []string  `json:"resources"`
 	OriginImage string    `json:"origin_image,omitempty"`
 	ValidBefore time.Time `json:"valid_before,omitempty"`
+	Width       int64     `json:"width,omitempty"`
+	Height      int64     `json:"height,omitempty"`
 }
 
 // ErrorResult 任务失败后的结果

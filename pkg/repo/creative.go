@@ -676,6 +676,8 @@ type CreativeRecordArguments struct {
 	Seed               int64    `json:"seed,omitempty"`
 	Text               string   `json:"text,omitempty"`
 	ArtisticType       string   `json:"artistic_type,omitempty"`
+	CfgScale           float64  `json:"cfg_scale,omitempty"`
+	MotionBucketID     int      `json:"motion_bucket_id,omitempty"`
 }
 
 func (arg CreativeRecordArguments) ToGalleryMeta() GalleryMeta {
