@@ -110,7 +110,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		mux.HandleFunc(queue.TypeFromStonCompletion, queue.BuildFromStonCompletionHandler(fromstonClient, uploader, rep))
 		mux.HandleFunc(queue.TypeDashscopeImageCompletion, queue.BuildDashscopeImageCompletionHandler(dashscopeClient, uploader, rep, translater, openaiClient))
 		mux.HandleFunc(queue.TypeGetimgAICompletion, queue.BuildGetimgAICompletionHandler(getimgaiClient, translater, uploader, rep, openaiClient))
-		mux.HandleFunc(queue.TypeImageDownloader, queue.BuildImageDownloaderHandler(uploader, rep))
+		mux.HandleFunc(queue.TypeImageDownloader, queue.BuildImageDownloaderHandler(conf, uploader, rep))
 		mux.HandleFunc(queue.TypeImageUpscale, queue.BuildImageUpscaleHandler(deepaiClient, stabaiClient, uploader, rep))
 		mux.HandleFunc(queue.TypeImageColorization, queue.BuildImageColorizationHandler(deepaiClient, uploader, rep))
 		mux.HandleFunc(queue.TypeGroupChat, queue.BuildGroupChatHandler(conf, ct, rep, userSvc))

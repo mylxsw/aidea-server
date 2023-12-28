@@ -44,13 +44,14 @@ func (Provider) Boot(app infra.Resolver) {
 		stabilityClient *stabilityai.StabilityAI,
 		up *uploader.Uploader,
 		queue *Queue,
+		conf *config.Config,
 		rep *repo.Repository,
 		userSvc *service.UserService,
 		rds *redis.Client,
 	) {
 		// 注册异步 PendingTask 任务处理器
 		manager.Register(TypeLeapAICompletion, leapAsyncJobProcesser(leapClient, up, rep))
-		manager.Register(TypeFromStonCompletion, fromStonAsyncJobProcesser(queue, fromstonClient, up, rep))
+		manager.Register(TypeFromStonCompletion, fromStonAsyncJobProcesser(conf, queue, fromstonClient, up, rep))
 		manager.Register(TypeDashscopeImageCompletion, dashscopeImageAsyncJobProcesser(queue, dashscopeClient, up, rep))
 		manager.Register(TypeImageToVideoCompletion, imageToVideoJobProcesser(stabilityClient, up, rep))
 

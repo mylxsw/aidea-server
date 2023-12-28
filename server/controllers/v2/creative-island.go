@@ -488,6 +488,10 @@ func (ctl *CreativeIslandController) Histories(ctx context.Context, webCtx web.C
 			item.IslandTitle = "高清修复"
 		case int64(repo.IslandTypeImageColorization):
 			item.IslandTitle = "图片上色"
+		case int64(repo.IslandTypeVideo):
+			item.IslandTitle = "图生视频"
+		case int64(repo.IslandTypeArtisticText):
+			item.IslandTitle = "艺术字"
 		}
 
 		// 客户端目前不支持封禁状态展示，这里转换为失败
