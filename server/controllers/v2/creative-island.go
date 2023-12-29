@@ -129,7 +129,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-text-to-image.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create?mode=text-to-image&id=text-to-image",
-			Note:         fmt.Sprintf("生成每张图片将消耗 %d 智慧果%s。", imageCost, imageModelsCostNote),
+			Note:         fmt.Sprintf("根据你的想法生成图片。生成每张图片将消耗 %d 智慧果%s。", imageCost, imageModelsCostNote),
 			Size:         SizeLarge,
 		},
 	}
@@ -141,7 +141,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-to-video-dark.jpg-thumb1000",
 			RouteURI:     "/creative-draw/create-video",
-			Note:         fmt.Sprintf("图生视频功能能够将静态的图片转换为动态的视频，转换后的视频时长为 2s。生成每个视频将消耗 %d 智慧果。", videoCost),
+			Note:         fmt.Sprintf("基于上传的图片再创作，生成一个时长为 2s 的短视频。生成每个视频将消耗 %d 智慧果。", videoCost),
 			Size:         SizeLarge,
 		})
 	}
@@ -153,7 +153,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/art-text-bg.jpg-thumb1000",
 			RouteURI:     "/creative-draw/artistic-text?type=text&id=artistic-text",
-			Note:         fmt.Sprintf("生成每张图片将消耗 %d 智慧果。", imageCost),
+			Note:         fmt.Sprintf("根据你的想法生成图片，并且在图片中融入你写的文字内容。生成每张图片将消耗 %d 智慧果。", imageCost),
 			Size:         SizeLarge,
 		})
 		items = append(items, CreativeIslandItem{
@@ -162,7 +162,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/art-qr-bg.jpg-thumb1000",
 			RouteURI:     "/creative-draw/artistic-text?type=qr&id=artistic-qr",
-			Note:         fmt.Sprintf("生成每张图片将消耗 %d 智慧果。", imageCost),
+			Note:         fmt.Sprintf("根据你的想法生成图片，并且将链接地址转换为二维码，把图片和二维码融合到一起。生成每张图片将消耗 %d 智慧果。", imageCost),
 			Size:         SizeMedium,
 		})
 	}
@@ -174,7 +174,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 		PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-image-to-image.jpeg-thumb1000",
 		RouteURI:     "/creative-draw/create?mode=image-to-image&id=image-to-image",
 		Tag:          ternary.If(client != nil && client.IsIOS(), "", "BETA"),
-		Note:         fmt.Sprintf("生成每张图片将消耗 %d 智慧果。", imageCost),
+		Note:         fmt.Sprintf("基于参考图片的轮廓，为你生成一张整体结构类似的图片。生成每张图片将消耗 %d 智慧果。", imageCost),
 		Size:         SizeMedium,
 	})
 
@@ -185,7 +185,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/super-res.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-upscale",
-			Note:         fmt.Sprintf("图片的高清修复功能能够把低分辨率的照片升级到高分辨率，让图片的清晰度得到明显提升。\n生成每张图片将消耗 %d 智慧果。", imageCost),
+			Note:         fmt.Sprintf("将低分辨率的照片升级到高分辨率，让图片的清晰度得到明显提升。\n生成每张图片将消耗 %d 智慧果。", imageCost),
 			Size:         SizeMedium,
 		})
 
@@ -195,7 +195,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-colorizev2.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-colorize",
-			Note:         fmt.Sprintf("图片上色功能能够把黑白照片变成彩色照片，让照片的色彩更加丰富。\n生成每张图片将消耗 %d 智慧果。", imageCost),
+			Note:         fmt.Sprintf("将黑白照片变成彩色照片，让照片的色彩更加丰富。\n生成每张图片将消耗 %d 智慧果。", imageCost),
 			Size:         SizeMedium,
 		})
 	}
