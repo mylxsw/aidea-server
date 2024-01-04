@@ -468,7 +468,7 @@ func Migrate20231129DDL(m *migrate.Manager) {
     room_type        TINYINT                             NULL COMMENT '房间类型：1-系统预设 2-自定义',
     init_message     TEXT                                NULL COMMENT '初始化消息',
     avatar_url       VARCHAR(255)                        NULL COMMENT ' 头像地址'
-) CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci`,
+) CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci AUTO_INCREMENT = 2`,
 			`CREATE INDEX rooms_user_id ON rooms (user_id)`,
 		}
 	})

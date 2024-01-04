@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
+	"strings"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -48,7 +50,7 @@ func NewImageDownloaderTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeImageDownloader, data)
 }
 
-func BuildImageDownloaderHandler(up *uploader.Uploader, rep *repo2.Repository) TaskHandler {
+func BuildImageDownloaderHandler(conf *config.Config, up *uploader.Uploader, rep *repo.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ImageDownloaderPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -72,7 +74,7 @@ func BuildImageDownloaderHandler(up *uploader.Uploader, rep *repo2.Repository) T
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo2.QueueTaskStatusFailed,
+					repo.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -103,6 +105,10 @@ func BuildImageDownloaderHandler(up *uploader.Uploader, rep *repo2.Repository) T
 		}
 
 		for i, res := range resources {
+			if strings.HasPrefix(res, conf.StorageDomain) {
+				continue
+			}
+
 			ret, err := up.UploadRemoteFile(ctx, res, int(payload.UserID), uploader.DefaultUploadExpireAfterDays, "png", false)
 			if err != nil {
 				log.WithFields(log.Fields{
@@ -124,7 +130,7 @@ func BuildImageDownloaderHandler(up *uploader.Uploader, rep *repo2.Repository) T
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo2.QueueTaskStatusSuccess,
+			repo.QueueTaskStatusSuccess,
 			EmptyResult{},
 		)
 	}

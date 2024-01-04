@@ -173,7 +173,7 @@ func BuildPaymentHandler(
 				payload.PaymentID,
 				payload.Source,
 			)
-			if err := ding.Send(dingding.NewMarkdownMessage(fmt.Sprintf("%s: 充值 %d 个智慧果", payload.Env, product.Quota), content, []string{})); err != nil {
+			if err := ding.Send(dingding.NewMarkdownMessage(fmt.Sprintf("用户 %d 充值 %d 个智慧果（%s）", payload.UserID, product.Quota, payload.Env), content, []string{})); err != nil {
 				log.Errorf("发送钉钉通知失败: %s", err)
 			}
 		}()
