@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	fromston2 "github.com/mylxsw/aidea-server/pkg/ai/fromston"
+	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/pkg/ai/fromston"
 	"github.com/mylxsw/aidea-server/pkg/misc"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
-	uploader2 "github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"os"
 	"strconv"
 	"strings"
@@ -105,11 +106,11 @@ type FromStonResponse interface {
 	GetState() string
 	IsFinished() bool
 	IsProcessing() bool
-	UploadResources(ctx context.Context, up *uploader2.Uploader, uid int64) ([]string, error)
+	UploadResources(ctx context.Context, up *uploader.Uploader, uid int64) ([]string, error)
 	GetImages() []string
 }
 
-func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Uploader, rep *repo2.Repository) TaskHandler {
+func BuildFromStonCompletionHandler(client *fromston.Fromston, up *uploader.Uploader, rep *repo.Repository) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload FromStonCompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -117,7 +118,7 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -128,9 +129,9 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
-					Status: repo2.CreativeStatusFailed,
+					Status: repo.CreativeStatusFailed,
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 				}
@@ -140,7 +141,7 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo2.QueueTaskStatusFailed,
+					repo.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -155,7 +156,7 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 		// 如果本地下载失败，则直接发送远程图片地址到 Leap
 		localImagePath := payload.Image
 		if payload.Image != "" {
-			imagePath, err := uploader2.DownloadRemoteFile(ctx, payload.Image)
+			imagePath, err := uploader.DownloadRemoteFile(ctx, payload.Image)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"payload": payload,
@@ -203,10 +204,10 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 
 		modelType, modelIdStr := ms[0], ms[1]
 
-		var resp *fromston2.GenImageResponseData
+		var resp *fromston.GenImageResponseData
 		if modelType == "custom" {
 			// 自己训练的模型
-			req := fromston2.GenImageCustomRequest{
+			req := fromston.GenImageCustomRequest{
 				Prompt:     prompt,
 				FillPrompt: int64(ternary.If(payload.AIRewrite, 1, 0)),
 				Width:      payload.Width,
@@ -214,7 +215,7 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 				RefImg:     localImagePath,
 				ModelID:    modelIdStr,
 				Multiply:   payload.ImageCount,
-				Addition: &fromston2.GenImageAddition{
+				Addition: &fromston.GenImageAddition{
 					ImgFmt:         "jpg",
 					NegativePrompt: negativePrompt,
 					Strength:       payload.ImageStrength,
@@ -233,7 +234,7 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 				panic(fmt.Errorf("invalid model: %s", payload.Model))
 			}
 
-			req := fromston2.GenImageRequest{
+			req := fromston.GenImageRequest{
 				Prompt:     prompt,
 				FillPrompt: int64(ternary.If(payload.AIRewrite, 1, 0)),
 				Width:      payload.Width,
@@ -242,7 +243,7 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 				ModelType:  ms[0],
 				ModelID:    int64(modelId),
 				Multiply:   payload.ImageCount,
-				Addition: &fromston2.GenImageAddition{
+				Addition: &fromston.GenImageAddition{
 					ImgFmt:         "jpg",
 					NegativePrompt: negativePrompt,
 					Strength:       payload.ImageStrength,
@@ -267,7 +268,7 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 		}
 
 		if prompt != payload.Prompt || negativePrompt != payload.NegativePrompt {
-			argUpdate := repo2.CreativeRecordUpdateExtArgs{}
+			argUpdate := repo.CreativeRecordUpdateExtArgs{}
 			if prompt != payload.Prompt {
 				argUpdate.RealPrompt = prompt
 			}
@@ -281,12 +282,12 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 			}
 		}
 
-		if err := rep.Queue.CreatePendingTask(ctx, &repo2.PendingTask{
+		if err := rep.Queue.CreatePendingTask(ctx, &repo.PendingTask{
 			TaskID:        payload.GetID(),
 			TaskType:      TypeFromStonCompletion,
 			NextExecuteAt: time.Now().Add(time.Duration(estimates) * time.Second),
 			DeadlineAt:    time.Now().Add(30 * time.Minute),
-			Status:        repo2.PendingTaskStatusProcessing,
+			Status:        repo.PendingTaskStatusProcessing,
 			Payload:       FromStonPendingTaskPayload{FromstonTaskIDs: resp.IDs, Payload: payload, ModelType: modelType},
 		}); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("create pending task failed: %s", err)
@@ -296,20 +297,20 @@ func BuildFromStonCompletionHandler(client *fromston2.Fromston, up *uploader2.Up
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo2.QueueTaskStatusRunning,
+			repo.QueueTaskStatusRunning,
 			nil,
 		)
 	}
 }
 
-func fromStonAsyncJobProcesser(que *Queue, client *fromston2.Fromston, up *uploader2.Uploader, rep *repo2.Repository) PendingTaskHandler {
-	return func(task *model.QueueTasksPending) (update *repo2.PendingTaskUpdate, err error) {
+func fromStonAsyncJobProcesser(conf *config.Config, que *Queue, client *fromston.Fromston, up *uploader.Uploader, rep *repo.Repository) PendingTaskHandler {
+	return func(task *model.QueueTasksPending) (update *repo.PendingTaskUpdate, err error) {
 		var payload FromStonPendingTaskPayload
 		if err := json.Unmarshal([]byte(task.Payload), &payload); err != nil {
 			return nil, err
 		}
 
-		var tasks []fromston2.Task
+		var tasks []fromston.Task
 		if payload.ModelType == "custom" {
 			// 自己训练的模型任务查询
 			for _, id := range payload.FromstonTaskIDs {
@@ -325,9 +326,9 @@ func fromStonAsyncJobProcesser(que *Queue, client *fromston2.Fromston, up *uploa
 			tasks, err = client.QueryTasks(context.TODO(), payload.FromstonTaskIDs)
 			if err != nil {
 				log.With(payload).Errorf("query fromston job result failed: %v", err)
-				return &repo2.PendingTaskUpdate{
+				return &repo.PendingTaskUpdate{
 					NextExecuteAt: time.Now().Add(5 * time.Second),
-					Status:        repo2.PendingTaskStatusProcessing,
+					Status:        repo.PendingTaskStatusProcessing,
 					ExecuteTimes:  task.ExecuteTimes + 1,
 				}, nil
 			}
@@ -339,21 +340,21 @@ func fromStonAsyncJobProcesser(que *Queue, client *fromston2.Fromston, up *uploa
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(context.TODO(), payload.Payload.GetUID(), payload.Payload.GetID(), repo2.CreativeRecordUpdateRequest{
+				if err := rep.Creative.UpdateRecordByTaskID(context.TODO(), payload.Payload.GetUID(), payload.Payload.GetID(), repo.CreativeRecordUpdateRequest{
 					Answer: err.Error(),
-					Status: repo2.CreativeStatusFailed,
+					Status: repo.CreativeStatusFailed,
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 				}
 
-				update = &repo2.PendingTaskUpdate{Status: repo2.PendingTaskStatusFailed}
+				update = &repo.PendingTaskUpdate{Status: repo.PendingTaskStatusFailed}
 			}
 
 			if err != nil {
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.Payload.GetID(),
-					repo2.QueueTaskStatusFailed,
+					repo.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -363,28 +364,28 @@ func fromStonAsyncJobProcesser(que *Queue, client *fromston2.Fromston, up *uploa
 			}
 		}()
 
-		unfinishedTask := array.Filter(tasks, func(item fromston2.Task, _ int) bool {
+		unfinishedTask := array.Filter(tasks, func(item fromston.Task, _ int) bool {
 			return array.In(item.State, []string{"in_wait", "in_create"})
 		})
 
 		if len(unfinishedTask) > 0 {
-			return &repo2.PendingTaskUpdate{
+			return &repo.PendingTaskUpdate{
 				NextExecuteAt: time.Now().Add(5 * time.Second),
-				Status:        repo2.PendingTaskStatusProcessing,
+				Status:        repo.PendingTaskStatusProcessing,
 				ExecuteTimes:  task.ExecuteTimes + 1,
 			}, nil
 		}
 
 		// 任务已经完成，开始处理结果
-		successTasks := array.Filter(tasks, func(item fromston2.Task, _ int) bool {
+		successTasks := array.Filter(tasks, func(item fromston.Task, _ int) bool {
 			return item.State == "success"
 		})
 
 		if len(successTasks) == 0 {
 			log.WithFields(log.Fields{"payload": payload, "tasks": tasks}).Errorf("no success task found")
-			failedTasks := array.Filter(tasks, func(item fromston2.Task, _ int) bool { return item.State == "fail" })
+			failedTasks := array.Filter(tasks, func(item fromston.Task, _ int) bool { return item.State == "fail" })
 			if len(failedTasks) > 0 {
-				panic(errors.New(strings.Join(array.Map(failedTasks, func(t fromston2.Task, _ int) string {
+				panic(errors.New(strings.Join(array.Map(failedTasks, func(t fromston.Task, _ int) string {
 					switch t.FailReson {
 					case "NSFW":
 						return "检测到违规内容，请修改后重试"
@@ -399,12 +400,12 @@ func fromStonAsyncJobProcesser(que *Queue, client *fromston2.Fromston, up *uploa
 		}
 
 		// 更新创作岛历史记录
-		if err := handleFromstonTask(que, payload, successTasks, up, rep); err != nil {
+		if err := handleFromstonTask(conf, que, payload, successTasks, up, rep); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
 			return nil, err
 		}
 
-		return &repo2.PendingTaskUpdate{Status: repo2.PendingTaskStatusSuccess}, nil
+		return &repo.PendingTaskUpdate{Status: repo.PendingTaskStatusSuccess}, nil
 	}
 }
 
@@ -417,14 +418,23 @@ type FromstonTaskPayload interface {
 }
 
 func handleFromstonTask(
+	conf *config.Config,
 	que *Queue,
 	payload FromstonTaskPayload,
-	tasks []fromston2.Task,
-	up *uploader2.Uploader,
-	rep *repo2.Repository,
+	tasks []fromston.Task,
+	up *uploader.Uploader,
+	rep *repo.Repository,
 ) error {
-	resources := array.Map(tasks, func(item fromston2.Task, _ int) string {
-		return item.GenImg
+	resources := array.Map(tasks, func(item fromston.Task, _ int) string {
+		ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+		defer cancel()
+
+		res, err := up.UploadRemoteFile(ctx, item.GenImg, int(payload.GetUID()), uploader.DefaultUploadExpireAfterDays, "png", false)
+		if err != nil {
+			return item.GenImg
+		}
+
+		return res
 	})
 	resources = array.Filter(resources, func(item string, _ int) bool { return item != "" })
 
@@ -446,10 +456,10 @@ func handleFromstonTask(
 	// quotaConsumed := coins.GetFromstonImageCoins(payload.GetModel(), isCsMode, width, height) * int64(len(resources))
 	quotaConsumed := int64(coins.GetUnifiedImageGenCoins("") * len(resources))
 
-	req := repo2.CreativeRecordUpdateRequest{
+	req := repo.CreativeRecordUpdateRequest{
 		Answer:    string(retJson),
 		QuotaUsed: quotaConsumed,
-		Status:    repo2.CreativeStatusSuccess,
+		Status:    repo.CreativeStatusSuccess,
 	}
 	if err := rep.Creative.UpdateRecordByTaskID(context.TODO(), payload.GetUID(), payload.GetID(), req); err != nil {
 		log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -462,30 +472,33 @@ func handleFromstonTask(
 		context.TODO(),
 		payload.GetUID(),
 		payload.GetQuota(),
-		repo2.NewQuotaUsedMeta("fromston", modelUsed...),
+		repo.NewQuotaUsedMeta("fromston", modelUsed...),
 	); err != nil {
 		log.Errorf("used quota add failed: %s", err)
 		return err
 	}
 
-	// 触发文件下载上传七牛云任务
-	downloadPayload := ImageDownloaderPayload{
-		CreativeHistoryTaskID: payload.GetID(),
-		UserID:                payload.GetUID(),
-		CreatedAt:             time.Now(),
-	}
-	downloadTaskID, err := que.Enqueue(&downloadPayload, NewImageDownloaderTask)
-	if err != nil {
-		log.WithFields(log.Fields{"payload": payload}).Errorf("enqueue image downloader task failed: %s", err)
-	} else {
-		log.WithFields(log.Fields{"payload": payload, "task_id": downloadTaskID}).Debugf("enqueue image downloader task success")
+	needDownloadResources := array.Filter(resources, func(item string, _ int) bool { return !strings.HasPrefix(item, conf.StorageDomain) })
+	if len(needDownloadResources) > 0 {
+		// 触发文件下载上传七牛云任务
+		downloadPayload := ImageDownloaderPayload{
+			CreativeHistoryTaskID: payload.GetID(),
+			UserID:                payload.GetUID(),
+			CreatedAt:             time.Now(),
+		}
+		downloadTaskID, err := que.Enqueue(&downloadPayload, NewImageDownloaderTask)
+		if err != nil {
+			log.WithFields(log.Fields{"payload": payload}).Errorf("enqueue image downloader task failed: %s", err)
+		} else {
+			log.WithFields(log.Fields{"payload": payload, "task_id": downloadTaskID}).Debugf("enqueue image downloader task success")
+		}
 	}
 
 	// 更新队列任务状态
 	return rep.Queue.Update(
 		context.TODO(),
 		payload.GetID(),
-		repo2.QueueTaskStatusSuccess,
+		repo.QueueTaskStatusSuccess,
 		CompletionResult{
 			OriginImage: payload.GetImage(),
 			Resources:   resources,

@@ -261,6 +261,15 @@ type Config struct {
 	FontPath string `json:"font_path" yaml:"font_path"`
 	// 服务状态页面
 	ServiceStatusPage string `json:"service_status_page" yaml:"service_status_page"`
+
+	// 免费 Chat 请求 （仅限 IOS）
+	FreeChatEnabled bool `json:"free_chat_enabled" yaml:"free_chat_enabled"`
+	// 免费 Chat 每日限制(每 IP)
+	FreeChatDailyLimit int `json:"free_chat_daily_limit" yaml:"free_chat_daily_limit"`
+	// 免费 Chat 每日全局限制（不区分 IP）
+	FreeChatDailyGlobalLimit int `json:"free_chat_daily_global_limit" yaml:"free_chat_daily_global_limit"`
+	// 免费 Chat 模型
+	FreeChatModel string `json:"free_chat_model" yaml:"free_chat_model"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -531,6 +540,11 @@ func Register(ins *app.App) {
 
 			FontPath:          ctx.String("font-path"),
 			ServiceStatusPage: ctx.String("service-status-page"),
+
+			FreeChatEnabled:          ctx.Bool("free-chat-enabled"),
+			FreeChatDailyLimit:       ctx.Int("free-chat-daily-limit"),
+			FreeChatDailyGlobalLimit: ctx.Int("free-chat-daily-global-limit"),
+			FreeChatModel:            ctx.String("free-chat-model"),
 		}
 	})
 }

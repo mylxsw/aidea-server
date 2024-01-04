@@ -217,4 +217,9 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("font-path", "", "字体文件路径")
 	ins.AddStringFlag("service-status-page", "", "服务状态页面，留空则不启用服务状态页面")
+
+	ins.AddBoolFlag("free-chat-enabled", "是否启用免费聊天功能，启用后，未登录可以免费使用部分模型")
+	ins.AddIntFlag("free-chat-daily-limit", 5, "每日免费次数，基于客户端 IP 限制")
+	ins.AddIntFlag("free-chat-daily-global-limit", 1000, "每日全局免费次数，总的限制次数，不管是哪个 IP")
+	ins.AddStringFlag("free-chat-model", "gpt-3.5-turbo", "免费模型，所有的请求都会被替换为该模型")
 }

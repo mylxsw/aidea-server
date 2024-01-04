@@ -46,7 +46,7 @@ func TestAnthropic_ChatStream(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := client.ChatStream(ctx, anthropic.NewRequest(anthropic.ModelClaudeInstant, []anthropic.Message{
+	resp, err := client.ChatStream(ctx, anthropic.NewRequest(anthropic.ModelClaude2, []anthropic.Message{
 		{
 			Role:    "user",
 			Content: "你是一名占卜师，我给你名字，你帮我占卜运势",
