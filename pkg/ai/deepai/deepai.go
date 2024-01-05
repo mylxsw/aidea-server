@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/misc"
-	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/proxy"
+	"gopkg.in/resty.v1"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/glacier/infra"
@@ -22,6 +24,7 @@ const DefaultServerURL = "https://api.deepai.org"
 type DeepAI struct {
 	conf   *config.Config
 	client *http.Client
+	resty  *resty.Client
 }
 
 func NewDeepAIRaw(conf *config.Config) *DeepAI {
@@ -30,13 +33,16 @@ func NewDeepAIRaw(conf *config.Config) *DeepAI {
 
 func NewDeepAI(resolver infra.Resolver, conf *config.Config) *DeepAI {
 	client := &http.Client{Timeout: 300 * time.Second}
+	restyClient := misc.RestyClient(2).SetTimeout(300 * time.Second)
 	if conf.SupportProxy() && conf.DeepAIAutoProxy {
 		resolver.MustResolve(func(pp *proxy.Proxy) {
-			client.Transport = pp.BuildTransport()
+			transport := pp.BuildTransport()
+			client.Transport = transport
+			restyClient.SetTransport(transport)
 		})
 	}
 
-	return &DeepAI{conf: conf, client: client}
+	return &DeepAI{conf: conf, client: client, resty: restyClient}
 }
 
 func (ai *DeepAI) lb() string {
@@ -112,7 +118,7 @@ type DeepAIImageGeneratorResponse struct {
 func (ai *DeepAI) Upscale(ctx context.Context, imageURL string) (*DeepAIImageGeneratorResponse, error) {
 	selectedServerURL := ai.lb()
 
-	resp, err := misc.RestyClient(2).R().
+	resp, err := ai.resty.R().
 		SetFormData(map[string]string{"image": imageURL}).
 		SetHeader("api-key", ai.conf.DeepAIKey).
 		SetContext(ctx).
@@ -141,7 +147,7 @@ func (ai *DeepAI) Upscale(ctx context.Context, imageURL string) (*DeepAIImageGen
 // DrawColor 图片上色
 func (ai *DeepAI) DrawColor(ctx context.Context, imageURL string) (*DeepAIImageGeneratorResponse, error) {
 	selectedServerURL := ai.lb()
-	resp, err := misc.RestyClient(2).R().
+	resp, err := ai.resty.R().
 		SetFormData(map[string]string{"image": imageURL}).
 		SetHeader("api-key", ai.conf.DeepAIKey).
 		SetContext(ctx).
