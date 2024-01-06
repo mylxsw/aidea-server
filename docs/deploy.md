@@ -27,6 +27,9 @@
   thumb_500 | imageView2/2/w/500/h/500/format/webp/q/75
   square_500 | imageView2/1/w/500/h/500/format/jpg/q/75
   fix_square_1024 | imageMogr2/auto-orient/thumbnail/!1024x1024r/gravity/Center/crop/1024x1024/blur/1x0/quality/75
+  resize1024x576 | imageView2/1/w/1024/h/576/format/png/q/75
+  resize576x1024 | imageView2/1/w/576/h/1024/format/png/q/75
+  resize768x768 | imageView2/1/w/768/h/768/format/png/q/75
 
 可选依赖
 
