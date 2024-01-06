@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"time"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
 	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
-	"path/filepath"
-	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/asteria/log"
@@ -142,7 +143,7 @@ func imageColorization(ctx context.Context, deepClient *deepai.DeepAI, up *uploa
 		return "", fmt.Errorf("图片超分辨率失败: %w", err)
 	}
 
-	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), false)
+	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), true)
 	if err != nil {
 		return "", fmt.Errorf("图片上传失败: %w", err)
 	}
