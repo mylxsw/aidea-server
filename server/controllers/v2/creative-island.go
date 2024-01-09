@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
@@ -46,6 +47,7 @@ type CreativeIslandController struct {
 	securitySrv  *service.SecurityService `autowire:"@"`
 	userSvc      *service.UserService     `autowire:"@"`
 	rds          *redis.Client            `autowire:"@"`
+	xfai         *xfyun.XFYunAI           `autowire:"@"`
 }
 
 // NewCreativeIslandController create a new CreativeIslandController

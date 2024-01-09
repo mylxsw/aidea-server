@@ -74,7 +74,7 @@ func (chat *GoogleChat) initRequest(req Request) (*google.Request, error) {
 					})
 				} else if ct.ImageURL != nil {
 					if strings.HasPrefix(ct.ImageURL.URL, "http://") || strings.HasPrefix(ct.ImageURL.URL, "https://") {
-						encoded, mimeType, err := uploader.DownloadRemoteFileAsBase64Raw(context.TODO(), ct.ImageURL.URL)
+						encoded, mimeType, err := uploader.DownloadRemoteFileAsBase64Raw(context.TODO(), ct.ImageURL.URL, true)
 						if err == nil {
 							contents = append(contents, google.MessagePart{
 								InlineData: &google.MessagePartInlineData{

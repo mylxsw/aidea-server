@@ -253,6 +253,9 @@ type Config struct {
 	DefaultImageToImageModel string `json:"default_image_to_image_model" yaml:"default_image_to_image_model"`
 	DefaultTextToImageModel  string `json:"default_text_to_image_model" yaml:"default_text_to_image_model"`
 
+	// 图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语
+	ImageToImageRecognitionProvider string `json:"img2img-recognition-provider" yaml:"img2img-recognition-provider"`
+
 	// 虚拟模型
 	EnableVirtualModel bool         `json:"enable_virtual_model" yaml:"enable_virtual_model"`
 	VirtualModel       VirtualModel `json:"virtual_model" yaml:"virtual_model"`
@@ -528,6 +531,8 @@ func Register(ins *app.App) {
 
 			DefaultImageToImageModel: ctx.String("default-img2img-model"),
 			DefaultTextToImageModel:  ctx.String("default-txt2img-model"),
+
+			ImageToImageRecognitionProvider: ctx.String("img2img-recognition-provider"),
 
 			EnableVirtualModel: ctx.Bool("enable-virtual-model"),
 			VirtualModel: VirtualModel{

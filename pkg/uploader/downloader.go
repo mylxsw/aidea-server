@@ -116,8 +116,8 @@ func DownloadRemoteFileAsBase64(ctx context.Context, remoteURL string) (string, 
 	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
-func DownloadRemoteFileAsBase64Raw(ctx context.Context, remoteURL string) (imageData string, mimeType string, err error) {
-	if str.HasSuffixes(strings.ToLower(remoteURL), supportImages) {
+func DownloadRemoteFileAsBase64Raw(ctx context.Context, remoteURL string, fromQiniu bool) (imageData string, mimeType string, err error) {
+	if fromQiniu && str.HasSuffixes(strings.ToLower(remoteURL), supportImages) {
 		remoteURL = remoteURL + "-thumb"
 	}
 

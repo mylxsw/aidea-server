@@ -231,118 +231,79 @@ type Chat interface {
 }
 
 type Imp struct {
-	openAI      *OpenAIChat
-	baiduAI     *BaiduAIChat
-	dashScope   *DashScopeChat
-	xfyunAI     *XFYunChat
-	snAI        *SenseNovaChat
-	tencentAI   *TencentAIChat
-	anthropicAI *AnthropicChat
-	baichuanAI  *BaichuanAIChat
-	g360        *GPT360Chat
-	virtual     *VirtualChat
-	one         *OneAPIChat
-	gai         *GoogleChat
-	openrouter  *OpenRouterChat
-	sky         *SkyChat
+	ai      *AI
+	virtual *VirtualChat
 }
 
-func NewChat(
-	conf *config.Config,
-	openAI *OpenAIChat,
-	baiduAI *BaiduAIChat,
-	dashScope *DashScopeChat,
-	xfyunAI *XFYunChat,
-	sn *SenseNovaChat,
-	tencentAI *TencentAIChat,
-	anthropicAI *AnthropicChat,
-	baichuanAI *BaichuanAIChat,
-	g360 *GPT360Chat,
-	one *OneAPIChat,
-	gai *GoogleChat,
-	openr *OpenRouterChat,
-	sky *SkyChat,
-) Chat {
+func NewChat(conf *config.Config, ai *AI) Chat {
 	var virtualImpl Chat
 	impLowercase := strings.ToLower(conf.VirtualModel.Implementation)
 	switch impLowercase {
 	case "openai":
-		virtualImpl = openAI
+		virtualImpl = ai.OpenAI
 	case "baidu", "文心千帆":
-		virtualImpl = baiduAI
+		virtualImpl = ai.Baidu
 	case "dashscope", "灵积":
-		virtualImpl = dashScope
+		virtualImpl = ai.DashScope
 	case "xfyun", "讯飞星火":
-		virtualImpl = xfyunAI
+		virtualImpl = ai.Xfyun
 	case "sense_nova", "商汤日日新":
-		virtualImpl = sn
+		virtualImpl = ai.SenseNova
 	case "tencent", "腾讯":
-		virtualImpl = tencentAI
+		virtualImpl = ai.Tencent
 	case "anthropic":
-		virtualImpl = anthropicAI
+		virtualImpl = ai.Anthropic
 	case "baichuan", "百川":
-		virtualImpl = baichuanAI
+		virtualImpl = ai.Baichuan
 	case "gpt360", "360智脑":
-		virtualImpl = g360
+		virtualImpl = ai.GPT360
 	case "chatglm_turbo", "chatglm_pro", "chatglm_lite", "chatglm_std", "PaLM-2":
-		virtualImpl = one
+		virtualImpl = ai.OneAPI
 	case "google":
-		virtualImpl = gai
+		virtualImpl = ai.Google
 	case "sky":
-		virtualImpl = sky
+		virtualImpl = ai.Sky
 	default:
 		if openrouter.SupportModel(impLowercase) {
-			virtualImpl = openr
+			virtualImpl = ai.Openrouter
 		} else {
-			virtualImpl = openAI
+			virtualImpl = ai.OpenAI
 		}
 	}
 
 	return &Imp{
-		openAI:      openAI,
-		baiduAI:     baiduAI,
-		dashScope:   dashScope,
-		xfyunAI:     xfyunAI,
-		snAI:        sn,
-		tencentAI:   tencentAI,
-		anthropicAI: anthropicAI,
-		baichuanAI:  baichuanAI,
-		g360:        g360,
-		virtual:     NewVirtualChat(virtualImpl, conf.VirtualModel),
-		one:         one,
-		gai:         gai,
-		openrouter:  openr,
-		sky:         sky,
+		ai:      ai,
+		virtual: NewVirtualChat(virtualImpl, conf.VirtualModel),
 	}
 }
 
 func (ai *Imp) selectImp(model string) Chat {
 	if strings.HasPrefix(model, "灵积:") {
-		return ai.dashScope
+		return ai.ai.DashScope
 	}
 
 	if strings.HasPrefix(model, "文心千帆:") {
-		return ai.baiduAI
+		return ai.ai.Baidu
 	}
 
 	if strings.HasPrefix(model, "讯飞星火:") {
-		return ai.xfyunAI
+		return ai.ai.Xfyun
 	}
 
 	if strings.HasPrefix(model, "商汤日日新:") {
-		return ai.snAI
+		return ai.ai.SenseNova
 	}
 
 	if strings.HasPrefix(model, "腾讯:") {
-		return ai.tencentAI
+		return ai.ai.Tencent
 	}
 
 	if strings.HasPrefix(model, "Anthropic:") {
-		return ai.anthropicAI
+		return ai.ai.Anthropic
 	}
 
 	if strings.HasPrefix(model, "百川:") {
-		return ai.baichuanAI
+		return ai.ai.Baichuan
 	}
 
 	if strings.HasPrefix(model, "virtual:") {
@@ -350,23 +311,23 @@ func (ai *Imp) selectImp(model string) Chat {
 	}
 
 	if strings.HasPrefix(model, "360智脑:") {
-		return ai.g360
+		return ai.ai.GPT360
 	}
 
 	if strings.HasPrefix(model, "oneapi:") {
-		return ai.one
+		return ai.ai.OneAPI
 	}
 
 	if strings.HasPrefix(model, "google:") {
-		return ai.gai
+		return ai.ai.Google
 	}
 
 	if strings.HasPrefix(model, "openrouter:") {
-		return ai.openrouter
+		return ai.ai.Openrouter
 	}
 
 	if strings.HasPrefix(model, "sky:") {
-		return ai.sky
+		return ai.ai.Sky
 	}
 
 	// TODO 根据模型名称判断使用哪个 AI
@@ -381,49 +342,49 @@ func (ai *Imp) selectImp(model string) Chat {
 		baidu.ModelLlama2_7b_CN,
 		baidu.ModelLlama2_70b:
 		// 百度文心千帆
-		return ai.baiduAI
+		return ai.ai.Baidu
 	case dashscope.ModelQWenV1, dashscope.ModelQWenPlusV1,
 		dashscope.ModelQWen7BV1, dashscope.ModelQWen7BChatV1,
 		dashscope.ModelQWenMax, dashscope.ModelQWenMaxLongContext, dashscope.ModelQWenVLPlus,
 		dashscope.ModelQWenTurbo, dashscope.ModelQWenPlus, dashscope.ModelBaiChuan7BChatV1,
 		dashscope.ModelQWen7BChat, dashscope.ModelQWen14BChat:
 		// 阿里灵积平台
-		return ai.dashScope
+		return ai.ai.DashScope
 	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2), string(xfyun.ModelGeneralV3):
 		// 讯飞星火
-		return ai.xfyunAI
+		return ai.ai.Xfyun
 	case string(sensenova.ModelNovaPtcXLV1), string(sensenova.ModelNovaPtcXSV1):
 		// 商汤日日新
-		return ai.snAI
+		return ai.ai.SenseNova
 	case tencentai.ModelHyllm:
 		// 腾讯混元大模型
-		return ai.tencentAI
+		return ai.ai.Tencent
 	case string(anthropic.ModelClaude2), string(anthropic.ModelClaudeInstant):
 		// Anthropic
-		return ai.anthropicAI
+		return ai.ai.Anthropic
 	case baichuan.ModelBaichuan2_53B:
 		// 百川
-		return ai.baichuanAI
+		return ai.ai.Baichuan
 	case gpt360.Model360GPT_S2_V9:
 		// 360智脑
-		return ai.g360
+		return ai.ai.GPT360
 	case ModelNanXian, ModelBeiChou:
 		// 虚拟模型
 		return ai.virtual
 	case "chatglm_turbo", "chatglm_pro", "chatglm_lite", "chatglm_std", "PaLM-2":
 		// oneapi
-		return ai.one
+		return ai.ai.OneAPI
 	case google.ModelGeminiPro, google.ModelGeminiProVision:
-		return ai.gai
+		return ai.ai.Google
 	case sky.ModelSkyChatMegaVerse:
-		return ai.sky
+		return ai.ai.Sky
 	default:
 		if openrouter.SupportModel(model) {
-			return ai.openrouter
+			return ai.ai.Openrouter
 		}
 	}
 
-	return ai.openAI
+	return ai.ai.OpenAI
 }
 
 func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
