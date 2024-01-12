@@ -303,7 +303,7 @@ func resolvePrompts(ctx context.Context, payload PromptResolverPayload, creative
 			if prompt == "" {
 				prompt = filter.ImageMeta.Prompt
 			} else {
-				prompt = fmt.Sprintf("%s, (%s:3)", prompt, filter.ImageMeta.Prompt)
+				prompt = fmt.Sprintf("%s, %s", filter.ImageMeta.Prompt, prompt)
 			}
 		}
 	}

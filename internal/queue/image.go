@@ -124,15 +124,12 @@ func BuildImageCompletionHandler(
 		}
 
 		// 如果是图生图，生成图生图提示语
-		// TODO 测试阶段，只有 UID 为 24 以下的用户才会生成图生图提示语
-		if payload.GetUID() <= 24 {
-			if payload.Image != "" && payload.Prompt == "" && conf.ImageToImageRecognitionProvider != "" {
-				payload.Prompt = imageToImagePrompt(ctx, aiProvider, conf.ImageToImageRecognitionProvider, payload.Image)
+		if payload.Image != "" && payload.Prompt == "" && conf.ImageToImageRecognitionProvider != "" {
+			payload.Prompt = imageToImagePrompt(ctx, aiProvider, conf.ImageToImageRecognitionProvider, payload.Image)
 
-				// 重写 Task，更新 Prompt
-				newPayload, _ := json.Marshal(payload)
-				task = asynq.NewTask(task.Type(), newPayload)
-			}
+			// 重写 Task，更新 Prompt
+			newPayload, _ := json.Marshal(payload)
+			task = asynq.NewTask(task.Type(), newPayload)
 		}
 
 		switch payload.Vendor {
