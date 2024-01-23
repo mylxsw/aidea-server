@@ -205,6 +205,7 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("default-img2img-model", "lb-realistic-versionv4.0", "默认的图生图模型，值取自数据表 image_model.model_id")
 	ins.AddStringFlag("default-txt2img-model", "sb-stable-diffusion-xl-1024-v1-0", "默认的文生图模型，值取自数据表 image_model.model_id")
+	ins.AddStringFlag("default-artistic-text-impl", "lepton", "默认的艺术字实现，可选值：lepton, dashscope")
 
 	ins.AddStringFlag("img2img-recognition-provider", "", "图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语，目前支持 xfyun，留空则表示不启用")
 

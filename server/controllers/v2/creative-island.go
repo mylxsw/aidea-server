@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
@@ -230,6 +231,7 @@ type CreativeIslandCapacity struct {
 	AllowUpscaleBy           []string        `json:"allow_upscale_by,omitempty"`
 	ShowImageStrength        bool            `json:"show_image_strength,omitempty"`
 	ArtisticStyles           []ArtisticStyle `json:"artistic_styles,omitempty"`
+	ArtisticTextStyles       []ArtisticStyle `json:"artistic_text_styles,omitempty"`
 }
 
 // Models 可用的模型列表
@@ -384,6 +386,7 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		AllowUpscaleBy:           []string{"x1", "x2", "x4"},
 		ShowImageStrength:        user.User != nil && user.User.InternalUser(),
 		ArtisticStyles:           artisticStyle,
+		ArtisticTextStyles:       []ArtisticStyle{},
 	})
 }
 
@@ -1067,7 +1070,7 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 // - prompt
 // - negative_prompt
 // - style_preset
-func (ctl *CreativeIslandController) ArtisticText(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+func (ctl *CreativeIslandController) ArtisticText(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	text := webCtx.Input("text")
 	if text == "" {
 		return webCtx.JSONError("invalid text", http.StatusBadRequest)
@@ -1131,33 +1134,57 @@ func (ctl *CreativeIslandController) ArtisticText(ctx context.Context, webCtx we
 		seed = -1
 	}
 
-	req := queue.ArtisticTextCompletionPayload{
-		Quota:     quotaConsume,
-		CreatedAt: time.Now(),
+	var req queue.Payload
+	var taskBuilder queue.TaskBuilder
 
-		Text:           text,
-		Type:           optType,
-		ArtisticType:   stylePreset,
-		Prompt:         prompt,
-		NegativePrompt: negativePrompt,
-		AIRewrite:      webCtx.Input("ai_rewrite") == "true",
-		UID:            user.ID,
-		FreezedCoins:   quotaConsume,
+	if optType == "text" && ctl.conf.DefaultArtisticTextImpl == "dashscope" && misc.VersionNewer(client.Version, "1.0.11") {
+		req = &queue.DashscopeImageCompletionPayload{
+			Quota:     quotaConsume,
+			CreatedAt: time.Now(),
 
-		ControlImageRatio: controlImageRatio,
-		ControlWeight:     controlWeight,
-		GuidanceStart:     0.3,
-		GuidanceEnd:       0.95,
-		Seed:              seed,
-		Steps:             int64(steps),
-		CfgScale:          7,
-		NumImages:         imageCount,
+			TextureText:  text,
+			Prompt:       prompt,
+			UID:          user.ID,
+			FreezedCoins: quotaConsume,
 
-		FontPath: ctl.conf.FontPath,
+			ImageCount: imageCount,
+			Steps:      int64(steps),
+			Seed:       seed,
+
+			Model: dashscope.WordArtTextureModel,
+		}
+		taskBuilder = queue.NewDashscopeImageCompletionTask
+	} else {
+		req = &queue.ArtisticTextCompletionPayload{
+			Quota:     quotaConsume,
+			CreatedAt: time.Now(),
+
+			Text:           text,
+			Type:           optType,
+			ArtisticType:   stylePreset,
+			Prompt:         prompt,
+			NegativePrompt: negativePrompt,
+			AIRewrite:      webCtx.Input("ai_rewrite") == "true",
+			UID:            user.ID,
+			FreezedCoins:   quotaConsume,
+
+			ControlImageRatio: controlImageRatio,
+			ControlWeight:     controlWeight,
+			GuidanceStart:     0.3,
+			GuidanceEnd:       0.95,
+			Seed:              seed,
+			Steps:             int64(steps),
+			CfgScale:          7,
+			NumImages:         imageCount,
+
+			FontPath: ctl.conf.FontPath,
+		}
+		taskBuilder = queue.NewArtisticTextCompletionTask
+
 	}
 
 	// 加入异步任务队列
-	taskID, err := ctl.queue.Enqueue(&req, queue.NewArtisticTextCompletionTask)
+	taskID, err := ctl.queue.Enqueue(req, taskBuilder)
 	if err != nil {
 		log.Errorf("enqueue task failed: %s", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, common.ErrInternalError), http.StatusInternalServerError)
@@ -1165,12 +1192,12 @@ func (ctl *CreativeIslandController) ArtisticText(ctx context.Context, webCtx we
 	log.WithFields(log.Fields{"task_id": taskID}).Debugf("enqueue task success: %s", taskID)
 
 	// 冻结智慧果
-	if err := ctl.userSvc.FreezeUserQuota(ctx, user.ID, req.Quota); err != nil {
-		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛冻结用户配额失败: %s", err)
+	if err := ctl.userSvc.FreezeUserQuota(ctx, user.ID, req.GetQuota()); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.GetQuota(), "task_id": taskID}).Errorf("创作岛冻结用户配额失败: %s", err)
 	}
 
-	if err := ctl.rds.SetEx(ctx, fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", user.ID, taskID), req.Quota, 5*time.Minute).Err(); err != nil {
-		log.F(log.M{"user_id": user.ID, "quota": req.Quota, "task_id": taskID}).Errorf("创作岛用户配额已冻结，更新 Redis 任务与配额关系失败: %s", err)
+	if err := ctl.rds.SetEx(ctx, fmt.Sprintf("creative-island:%d:task:%s:quota-freeze", user.ID, taskID), req.GetQuota(), 5*time.Minute).Err(); err != nil {
+		log.F(log.M{"user_id": user.ID, "quota": req.GetQuota(), "task_id": taskID}).Errorf("创作岛用户配额已冻结，更新 Redis 任务与配额关系失败: %s", err)
 	}
 
 	creativeItem := repo.CreativeItem{

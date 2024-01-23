@@ -192,6 +192,15 @@ func SubString(str string, length int) string {
 	return string([]rune(str)[:length]) + "..."
 }
 
+func SubStringRaw(str string, length int) string {
+	size := utf8.RuneCountInString(str)
+	if size <= length {
+		return str
+	}
+
+	return string([]rune(str)[:length])
+}
+
 // TextSplit 把 text 以 size 个字符为单位分割
 func TextSplit(text string, size int) []string {
 	var segments []string

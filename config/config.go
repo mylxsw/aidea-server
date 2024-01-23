@@ -252,6 +252,8 @@ type Config struct {
 	// 文生图、图生图控制
 	DefaultImageToImageModel string `json:"default_image_to_image_model" yaml:"default_image_to_image_model"`
 	DefaultTextToImageModel  string `json:"default_text_to_image_model" yaml:"default_text_to_image_model"`
+	// 默认艺术字实现，支持 lepton（默认）, dashscope
+	DefaultArtisticTextImpl string `json:"default_artistic_text_impl" yaml:"default_artistic_text_impl"`
 
 	// 图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语
 	ImageToImageRecognitionProvider string `json:"img2img-recognition-provider" yaml:"img2img-recognition-provider"`
@@ -531,6 +533,7 @@ func Register(ins *app.App) {
 
 			DefaultImageToImageModel: ctx.String("default-img2img-model"),
 			DefaultTextToImageModel:  ctx.String("default-txt2img-model"),
+			DefaultArtisticTextImpl:  ctx.String("default-artistic-text-impl"),
 
 			ImageToImageRecognitionProvider: ctx.String("img2img-recognition-provider"),
 
