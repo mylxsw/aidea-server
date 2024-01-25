@@ -420,10 +420,6 @@ cnlocal-model: "generalv2"
 default-img2img-model: lb-realistic-versionv4.0
 default-txt2img-model: sb-stable-diffusion-xl-1024-v1-0
 
-# 默认艺术字实现，目前支持 lepton、dashscope，默认为 lepton
-# 当值为非 lepton 时，AIdea 客户端版本需要 >= 1.0.12
-default-artistic-text-impl: "lepton"
-
 # 图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语，目前支持 xfyun，留空则表示不启用
 img2img-recognition-provider: ""
 

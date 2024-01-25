@@ -149,15 +149,28 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 		})
 	}
 
-	if client != nil && misc.VersionNewer(client.Version, "1.0.8") && ctl.conf.EnableLeptonAI {
+	enableArtistText := ctl.conf.EnableDashScopeAI && misc.VersionNewer(client.Version, "1.0.11")
+	if enableArtistText {
 		items = append(items, CreativeIslandItem{
 			ID:           "artistic-text",
 			Title:        "艺术字",
 			TitleColor:   "FFFFFFFF",
-			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/art-text-bg.jpg-thumb1000",
+			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/artistic-wordart-v2.jpg-thumb1000",
+			RouteURI:     "/creative-draw/artistic-wordart?id=artistic-text",
+			Note:         fmt.Sprintf("根据你的想法生成图片，并且在图片中融入你写的文字内容。生成每张图片将消耗 %d 智慧果。", imageCost),
+			Size:         SizeMedium,
+		})
+	}
+
+	if client != nil && misc.VersionNewer(client.Version, "1.0.8") && ctl.conf.EnableLeptonAI {
+		items = append(items, CreativeIslandItem{
+			ID:           "artistic-text",
+			Title:        "图文融合",
+			TitleColor:   "FFFFFFFF",
+			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/artistic-text-v2.jpg-thumb1000",
 			RouteURI:     "/creative-draw/artistic-text?type=text&id=artistic-text",
 			Note:         fmt.Sprintf("根据你的想法生成图片，并且在图片中融入你写的文字内容。生成每张图片将消耗 %d 智慧果。", imageCost),
-			Size:         SizeLarge,
+			Size:         ternary.If(enableArtistText, SizeMedium, SizeLarge),
 		})
 		items = append(items, CreativeIslandItem{
 			ID:           "artistic-qr",
@@ -194,7 +207,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 
 		items = append(items, CreativeIslandItem{
 			ID:           "image-colorize",
-			Title:        "图片上色",
+			Title:        "旧照片上色",
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-colorizev2.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create-colorize",
@@ -232,6 +245,7 @@ type CreativeIslandCapacity struct {
 	ShowImageStrength        bool            `json:"show_image_strength,omitempty"`
 	ArtisticStyles           []ArtisticStyle `json:"artistic_styles,omitempty"`
 	ArtisticTextStyles       []ArtisticStyle `json:"artistic_text_styles,omitempty"`
+	ArtisticTextFonts        []ArtisticStyle `json:"artistic_text_fonts,omitempty"`
 }
 
 // Models 可用的模型列表
@@ -362,6 +376,7 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 	}
 
 	artisticStyle := make([]ArtisticStyle, 0)
+	// 艺术字、艺术二维码风格
 	if ctl.conf.EnableLeptonAI {
 		// "realism", "anime", "comics", "dream", "prime", "2.5d"
 		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "realism", Name: "写实", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-realism.png-avatar"})
@@ -370,6 +385,26 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "dream", Name: "梦幻", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-dream.png-avatar"})
 		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "prime", Name: "素描", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-prime.png-avatar"})
 		artisticStyle = append(artisticStyle, ArtisticStyle{ID: "2.5d", Name: "2.5D", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/art-style-2.5d.png-avatar"})
+	}
+
+	// 艺术字风格（阿里云锦书接口）
+	artisticTextStyle := make([]ArtisticStyle, 0)
+	artisticTextFonts := make([]ArtisticStyle, 0)
+	if ctl.conf.EnableDashScopeAI {
+		artisticTextStyle = append(artisticTextStyle, ArtisticStyle{ID: "material", Name: "立体材质", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/style-material.jpg-avatar"})
+		artisticTextStyle = append(artisticTextStyle, ArtisticStyle{ID: "scene", Name: "场景融合", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/style-scene.jpg-avatar"})
+
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "dongfangdakai", Name: "阿里妈妈东方大楷", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/阿里妈妈东方大楷.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "puhuiti_m", Name: "阿里巴巴普惠体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/阿里巴巴普惠体.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "shuheiti", Name: "阿里妈妈数黑体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/阿里妈妈数黑体.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "jinbuti", Name: "钉钉进步体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/钉钉进步体.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "kuheiti", Name: "站酷酷黑体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/站酷酷黑体.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "kuaileti", Name: "站酷快乐体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/站酷快乐体.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "wenyiti", Name: "站酷文艺体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/站酷文艺体.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "logoti", Name: "站酷小薇LOGO体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/站酷小薇LOGO体.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "cangeryuyangti_m", Name: "站酷仓耳渔阳体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/站酷仓耳渔阳体.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "siyuansongti_b", Name: "思源宋体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/思源宋体.jpg-avatar"})
+		artisticTextFonts = append(artisticTextFonts, ArtisticStyle{ID: "siyuanheiti_m", Name: "思源黑体", PreviewImage: "https://ssl.aicode.cc/ai-server/assets/styles/fonts/思源黑体.jpg-avatar"})
 	}
 
 	return webCtx.JSON(CreativeIslandCapacity{
@@ -386,7 +421,8 @@ func (ctl *CreativeIslandController) Capacity(ctx context.Context, webCtx web.Co
 		AllowUpscaleBy:           []string{"x1", "x2", "x4"},
 		ShowImageStrength:        user.User != nil && user.User.InternalUser(),
 		ArtisticStyles:           artisticStyle,
-		ArtisticTextStyles:       []ArtisticStyle{},
+		ArtisticTextStyles:       artisticTextStyle,
+		ArtisticTextFonts:        artisticTextFonts,
 	})
 }
 
@@ -1066,7 +1102,7 @@ func (ctl *CreativeIslandController) ImageColorize(ctx context.Context, webCtx w
 // ArtisticText 艺术字、QR 生成
 // 请求参数：
 // - text
-// - type: qr/text
+// - type: qr/text/word_art（锦书）
 // - prompt
 // - negative_prompt
 // - style_preset
@@ -1077,7 +1113,7 @@ func (ctl *CreativeIslandController) ArtisticText(ctx context.Context, webCtx we
 	}
 
 	optType := webCtx.Input("type")
-	if !str.In(optType, []string{"qr", "text"}) {
+	if !str.In(optType, []string{"qr", "text", "word_art"}) {
 		return webCtx.JSONError("invalid type", http.StatusBadRequest)
 	}
 
@@ -1090,11 +1126,21 @@ func (ctl *CreativeIslandController) ArtisticText(ctx context.Context, webCtx we
 
 	stylePreset := webCtx.Input("style_preset")
 	if stylePreset == "" {
-		stylePreset = "realism"
+		if optType == "word_art" {
+			stylePreset = "material"
+		} else {
+			stylePreset = "realism"
+		}
 	}
 
-	if !str.In(stylePreset, []string{"realism", "anime", "comics", "dream", "prime", "2.5d"}) {
+	if !str.In(stylePreset, []string{"realism", "anime", "comics", "dream", "prime", "2.5d" /* 分割线，后面的是锦书 */, "material", "scene"}) {
 		return webCtx.JSONError("invalid stylePreset", http.StatusBadRequest)
+	}
+
+	// 字体：使用阿里云的锦书服务时有效
+	fontName := webCtx.Input("font_name")
+	if fontName != "" && !str.In(fontName, []string{"dongfangdakai", "puhuiti_m", "shuheiti", "jinbuti", "kuheiti", "kuaileti", "wenyiti", "logoti", "cangeryuyangti_m", "siyuansongti_b", "siyuanheiti_m", "fangzhengkaiti"}) {
+		return webCtx.JSONError("invalid fontName", http.StatusBadRequest)
 	}
 
 	imageCount := webCtx.Int64Input("image_count", 1)
@@ -1137,15 +1183,17 @@ func (ctl *CreativeIslandController) ArtisticText(ctx context.Context, webCtx we
 	var req queue.Payload
 	var taskBuilder queue.TaskBuilder
 
-	if optType == "text" && ctl.conf.DefaultArtisticTextImpl == "dashscope" && misc.VersionNewer(client.Version, "1.0.11") {
+	if optType == "word_art" {
 		req = &queue.DashscopeImageCompletionPayload{
 			Quota:     quotaConsume,
 			CreatedAt: time.Now(),
 
-			TextureText:  text,
-			Prompt:       prompt,
-			UID:          user.ID,
-			FreezedCoins: quotaConsume,
+			TextureText:     text,
+			Prompt:          prompt,
+			TextureStyle:    stylePreset,
+			UID:             user.ID,
+			FreezedCoins:    quotaConsume,
+			TextureFontName: fontName,
 
 			ImageCount: imageCount,
 			Steps:      int64(steps),

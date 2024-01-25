@@ -12,6 +12,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
+	"math/rand"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -166,21 +167,22 @@ func BuildDashscopeImageCompletionHandler(
 
 		switch payload.GetModel() {
 		case dashscope.WordArtTextureModel:
-			prompt = payload.Prompt
+			prompt = misc.SubStringRaw(payload.Prompt, 200)
 			negativePrompt = ""
 
 			resp, err = client.WordArtTexture(ctx, dashscope.WordArtTextureRequest{
 				Model: payload.GetModel(),
 				Input: dashscope.WordArtTextureRequestInput{
 					Text: &dashscope.WordArtTextureRequestInputText{
-						FontName:    payload.TextureFontName,
-						TextContent: misc.SubStringRaw(payload.TextureText, 6),
+						FontName:         payload.TextureFontName,
+						TextContent:      misc.SubStringRaw(payload.TextureText, 6),
+						OutputImageRatio: dashscopeWordArtImageRatio(misc.WordCount(payload.TextureText)),
 					},
 					TextureStyle: payload.TextureStyle,
 					Prompt:       prompt,
 				},
 				Parameters: dashscope.WordArtTextureRequestParameters{
-					ImageShortSize: 512,
+					ImageShortSize: 1024,
 					N:              int(payload.ImageCount),
 				},
 			})
@@ -342,7 +344,7 @@ func dashscopeImageAsyncJobProcesser(que *Queue, client *dashscope.DashScope, up
 
 		// 任务已经完成，开始处理结果
 		if taskRes.Output.TaskStatus == dashscope.TaskStatusFailed {
-			log.WithFields(log.Fields{"payload": payload, "task": task}).Errorf("no success task found")
+			log.WithFields(log.Fields{"payload": payload, "task": task, "res": taskRes}).Errorf("no success task found")
 			panic(errors.New("task failed: " + taskRes.Output.TaskStatus))
 		}
 
@@ -442,4 +444,18 @@ func handleDashscopeImageTask(
 			ValidBefore: time.Now().Add(7 * 24 * time.Hour),
 		},
 	)
+}
+
+// dashscopeWordArtImageRatio 根据文字数量计算图片宽高比
+func dashscopeWordArtImageRatio(wordCount int64) string {
+	if wordCount <= 2 {
+		return "1:1"
+	}
+
+	// 随机返回 16:9 或者 9:16
+	if rand.Intn(2) == 0 {
+		return "16:9"
+	}
+
+	return "9:16"
 }

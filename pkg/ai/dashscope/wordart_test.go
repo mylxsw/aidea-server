@@ -53,3 +53,31 @@ func TestWordArtTexture(t *testing.T) {
 		}
 	}
 }
+
+func TestWordArtTextureTask(t *testing.T) {
+	taskID := "66d6c959-9e32-42cd-845e-60c70236fe4b"
+
+	client := createClient()
+
+	ticker := time.NewTicker(3 * time.Second)
+	defer ticker.Stop()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	for {
+		select {
+		case <-ticker.C:
+			taskResp, err := client.ImageTaskStatus(context.TODO(), taskID)
+			assert.NoError(t, err)
+
+			log.With(taskResp).Debug("resp")
+
+			if taskResp.Output.TaskStatus == dashscope.TaskStatusSucceeded || taskResp.Output.TaskStatus == dashscope.TaskStatusFailed {
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}

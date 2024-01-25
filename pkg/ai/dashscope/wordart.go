@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/asteria/log"
 	"io"
 	"net/http"
 )
@@ -99,6 +100,8 @@ func (ds *DashScope) WordArtTexture(ctx context.Context, req WordArtTextureReque
 	if err != nil {
 		return nil, err
 	}
+
+	log.With(req).Debugf("send wordart texture request")
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+"/api/v1/services/aigc/wordart/texture", bytes.NewReader(body))
 	if err != nil {
