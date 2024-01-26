@@ -3,6 +3,8 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
 	"github.com/mylxsw/aidea-server/pkg/ai/fromston"
@@ -95,6 +97,8 @@ type ImageResponse interface {
 }
 
 func BuildImageCompletionHandler(
+	conf *config.Config,
+	aiProvider *chat.AIProvider,
 	leapClient *leap.LeapAI,
 	stabaiClient *stabilityai.StabilityAI,
 	deepaiClient *deepai.DeepAI,
@@ -119,6 +123,15 @@ func BuildImageCompletionHandler(
 			return nil
 		}
 
+		// 如果是图生图，生成图生图提示语
+		if payload.Image != "" && payload.Prompt == "" && conf.ImageToImageRecognitionProvider != "" {
+			payload.Prompt = imageToImagePrompt(ctx, aiProvider, conf.ImageToImageRecognitionProvider, payload.Image)
+
+			// 重写 Task，更新 Prompt
+			newPayload, _ := json.Marshal(payload)
+			task = asynq.NewTask(task.Type(), newPayload)
+		}
+
 		switch payload.Vendor {
 		case "leapai":
 			return BuildLeapAICompletionHandler(leapClient, translator, up, rep, oai)(ctx, task)
@@ -138,4 +151,27 @@ func BuildImageCompletionHandler(
 			return nil
 		}
 	}
+}
+
+// imageToImagePrompt 通过图像识别生成图生图的提示语，目前仅支持讯飞星火
+func imageToImagePrompt(ctx context.Context, ai *chat.AIProvider, targetProvider string, imageURL string) string {
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	var desc string
+	var err error
+
+	switch targetProvider {
+	case "xfyun":
+		desc, err = ai.Xfyun.DescribeImage(ctx, imageURL, true)
+	default:
+		return ""
+	}
+
+	if err != nil {
+		log.WithFields(log.Fields{"image_url": imageURL}).Errorf("%s describe image failed: %s", targetProvider, err)
+		return ""
+	}
+
+	return desc
 }

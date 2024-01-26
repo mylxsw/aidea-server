@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"io"
 	"net/http"
 	"net/url"
@@ -21,6 +22,8 @@ const (
 	ModelGeneralV1_5 Model = "general"
 	ModelGeneralV2   Model = "generalv2"
 	ModelGeneralV3   Model = "generalv3"
+	// ModelGeneralImageRecognize 图像识别模型，真实模型其实是 general
+	ModelGeneralImageRecognize Model = "general_image_recognize"
 )
 
 type XFYunAI struct {
@@ -196,6 +199,8 @@ func (ai *XFYunAI) hmacWithShaToBase64(data, key string) string {
 type Message struct {
 	Role    Role   `json:"role"`
 	Content string `json:"content"`
+	// ContentType 类型，图片上传的时候固定使用 image
+	ContentType string `json:"content_type,omitempty"`
 }
 
 type Role string
@@ -254,5 +259,38 @@ func (ai *XFYunAI) resolveHostForModel(model Model) string {
 		return "wss://spark-api.xf-yun.com/v3.1/chat"
 	}
 
+	if model == ModelGeneralImageRecognize {
+		return "wss://spark-api.cn-huabei-1.xf-yun.com/v2.1/image"
+	}
+
 	return "wss://spark-api.xf-yun.com/v2.1/chat"
+}
+
+// DescribeImage 图像识别
+func (ai *XFYunAI) DescribeImage(ctx context.Context, imageURL string, fromQiniu bool) (string, error) {
+	imageData, _, err := uploader.DownloadRemoteFileAsBase64Raw(ctx, imageURL, fromQiniu)
+	if err != nil {
+		return "", err
+	}
+
+	messages := []Message{
+		{Role: RoleUser, Content: imageData, ContentType: "image"},
+		{Role: RoleUser, Content: "describe the image using english, output must be english"},
+	}
+
+	stream, err := ai.ChatStream(ctx, ModelGeneralImageRecognize, messages)
+	if err != nil {
+		return "", err
+	}
+
+	var content string
+	for msg := range stream {
+		if msg.Header.Code != 0 {
+			return "", fmt.Errorf("讯飞 AI 调用失败：%s", msg.Header.Message)
+		}
+
+		content += msg.Payload.Choices.Text[0].Content
+	}
+
+	return content, nil
 }

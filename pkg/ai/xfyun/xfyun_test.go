@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
+	"github.com/mylxsw/go-utils/must"
 	"os"
 	"testing"
 
@@ -25,4 +26,13 @@ func TestXFYunAI_ChatStream(t *testing.T) {
 	}
 
 	fmt.Println()
+}
+
+func TestXFYunAI_ImageChatStream(t *testing.T) {
+	client := xfyun.New(os.Getenv("XFYUN_APPID"), os.Getenv("XFYUN_API_KEY"), os.Getenv("XFYUN_API_SECRET"))
+
+	res, err := client.DescribeImage(context.TODO(), "https://stable-diffusion-art.com/wp-content/uploads/2023/05/image-161.png", false)
+	must.NoError(err)
+
+	fmt.Println(res)
 }

@@ -92,9 +92,9 @@ fallback-openai-autoproxy: false
 # OpenAI 服务配置
 fallback-openai-organization: ""
 # 备用的 OpenAI 服务器地址，配置多个时会自动在多个服务之间平衡负载，不要忘记在在 URL 后面添加 /v1
-fallback-openai-servers: ["https://api.openai.com/v1"]
+fallback-openai-servers: [ "https://api.openai.com/v1" ]
 # 备用的 OpenAI Keys，如果指定多个，会在多个服务之间平衡负载
-fallback-openai-keys: [""]
+fallback-openai-keys: [ "" ]
 
 ######## OpenAI Dalle 配置 ########
 # OpenAI Dalle 服务配置，用于文生图
@@ -105,8 +105,8 @@ openai-dalle-autoproxy: false
 openai-dalle-azure: false
 openai-dalle-apiversion: "2023-05-15"
 openai-dalle-organization: ""
-openai-dalle-servers: ["https://api.openai.com/v1"]
-openai-dalle-keys: [""]
+openai-dalle-servers: [ "https://api.openai.com/v1" ]
+openai-dalle-keys: [ "" ]
 
 ######## Anthropic #######
 
@@ -198,7 +198,7 @@ gpt360-apikey: ""
 # https://github.com/songquanpeng/one-api
 
 # 支持的模型列表，当前支持：chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2
-oneapi-support-models: []
+oneapi-support-models: [ ]
 enable-oneapi: false
 oneapi-server: ""
 oneapi-key: ""
@@ -208,7 +208,7 @@ oneapi-key: ""
 # https://openrouter.ai/
 
 # 支持的模型列表，
-openrouter-support-models: ["01-ai/yi-34b-chat"]
+openrouter-support-models: [ "01-ai/yi-34b-chat" ]
 openrouter-autoproxy: false
 enable-openrouter: false
 openrouter-server: "https://openrouter.ai/api/v1"
@@ -273,8 +273,8 @@ getimgai-key: ""
 # API 申请：https://www.lepton.ai/
 enable-leptonai: false
 leptonai-autoproxy: false
-leptonai-qr-servers: ["https://aiqr.lepton.run"]
-leptonai-keys: [""]
+leptonai-qr-servers: [ "https://aiqr.lepton.run" ]
+leptonai-keys: [ "" ]
 
 # 艺术字字体文件，只支持 ttf 格式
 font-path: "path/to/your/font/MaoKenShiJinHei-2.ttf"
@@ -419,6 +419,9 @@ cnlocal-model: "generalv2"
 # 当用户没有选择风格时，默认使用这里配置的模型
 default-img2img-model: lb-realistic-versionv4.0
 default-txt2img-model: sb-stable-diffusion-xl-1024-v1-0
+
+# 图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语，目前支持 xfyun，留空则表示不启用
+img2img-recognition-provider: ""
 
 ######## 虚拟模型配置 ########
 enable-virtual-model: false

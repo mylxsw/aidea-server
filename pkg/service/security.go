@@ -44,6 +44,10 @@ func (s *SecurityService) contentDetect(typ aliyun.CheckType, content string) *a
 		return &aliyun.CheckResult{Safe: true}
 	}
 
+	if content == "" {
+		return &aliyun.CheckResult{Safe: true}
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
