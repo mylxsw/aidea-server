@@ -21,6 +21,7 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	data.Migrate20231129DDL(m)
 	data.Migrate20231129DML(m)
 	data.Migrate20240125DML(m)
+	data.Migrate20240131DDL(m)
 
 	return m.Run(ctx)
 }

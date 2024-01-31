@@ -7,6 +7,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
 	"github.com/mylxsw/aidea-server/pkg/file"
+	"github.com/mylxsw/aidea-server/pkg/wechat"
 	"math/rand"
 	"path/filepath"
 	"time"
@@ -135,6 +136,7 @@ func main() {
 		youdao.Provider{},
 		alipay.Provider{},
 		applepay.Provider{},
+		wechat.Provider{},
 	)
 
 	// AI 服务

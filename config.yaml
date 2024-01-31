@@ -447,3 +447,7 @@ free-chat-daily-limit: 5
 free-chat-daily-global-limit: 1000
 # 免费模型，所有的请求都会被替换为该模型
 free-chat-model: gpt-3.5-turbo
+
+######## 微信开放平台 ########
+wechat-appid: ""
+wechat-secret: ""

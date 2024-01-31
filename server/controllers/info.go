@@ -145,6 +145,7 @@ type HomeModel struct {
 func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
 	enableOpenAI, homeModels := ctl.loadHomeModels(ctx, ctl.conf, client, user)
 	return webCtx.JSON(web.M{
+		"wechat_signin_enabled": ctl.conf.WeChatAppID != "" && ctl.conf.WeChatSecret != "",
 		// 是否启用苹果 App 支付
 		"apple_pay_enabled": ctl.conf.EnableApplePay,
 		// 是否启用支付宝支付 @deprecated(since 1.0.8)

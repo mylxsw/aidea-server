@@ -9,6 +9,7 @@ require (
 	github.com/alibabacloud-go/green-20220302 v1.0.6
 	github.com/alibabacloud-go/tea v1.1.19
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.1
+	github.com/bcicen/jstream v1.0.1
 	github.com/fogleman/gg v1.3.0
 	github.com/fvbommel/sortorder v1.1.0
 	github.com/go-pay/gopay v1.5.94
@@ -41,7 +42,6 @@ require (
 	github.com/alibabacloud-go/tea-utils v1.3.1 // indirect
 	github.com/alibabacloud-go/tea-xml v1.1.2 // indirect
 	github.com/aliyun/credentials-go v1.1.2 // indirect
-	github.com/bcicen/jstream v1.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -67,12 +67,12 @@ require (
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
-	github.com/spf13/cast v1.3.1 // indirect
+	github.com/spf13/cast v1.6.0 // indirect
 	github.com/tideland/golib v4.24.2+incompatible // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	golang.org/x/image v0.14.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
@@ -101,7 +101,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.671
 	github.com/urfave/cli/v2 v2.23.7 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
-	golang.org/x/crypto v0.9.0
+	golang.org/x/crypto v0.18.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

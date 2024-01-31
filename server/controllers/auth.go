@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/rate"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/aidea-server/pkg/token"
+	"github.com/mylxsw/aidea-server/pkg/wechat"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"math/rand"
 	"net/http"
@@ -40,8 +41,9 @@ type AuthController struct {
 	translater youdao.Translater `autowire:"@"`
 	limiter    *rate.RateLimiter `autowire:"@"`
 	tk         *token.Token      `autowire:"@"`
-	rds        *redis.Client   `autowire:"@"`
-	userRepo   *repo2.UserRepo `autowire:"@"`
+	rds        *redis.Client     `autowire:"@"`
+	userRepo   *repo.UserRepo    `autowire:"@"`
+	wc         *wechat.WeChat    `autowire:"@"`
 }
 
 func NewAuthController(resolver infra.Resolver, conf *config.Config) web.Controller {
@@ -54,6 +56,7 @@ func (ctl *AuthController) Register(router web.Router) {
 	router.Group("/auth", func(router web.Router) {
 		// 登录
 		router.Post("/sign-in-apple", ctl.signInWithApple)
+		router.Post("/sign-in-wechat", ctl.signInWithWechat)
 		router.Post("/sign-in", ctl.signInWithPassword)
 		router.Post("/sign-in/sms-code", ctl.sendSigninSMSCode)
 		router.Post("/sign-in/email-code", ctl.sendEmailCode)
@@ -113,11 +116,11 @@ func (ctl *AuthController) checkPhoneExistence(ctx context.Context, webCtx web.C
 		signInMethod = "email_code"
 	}
 	if err != nil {
-		if errors.Is(err, repo2.ErrNotFound) {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSON(web.M{"exist": false, "sign_in_method": signInMethod})
 		}
 
-		if errors.Is(err, repo2.ErrUserAccountDisabled) {
+		if errors.Is(err, repo.ErrUserAccountDisabled) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "账号不可用：用户账号已注销"), http.StatusForbidden)
 		}
 
@@ -152,7 +155,7 @@ func (ctl *AuthController) signInOrUpWithSMSCode(ctx context.Context, webCtx web
 	inviteCode := strings.TrimSpace(webCtx.Input("invite_code"))
 	if inviteCode != "" {
 		if err := ctl.verifyInviteCode(ctx, inviteCode); err != nil {
-			if errors.Is(err, repo2.ErrNotFound) {
+			if errors.Is(err, repo.ErrNotFound) {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "邀请码无效"), http.StatusBadRequest)
 			}
 
@@ -201,7 +204,7 @@ func (ctl *AuthController) signInOrUpWithSMSCode(ctx context.Context, webCtx web
 		user, err = ctl.userRepo.GetUserByEmail(ctx, username)
 	}
 	if err != nil {
-		if errors.Is(err, repo2.ErrNotFound) {
+		if errors.Is(err, repo.ErrNotFound) {
 			// 用户不存在，注册新用户
 			return ctl.createAccount(ctx, webCtx, username, "", inviteCode)
 		}
@@ -219,7 +222,7 @@ func (ctl *AuthController) sendSigninSMSCode(ctx context.Context, webCtx web.Con
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if _, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-			if errors.Is(err, repo2.ErrNotFound) {
+			if errors.Is(err, repo.ErrNotFound) {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 			}
 
@@ -237,8 +240,8 @@ func (ctl *AuthController) sendSigninSMSCode(ctx context.Context, webCtx web.Con
 // verifyInviteCode 验证邀请码
 func (ctl *AuthController) verifyInviteCode(ctx context.Context, code string) error {
 	_, err := ctl.userRepo.GetUserByInviteCode(ctx, code)
-	if errors.Is(err, repo2.ErrUserAccountDisabled) {
-		return repo2.ErrNotFound
+	if errors.Is(err, repo.ErrUserAccountDisabled) {
+		return repo.ErrNotFound
 	}
 
 	return err
@@ -258,7 +261,7 @@ func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, cu
 	inviteCode := strings.TrimSpace(webCtx.Input("invite_code"))
 	if inviteCode != "" {
 		if err := ctl.verifyInviteCode(ctx, inviteCode); err != nil {
-			if err == repo2.ErrNotFound {
+			if err == repo.ErrNotFound {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "邀请码无效"), http.StatusBadRequest)
 			}
 
@@ -302,7 +305,7 @@ func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, cu
 	// 检查用户信息
 	user, err := ctl.userRepo.GetUserByID(ctx, current.ID)
 	if err != nil {
-		if err == repo2.ErrNotFound {
+		if err == repo.ErrNotFound {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 		}
 
@@ -322,7 +325,7 @@ func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, cu
 
 	// 检查手机号是否绑定到其它账号
 	if u, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-		if err != repo2.ErrNotFound {
+		if err != repo.ErrNotFound {
 			log.WithFields(log.Fields{
 				"username": username,
 			}).Errorf("failed to get user: %s", err)
@@ -378,7 +381,7 @@ func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, cu
 	return webCtx.JSON(buildUserLoginRes(user, isNewUser, ctl.tk))
 }
 
-func (ctl *AuthController) resetPassword(ctx context.Context, webCtx web.Context, userRepo *repo2.UserRepo, rds *redis.Client) web.Response {
+func (ctl *AuthController) resetPassword(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名不能为空"), http.StatusBadRequest)
@@ -469,7 +472,7 @@ func (ctl *AuthController) resetPassword(ctx context.Context, webCtx web.Context
 }
 
 // sendEmailCode 发送邮件验证码
-func (ctl *AuthController) sendEmailCode(ctx context.Context, webCtx web.Context, userRepo *repo2.UserRepo, rds *redis.Client) web.Response {
+func (ctl *AuthController) sendEmailCode(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名不能为空"), http.StatusBadRequest)
@@ -506,7 +509,7 @@ func (ctl *AuthController) sendEmailCode(ctx context.Context, webCtx web.Context
 
 	// 检查用户是否存在
 	if _, err := userRepo.GetUserByEmail(ctx, username); err != nil {
-		if errors.Is(err, repo2.ErrNotFound) {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 		}
 
@@ -672,7 +675,7 @@ func (ctl *AuthController) resetPasswordSMSCode(ctx context.Context, webCtx web.
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if _, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-			if err == repo2.ErrNotFound {
+			if err == repo.ErrNotFound {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 			}
 
@@ -691,7 +694,7 @@ func (ctl *AuthController) bindPhoneSendSMSCode(ctx context.Context, webCtx web.
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if u, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-			if err != repo2.ErrNotFound {
+			if err != repo.ErrNotFound {
 				log.WithFields(log.Fields{
 					"username": username,
 				}).Errorf("failed to get user: %s", err)
@@ -735,7 +738,7 @@ func (ctl *AuthController) signUpSendEmailCode(ctx context.Context, webCtx web.C
 
 	// 检查用户是否存在
 	if u, err := ctl.userRepo.GetUserByEmail(ctx, username); err != nil {
-		if !errors.Is(err, repo2.ErrNotFound) {
+		if !errors.Is(err, repo.ErrNotFound) {
 			log.WithFields(log.Fields{
 				"username": username,
 			}).Errorf("failed to get user: %s", err)
@@ -828,7 +831,7 @@ func (ctl *AuthController) signUpWithPassword(ctx context.Context, webCtx web.Co
 	inviteCode := strings.TrimSpace(webCtx.Input("invite_code"))
 	if inviteCode != "" {
 		if err := ctl.verifyInviteCode(ctx, inviteCode); err != nil {
-			if err == repo2.ErrNotFound {
+			if err == repo.ErrNotFound {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "邀请码无效"), http.StatusBadRequest)
 			}
 
@@ -953,6 +956,56 @@ func (ctl *AuthController) signInWithPassword(ctx context.Context, webCtx web.Co
 	return webCtx.JSON(buildUserLoginRes(user, false, ctl.tk))
 }
 
+// signInWithWechat 使用微信登录
+func (ctl *AuthController) signInWithWechat(ctx context.Context, webCtx web.Context) web.Response {
+	code := strings.TrimSpace(webCtx.Input("code"))
+	if code == "" {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "code 不能为空"), http.StatusBadRequest)
+	}
+
+	accessToken, err := ctl.wc.OAuthAccessToken(ctx, code)
+	if err != nil {
+		log.WithFields(log.Fields{"code": code}).Errorf("failed to get wechat access token: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "内部错误，请稍后再试"), http.StatusInternalServerError)
+	}
+
+	// 获取用户信息
+	userInfo, err := ctl.wc.QueryUserInfo(ctx, accessToken.AccessToken, accessToken.OpenID)
+	if err != nil {
+		log.WithFields(log.Fields{"code": code}).Errorf("failed to get wechat user info: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "内部错误，请稍后再试"), http.StatusInternalServerError)
+	}
+
+	log.WithFields(log.Fields{
+		"code":         code,
+		"access_token": accessToken,
+		"user_info":    userInfo,
+	}).Debugf("wechat access token")
+
+	user, eventID, err := ctl.userRepo.WeChatSignIn(ctx, userInfo.UnionID, userInfo.NickName, userInfo.HeadImgURL)
+	if err != nil {
+		log.WithFields(log.Fields{"code": code}).Errorf("failed to sign in with wechat: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "内部错误，请稍后再试"), http.StatusInternalServerError)
+	}
+
+	if eventID > 0 {
+		payload := queue.SignupPayload{
+			UserID:    user.Id,
+			EventID:   eventID,
+			CreatedAt: time.Now(),
+		}
+
+		if _, err := ctl.queue.Enqueue(&payload, queue.NewSignupTask, asynq.Queue("user")); err != nil {
+			log.WithFields(log.Fields{
+				"user_id":  user.Id,
+				"event_id": eventID,
+			}).Errorf("failed to enqueue signup task: %s", err)
+		}
+	}
+
+	return webCtx.JSON(buildUserLoginRes(user, eventID > 0, ctl.tk))
+}
+
 // signInWithApple 使用 Apple ID 登录
 func (ctl *AuthController) signInWithApple(ctx context.Context, webCtx web.Context) web.Response {
 	authorizationCode := strings.TrimSpace(webCtx.Input("authorization_code"))
@@ -988,7 +1041,7 @@ func appleSignIn(
 	ctx context.Context,
 	isIOS bool,
 	conf *config.Config,
-	userRepo *repo2.UserRepo,
+	userRepo *repo.UserRepo,
 	qu *queue.Queue,
 	authorizationCode string,
 	familyName, givenName string,

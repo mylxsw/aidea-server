@@ -24,8 +24,9 @@ type UserCreatedEvent struct {
 type UserCreatedEventSource string
 
 const (
-	UserCreatedEventSourceEmail UserCreatedEventSource = "email"
-	UserCreatedEventSourcePhone UserCreatedEventSource = "phone"
+	UserCreatedEventSourceEmail  UserCreatedEventSource = "email"
+	UserCreatedEventSourcePhone  UserCreatedEventSource = "phone"
+	UserCreatedEventSourceWechat UserCreatedEventSource = "wechat"
 )
 
 type UserBindEvent struct {
