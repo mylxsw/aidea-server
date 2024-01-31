@@ -104,7 +104,7 @@ func (ctl *InfoController) Redirect(ctx context.Context, webCtx web.Context) web
 	return webCtx.HTML(fmt.Sprintf(htmlTemplate, "Redirect", fmt.Sprintf(`<div style="margin: 0; text-align: center; margin-top: 50px;"><a href="%s">NSFW</a></div>`, url)))
 }
 
-const CurrentVersion = "1.0.11"
+const CurrentVersion = "1.0.12"
 
 func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 	clientVersion := ctx.Input("version")
