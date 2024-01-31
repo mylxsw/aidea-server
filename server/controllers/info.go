@@ -146,7 +146,7 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 	enableOpenAI, homeModels := ctl.loadHomeModels(ctx, ctl.conf, client, user)
 	return webCtx.JSON(web.M{
 		// 是否启用苹果 App 支付
-		"applepay_enabled": ctl.conf.EnableApplePay,
+		"apple_pay_enabled": ctl.conf.EnableApplePay,
 		// 是否启用支付宝支付 @deprecated(since 1.0.8)
 		"alipay_enabled": ctl.conf.EnableAlipay,
 		// 是否启用支付宝支付
