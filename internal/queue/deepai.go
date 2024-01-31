@@ -4,12 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
-	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/asteria/log"
@@ -137,7 +138,7 @@ func BuildDeepAICompletionHandler(client *deepai.DeepAI, translator youdao.Trans
 		defer cancel()
 
 		// 上传图片到七牛云
-		tmpURL, err := up.UploadRemoteFile(ctx, res.OutputURL, int(payload.GetUID()), uploader.DefaultUploadExpireAfterDays, "png", false)
+		tmpURL, err := up.UploadRemoteFile(ctx, res.OutputURL, int(payload.GetUID()), uploader.DefaultUploadExpireAfterDays, "png", true)
 		if err != nil {
 			log.With(payload).Errorf("upload image to qiniu failed: %v", err)
 		} else {

@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"image"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/deepai"
 	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
 	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
 	uploader2 "github.com/mylxsw/aidea-server/pkg/uploader"
-	"image"
-	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/hibiken/asynq"
 	"github.com/mylxsw/asteria/log"
@@ -190,7 +192,8 @@ func upscaleByDeepAI(ctx context.Context, deepClient *deepai.DeepAI, up *uploade
 		return "", fmt.Errorf("图片超分辨率失败: %w", err)
 	}
 
-	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader2.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), false)
+	shouldBreakWall := strings.HasPrefix(res.OutputURL, "https://api.deepai.org/")
+	uploaded, err := up.UploadRemoteFile(ctx, res.OutputURL, int(userID), uploader2.DefaultUploadExpireAfterDays, filepath.Ext(res.OutputURL), shouldBreakWall)
 	if err != nil {
 		return "", fmt.Errorf("图片上传失败: %w", err)
 	}

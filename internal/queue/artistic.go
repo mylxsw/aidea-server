@@ -10,7 +10,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/lepton"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/image"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/mylxsw/asteria/log"
@@ -68,20 +68,20 @@ func NewArtisticTextCompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeArtisticTextCompletion, data)
 }
 
-func BuildArtisticTextCompletionHandler(client *lepton.Lepton, translator youdao.Translater, up *uploader.Uploader, rep *repo2.Repository, oai openai.Client) TaskHandler {
+func BuildArtisticTextCompletionHandler(leptonClient *lepton.Lepton, translator youdao.Translater, up *uploader.Uploader, rep *repo.Repository, oai openai.Client) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload ArtisticTextCompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
 			return err
 		}
 
-		if err := rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusRunning, nil); err != nil {
+		if err := rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusRunning, nil); err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("set task status to running failed: %s", err)
 			return err
 		}
 
 		if payload.CreatedAt.Add(5 * time.Minute).Before(time.Now()) {
-			rep.Queue.Update(context.TODO(), payload.GetID(), repo2.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
+			rep.Queue.Update(context.TODO(), payload.GetID(), repo.QueueTaskStatusFailed, ErrorResult{Errors: []string{"任务处理超时"}})
 			log.WithFields(log.Fields{"payload": payload}).Errorf("task expired")
 			return nil
 		}
@@ -92,8 +92,8 @@ func BuildArtisticTextCompletionHandler(client *lepton.Lepton, translator youdao
 				err = err2.(error)
 
 				// 更新创作岛历史记录
-				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo2.CreativeRecordUpdateRequest{
-					Status: repo2.CreativeStatusFailed,
+				if err := rep.Creative.UpdateRecordByTaskID(ctx, payload.GetUID(), payload.GetID(), repo.CreativeRecordUpdateRequest{
+					Status: repo.CreativeStatusFailed,
 					Answer: err.Error(),
 				}); err != nil {
 					log.WithFields(log.Fields{"payload": payload}).Errorf("update creative failed: %s", err)
@@ -104,7 +104,7 @@ func BuildArtisticTextCompletionHandler(client *lepton.Lepton, translator youdao
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo2.QueueTaskStatusFailed,
+					repo.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -146,7 +146,7 @@ func BuildArtisticTextCompletionHandler(client *lepton.Lepton, translator youdao
 			panic(fmt.Errorf("不支持该艺术字类型: %v", payload.Type))
 		}
 
-		res, err := client.ImageGenerate(ctx, lepton.QRImageRequest{
+		res, err := leptonClient.ImageGenerate(ctx, lepton.QRImageRequest{
 			Prompt:            prompt,
 			NegativePrompt:    negativePrompt,
 			Model:             payload.ArtisticType,
@@ -171,7 +171,7 @@ func BuildArtisticTextCompletionHandler(client *lepton.Lepton, translator youdao
 
 		imageUrls, err := res.UploadResources(ctx, up, payload.GetUID())
 		if err != nil {
-			log.With(payload).Errorf("上传图片到七牛云存储失败: %", err)
+			log.With(payload).Errorf("上传图片到七牛云存储失败: %v", err)
 			panic(fmt.Errorf("上传图片到七牛云存储失败: %w", err))
 		}
 
@@ -190,14 +190,14 @@ func BuildArtisticTextCompletionHandler(client *lepton.Lepton, translator youdao
 			panic(err)
 		}
 
-		req := repo2.CreativeRecordUpdateRequest{
-			Status:    repo2.CreativeStatusSuccess,
+		req := repo.CreativeRecordUpdateRequest{
+			Status:    repo.CreativeStatusSuccess,
 			Answer:    string(retJson),
 			QuotaUsed: payload.GetQuota(),
 		}
 
 		if prompt != payload.Prompt || negativePrompt != payload.NegativePrompt {
-			ext := repo2.CreativeRecordUpdateExtArgs{}
+			ext := repo.CreativeRecordUpdateExtArgs{}
 			if prompt != payload.Prompt {
 				ext.RealPrompt = prompt
 			}
@@ -219,7 +219,7 @@ func BuildArtisticTextCompletionHandler(client *lepton.Lepton, translator youdao
 			ctx,
 			payload.GetUID(),
 			payload.GetQuota(),
-			repo2.NewQuotaUsedMeta("leptonai", modelUsed...),
+			repo.NewQuotaUsedMeta("leptonai", modelUsed...),
 		); err != nil {
 			log.Errorf("used quota add failed: %s", err)
 		}
@@ -227,7 +227,7 @@ func BuildArtisticTextCompletionHandler(client *lepton.Lepton, translator youdao
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo2.QueueTaskStatusSuccess,
+			repo.QueueTaskStatusSuccess,
 			CompletionResult{
 				Resources:   imageUrls,
 				ValidBefore: time.Now().Add(7 * 24 * time.Hour),

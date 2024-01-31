@@ -298,7 +298,7 @@ func (getimg *GetimgAI) ImageToImage(ctx context.Context, req ImageToImageReques
 	if resp.IsError() {
 		var errResp ErrorResponse
 		if err := json.Unmarshal(resp.Body(), &errResp); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("image to image failed: %v", string(resp.Body()))
 		}
 
 		return nil, fmt.Errorf("image to image failed: %s", errResp.Error.Message)
