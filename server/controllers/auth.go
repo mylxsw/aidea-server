@@ -55,29 +55,35 @@ func NewAuthController(resolver infra.Resolver, conf *config.Config) web.Control
 func (ctl *AuthController) Register(router web.Router) {
 	router.Group("/auth", func(router web.Router) {
 		// 登录
-		router.Post("/sign-in-apple", ctl.signInWithApple)
-		router.Post("/sign-in-wechat", ctl.signInWithWechat)
-		router.Post("/sign-in", ctl.signInWithPassword)
-		router.Post("/sign-in/sms-code", ctl.sendSigninSMSCode)
-		router.Post("/sign-in/email-code", ctl.sendEmailCode)
+		router.Post("/sign-in", ctl.SignInWithPassword)
+		router.Post("/sign-in/sms-code", ctl.SendSigninSMSCode)
+		router.Post("/sign-in/email-code", ctl.SendEmailCode)
+
+		// Apple 登录
+		router.Post("/sign-in-apple", ctl.SignInWithApple)
+
+		// 微信登录
+		router.Post("/sign-in-wechat/try", ctl.TrySignInWithWechat)
+		router.Post("/sign-in-wechat", ctl.SignInWithWechat)
+		router.Post("/bind-wechat", ctl.BindWeChat)
 
 		// 注册登录二合一
-		router.Post("/2in1/check", ctl.checkPhoneExistence)
-		router.Post("/2in1/sign-inup", ctl.signInOrUpWithSMSCode)
+		router.Post("/2in1/check", ctl.CheckPhoneExistence)
+		router.Post("/2in1/sign-inup", ctl.SignInOrUpWithSMSCode)
 
 		// 注册
-		router.Post("/sign-up", ctl.signUpWithPassword)
-		router.Post("/sign-up/email-code", ctl.signUpSendEmailCode)
-		router.Post("/sign-up/sms-code", ctl.bindPhoneSendSMSCode)
+		router.Post("/sign-up", ctl.SignUpWithPassword)
+		router.Post("/sign-up/email-code", ctl.SignUpSendEmailCode)
+		router.Post("/sign-up/sms-code", ctl.BindPhoneSendSMSCode)
 
 		// 找回密码
-		router.Post("/reset-password/email-code", ctl.sendEmailCode)
-		router.Post("/reset-password/sms-code", ctl.resetPasswordSMSCode)
-		router.Post("/reset-password", ctl.resetPassword)
+		router.Post("/reset-password/email-code", ctl.SendEmailCode)
+		router.Post("/reset-password/sms-code", ctl.ResetPasswordSMSCode)
+		router.Post("/reset-password", ctl.ResetPassword)
 
 		// 绑定手机号
-		router.Post("/bind-phone/sms-code", ctl.bindPhoneSendSMSCode)
-		router.Post("/bind-phone", ctl.bindPhone)
+		router.Post("/bind-phone/sms-code", ctl.BindPhoneSendSMSCode)
+		router.Post("/bind-phone", ctl.BindPhone)
 	})
 }
 
@@ -94,7 +100,7 @@ func isPhoneNumber(value string) bool {
 	return regexp.MustCompile(phoneRegex).MatchString(value)
 }
 
-func (ctl *AuthController) checkPhoneExistence(ctx context.Context, webCtx web.Context) web.Response {
+func (ctl *AuthController) CheckPhoneExistence(ctx context.Context, webCtx web.Context) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "账号不能为空"), http.StatusBadRequest)
@@ -142,7 +148,7 @@ func (ctl *AuthController) checkPhoneExistence(ctx context.Context, webCtx web.C
 	return webCtx.JSON(web.M{"exist": true, "sign_in_method": user.PreferSigninMethod})
 }
 
-func (ctl *AuthController) signInOrUpWithSMSCode(ctx context.Context, webCtx web.Context) web.Response {
+func (ctl *AuthController) SignInOrUpWithSMSCode(ctx context.Context, webCtx web.Context) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "账号不能为空"), http.StatusBadRequest)
@@ -180,7 +186,7 @@ func (ctl *AuthController) signInOrUpWithSMSCode(ctx context.Context, webCtx web
 	// 检查验证码是否正确
 	realVerifyCode, err := ctl.rds.Get(ctx, fmt.Sprintf("auth:verify-code:%s:%s", verifyCodeId, username)).Result()
 	if err != nil {
-		if err != redis.Nil {
+		if !errors.Is(err, redis.Nil) {
 			log.WithFields(log.Fields{
 				"username": username,
 				"id":       verifyCodeId,
@@ -215,10 +221,39 @@ func (ctl *AuthController) signInOrUpWithSMSCode(ctx context.Context, webCtx web
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "内部错误，请稍后再试"), http.StatusInternalServerError)
 	}
 
+	// 微信绑定 token
+	wechatBindToken := strings.TrimSpace(webCtx.Input("wechat_bind_token"))
+	if wechatBindToken != "" {
+		if err := ctl.bindWeChatWithToken(ctx, user.Id, wechatBindToken); err != nil {
+			log.WithFields(log.Fields{
+				"username": username,
+				"token":    wechatBindToken,
+			}).Errorf("failed to bind wechat: %s", err)
+		}
+	}
+
 	return webCtx.JSON(buildUserLoginRes(user, false, ctl.tk))
 }
 
-func (ctl *AuthController) sendSigninSMSCode(ctx context.Context, webCtx web.Context) web.Response {
+// bindWeChatWithToken 绑定微信
+func (ctl *AuthController) bindWeChatWithToken(ctx context.Context, userID int64, tokenValue string) error {
+	payload, err := ctl.tk.ParseToken(tokenValue)
+	if err != nil {
+		return errors.New("invalid token")
+	}
+
+	unionID := payload.StringValue("union_id")
+	nickname := payload.StringValue("nickname")
+	avatar := payload.StringValue("avatar")
+
+	if unionID == "" {
+		return errors.New("invalid token")
+	}
+
+	return ctl.userRepo.BindWeChat(ctx, userID, unionID, nickname, avatar)
+}
+
+func (ctl *AuthController) SendSigninSMSCode(ctx context.Context, webCtx web.Context) web.Response {
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if _, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
@@ -247,8 +282,8 @@ func (ctl *AuthController) verifyInviteCode(ctx context.Context, code string) er
 	return err
 }
 
-// bindPhone 绑定手机号码
-func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, current *auth.User) web.Response {
+// BindPhone 绑定手机号码
+func (ctl *AuthController) BindPhone(ctx context.Context, webCtx web.Context, current *auth.User) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "手机号不能为空"), http.StatusBadRequest)
@@ -381,7 +416,7 @@ func (ctl *AuthController) bindPhone(ctx context.Context, webCtx web.Context, cu
 	return webCtx.JSON(buildUserLoginRes(user, isNewUser, ctl.tk))
 }
 
-func (ctl *AuthController) resetPassword(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
+func (ctl *AuthController) ResetPassword(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名不能为空"), http.StatusBadRequest)
@@ -471,8 +506,8 @@ func (ctl *AuthController) resetPassword(ctx context.Context, webCtx web.Context
 	return webCtx.JSON(web.M{})
 }
 
-// sendEmailCode 发送邮件验证码
-func (ctl *AuthController) sendEmailCode(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
+// SendEmailCode 发送邮件验证码
+func (ctl *AuthController) SendEmailCode(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名不能为空"), http.StatusBadRequest)
@@ -670,8 +705,8 @@ func (ctl *AuthController) sendSMSCode(ctx context.Context, webCtx web.Context, 
 	})
 }
 
-// resetPasswordSMSCode 发送找回密码短信验证码
-func (ctl *AuthController) resetPasswordSMSCode(ctx context.Context, webCtx web.Context) web.Response {
+// ResetPasswordSMSCode 发送找回密码短信验证码
+func (ctl *AuthController) ResetPasswordSMSCode(ctx context.Context, webCtx web.Context) web.Response {
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if _, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
@@ -690,7 +725,7 @@ func (ctl *AuthController) resetPasswordSMSCode(ctx context.Context, webCtx web.
 	})
 }
 
-func (ctl *AuthController) bindPhoneSendSMSCode(ctx context.Context, webCtx web.Context) web.Response {
+func (ctl *AuthController) BindPhoneSendSMSCode(ctx context.Context, webCtx web.Context) web.Response {
 	return ctl.sendSMSCode(ctx, webCtx, func(username string) web.Response {
 		// 检查用户是否存在
 		if u, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
@@ -711,8 +746,8 @@ func (ctl *AuthController) bindPhoneSendSMSCode(ctx context.Context, webCtx web.
 	})
 }
 
-// signUpSendEmailCode 发送注册邮件验证码
-func (ctl *AuthController) signUpSendEmailCode(ctx context.Context, webCtx web.Context) web.Response {
+// SignUpSendEmailCode 发送注册邮件验证码
+func (ctl *AuthController) SignUpSendEmailCode(ctx context.Context, webCtx web.Context) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名不能为空"), http.StatusBadRequest)
@@ -808,8 +843,8 @@ func verifyCodeGenerator() string {
 	return fmt.Sprintf("%d", rand.Intn(900000)+100000)
 }
 
-// signUpWithPassword 用户账号注册
-func (ctl *AuthController) signUpWithPassword(ctx context.Context, webCtx web.Context) web.Response {
+// SignUpWithPassword 用户账号注册
+func (ctl *AuthController) SignUpWithPassword(ctx context.Context, webCtx web.Context) web.Response {
 	username := strings.TrimSpace(webCtx.Input("username"))
 	if username == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名不能为空"), http.StatusBadRequest)
@@ -831,7 +866,7 @@ func (ctl *AuthController) signUpWithPassword(ctx context.Context, webCtx web.Co
 	inviteCode := strings.TrimSpace(webCtx.Input("invite_code"))
 	if inviteCode != "" {
 		if err := ctl.verifyInviteCode(ctx, inviteCode); err != nil {
-			if err == repo.ErrNotFound {
+			if errors.Is(err, repo.ErrNotFound) {
 				return webCtx.JSONError(common.Text(webCtx, ctl.translater, "邀请码无效"), http.StatusBadRequest)
 			}
 
@@ -855,7 +890,7 @@ func (ctl *AuthController) signUpWithPassword(ctx context.Context, webCtx web.Co
 
 	realVerifyCode, err := ctl.rds.Get(ctx, fmt.Sprintf("auth:verify-code:%s:%s", verifyCodeId, username)).Result()
 	if err != nil {
-		if err != redis.Nil {
+		if !errors.Is(err, redis.Nil) {
 			log.WithFields(log.Fields{
 				"username": username,
 				"id":       verifyCodeId,
@@ -925,11 +960,23 @@ func (ctl *AuthController) createAccount(ctx context.Context, webCtx web.Context
 			}).Errorf("failed to enqueue signup task: %s", err)
 		}
 	}
+
+	// 微信绑定 token
+	wechatBindToken := strings.TrimSpace(webCtx.Input("wechat_bind_token"))
+	if wechatBindToken != "" {
+		if err := ctl.bindWeChatWithToken(ctx, user.Id, wechatBindToken); err != nil {
+			log.WithFields(log.Fields{
+				"user_id": user.Id,
+				"token":   wechatBindToken,
+			}).Errorf("failed to bind wechat: %s", err)
+		}
+	}
+
 	return webCtx.JSON(buildUserLoginRes(user, true, ctl.tk))
 }
 
-// signInWithPassword 用户账号登录
-func (ctl *AuthController) signInWithPassword(ctx context.Context, webCtx web.Context) web.Response {
+// SignInWithPassword 用户账号登录
+func (ctl *AuthController) SignInWithPassword(ctx context.Context, webCtx web.Context) web.Response {
 	username := webCtx.Input("username")
 	password := webCtx.Input("password")
 
@@ -938,7 +985,7 @@ func (ctl *AuthController) signInWithPassword(ctx context.Context, webCtx web.Co
 	}
 
 	if err := ctl.limiter.Allow(ctx, fmt.Sprintf("auth:%s:login", username), rate.MaxRequestsInPeriod(5, 10*time.Minute)); err != nil {
-		if err == rate.ErrRateLimitExceeded {
+		if errors.Is(err, rate.ErrRateLimitExceeded) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "登录频率过高，请稍后再试"), http.StatusTooManyRequests)
 		}
 
@@ -953,11 +1000,22 @@ func (ctl *AuthController) signInWithPassword(ctx context.Context, webCtx web.Co
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户名或密码错误"), http.StatusBadRequest)
 	}
 
+	// 微信绑定 token
+	wechatBindToken := strings.TrimSpace(webCtx.Input("wechat_bind_token"))
+	if wechatBindToken != "" {
+		if err := ctl.bindWeChatWithToken(ctx, user.Id, wechatBindToken); err != nil {
+			log.WithFields(log.Fields{
+				"user_id": user.Id,
+				"token":   wechatBindToken,
+			}).Errorf("failed to bind wechat: %s", err)
+		}
+	}
+
 	return webCtx.JSON(buildUserLoginRes(user, false, ctl.tk))
 }
 
-// signInWithWechat 使用微信登录
-func (ctl *AuthController) signInWithWechat(ctx context.Context, webCtx web.Context) web.Response {
+// TrySignInWithWechat 尝试使用微信登录，返回微信端用户信息 token + 用户是否存在
+func (ctl *AuthController) TrySignInWithWechat(ctx context.Context, webCtx web.Context) web.Response {
 	code := strings.TrimSpace(webCtx.Input("code"))
 	if code == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "code 不能为空"), http.StatusBadRequest)
@@ -982,9 +1040,47 @@ func (ctl *AuthController) signInWithWechat(ctx context.Context, webCtx web.Cont
 		"user_info":    userInfo,
 	}).Debugf("wechat access token")
 
-	user, eventID, err := ctl.userRepo.WeChatSignIn(ctx, userInfo.UnionID, userInfo.NickName, userInfo.HeadImgURL)
+	bond, err := ctl.userRepo.WeChatIsBond(ctx, userInfo.UnionID)
 	if err != nil {
-		log.WithFields(log.Fields{"code": code}).Errorf("failed to sign in with wechat: %s", err)
+		log.WithFields(log.Fields{"code": code}).Errorf("failed to check wechat binding: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "内部错误，请稍后再试"), http.StatusInternalServerError)
+	}
+
+	payload := token.Claims{
+		"union_id": userInfo.UnionID,
+		"nickname": userInfo.NickName,
+		"avatar":   userInfo.HeadImgURL,
+	}
+
+	return webCtx.JSON(web.M{
+		"token": ctl.tk.CreateToken(payload, 5*time.Minute),
+		"exist": bond,
+	})
+}
+
+// SignInWithWechat 使用微信登录
+func (ctl *AuthController) SignInWithWechat(ctx context.Context, webCtx web.Context) web.Response {
+	accessToken := webCtx.Input("token")
+	if accessToken == "" {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "token 不能为空"), http.StatusBadRequest)
+	}
+
+	payload, err := ctl.tk.ParseToken(accessToken)
+	if err != nil {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "token 无效"), http.StatusBadRequest)
+	}
+
+	unionID := payload.StringValue("union_id")
+	nickname := payload.StringValue("nickname")
+	avatar := payload.StringValue("avatar")
+
+	if unionID == "" {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "token 无效"), http.StatusBadRequest)
+	}
+
+	user, eventID, err := ctl.userRepo.WeChatSignIn(ctx, unionID, nickname, avatar)
+	if err != nil {
+		log.WithFields(log.Fields{"token": accessToken}).Errorf("failed to sign in with wechat: %s", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "内部错误，请稍后再试"), http.StatusInternalServerError)
 	}
 
@@ -1006,8 +1102,45 @@ func (ctl *AuthController) signInWithWechat(ctx context.Context, webCtx web.Cont
 	return webCtx.JSON(buildUserLoginRes(user, eventID > 0, ctl.tk))
 }
 
-// signInWithApple 使用 Apple ID 登录
-func (ctl *AuthController) signInWithApple(ctx context.Context, webCtx web.Context) web.Response {
+// BindWeChat 绑定微信
+func (ctl *AuthController) BindWeChat(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	code := strings.TrimSpace(webCtx.Input("code"))
+	if code == "" {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "code 不能为空"), http.StatusBadRequest)
+	}
+
+	accessToken, err := ctl.wc.OAuthAccessToken(ctx, code)
+	if err != nil {
+		log.WithFields(log.Fields{"code": code}).Errorf("failed to get wechat access token: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "内部错误，请稍后再试"), http.StatusInternalServerError)
+	}
+
+	// 获取用户信息
+	userInfo, err := ctl.wc.QueryUserInfo(ctx, accessToken.AccessToken, accessToken.OpenID)
+	if err != nil {
+		log.WithFields(log.Fields{"code": code}).Errorf("failed to get wechat user info: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "内部错误，请稍后再试"), http.StatusInternalServerError)
+	}
+
+	log.WithFields(log.Fields{
+		"code":         code,
+		"access_token": accessToken,
+		"user_info":    userInfo,
+	}).Debugf("wechat access token")
+
+	if err := ctl.userRepo.BindWeChat(ctx, user.ID, userInfo.UnionID, userInfo.NickName, userInfo.HeadImgURL); err != nil {
+		log.WithFields(log.Fields{
+			"user_id":  user.ID,
+			"union_id": userInfo.UnionID,
+		}).Errorf("failed to bind wechat: %s", err)
+		return webCtx.JSONError(err.Error(), http.StatusBadRequest)
+	}
+
+	return webCtx.JSON(web.M{})
+}
+
+// SignInWithApple 使用 Apple ID 登录
+func (ctl *AuthController) SignInWithApple(ctx context.Context, webCtx web.Context) web.Response {
 	authorizationCode := strings.TrimSpace(webCtx.Input("authorization_code"))
 	if authorizationCode == "" {
 		return webCtx.JSONError("authorization_code is required", http.StatusBadRequest)
@@ -1032,6 +1165,17 @@ func (ctl *AuthController) signInWithApple(ctx context.Context, webCtx web.Conte
 	if err != nil {
 		log.WithFields(logFields).Error(err.Error())
 		return webCtx.JSONError(common.ErrInternalError, http.StatusInternalServerError)
+	}
+
+	// 微信绑定 token
+	wechatBindToken := strings.TrimSpace(webCtx.Input("wechat_bind_token"))
+	if wechatBindToken != "" {
+		if err := ctl.bindWeChatWithToken(ctx, user.Id, wechatBindToken); err != nil {
+			log.WithFields(log.Fields{
+				"user_id": user.Id,
+				"token":   wechatBindToken,
+			}).Errorf("failed to bind wechat: %s", err)
+		}
 	}
 
 	return webCtx.JSON(buildUserLoginRes(user, isNewUser, ctl.tk))

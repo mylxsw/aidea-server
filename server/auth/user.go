@@ -21,6 +21,7 @@ type User struct {
 	AppleUID      string    `json:"apple_uid,omitempty"`
 	IsSetPassword bool      `json:"is_set_password,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
+	UnionID       string    `json:"union_id,omitempty"`
 	withLab       bool      `json:"-"`
 }
 
@@ -54,6 +55,7 @@ func CreateAuthUserFromModel(user *model.Users) *User {
 		AppleUID:      user.AppleUid,
 		IsSetPassword: user.Password != "",
 		CreatedAt:     user.CreatedAt,
+		UnionID:       user.UnionId,
 		// 仅限实验室用户
 		withLab: array.In(user.Id, []int64{1}),
 	}

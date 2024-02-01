@@ -340,6 +340,56 @@ func (repo *UserRepo) SignIn(ctx context.Context, emailOrPhone, password string)
 	return &u, nil
 }
 
+// WeChatIsBond 微信是否已经绑定
+func (repo *UserRepo) WeChatIsBond(ctx context.Context, unionID string) (bool, error) {
+	q := query.Builder().Where(model.FieldUsersUnionId, unionID)
+	matchedCount, err := model.NewUsersModel(repo.db).Count(ctx, q)
+	if err != nil {
+		return false, err
+	}
+
+	return matchedCount > 0, nil
+}
+
+// BindWeChat 绑定微信
+func (repo *UserRepo) BindWeChat(ctx context.Context, userID int64, unionID string, nickname string, avatarURL string) error {
+	return eloquent.Transaction(repo.db, func(tx query.Database) error {
+		q := query.Builder().Where(model.FieldUsersId, userID)
+		user, err := model.NewUsersModel(tx).First(ctx, q)
+		if err != nil {
+			return ErrNotFound
+		}
+
+		if user.UnionId.ValueOrZero() == unionID {
+			return nil
+		}
+
+		if user.UnionId.ValueOrZero() != "" && user.UnionId.ValueOrZero() != unionID {
+			return errors.New("当前账号已绑定其他微信")
+		}
+
+		bond, err := repo.WeChatIsBond(ctx, unionID)
+		if err != nil {
+			return err
+		}
+
+		if bond {
+			return errors.New("当前微信已绑定其他账号")
+		}
+
+		if user.Realname.ValueOrZero() == "" {
+			user.Realname = null.StringFrom(nickname)
+		}
+
+		if user.Avatar.ValueOrZero() == "" {
+			user.Avatar = null.StringFrom(avatarURL)
+		}
+
+		user.UnionId = null.StringFrom(unionID)
+		return user.Save(ctx, model.FieldUsersUnionId, model.FieldUsersRealname, model.FieldUsersAvatar)
+	})
+}
+
 // WeChatSignIn 微信登录
 func (repo *UserRepo) WeChatSignIn(ctx context.Context, unionID string, nickname string, avatarURL string) (user *model.Users, eventID int64, err error) {
 	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
