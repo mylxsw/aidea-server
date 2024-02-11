@@ -580,7 +580,15 @@ func (repo *UserRepo) BindPhone(ctx context.Context, userID int64, phone string,
 // UserCustomConfig 用户自定义配置
 type UserCustomConfig struct {
 	// HomeModels 主页显示的模型
-	HomeModels []string `json:"home_models,omitempty"`
+	HomeModels   []string      `json:"home_models,omitempty"`
+	HomeModelsV2 []HomeModelV2 `json:"home_models_v2,omitempty"`
+}
+
+type HomeModelV2 struct {
+	Type          string `json:"type"`
+	ID            string `json:"id"`
+	Name          string `json:"name,omitempty"`
+	SupportVision bool   `json:"support_vision,omitempty"`
 }
 
 // CustomConfig 查询用户自定义配置

@@ -7,8 +7,10 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/rate"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -20,15 +22,16 @@ import (
 )
 
 type UserService struct {
-	userRepo  *repo2.UserRepo
-	quotaRepo *repo2.QuotaRepo
+	userRepo  *repo.UserRepo
+	roomRepo  *repo.RoomRepo
+	quotaRepo *repo.QuotaRepo
 	rds       *redis.Client
 	limiter   *rate.RateLimiter
 	conf      *config.Config
 }
 
-func NewUserService(conf *config.Config, userRepo *repo2.UserRepo, quotaRepo *repo2.QuotaRepo, rds *redis.Client, limiter *rate.RateLimiter) *UserService {
-	return &UserService{conf: conf, userRepo: userRepo, quotaRepo: quotaRepo, rds: rds, limiter: limiter}
+func NewUserService(conf *config.Config, userRepo *repo.UserRepo, roomRepo *repo.RoomRepo, quotaRepo *repo.QuotaRepo, rds *redis.Client, limiter *rate.RateLimiter) *UserService {
+	return &UserService{conf: conf, userRepo: userRepo, roomRepo: roomRepo, quotaRepo: quotaRepo, rds: rds, limiter: limiter}
 }
 
 type FreeChatState struct {
@@ -195,12 +198,12 @@ func (srv *UserService) GetUserByAPIKey(ctx context.Context, key string) (*model
 }
 
 // CustomConfig 获取用户自定义配置
-func (srv *UserService) CustomConfig(ctx context.Context, userID int64) (*repo2.UserCustomConfig, error) {
+func (srv *UserService) CustomConfig(ctx context.Context, userID int64) (*repo.UserCustomConfig, error) {
 	return srv.userRepo.CustomConfig(ctx, userID)
 }
 
 // UpdateCustomConfig 更新用户自定义配置
-func (srv *UserService) UpdateCustomConfig(ctx context.Context, userID int64, config repo2.UserCustomConfig) error {
+func (srv *UserService) UpdateCustomConfig(ctx context.Context, userID int64, config repo.UserCustomConfig) error {
 	return srv.userRepo.UpdateCustomConfig(ctx, userID, config)
 }
 
@@ -276,4 +279,82 @@ func (srv *UserService) UnfreezeUserQuota(ctx context.Context, userID int64, quo
 
 func (srv *UserService) userQuotaFreezedCacheKey(userID int64) string {
 	return fmt.Sprintf("user:%d:quota:freezed", userID)
+}
+
+type HomeModel struct {
+	// Type 模型类型：支持 model/room_gallery/rooms/room_enterprise
+	Type          string `json:"type"`
+	ID            string `json:"id"`
+	Name          string `json:"name,omitempty"`
+	AvatarURL     string `json:"avatar_url,omitempty"`
+	ModelID       string `json:"model_id,omitempty"`
+	ModelName     string `json:"model_name,omitempty"`
+	SupportVision bool   `json:"support_vision,omitempty"`
+	Prompt        string `json:"-"`
+}
+
+const (
+	HomeModelTypeModel          = "model"
+	HomeModelTypeRoomGallery    = "room_gallery"
+	HomeModelTypeRooms          = "rooms"
+	HomeModelTypeRoomEnterprise = "room_enterprise"
+)
+
+func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]chat.Model, userID int64, homeModelUniqueKey string) (*HomeModel, error) {
+	segs := strings.SplitN(homeModelUniqueKey, "|", 2)
+	if len(segs) != 2 {
+		return nil, fmt.Errorf("invalid home model format")
+	}
+
+	res := HomeModel{}
+	res.Type, res.ID = segs[0], segs[1]
+
+	switch res.Type {
+	case HomeModelTypeRoomGallery:
+		room, err := srv.roomRepo.GalleryItem(ctx, int64(must.Must(strconv.Atoi(res.ID))))
+		if err != nil {
+			return nil, fmt.Errorf("get room gallery item failed: %v", err)
+		}
+
+		res.Name = room.Name
+		res.ModelID = room.Model
+		res.Prompt = room.Prompt
+		res.AvatarURL = room.AvatarUrl
+		mod, ok := models[room.Vendor+":"+room.Model]
+		if ok {
+			res.SupportVision = mod.SupportVision
+			res.ModelName = mod.Name
+		}
+	case HomeModelTypeRooms:
+		room, err := srv.roomRepo.Room(ctx, userID, int64(must.Must(strconv.Atoi(res.ID))))
+		if err != nil {
+			return nil, fmt.Errorf("get room item failed: %v", err)
+		}
+
+		res.Name = room.Name
+		res.ModelID = room.Model
+		res.Prompt = room.SystemPrompt
+		res.AvatarURL = room.AvatarUrl
+		mod, ok := models[room.Vendor+":"+room.Model]
+		if ok {
+			res.SupportVision = mod.SupportVision
+			res.ModelID = room.Model
+		}
+	case HomeModelTypeModel:
+		mod, ok := models[res.ID]
+		if !ok {
+			segs := strings.Split(res.ID, ":")
+			mod, ok = models[segs[len(segs)-1]]
+			if !ok {
+				return nil, fmt.Errorf("model not found: %s", res.ID)
+			}
+		}
+
+		res.Name = mod.ShortName
+		res.ModelID = mod.ID
+		res.SupportVision = mod.SupportVision
+		res.AvatarURL = mod.AvatarURL
+	}
+
+	return &res, nil
 }

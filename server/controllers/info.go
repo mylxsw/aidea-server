@@ -143,7 +143,15 @@ type HomeModel struct {
 
 // Capabilities 获取 AI 平台的能力列表
 func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
-	enableOpenAI, homeModels := ctl.loadHomeModels(ctx, ctl.conf, client, user)
+	var enableOpenAI bool
+	var homeModels []HomeModel
+	var homeModelsV2 []service.HomeModel
+
+	if misc.VersionOlder(client.Version, "1.0.13") {
+		enableOpenAI, homeModels = ctl.loadHomeModels(ctx, ctl.conf, client, user)
+	} else {
+		enableOpenAI, homeModelsV2 = ctl.loadHomeModelsV2(ctx, ctl.conf, client, user)
+	}
 	return webCtx.JSON(web.M{
 		"wechat_signin_enabled": ctl.conf.WeChatAppID != "" && ctl.conf.WeChatSecret != "",
 		// 是否启用苹果 App 支付
@@ -165,7 +173,8 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 		// 是否启用邮件发送功能
 		"mail_enabled": ctl.conf.EnableMail,
 		// 首页模型
-		"home_models": homeModels,
+		"home_models":    homeModels,
+		"home_models_v2": homeModelsV2,
 
 		// 首页路由地址
 		"home_route": "/chat-chat",
@@ -346,3 +355,66 @@ const termsOfUser = `<h1 id="-">用户协议</h1>
 <p>本协议构成您与本公司之间就本应用使用达成的完整协议，取代您和本公司先前就本应用达成的任何口头或书面协议。本协议的任何规定被认定为无效、不可执行或非法，不应影响其他规定的有效性和可执行性。</p>
 <p>如您对本协议有任何疑问，请联系本公司。</p>
 `
+
+func (ctl *InfoController) loadHomeModelsV2(ctx context.Context, conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
+	enableOpenAI, homeModels = ctl.loadDefaultHomeModelsV2(ctl.conf, client, user)
+
+	if user.User != nil && conf.EnableCustomHomeModels {
+		cus, err := ctl.userSvc.CustomConfig(ctx, user.User.ID)
+		if err != nil {
+			log.F(log.M{"user": user, "client": client}).Errorf("get user custom config failed: %s", err)
+		} else if cus != nil && len(cus.HomeModelsV2) > 0 {
+			for i, m := range cus.HomeModelsV2 {
+				if m.ID == "" {
+					continue
+				}
+
+				if len(homeModels) <= i {
+					homeModels = append(homeModels, service.HomeModel{
+						Type:          m.Type,
+						ID:            m.ID,
+						Name:          m.Name,
+						SupportVision: m.SupportVision,
+					})
+				} else {
+					homeModels[i].Type = m.Type
+					homeModels[i].ID = m.ID
+					homeModels[i].Name = m.Name
+					homeModels[i].SupportVision = m.SupportVision
+				}
+			}
+		}
+	}
+
+	return enableOpenAI, homeModels
+}
+
+func (ctl *InfoController) loadDefaultHomeModelsV2(conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
+	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
+		return false, []service.HomeModel{
+			{
+				Name: "南贤 3.5",
+				ID:   "virtual:nanxian",
+				Type: service.HomeModelTypeModel,
+			},
+			{
+				Name: "北丑 4.0",
+				ID:   "virtual:beichou",
+				Type: service.HomeModelTypeModel,
+			},
+		}
+	}
+
+	return conf.EnableOpenAI, []service.HomeModel{
+		{
+			Name: "GPT-3.5",
+			ID:   "openai:gpt-3.5-turbo",
+			Type: service.HomeModelTypeModel,
+		},
+		{
+			Name: "GPT-4",
+			ID:   "openai:gpt-4",
+			Type: service.HomeModelTypeModel,
+		},
+	}
+}

@@ -103,6 +103,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v2/creative-island/histories",   // 创作岛历史记录
 		"/v2/creative-island/completions", // 创作岛生成操作
 		"/v2/rooms",                       // 数字人管理
+		"/v2/users",                       // 用户管理
 	}
 
 	// Prometheus 监控指标
@@ -309,8 +310,9 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 	r.Controllers(
 		"/v2",
 		v2.NewCreativeIslandController(resolver, conf),
-		v2.NewModelController(conf),
+		v2.NewModelController(resolver),
 		v2.NewRoomController(resolver),
+		v2.NewUserController(resolver),
 	)
 
 	// 内部给管理接口

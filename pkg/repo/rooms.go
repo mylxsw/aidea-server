@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	model2 "github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/go-utils/maps"
 	"time"
 
@@ -40,51 +40,51 @@ func NewRoomRepo(db *sql.DB) *RoomRepo {
 }
 
 type Room struct {
-	model2.Rooms
+	model.Rooms
 	Members []string `json:"members,omitempty"`
 }
 
 func (r *RoomRepo) Rooms(ctx context.Context, userID int64, roomTypes []int, limit int64) ([]Room, error) {
 	q := query.Builder().
-		Where(model2.FieldRoomsUserId, userID).
-		WhereIn(model2.FieldRoomsRoomType, roomTypes).
-		OrderBy(model2.FieldRoomsPriority, "DESC").
-		OrderBy(model2.FieldRoomsLastActiveTime, "DESC").
+		Where(model.FieldRoomsUserId, userID).
+		WhereIn(model.FieldRoomsRoomType, roomTypes).
+		OrderBy(model.FieldRoomsPriority, "DESC").
+		OrderBy(model.FieldRoomsLastActiveTime, "DESC").
 		Limit(limit)
 
-	rooms, err := model2.NewRoomsModel(r.db).Get(ctx, q)
+	rooms, err := model.NewRoomsModel(r.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 
 	// 查询群聊头像列表
-	groupRooms := array.Filter(rooms, func(item model2.RoomsN, index int) bool {
+	groupRooms := array.Filter(rooms, func(item model.RoomsN, index int) bool {
 		return item.RoomType.ValueOrZero() == RoomTypeGroupChat
 	})
 
 	var groupMembers map[int64][]string
 	if len(groupRooms) > 0 {
-		groupIDs := array.Map(groupRooms, func(item model2.RoomsN, index int) int64 { return item.Id.ValueOrZero() })
+		groupIDs := array.Map(groupRooms, func(item model.RoomsN, index int) int64 { return item.Id.ValueOrZero() })
 
 		q := query.Builder().
-			WhereIn(model2.FieldChatGroupMemberGroupId, groupIDs).
-			Where(model2.FieldChatGroupMemberUserId, userID).
-			Where(model2.FieldChatGroupMemberStatus, MessageStatusSucceed)
+			WhereIn(model.FieldChatGroupMemberGroupId, groupIDs).
+			Where(model.FieldChatGroupMemberUserId, userID).
+			Where(model.FieldChatGroupMemberStatus, MessageStatusSucceed)
 
-		members, err := model2.NewChatGroupMemberModel(r.db).Get(ctx, q)
+		members, err := model.NewChatGroupMemberModel(r.db).Get(ctx, q)
 		if err != nil {
 			log.Errorf("query chat group members failed: %v", err)
 		}
 
 		groupMembers = maps.Map(
-			array.GroupBy(members, func(item model2.ChatGroupMemberN) int64 { return item.GroupId.ValueOrZero() }),
-			func(items []model2.ChatGroupMemberN, _ int64) []string {
-				return array.Map(items, func(item model2.ChatGroupMemberN, _ int) string { return item.ModelId.ValueOrZero() })
+			array.GroupBy(members, func(item model.ChatGroupMemberN) int64 { return item.GroupId.ValueOrZero() }),
+			func(items []model.ChatGroupMemberN, _ int64) []string {
+				return array.Map(items, func(item model.ChatGroupMemberN, _ int) string { return item.ModelId.ValueOrZero() })
 			},
 		)
 	}
 
-	return array.Map(rooms, func(room model2.RoomsN, _ int) Room {
+	return array.Map(rooms, func(room model.RoomsN, _ int) Room {
 		return Room{
 			Rooms:   room.ToRooms(),
 			Members: groupMembers[room.Id.ValueOrZero()],
@@ -92,8 +92,8 @@ func (r *RoomRepo) Rooms(ctx context.Context, userID int64, roomTypes []int, lim
 	}), nil
 }
 
-func GetDefaultRoom() *model2.Rooms {
-	return &model2.Rooms{
+func GetDefaultRoom() *model.Rooms {
+	return &model.Rooms{
 		Id:         1,
 		Name:       "默认",
 		Model:      "gpt-3.5-turbo",
@@ -103,16 +103,16 @@ func GetDefaultRoom() *model2.Rooms {
 	}
 }
 
-func (r *RoomRepo) Room(ctx context.Context, userID, roomID int64) (*model2.Rooms, error) {
+func (r *RoomRepo) Room(ctx context.Context, userID, roomID int64) (*model.Rooms, error) {
 	if roomID == 1 {
 		return GetDefaultRoom(), nil
 	}
 
 	q := query.Builder().
-		Where(model2.FieldRoomsUserId, userID).
-		Where(model2.FieldRoomsId, roomID)
+		Where(model.FieldRoomsUserId, userID).
+		Where(model.FieldRoomsId, roomID)
 
-	room, err := model2.NewRoomsModel(r.db).First(ctx, q)
+	room, err := model.NewRoomsModel(r.db).First(ctx, q)
 	if err != nil {
 		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
@@ -125,12 +125,12 @@ func (r *RoomRepo) Room(ctx context.Context, userID, roomID int64) (*model2.Room
 	return &ret, nil
 }
 
-func (r *RoomRepo) Create(ctx context.Context, userID int64, room *model2.Rooms, enableDup bool) (id int64, err error) {
+func (r *RoomRepo) Create(ctx context.Context, userID int64, room *model.Rooms, enableDup bool) (id int64, err error) {
 	if !enableDup {
 		q := query.Builder().
-			Where(model2.FieldRoomsName, room.Name).
-			Where(model2.FieldRoomsUserId, userID)
-		exist, err := model2.NewRoomsModel(r.db).Exists(ctx, q)
+			Where(model.FieldRoomsName, room.Name).
+			Where(model.FieldRoomsUserId, userID)
+		exist, err := model.NewRoomsModel(r.db).Exists(ctx, q)
 		if err != nil {
 			return 0, err
 		}
@@ -143,52 +143,52 @@ func (r *RoomRepo) Create(ctx context.Context, userID int64, room *model2.Rooms,
 	room.UserId = userID
 
 	roomN := room.ToRoomsN(
-		model2.FieldRoomsName,
-		model2.FieldRoomsUserId,
-		model2.FieldRoomsAvatarId,
-		model2.FieldRoomsAvatarUrl,
-		model2.FieldRoomsDescription,
-		model2.FieldRoomsPriority,
-		model2.FieldRoomsModel,
-		model2.FieldRoomsVendor,
-		model2.FieldRoomsSystemPrompt,
-		model2.FieldRoomsLastActiveTime,
-		model2.FieldRoomsMaxContext,
-		model2.FieldRoomsRoomType,
-		model2.FieldRoomsInitMessage,
+		model.FieldRoomsName,
+		model.FieldRoomsUserId,
+		model.FieldRoomsAvatarId,
+		model.FieldRoomsAvatarUrl,
+		model.FieldRoomsDescription,
+		model.FieldRoomsPriority,
+		model.FieldRoomsModel,
+		model.FieldRoomsVendor,
+		model.FieldRoomsSystemPrompt,
+		model.FieldRoomsLastActiveTime,
+		model.FieldRoomsMaxContext,
+		model.FieldRoomsRoomType,
+		model.FieldRoomsInitMessage,
 	)
 
-	id, err = model2.NewRoomsModel(r.db).Save(ctx, roomN)
+	id, err = model.NewRoomsModel(r.db).Save(ctx, roomN)
 
 	return
 }
 
 func (r *RoomRepo) Remove(ctx context.Context, userID, roomID int64) error {
 	q := query.Builder().
-		Where(model2.FieldRoomsUserId, userID).
-		Where(model2.FieldRoomsId, roomID)
+		Where(model.FieldRoomsUserId, userID).
+		Where(model.FieldRoomsId, roomID)
 
-	_, err := model2.NewRoomsModel(r.db).Delete(ctx, q)
+	_, err := model.NewRoomsModel(r.db).Delete(ctx, q)
 	return err
 }
 
-func (r *RoomRepo) Update(ctx context.Context, userID, roomID int64, room *model2.Rooms) error {
+func (r *RoomRepo) Update(ctx context.Context, userID, roomID int64, room *model.Rooms) error {
 	q := query.Builder().
-		Where(model2.FieldRoomsUserId, userID).
-		Where(model2.FieldRoomsId, roomID)
+		Where(model.FieldRoomsUserId, userID).
+		Where(model.FieldRoomsId, roomID)
 
-	_, err := model2.NewRoomsModel(r.db).Update(ctx, q, room.ToRoomsN(
-		model2.FieldRoomsName,
-		model2.FieldRoomsDescription,
-		model2.FieldRoomsAvatarId,
-		model2.FieldRoomsAvatarUrl,
-		model2.FieldRoomsPriority,
-		model2.FieldRoomsModel,
-		model2.FieldRoomsVendor,
-		model2.FieldRoomsSystemPrompt,
-		model2.FieldRoomsMaxContext,
-		model2.FieldRoomsRoomType,
-		model2.FieldRoomsInitMessage,
+	_, err := model.NewRoomsModel(r.db).Update(ctx, q, room.ToRoomsN(
+		model.FieldRoomsName,
+		model.FieldRoomsDescription,
+		model.FieldRoomsAvatarId,
+		model.FieldRoomsAvatarUrl,
+		model.FieldRoomsPriority,
+		model.FieldRoomsModel,
+		model.FieldRoomsVendor,
+		model.FieldRoomsSystemPrompt,
+		model.FieldRoomsMaxContext,
+		model.FieldRoomsRoomType,
+		model.FieldRoomsInitMessage,
 	))
 
 	return err
@@ -196,10 +196,10 @@ func (r *RoomRepo) Update(ctx context.Context, userID, roomID int64, room *model
 
 func (r *RoomRepo) UpdateLastActiveTime(ctx context.Context, userID, roomID int64) error {
 	q := query.Builder().
-		Where(model2.FieldRoomsUserId, userID).
-		Where(model2.FieldRoomsId, roomID)
+		Where(model.FieldRoomsUserId, userID).
+		Where(model.FieldRoomsId, roomID)
 
-	_, err := model2.NewRoomsModel(r.db).Update(ctx, q, model2.RoomsN{
+	_, err := model.NewRoomsModel(r.db).Update(ctx, q, model.RoomsN{
 		LastActiveTime: null.TimeFrom(time.Now()),
 	})
 
@@ -224,7 +224,7 @@ type GalleryRoom struct {
 	InitMessage string `json:"-"`
 }
 
-func createGalleryRoomFromModel(room model2.RoomGallery) GalleryRoom {
+func createGalleryRoomFromModel(room model.RoomGallery) GalleryRoom {
 	var tags []string
 	if err := json.Unmarshal([]byte(room.Tags), &tags); err != nil {
 		tags = []string{}
@@ -256,19 +256,19 @@ func createGalleryRoomFromModel(room model2.RoomGallery) GalleryRoom {
 }
 
 func (r *RoomRepo) GallerySuggests(ctx context.Context, limit int64) ([]GalleryRoom, error) {
-	systemModelQ := query.Builder().Where(model2.FieldRoomGalleryRoomType, "system").
+	systemModelQ := query.Builder().Where(model.FieldRoomGalleryRoomType, "system").
 		OrderByRaw("RAND() DESC").Limit(3)
-	systemModels, err := model2.NewRoomGalleryModel(r.db).Get(ctx, systemModelQ)
+	systemModels, err := model.NewRoomGalleryModel(r.db).Get(ctx, systemModelQ)
 	if err != nil {
 		return nil, err
 	}
 
 	defaultModelLimit := limit - int64(len(systemModels))
 	if defaultModelLimit > 0 {
-		items, err := model2.NewRoomGalleryModel(r.db).Get(
+		items, err := model.NewRoomGalleryModel(r.db).Get(
 			ctx,
 			query.Builder().
-				Where(model2.FieldRoomGalleryRoomType, "default").
+				Where(model.FieldRoomGalleryRoomType, "default").
 				Limit(defaultModelLimit).
 				OrderByRaw("RAND()"),
 		)
@@ -279,28 +279,28 @@ func (r *RoomRepo) GallerySuggests(ctx context.Context, limit int64) ([]GalleryR
 		systemModels = append(systemModels, items...)
 	}
 
-	return array.Map(systemModels, func(item model2.RoomGalleryN, _ int) GalleryRoom {
+	return array.Map(systemModels, func(item model.RoomGalleryN, _ int) GalleryRoom {
 		return createGalleryRoomFromModel(item.ToRoomGallery())
 	}), nil
 }
 
 func (r *RoomRepo) Galleries(ctx context.Context) ([]GalleryRoom, error) {
-	items, err := model2.NewRoomGalleryModel(r.db).Get(
+	items, err := model.NewRoomGalleryModel(r.db).Get(
 		ctx,
 		query.Builder().
-			OrderBy(model2.FieldRoomGalleryCreatedAt, "DESC"),
+			OrderBy(model.FieldRoomGalleryCreatedAt, "DESC"),
 	)
 	if err != nil {
 		return nil, err
 	}
 
-	return array.Map(items, func(item model2.RoomGalleryN, _ int) GalleryRoom {
+	return array.Map(items, func(item model.RoomGalleryN, _ int) GalleryRoom {
 		return createGalleryRoomFromModel(item.ToRoomGallery())
 	}), nil
 }
 
 func (r *RoomRepo) GalleryItem(ctx context.Context, id int64) (*GalleryRoom, error) {
-	item, err := model2.NewRoomGalleryModel(r.db).First(ctx, query.Builder().Where(model2.FieldRoomGalleryId, id))
+	item, err := model.NewRoomGalleryModel(r.db).First(ctx, query.Builder().Where(model.FieldRoomGalleryId, id))
 	if err != nil {
 		if err == query.ErrNoResult {
 			return nil, ErrNotFound
