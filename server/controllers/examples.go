@@ -121,7 +121,8 @@ func (ctl *ExampleController) Examples(ctx web.Context) web.Response {
 
 // Example 获取模型的用户提示语示例
 func (ctl *ExampleController) Example(ctx web.Context) web.Response {
-	model := ctx.PathVar("model")
+	segs := strings.Split(ctx.PathVar("model"), "|")
+	model := segs[len(segs)-1]
 	if model == "" {
 		return ctx.JSONError(common.ErrInvalidModel, http.StatusBadRequest)
 	}

@@ -19,6 +19,9 @@ models:
     - name: realname
       type: string
       tag: json:"realname"
+    - name: union_id
+      type: string
+      tag: json:"union_id"
     - name: avatar
       type: string
       tag: json:"avatar"

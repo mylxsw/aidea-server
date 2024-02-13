@@ -224,4 +224,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddIntFlag("free-chat-daily-limit", 5, "每日免费次数，基于客户端 IP 限制")
 	ins.AddIntFlag("free-chat-daily-global-limit", 1000, "每日全局免费次数，总的限制次数，不管是哪个 IP")
 	ins.AddStringFlag("free-chat-model", "gpt-3.5-turbo", "免费模型，所有的请求都会被替换为该模型")
+
+	ins.AddStringFlag("wechat-appid", "", "微信开放平台 APP ID")
+	ins.AddStringFlag("wechat-secret", "", "微信开放平台 APP Secret")
 }

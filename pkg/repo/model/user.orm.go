@@ -25,6 +25,7 @@ type UsersN struct {
 	Phone              null.String `json:"phone"`
 	Password           null.String `json:"-"`
 	Realname           null.String `json:"realname"`
+	UnionId            null.String `json:"union_id"`
 	Avatar             null.String `json:"avatar"`
 	AppleUid           null.String `json:"apple_uid"`
 	InvitedBy          null.Int    `json:"invite_by"`
@@ -54,6 +55,7 @@ type usersOriginal struct {
 	Phone              null.String
 	Password           null.String
 	Realname           null.String
+	UnionId            null.String
 	Avatar             null.String
 	AppleUid           null.String
 	InvitedBy          null.Int
@@ -86,6 +88,9 @@ func (inst *UsersN) Staled(onlyFields ...string) bool {
 			return true
 		}
 		if inst.Realname != inst.original.Realname {
+			return true
+		}
+		if inst.UnionId != inst.original.UnionId {
 			return true
 		}
 		if inst.Avatar != inst.original.Avatar {
@@ -137,6 +142,10 @@ func (inst *UsersN) Staled(onlyFields ...string) bool {
 				}
 			case "realname":
 				if inst.Realname != inst.original.Realname {
+					return true
+				}
+			case "union_id":
+				if inst.UnionId != inst.original.UnionId {
 					return true
 				}
 			case "avatar":
@@ -208,6 +217,9 @@ func (inst *UsersN) StaledKV(onlyFields ...string) query.KV {
 		if inst.Realname != inst.original.Realname {
 			kv["realname"] = inst.Realname
 		}
+		if inst.UnionId != inst.original.UnionId {
+			kv["union_id"] = inst.UnionId
+		}
 		if inst.Avatar != inst.original.Avatar {
 			kv["avatar"] = inst.Avatar
 		}
@@ -258,6 +270,10 @@ func (inst *UsersN) StaledKV(onlyFields ...string) query.KV {
 			case "realname":
 				if inst.Realname != inst.original.Realname {
 					kv["realname"] = inst.Realname
+				}
+			case "union_id":
+				if inst.UnionId != inst.original.UnionId {
+					kv["union_id"] = inst.UnionId
 				}
 			case "avatar":
 				if inst.Avatar != inst.original.Avatar {
@@ -399,6 +415,7 @@ type Users struct {
 	Phone              string `json:"phone"`
 	Password           string `json:"-"`
 	Realname           string `json:"realname"`
+	UnionId            string `json:"union_id"`
 	Avatar             string `json:"avatar"`
 	AppleUid           string `json:"apple_uid"`
 	InvitedBy          int64  `json:"invite_by"`
@@ -419,6 +436,7 @@ func (w Users) ToUsersN(allows ...string) UsersN {
 			Phone:              null.StringFrom(w.Phone),
 			Password:           null.StringFrom(w.Password),
 			Realname:           null.StringFrom(w.Realname),
+			UnionId:            null.StringFrom(w.UnionId),
 			Avatar:             null.StringFrom(w.Avatar),
 			AppleUid:           null.StringFrom(w.AppleUid),
 			InvitedBy:          null.IntFrom(int64(w.InvitedBy)),
@@ -445,6 +463,8 @@ func (w Users) ToUsersN(allows ...string) UsersN {
 			res.Password = null.StringFrom(w.Password)
 		case "realname":
 			res.Realname = null.StringFrom(w.Realname)
+		case "union_id":
+			res.UnionId = null.StringFrom(w.UnionId)
 		case "avatar":
 			res.Avatar = null.StringFrom(w.Avatar)
 		case "apple_uid":
@@ -484,6 +504,7 @@ func (w *UsersN) ToUsers() Users {
 		Phone:              w.Phone.String,
 		Password:           w.Password.String,
 		Realname:           w.Realname.String,
+		UnionId:            w.UnionId.String,
 		Avatar:             w.Avatar.String,
 		AppleUid:           w.AppleUid.String,
 		InvitedBy:          w.InvitedBy.Int64,
@@ -520,6 +541,7 @@ const (
 	FieldUsersPhone              = "phone"
 	FieldUsersPassword           = "password"
 	FieldUsersRealname           = "realname"
+	FieldUsersUnionId            = "union_id"
 	FieldUsersAvatar             = "avatar"
 	FieldUsersAppleUid           = "apple_uid"
 	FieldUsersInvitedBy          = "invited_by"
@@ -539,6 +561,7 @@ func UsersFields() []string {
 		"phone",
 		"password",
 		"realname",
+		"union_id",
 		"avatar",
 		"apple_uid",
 		"invited_by",
@@ -683,6 +706,7 @@ func (m *UsersModel) Get(ctx context.Context, builders ...query.SQLBuilder) ([]U
 			"phone",
 			"password",
 			"realname",
+			"union_id",
 			"avatar",
 			"apple_uid",
 			"invited_by",
@@ -710,6 +734,8 @@ func (m *UsersModel) Get(ctx context.Context, builders ...query.SQLBuilder) ([]U
 		case "password":
 			selectFields = append(selectFields, f)
 		case "realname":
+			selectFields = append(selectFields, f)
+		case "union_id":
 			selectFields = append(selectFields, f)
 		case "avatar":
 			selectFields = append(selectFields, f)
@@ -749,6 +775,8 @@ func (m *UsersModel) Get(ctx context.Context, builders ...query.SQLBuilder) ([]U
 				scanFields = append(scanFields, &usersVar.Password)
 			case "realname":
 				scanFields = append(scanFields, &usersVar.Realname)
+			case "union_id":
+				scanFields = append(scanFields, &usersVar.UnionId)
 			case "avatar":
 				scanFields = append(scanFields, &usersVar.Avatar)
 			case "apple_uid":
