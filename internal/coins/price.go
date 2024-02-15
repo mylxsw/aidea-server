@@ -31,12 +31,15 @@ var coinTables = map[string]CoinTable{
 		"gpt-3.5-turbo":          3,   // valid $0.002/1K tokens -> ¥0.014/1K tokens
 		"gpt-3.5-turbo-0613":     3,   // valid $0.002/1K tokens -> ¥0.014/1K tokens
 		"gpt-3.5-turbo-1106":     3,   // valid $0.002/1K tokens -> ¥0.014/1K tokens
+		"gpt-3.5-turbo-0125":     3,   // valid $0.0015/1K tokens -> ¥0.011/1K tokens
 		"gpt-3.5-turbo-16k":      5,   // valid $0.004/1K tokens -> ¥0.028/1K tokens
 		"gpt-3.5-turbo-16k-0613": 5,   // valid $0.004/1K tokens -> ¥0.028/1K tokens
 		"gpt-4":                  50,  // valid $0.06/1K tokens  -> ¥0.42/1K tokens
 		"gpt-4-8k":               50,  // $0.06/1K tokens        -> ¥0.42/1K tokens
 		"gpt-4-32k":              100, // $0.12/1K tokens        -> ¥0.84/1K tokens
+		"gpt-4-turbo-preview":    30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
 		"gpt-4-1106-preview":     30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
+		"gpt-4-0125-preview":     30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
 		"gpt-4-vision-preview":   30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
 
 		// Anthropic
