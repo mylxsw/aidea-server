@@ -72,9 +72,10 @@ var coinTables = map[string]CoinTable{
 		"qwen-vl-plus":         1, // 官方限时免费
 
 		// 讯飞星火 https://xinghuo.xfyun.cn/sparkapi
-		"generalv3": 5, // valid 讯飞星火 v3    ¥0.036/1K tokens
-		"generalv2": 5, // valid 讯飞星火 v2    ¥0.036/1K tokens
-		"general":   3, // valid 讯飞星火 v1.5  ¥0.018/1K tokens
+		"generalv3.5": 5, // valid 讯飞星火 v3.5  ¥0.036/1K tokens
+		"generalv3":   5, // valid 讯飞星火 v3    ¥0.036/1K tokens
+		"generalv2":   5, // valid 讯飞星火 v2    ¥0.036/1K tokens
+		"general":     3, // valid 讯飞星火 v1.5  ¥0.018/1K tokens
 
 		// 商汤（官方暂未公布价格）
 		"nova-ptc-xl-v1": 3, // 大参数量

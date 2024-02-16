@@ -22,6 +22,7 @@ const (
 	ModelGeneralV1_5 Model = "general"
 	ModelGeneralV2   Model = "generalv2"
 	ModelGeneralV3   Model = "generalv3"
+	ModelGeneralV35  Model = "generalv3.5"
 	// ModelGeneralImageRecognize 图像识别模型，真实模型其实是 general
 	ModelGeneralImageRecognize Model = "general_image_recognize"
 )
@@ -257,6 +258,10 @@ func (ai *XFYunAI) resolveHostForModel(model Model) string {
 
 	if model == ModelGeneralV3 {
 		return "wss://spark-api.xf-yun.com/v3.1/chat"
+	}
+
+	if model == ModelGeneralV35 {
+		return "wss://spark-api.xf-yun.com/v3.5/chat"
 	}
 
 	if model == ModelGeneralImageRecognize {

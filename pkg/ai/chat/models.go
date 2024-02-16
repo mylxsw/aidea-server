@@ -174,6 +174,17 @@ func chinaModels(conf *config.Config) []Model {
 		VersionMin:  "1.0.3",
 		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/xfyun-v3.png",
 	})
+	models = append(models, Model{
+		ID:          "讯飞星火:" + string(xfyun.ModelGeneralV35),
+		Name:        "星火大模型 v3.5",
+		ShortName:   "星火 3.5",
+		Description: "科大讯飞研发的认知大模型，V3.0 能力全面升级，在数学、代码、医疗、教育等场景进行了专项优化，让大模型更懂你所需",
+		Category:    "讯飞星火",
+		IsChat:      true,
+		Disabled:    !conf.EnableXFYunAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/xfyun-v3.png",
+	})
 
 	models = append(models, Model{
 		ID:          "文心千帆:" + baidu.ModelErnieBotTurbo,
