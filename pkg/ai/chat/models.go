@@ -103,7 +103,7 @@ func openAIModels(conf *config.Config) []Model {
 			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gpt4.png",
 		},
 		{
-			ID:          "openai:gpt-4-1106-preview",
+			ID:          "openai:gpt-4-turbo-preview",
 			Name:        "GPT-4 Turbo",
 			ShortName:   "GPT-4 Turbo",
 			Description: "能力强，更精准",

@@ -249,8 +249,8 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 			Powerful: false,
 		},
 		{
-			Name:     "GPT-4",
-			ModelID:  "gpt-4",
+			Name:     "GPT-4 Turbo",
+			ModelID:  "gpt-4-turbo-preview",
 			Desc:     "能力强，更精准",
 			Color:    "FF714BD7",
 			Powerful: true,
@@ -412,8 +412,8 @@ func (ctl *InfoController) loadDefaultHomeModelsV2(conf *config.Config, client *
 			Type: service.HomeModelTypeModel,
 		},
 		{
-			Name: "GPT-4",
-			ID:   "openai:gpt-4",
+			Name: "GPT-4 Turbo",
+			ID:   "openai:gpt-4-turbo-preview",
 			Type: service.HomeModelTypeModel,
 		},
 	}
