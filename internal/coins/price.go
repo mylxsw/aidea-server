@@ -49,16 +49,19 @@ var coinTables = map[string]CoinTable{
 		// 国产模型
 
 		// 百度 https://console.bce.baidu.com/qianfan/chargemanage/list
-		"model_ernie_bot_turbo":       2,  // valid 文心一言 ¥0.008/1K tokens
-		"model_ernie_bot":             4,  // valid 文心一言 ¥0.012/1K tokens
-		"model_ernie_bot_4":           15, // valid 文心一言 4.0 ¥0.12/1K tokens
-		"model_badiu_llama2_70b":      6,  // valid llama2 70b ¥0.044元/千tokens
-		"model_baidu_llama2_7b_cn":    2,  // valid llama2 7b cn ¥0.006元/千tokens
-		"model_baidu_llama2_13b":      2,  // valid llama2 7b ¥0.008元/千tokens
-		"model_baidu_chatglm2_6b_32k": 2,  // valid chatglm2 6b ¥0.006/1K tokens
-		"model_baidu_aquila_chat7b":   2,  // valid aquila chat7b ¥0.006/1K tokens
-		"model_baidu_bloomz_7b":       2,  // valid bloomz 7b ¥0.006/1K tokens
-
+		"model_ernie_bot_turbo":             2,  // valid 文心一言 ¥0.008/1K tokens
+		"model_ernie_bot":                   4,  // valid 文心一言 ¥0.012/1K tokens
+		"model_ernie_bot_4":                 15, // valid 文心一言 4.0 ¥0.12/1K tokens
+		"model_badiu_llama2_70b":            6,  // valid llama2 70b ¥0.044元/千tokens
+		"model_baidu_llama2_7b_cn":          2,  // valid llama2 7b cn ¥0.006元/千tokens
+		"model_baidu_llama2_13b":            2,  // valid llama2 7b ¥0.008元/千tokens
+		"model_baidu_chatglm2_6b_32k":       2,  // valid chatglm2 6b ¥0.006/1K tokens
+		"model_baidu_aquila_chat7b":         2,  // valid aquila chat7b ¥0.006/1K tokens
+		"model_baidu_bloomz_7b":             2,  // valid bloomz 7b ¥0.006/1K tokens
+		"model_baidu_llama2_13b_cn":         2,  // valid chat_law ¥0.006元/1K tokens
+		"model_baidu_xuanyuan_70b":          5,  // valid xuanyuan 70b ¥0.035元/1K tokens
+		"model_baidu_chat_law":              2,  // valid chat_law ¥0.008元/1K tokens
+		"model_baidu_mixtral_8x7b_instruct": 5,  // valid mixtral 8x7b instruct ¥0.035元/1K tokens
 		// 阿里 https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing
 		"qwen-v1":              1, // valid 通义千问 v1    ¥0.008/1K tokens
 		"qwen-plus-v1":         3, // valid 通义千问 plus v1 ¥0.02/1K tokens

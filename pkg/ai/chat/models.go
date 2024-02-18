@@ -295,6 +295,39 @@ func chinaModels(conf *config.Config) []Model {
 		VersionMin:  "1.0.3",
 		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/BLOOMZ.png",
 	})
+	models = append(models, Model{
+		ID:          "文心千帆:" + baidu.ModelXuanYuan70B,
+		Name:        "轩辕 70B",
+		ShortName:   "轩辕 70B",
+		Description: "由度小满开发，基于Llama2-70B模型进行中文增强的金融行业大模型，通用能力显著提升，在CMMLU/CEVAL等各项榜单中排名前列；金融域任务超越领先通用模型，支持金融知识问答、金融计算、金融分析等各项任务",
+		Category:    "文心千帆",
+		IsChat:      true,
+		Disabled:    !conf.EnableBaiduWXAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/xuanyuan.jpg",
+	})
+	models = append(models, Model{
+		ID:          "文心千帆:" + baidu.ModelChatLaw,
+		Name:        "ChatLaw",
+		ShortName:   "ChatLaw",
+		Description: "由壹万卷公司与北大深研院研发的法律行业大模型，在开源版本基础上进行了进一步架构升级，融入了法律意图识别、法律关键词提取、CoT推理增强等模块，实现了效果提升，以满足法律问答、法条检索等应用需求",
+		Category:    "文心千帆",
+		IsChat:      true,
+		Disabled:    !conf.EnableBaiduWXAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/chatlaw.png",
+	})
+	models = append(models, Model{
+		ID:          "文心千帆:" + baidu.ModelMixtral8x7bInstruct,
+		Name:        "Mixtral-8x7B-Instruct",
+		ShortName:   "Mixtral-8x7B-Instruct",
+		Description: "由 Mistral AI 发布的首个高质量稀疏专家混合模型 (MOE)，模型由8个70亿参数专家模型组成，在多个基准测试中表现优于 Llama-2-70B 及 GPT3.5，能够处理 32K 上下文，在代码生成任务中表现尤为优异",
+		Category:    "文心千帆",
+		IsChat:      true,
+		Disabled:    !conf.EnableBaiduWXAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/mixtral.jpg",
+	})
 
 	if conf.EnableDashScopeAI {
 		models = append(models, Model{
@@ -609,7 +642,7 @@ func aideaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableVirtualModel,
 			VersionMin:  "1.0.5",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/nanxian.png",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/beichou.png",
 		},
 	}
 }

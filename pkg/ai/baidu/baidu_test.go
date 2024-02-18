@@ -12,11 +12,11 @@ import (
 )
 
 func TestBaiduAI_Chat(t *testing.T) {
-	testBaiduAI_Chat(t, baidu.ModelErnieBot4)
+	testBaiduAI_Chat(t, baidu.ModelChatLaw)
 }
 
 func TestBaiduAI_ChatStream(t *testing.T) {
-	testBaiduAI_ChatStream(t, baidu.ModelLlama2_13b_CN)
+	testBaiduAI_ChatStream(t, baidu.ModelMixtral8x7bInstruct)
 }
 
 func testBaiduAI_Chat(t *testing.T, model baidu.Model) {

@@ -341,7 +341,10 @@ func (ai *Imp) selectImp(model string) Chat {
 		baidu.ModelLlama2_13b,
 		baidu.ModelLlama2_7b_CN,
 		baidu.ModelLlama2_13b_CN,
-		baidu.ModelLlama2_70b:
+		baidu.ModelLlama2_70b,
+		baidu.ModelXuanYuan70B,
+		baidu.ModelChatLaw,
+		baidu.ModelMixtral8x7bInstruct:
 		// 百度文心千帆
 		return ai.ai.Baidu
 	case dashscope.ModelQWenV1, dashscope.ModelQWenPlusV1,

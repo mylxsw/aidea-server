@@ -116,10 +116,31 @@ type ChatRequest struct {
 	// （1）长度限制1024个字符
 	// （2）如果使用functions参数，不支持设定人设system
 	System string `json:"system,omitempty"`
+	// ExtraParameters 第三方大模型推理高级参数，依据第三方大模型厂商不同而变化
+	ExtraParameters any `json:"extra_parameters,omitempty"`
+}
+
+type ExtraParametersForChatLaw struct {
+	// UseKeyword 表示是否提取问答关键词以加强模型推理。使用use_keyword参数，可能会导致以下情况：
+	//（1）模型回答通识性问题下降
+	//（2）在接口响应前，获取到提取的问答关键词，并将内容拼接到prompt中，最终接口返回参数prompt_tokens数会比用户输入多
+	UseKeyword bool `json:"use_keyword"`
+	// UseReference 表示是否使用参考法条以加强推理。使用use_reference参数，可能会导致以下情况：
+	//（1）模型回答通识性问题下降
+	//（2）在接口响应前，获取到参考法条，并将内容拼接到prompt中，最终接口返回参数prompt_tokens数会比用户输入多
+	UseReference bool `json:"use_reference"`
 }
 
 func (req ChatRequest) Fix(model Model) ChatRequest {
 	req.Messages = req.Messages.Fix()
+	// ExtraParameters
+	if req.ExtraParameters == nil {
+		switch model {
+		case ModelChatLaw:
+			req.ExtraParameters = ExtraParametersForChatLaw{}
+		}
+	}
+
 	return req
 }
 
@@ -242,6 +263,15 @@ const (
 	// ModelBloomz7B BLOOMZ-7B是业内知名的⼤语⾔模型，由BigScience研发并开源，能够以46种语⾔和13种编程语⾔输出⽂本
 	// ¥0.006元/千tokens
 	ModelBloomz7B = "model_baidu_bloomz_7b"
+	// ModelXuanYuan70B XuanYuan-70B-Chat-4bit由度小满开发，基于Llama2-70B模型进行中文增强的金融行业大模型，通用能力显著提升，在CMMLU/CEVAL等各项榜单中排名前列；金融域任务超越领先通用模型，支持金融知识问答、金融计算、金融分析等各项任务
+	// ¥0.035元/千tokens
+	ModelXuanYuan70B = "model_baidu_xuanyuan_70b"
+	// ModelChatLaw ChatLaw由壹万卷公司与北大深研院研发的法律行业大模型，在开源版本基础上进行了进一步架构升级，融入了法律意图识别、法律关键词提取、CoT推理增强等模块，实现了效果提升，以满足法律问答、法条检索等应用需求。
+	// ¥0.008元/千tokens
+	ModelChatLaw = "model_baidu_chat_law"
+	// ModelMixtral8x7bInstruct 由Mistral AI发布的首个高质量稀疏专家混合模型 (MOE)，模型由8个70亿参数专家模型组成，在多个基准测试中表现优于Llama-2-70B及GPT3.5，能够处理32K上下文，在代码生成任务中表现尤为优异
+	// ¥0.035元/千tokens
+	ModelMixtral8x7bInstruct = "model_baidu_mixtral_8x7b_instruct"
 )
 
 func (ai *BaiduAIImpl) Chat(ctx context.Context, model Model, req ChatRequest) (*ChatResponse, error) {
@@ -297,6 +327,12 @@ func (ai *BaiduAIImpl) modelURL(model Model) string {
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/aquilachat_7b"
 	case ModelBloomz7B:
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/bloomz_7b1"
+	case ModelXuanYuan70B:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/xuanyuan_70b_chat"
+	case ModelChatLaw:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/chatlaw"
+	case ModelMixtral8x7bInstruct:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/mixtral_8x7b_instruct"
 	default:
 		panic("invalid model")
 	}
