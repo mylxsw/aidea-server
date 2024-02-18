@@ -252,6 +252,17 @@ func chinaModels(conf *config.Config) []Model {
 		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/llama2-cn.png",
 	})
 	models = append(models, Model{
+		ID:          "文心千帆:" + baidu.ModelLlama2_13b_CN,
+		Name:        "Llama 2 13B 中文版",
+		ShortName:   "Llama2 13B",
+		Description: "由 Meta AI 研发并开源，在编码、推理及知识应用等场景表现优秀，当前版本是千帆团队的中文增强版本",
+		Category:    "文心千帆",
+		IsChat:      true,
+		Disabled:    !conf.EnableBaiduWXAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/llama2-cn.png",
+	})
+	models = append(models, Model{
 		ID:          "文心千帆:" + baidu.ModelChatGLM2_6B_32K,
 		Name:        "ChatGLM2 6B",
 		ShortName:   "ChatGLM2",

@@ -230,6 +230,9 @@ const (
 	// ModelLlama2_7b_CN Qianfan-Chinese-Llama-2-7B是千帆团队在Llama-2-7b基础上的中文增强版本，在CMMLU、C-EVAL等中文数据集上表现优异
 	// ¥0.006元/千tokens
 	ModelLlama2_7b_CN = "model_baidu_llama2_7b_cn"
+	// ModelLlama2_13b_CN Qianfan-Chinese-Llama-2-13B是千帆团队在Llama-2-13b基础上的中文增强版本，在CMMLU、C-EVAL等中文数据集上表现优异
+	// ¥0.006元/千tokens
+	ModelLlama2_13b_CN = "model_baidu_llama2_13b_cn"
 	// ModelChatGLM2_6B_32K ChatGLM2-6B是由智谱AI与清华KEG实验室发布的中英双语对话模型，具备强大的推理性能、效果、较低的部署门槛及更长的上下文，在MMLU、CEval等数据集上相比初代有大幅的性能提升。
 	// ¥0.006元/千tokens
 	ModelChatGLM2_6B_32K = "model_baidu_chatglm2_6b_32k"
@@ -286,6 +289,8 @@ func (ai *BaiduAIImpl) modelURL(model Model) string {
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/llama_2_13b"
 	case ModelLlama2_7b_CN:
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/qianfan_chinese_llama_2_7b"
+	case ModelLlama2_13b_CN:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/qianfan_chinese_llama_2_13b"
 	case ModelChatGLM2_6B_32K:
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/chatglm2_6b_32k"
 	case ModelAquilaChat7B:

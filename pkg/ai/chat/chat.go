@@ -340,6 +340,7 @@ func (ai *Imp) selectImp(model string) Chat {
 		baidu.ModelBloomz7B,
 		baidu.ModelLlama2_13b,
 		baidu.ModelLlama2_7b_CN,
+		baidu.ModelLlama2_13b_CN,
 		baidu.ModelLlama2_70b:
 		// 百度文心千帆
 		return ai.ai.Baidu

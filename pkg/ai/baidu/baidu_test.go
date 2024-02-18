@@ -16,7 +16,7 @@ func TestBaiduAI_Chat(t *testing.T) {
 }
 
 func TestBaiduAI_ChatStream(t *testing.T) {
-	testBaiduAI_ChatStream(t, baidu.ModelLlama2_13b)
+	testBaiduAI_ChatStream(t, baidu.ModelLlama2_13b_CN)
 }
 
 func testBaiduAI_Chat(t *testing.T, model baidu.Model) {
