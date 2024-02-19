@@ -85,7 +85,9 @@ var coinTables = map[string]CoinTable{
 		"nova-ptc-xs-v1": 2, // 小参数量
 
 		// 腾讯
-		"hyllm": 15, // valid 腾讯混元大模型 ¥0.10/1K tokens
+		"hyllm":     3,  // valid 腾讯混元大模型 (Std) ¥0.10/1K tokens
+		"hyllm_std": 3,  // valid 腾讯混元小模型 Std ¥0.01/1K tokens
+		"hyllm_pro": 15, // valid 腾讯混元大模型 Pro ¥0.10/1K tokens
 
 		// 百川 https://platform.baichuan-ai.com/price
 		"Baichuan2-53B": 3, // valid 百川 53b ¥0.02/1K tokens

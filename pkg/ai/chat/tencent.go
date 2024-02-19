@@ -52,24 +52,25 @@ func (chat *TencentAIChat) initRequest(req Request) tencentai.Request {
 		contextMessages = append(finalSystemMessages, contextMessages...)
 	}
 
-	return tencentai.NewRequest(contextMessages)
+	return tencentai.NewRequest(req.Model, contextMessages)
 }
 
 func (chat *TencentAIChat) Chat(ctx context.Context, req Request) (*Response, error) {
-	res, err := chat.ai.Chat(ctx, chat.initRequest(req))
+	stream, err := chat.ChatStream(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	if res.Error.Code != 0 {
-		return nil, fmt.Errorf("tencent ai chat error: [%d] %s", res.Error.Code, res.Error.Message)
+	var content string
+	for msg := range stream {
+		if msg.ErrorCode != "" {
+			return nil, fmt.Errorf("%s %s", msg.ErrorCode, msg.Error)
+		}
+
+		content += msg.Text
 	}
 
-	return &Response{
-		Text:         res.Choices[0].Messages.Content,
-		InputTokens:  int(res.Usage.PromptTokens),
-		OutputTokens: int(res.Usage.CompletionTokens),
-	}, nil
+	return &Response{Text: content}, nil
 }
 
 func (chat *TencentAIChat) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {

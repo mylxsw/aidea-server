@@ -209,7 +209,6 @@ type Config struct {
 	UseTencentVoiceToText bool   `json:"use_tencent_voice_to_text" yaml:"use_tencent_voice_to_text"`
 	TencentSecretID       string `json:"tencent_secret_id" yaml:"tencent_secret_id"`
 	TencentSecretKey      string `json:"-" yaml:"tencent_secret_key"`
-	TencentAppID          int    `json:"tencent_app_id" yaml:"tencent_app_id"`
 	EnableTencentAI       bool   `json:"enable_tencent_ai" yaml:"enable_tencent_ai"`
 	TencentSMSSDKAppID    string `json:"tencent_sms_sdk_appid" yaml:"tencent_sms_sdk_appid"`
 	TencentSMSTemplateID  string `json:"tencent_sms_template_id" yaml:"tencent_sms_template_id"`
@@ -502,7 +501,6 @@ func Register(ins *app.App) {
 			TencentSMSSDKAppID:    ctx.String("tencent-smssdkappid"),
 			TencentSMSTemplateID:  ctx.String("tencent-smstemplateid"),
 			TencentSMSSign:        ctx.String("tencent-smssign"),
-			TencentAppID:          ctx.Int("tencent-appid"),
 			EnableTencentAI:       ctx.Bool("enable-tencentai"),
 
 			AliyunAccessKeyID:   ctx.String("aliyun-key"),

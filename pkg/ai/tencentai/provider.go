@@ -9,6 +9,6 @@ type Provider struct{}
 
 func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(func(conf *config.Config) *TencentAI {
-		return New(conf.TencentAppID, conf.TencentSecretID, conf.TencentSecretKey)
+		return New(conf.TencentSecretID, conf.TencentSecretKey)
 	})
 }

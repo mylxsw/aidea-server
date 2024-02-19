@@ -85,7 +85,9 @@ coin_tables:
     gpt-4-8k: 45
     gpt-4-32k: 90
     # 腾讯混元大模型
-    hyllm: 15
+    hyllm: 3
+    hyllm_std: 3
+    hyllm_pro: 15
     # 文心千帆
     model_badiu_llama2_70b: 6 # 拼写错误，但是已经上线了，不能改了
     model_baidu_llama2_13b: 2

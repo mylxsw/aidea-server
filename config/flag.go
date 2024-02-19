@@ -169,7 +169,6 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("tencent-smstemplateid", "", "腾讯短信验证码模板 ID")
 	ins.AddStringFlag("tencent-smssign", "AIdea", "腾讯短信签名")
 	ins.AddBoolFlag("tencent-voice", "是否使用腾讯的语音转文本服务，不启用则使用 OpenAI 的 Whisper 模型")
-	ins.AddIntFlag("tencent-appid", 0, "腾讯云 APP ID，用于腾讯混元大模型")
 	ins.AddBoolFlag("enable-tencentai", "是否启用腾讯混元大模型 AI 服务")
 
 	ins.AddStringFlag("aliyun-key", "", "aliyun app key")

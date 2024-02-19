@@ -5,17 +5,14 @@ import (
 	chat2 "github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"os"
-	"strconv"
 	"testing"
 
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/assert"
-	"github.com/mylxsw/go-utils/must"
 )
 
 func createTencentClient() chat2.Chat {
 	client := tencentai.New(
-		must.Must(strconv.Atoi(os.Getenv("TENCENTCLOUD_APPID"))),
 		os.Getenv("TENCENTCLOUD_SECRET_ID"),
 		os.Getenv("TENCENTCLOUD_SECRET_KEY"),
 	)

@@ -347,8 +347,6 @@ tencent-smssign: "AIdea"
 # 混元大模型
 # API 申请：https://hunyuan.tencent.com/
 
-# 腾讯云 APP ID，用于混元大模型
-tencent-appid: 1256440000
 # 是否启用腾讯混元大模型
 enable-tencentai: false
 

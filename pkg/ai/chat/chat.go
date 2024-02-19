@@ -360,7 +360,7 @@ func (ai *Imp) selectImp(model string) Chat {
 	case string(sensenova.ModelNovaPtcXLV1), string(sensenova.ModelNovaPtcXSV1):
 		// 商汤日日新
 		return ai.ai.SenseNova
-	case tencentai.ModelHyllm:
+	case tencentai.ModelHyllm, tencentai.ModelHyllmStd, tencentai.ModelHyllmPro:
 		// 腾讯混元大模型
 		return ai.ai.Tencent
 	case string(anthropic.ModelClaude2), string(anthropic.ModelClaudeInstant):

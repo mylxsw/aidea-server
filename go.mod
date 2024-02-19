@@ -68,6 +68,7 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/hunyuan v1.0.857 // indirect
 	github.com/tideland/golib v4.24.2+incompatible // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	golang.org/x/image v0.14.0 // indirect
@@ -97,7 +98,7 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/stretchr/testify v1.8.2
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/asr v1.0.665
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.727
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.857
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.671
 	github.com/urfave/cli/v2 v2.23.7 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
