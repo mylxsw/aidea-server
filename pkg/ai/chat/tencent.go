@@ -36,20 +36,7 @@ func (chat *TencentAIChat) initRequest(req Request) tencentai.Request {
 
 	contextMessages = contextMessages.Fix()
 	if len(systemMessages) > 0 {
-		systemMessage := systemMessages[0]
-		finalSystemMessages := make(tencentai.Messages, 0)
-
-		systemMessage.Role = "user"
-		finalSystemMessages = append(
-			finalSystemMessages,
-			systemMessage,
-			tencentai.Message{
-				Role:    "assistant",
-				Content: "好的",
-			},
-		)
-
-		contextMessages = append(finalSystemMessages, contextMessages...)
+		contextMessages = append(tencentai.Messages{systemMessages[0]}, contextMessages...)
 	}
 
 	return tencentai.NewRequest(req.Model, contextMessages)
