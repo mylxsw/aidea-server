@@ -238,6 +238,11 @@ func ImageToBase64Image(imagePath string) (string, error) {
 	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
+// RemoveImageBase64Prefix 移除 base64 图片的前缀
+func RemoveImageBase64Prefix(base64Image string) string {
+	return strings.SplitN(base64Image, ",", 2)[1]
+}
+
 // ImageToBase64ImageWithMime 把图片转换为 base64 编码图片
 func ImageToBase64ImageWithMime(imagePath string) (encoded string, mimeType string, err error) {
 	data, err := os.ReadFile(imagePath)

@@ -10,6 +10,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
+	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"github.com/mylxsw/go-utils/str"
 	"strings"
 
@@ -573,6 +574,41 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			VersionMin:  "1.0.5",
 			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/sky.png",
+		})
+	}
+
+	if conf.EnableZhipuAI {
+		models = append(models, Model{
+			ID:          "zhipu:" + zhipuai.ModelGLM4,
+			Name:        "GLM-4",
+			ShortName:   "GLM-4",
+			Description: "智谱 AI 全自研的大语言模型，提供了更强大的问答和文本生成能力，适合于复杂的对话交互和深度内容创作设计的场景",
+			Category:    "zhipu",
+			IsChat:      true,
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/glm.png",
+		})
+		//models = append(models, Model{
+		//	ID:            "zhipu:" + zhipuai.ModelGLM4V,
+		//	Name:          "GLM-4V",
+		//	ShortName:     "GLM-4V",
+		//	Description:   "智谱 AI 全自研的大语言模型，实现了视觉语言特征的深度融合，支持视觉问答、图像字幕、视觉定位、复杂目标检测等各类图像理解任务",
+		//	Category:      "zhipu",
+		//	IsChat:        true,
+		//	VersionMin:    "1.0.5",
+		//	AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/glm.png",
+		//	SupportVision: true,
+		//})
+		models = append(models, Model{
+			ID:            "zhipu:" + zhipuai.ModelGLM3Turbo,
+			Name:          "GLM-3 Turbo",
+			ShortName:     "GLM-3",
+			Description:   "智谱 AI 全自研的大语言模型，适用于对知识量、推理能力、创造力要求较高的场景，比如广告文案、小说写作、知识类写作、代码生成等",
+			Category:      "zhipu",
+			IsChat:        true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/glm.png",
+			SupportVision: true,
 		})
 	}
 

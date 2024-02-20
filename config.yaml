@@ -193,6 +193,12 @@ sky-appsecret: ""
 enable-gpt360: false
 gpt360-apikey: ""
 
+######## 智谱 #########
+
+# API 申请 https://open.bigmodel.cn
+enable-zhipuai: false
+zhipuai-key: ""
+
 ######## ONEAPI ########
 
 # https://github.com/songquanpeng/one-api

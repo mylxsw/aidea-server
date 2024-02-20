@@ -112,6 +112,11 @@ var coinTables = map[string]CoinTable{
 
 		// 天工 https://model-platform.tiangong.cn/pricing
 		"SkyChat-MegaVerse": 2, // valid ¥0.01/1K tokens
+
+		// 智谱 https://open.bigmodel.cn/pricing
+		"glm-4":       15, // valid ¥0.1/1K tokens
+		"glm-4v":      15, // valid ¥0.1/1K tokens
+		"glm-3-turbo": 1,  // valid ¥0.005/1K tokens
 	},
 
 	"voice-recognition": {

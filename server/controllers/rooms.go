@@ -125,6 +125,10 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 			return false
 		}
 
+		if !ctl.conf.EnableZhipuAI && item.Vendor == "zhipu" {
+			return false
+		}
+
 		// 检查版本是否满足条件
 		if item.VersionMax == "" && item.VersionMin == "" {
 			return true

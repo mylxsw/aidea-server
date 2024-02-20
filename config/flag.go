@@ -98,6 +98,9 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("enable-gpt360", "是否启用 360 智脑大模型")
 	ins.AddStringFlag("gpt360-apikey", "", "360 智脑大模型 API Key")
 
+	ins.AddBoolFlag("enable-zhipuai", "是否启用智谱 AI")
+	ins.AddStringFlag("zhipuai-key", "", "智谱 AI API Key")
+
 	ins.AddStringSliceFlag("oneapi-support-models", []string{}, "one-server 支持的模型，可选项 chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2")
 	ins.AddBoolFlag("enable-oneapi", "是否启用 OneAPI")
 	ins.AddStringFlag("oneapi-server", "", "one-server server")

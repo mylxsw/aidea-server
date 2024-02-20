@@ -15,6 +15,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
+	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -263,6 +264,8 @@ func NewChat(conf *config.Config, ai *AI) Chat {
 		virtualImpl = ai.Google
 	case "sky":
 		virtualImpl = ai.Sky
+	case "zhipu":
+		virtualImpl = ai.Zhipu
 	default:
 		if openrouter.SupportModel(impLowercase) {
 			virtualImpl = ai.Openrouter
@@ -330,6 +333,10 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.ai.Sky
 	}
 
+	if strings.HasPrefix(model, "zhipu:") {
+		return ai.ai.Zhipu
+	}
+
 	// TODO 根据模型名称判断使用哪个 AI
 	switch model {
 	case string(baidu.ModelErnieBot),
@@ -382,6 +389,8 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.ai.Google
 	case sky.ModelSkyChatMegaVerse:
 		return ai.ai.Sky
+	case zhipuai.ModelGLM4, zhipuai.ModelGLM3Turbo, zhipuai.ModelGLM4V:
+		return ai.ai.Zhipu
 	default:
 		if openrouter.SupportModel(model) {
 			return ai.ai.Openrouter

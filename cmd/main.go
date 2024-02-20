@@ -6,6 +6,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
+	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"github.com/mylxsw/aidea-server/pkg/file"
 	"github.com/mylxsw/aidea-server/pkg/wechat"
 	"math/rand"
@@ -160,6 +161,7 @@ func main() {
 		google.Provider{},
 		openrouter.Provider{},
 		sky.Provider{},
+		zhipuai.Provider{},
 	)
 
 	app.MustRun(ins)

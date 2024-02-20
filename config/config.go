@@ -115,6 +115,10 @@ type Config struct {
 	EnableGPT360 bool   `json:"enable_gpt360" yaml:"enable_gpt360"`
 	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
 
+	// 智谱
+	EnableZhipuAI bool   `json:"enable_zhipuai" yaml:"enable_zhipuai"`
+	ZhipuAIKey    string `json:"zhipuai_key" yaml:"zhipuai_key"`
+
 	// OneAPI 支持的模型列表
 	// one-server: https://github.com/songquanpeng/one-api
 	OneAPISupportModels []string `json:"oneapi_support_models" yaml:"oneapi_support_models"`
@@ -422,6 +426,9 @@ func Register(ins *app.App) {
 
 			EnableGPT360: ctx.Bool("enable-gpt360"),
 			GPT360APIKey: ctx.String("gpt360-apikey"),
+
+			EnableZhipuAI: ctx.Bool("enable-zhipuai"),
+			ZhipuAIKey:    ctx.String("zhipuai-key"),
 
 			OneAPISupportModels: ctx.StringSlice("oneapi-support-models"),
 			EnableOneAPI:        ctx.Bool("enable-oneapi"),
