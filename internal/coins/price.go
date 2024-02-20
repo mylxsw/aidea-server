@@ -117,6 +117,11 @@ var coinTables = map[string]CoinTable{
 		"glm-4":       15, // valid ¥0.1/1K tokens
 		"glm-4v":      15, // valid ¥0.1/1K tokens
 		"glm-3-turbo": 1,  // valid ¥0.005/1K tokens
+
+		// 月之暗面 https://platform.moonshot.cn/pricing
+		"moonshot-v1-8k":   2,  // valid ¥0.012/1K tokens
+		"moonshot-v1-32k":  4,  // valid ¥0.024/1K tokens
+		"moonshot-v1-128k": 10, // valid ¥0.06/1K tokens
 	},
 
 	"voice-recognition": {

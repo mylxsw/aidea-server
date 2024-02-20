@@ -119,6 +119,10 @@ type Config struct {
 	EnableZhipuAI bool   `json:"enable_zhipuai" yaml:"enable_zhipuai"`
 	ZhipuAIKey    string `json:"zhipuai_key" yaml:"zhipuai_key"`
 
+	// 月之暗面
+	EnableMoonshot bool   `json:"enable_moonshot" yaml:"enable_moonshot"`
+	MoonshotAPIKey string `json:"moonshot_api_key" yaml:"moonshot_api_key"`
+
 	// OneAPI 支持的模型列表
 	// one-server: https://github.com/songquanpeng/one-api
 	OneAPISupportModels []string `json:"oneapi_support_models" yaml:"oneapi_support_models"`
@@ -429,6 +433,9 @@ func Register(ins *app.App) {
 
 			EnableZhipuAI: ctx.Bool("enable-zhipuai"),
 			ZhipuAIKey:    ctx.String("zhipuai-key"),
+
+			EnableMoonshot: ctx.Bool("enable-moonshot"),
+			MoonshotAPIKey: ctx.String("moonshot-apikey"),
 
 			OneAPISupportModels: ctx.StringSlice("oneapi-support-models"),
 			EnableOneAPI:        ctx.Bool("enable-oneapi"),

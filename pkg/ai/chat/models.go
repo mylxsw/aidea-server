@@ -7,6 +7,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
+	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
@@ -608,6 +609,42 @@ func chinaModels(conf *config.Config) []Model {
 			IsChat:        true,
 			VersionMin:    "1.0.5",
 			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/glm.png",
+			SupportVision: true,
+		})
+	}
+
+	if conf.EnableMoonshot {
+		models = append(models, Model{
+			ID:            "moonshot:" + moonshot.ModelMoonshotV1_8K,
+			Name:          "Moonshot 8K",
+			ShortName:     "Moonshot 8K",
+			Description:   "AI 创业公司月之暗面推出的大语言模型",
+			Category:      "moonshot",
+			IsChat:        true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/moonshot.png",
+			SupportVision: true,
+		})
+		models = append(models, Model{
+			ID:            "moonshot:" + moonshot.ModelMoonshotV1_32K,
+			Name:          "Moonshot 32K",
+			ShortName:     "Moonshot 32K",
+			Description:   "AI 创业公司月之暗面推出的大语言模型",
+			Category:      "moonshot",
+			IsChat:        true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/moonshot.png",
+			SupportVision: true,
+		})
+		models = append(models, Model{
+			ID:            "moonshot:" + moonshot.ModelMoonshotV1_128K,
+			Name:          "Moonshot 128K",
+			ShortName:     "Moonshot 128K",
+			Description:   "AI 创业公司月之暗面推出的大语言模型",
+			Category:      "moonshot",
+			IsChat:        true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/moonshot.png",
 			SupportVision: true,
 		})
 	}

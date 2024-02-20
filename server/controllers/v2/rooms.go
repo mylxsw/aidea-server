@@ -123,6 +123,10 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 				return false
 			}
 
+			if !ctl.conf.EnableMoonshot && item.Vendor == "moonshot" {
+				return false
+			}
+
 			if item.VersionMax == "" && item.VersionMin == "" {
 				return true
 			}

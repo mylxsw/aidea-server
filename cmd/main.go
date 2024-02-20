@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
+	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
 	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
@@ -162,6 +163,7 @@ func main() {
 		openrouter.Provider{},
 		sky.Provider{},
 		zhipuai.Provider{},
+		moonshot.Provider{},
 	)
 
 	app.MustRun(ins)

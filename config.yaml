@@ -199,6 +199,12 @@ gpt360-apikey: ""
 enable-zhipuai: false
 zhipuai-key: ""
 
+######## 月之暗面 ########
+
+# API 申请 https://platform.moonshot.cn
+enable-moonshot: false
+moonshot-apikey: ""
+
 ######## ONEAPI ########
 
 # https://github.com/songquanpeng/one-api

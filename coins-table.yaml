@@ -124,3 +124,7 @@ coin_tables:
     glm-4: 15
     glm-4v: 15
     glm-3-turbo: 1
+    # 月之暗面
+    moonshot-v1-8k: 2
+    moonshot-v1-32k: 4
+    moonshot-v1-128k: 10

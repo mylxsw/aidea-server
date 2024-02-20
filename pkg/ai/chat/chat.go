@@ -10,6 +10,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
+	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
@@ -266,6 +267,8 @@ func NewChat(conf *config.Config, ai *AI) Chat {
 		virtualImpl = ai.Sky
 	case "zhipu":
 		virtualImpl = ai.Zhipu
+	case "moonshot":
+		virtualImpl = ai.Moonshot
 	default:
 		if openrouter.SupportModel(impLowercase) {
 			virtualImpl = ai.Openrouter
@@ -337,6 +340,10 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.ai.Zhipu
 	}
 
+	if strings.HasPrefix(model, "moonshot:") {
+		return ai.ai.Moonshot
+	}
+
 	// TODO 根据模型名称判断使用哪个 AI
 	switch model {
 	case string(baidu.ModelErnieBot),
@@ -391,6 +398,8 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.ai.Sky
 	case zhipuai.ModelGLM4, zhipuai.ModelGLM3Turbo, zhipuai.ModelGLM4V:
 		return ai.ai.Zhipu
+	case moonshot.ModelMoonshotV1_8K, moonshot.ModelMoonshotV1_32K, moonshot.ModelMoonshotV1_128K:
+		return ai.ai.Moonshot
 	default:
 		if openrouter.SupportModel(model) {
 			return ai.ai.Openrouter
