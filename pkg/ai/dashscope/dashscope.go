@@ -6,11 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/go-utils/ternary"
 	"io"
 	"math/rand"
 	"net/http"
 	"strings"
+
+	"github.com/mylxsw/go-utils/ternary"
 )
 
 type DashScope struct {
@@ -62,7 +63,7 @@ const (
 )
 
 type ChatRequest struct {
-	// Model 指明需要调用的模型，目前可选 qwen-v1 和 qwen-plus-v1
+	// Model 指明需要调用的模型，目前可选 qwen-v1, qwen-plus-v1, qwen-vl-plus
 	Model      string         `json:"model,omitempty"`
 	Input      ChatInput      `json:"input,omitempty"`
 	Parameters ChatParameters `json:"parameters,omitempty"`
@@ -159,8 +160,12 @@ func (ds *DashScope) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, 
 	if err != nil {
 		return nil, err
 	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+"/api/v1/services/aigc/text-generation/generation", bytes.NewReader(body))
+	endpoint := ternary.IfElse(
+		req.Model == ModelQWenVLPlus,
+		"/api/v1/services/aigc/multimodal-generation/generation",
+		"/api/v1/services/aigc/text-generation/generation",
+	)
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", ds.serviceURL+endpoint, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}

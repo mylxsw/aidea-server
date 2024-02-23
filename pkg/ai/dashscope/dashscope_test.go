@@ -2,9 +2,10 @@ package dashscope_test
 
 import (
 	"context"
-	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"os"
 	"testing"
+
+	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/assert"
@@ -17,9 +18,42 @@ func createClient() *dashscope.DashScope {
 func TestDashScope_Chat(t *testing.T) {
 	client := createClient()
 	resp, err := client.Chat(context.TODO(), dashscope.ChatRequest{
-		Model: "qwen-plus",
+		Model: dashscope.ModelQWenPlus,
 		Input: dashscope.ChatInput{
 			Prompt: "鲁迅为什么要暴打周树人呢",
+		},
+	})
+	assert.NoError(t, err)
+
+	log.With(resp).Debug("resp")
+}
+
+func TestDashScope_Chat_VL(t *testing.T) {
+	client := createClient()
+	resp, err := client.Chat(context.TODO(), dashscope.ChatRequest{
+		Model: dashscope.ModelQWenVLPlus,
+		Input: dashscope.ChatInput{
+			Messages: []dashscope.Message{
+				{
+					Role: "system",
+					Content: []dashscope.MessageContent{
+						{
+							Text: "You are a helpful assistant.",
+						},
+					},
+				},
+				{
+					Role: "user",
+					Content: []dashscope.MessageContent{
+						{
+							Image: "https://dashscope.oss-cn-beijing.aliyuncs.com/images/dog_and_girl.jpeg",
+						},
+						{
+							Text: "这个图片是哪里？",
+						},
+					},
+				},
+			},
 		},
 	})
 	assert.NoError(t, err)
