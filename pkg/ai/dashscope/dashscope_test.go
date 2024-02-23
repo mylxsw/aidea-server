@@ -27,7 +27,6 @@ func TestDashScope_Chat(t *testing.T) {
 
 	log.With(resp).Debug("resp")
 }
-
 func TestDashScope_Chat_VL(t *testing.T) {
 	client := createClient()
 	resp, err := client.Chat(context.TODO(), dashscope.ChatRequest{
