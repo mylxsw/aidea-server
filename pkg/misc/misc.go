@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/hashicorp/go-uuid"
-	"github.com/mylxsw/asteria/log"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -18,6 +16,9 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/hashicorp/go-uuid"
+	"github.com/mylxsw/asteria/log"
 
 	"gopkg.in/resty.v1"
 
@@ -316,7 +317,8 @@ func NoError2[T any](_ T, err error) {
 
 // GenerateAPIToken 生成 API Token
 func GenerateAPIToken(name string, uid int64) string {
-	return fmt.Sprintf("%s.%d.%x", HashID(uid), time.Now().UnixNano(), sha1.Sum([]byte(fmt.Sprintf("%s:%d:%d:%d", name, uid, time.Now().UnixNano(), rand.Intn(9999999999)))))
+	randomNumber := rand.Int63n(int64(9999999999))
+	return fmt.Sprintf("%s.%d.%x", HashID(uid), time.Now().UnixNano(), sha1.Sum([]byte(fmt.Sprintf("%s:%d:%d:%d", name, uid, time.Now().UnixNano(), randomNumber))))
 }
 
 // UUID 生成一个 UUID
