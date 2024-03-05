@@ -74,6 +74,11 @@ func MessageTokenCount(messages Messages, model string) (numTokens int, err erro
 					// 智谱的 GLM 4V 模型，图片的 token 计算方式不同
 					if model == "glm-4v" {
 						numTokens += 1047
+					} else if strings.HasPrefix(model, "claude-") {
+						// Anthropic 的 claude 系列模型，图片的 token 计算方式不同，这里简单处理
+						// tokens = (width px * height px)/750
+						// https://docs.anthropic.com/claude/docs/vision#image-costs
+						numTokens += 1000
 					} else {
 						if content.ImageURL.Detail == "low" {
 							numTokens += 65

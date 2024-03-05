@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/anthropic"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/go-utils/ternary"
 	"strings"
 )
 
@@ -30,11 +32,14 @@ func (chat *AnthropicChat) initRequest(req Request) anthropic.MessageRequest {
 			if msg.MultipartContents != nil {
 				contents := make([]anthropic.MessageContent, 0)
 				for _, ct := range msg.MultipartContents {
-					item := anthropic.MessageContent{Type: ct.Type}
+					item := anthropic.MessageContent{Type: ternary.If(ct.Type == "text", "text", "image")}
 					if ct.Type == "text" {
 						item.Text = ct.Text
 					} else if ct.ImageURL != nil {
-						item.Source = anthropic.NewImageSource(ct.ImageURL.URL)
+						item.Source = anthropic.NewImageSource(
+							misc.Base64ImageMediaType(ct.ImageURL.URL),
+							misc.RemoveImageBase64Prefix(ct.ImageURL.URL),
+						)
 					}
 
 					contents = append(contents, item)

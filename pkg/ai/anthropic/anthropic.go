@@ -109,10 +109,10 @@ type MessageContent struct {
 	Source *ImageSource `json:"source,omitempty"`
 }
 
-func NewImageSource(data string) *ImageSource {
+func NewImageSource(mediaType, data string) *ImageSource {
 	return &ImageSource{
 		Type:      "base64",
-		MediaType: "image/jpeg",
+		MediaType: mediaType,
 		Data:      data,
 	}
 }
