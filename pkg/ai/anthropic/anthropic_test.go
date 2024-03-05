@@ -16,20 +16,14 @@ import (
 func TestAnthropic_Chat(t *testing.T) {
 	client := anthropic.New("", os.Getenv("ANTHROPIC_API_KEY"), http.DefaultClient)
 
-	resp, err := client.Chat(context.TODO(), anthropic.NewRequest(anthropic.ModelClaudeInstant, []anthropic.Message{
-		{
-			Role:    "user",
-			Content: "你是一名占卜师，我给你名字，你帮我占卜运势",
+	resp, err := client.Chat(context.TODO(), anthropic.MessageRequest{
+		Model: anthropic.ModelClaude3Opus,
+		Messages: []anthropic.Message{
+			anthropic.NewTextMessage("user", "你是一名占卜师，我给你名字，你帮我占卜运势"),
+			anthropic.NewTextMessage("assistant", "OK，请告诉我你的名字"),
+			anthropic.NewTextMessage("user", "我的名字是李逍遥，请帮我占卜一下运势"),
 		},
-		{
-			Role:    "assistant",
-			Content: "OK，请告诉我你的名字",
-		},
-		{
-			Role:    "user",
-			Content: "我的名字是李逍遥，请帮我占卜一下运势",
-		},
-	}))
+	})
 	assert.NoError(t, err)
 
 	if resp.Error != nil && resp.Error.Type != "" {
@@ -46,20 +40,14 @@ func TestAnthropic_ChatStream(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	resp, err := client.ChatStream(ctx, anthropic.NewRequest(anthropic.ModelClaude2, []anthropic.Message{
-		{
-			Role:    "user",
-			Content: "你是一名占卜师，我给你名字，你帮我占卜运势",
+	resp, err := client.ChatStream(ctx, anthropic.MessageRequest{
+		Model: anthropic.ModelClaude3Sonnet,
+		Messages: []anthropic.Message{
+			anthropic.NewTextMessage("user", "你是一名占卜师，我给你名字，你帮我占卜运势"),
+			anthropic.NewTextMessage("assistant", "OK，请告诉我你的名字"),
+			anthropic.NewTextMessage("user", "我的名字是李逍遥，请帮我占卜一下运势"),
 		},
-		{
-			Role:    "assistant",
-			Content: "OK，请告诉我你的名字",
-		},
-		{
-			Role:    "user",
-			Content: "我的名字是李逍遥，请帮我占卜一下运势",
-		},
-	}))
+	})
 	assert.NoError(t, err)
 
 	for res := range resp {
@@ -68,6 +56,6 @@ func TestAnthropic_ChatStream(t *testing.T) {
 			return
 		}
 
-		fmt.Print(res.Completion)
+		fmt.Print(res.Text())
 	}
 }

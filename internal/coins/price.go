@@ -45,6 +45,9 @@ var coinTables = map[string]CoinTable{
 		// Anthropic
 		"claude-instant-1": 5,  // valid (input $1.63/million, output $5.51/million)  -> ¥0.039/1K tokens
 		"claude-2":         25, // valid (input $11.2/million, output $32.68/million) -> ¥0.229/1K tokens
+		"claude-3-opus":    75, // valid (input $15/million, output $75/million)      -> ¥0.63/1K tokens
+		"claude-3-sonnet":  10, // valid (input $3/million, output $15/million)       -> ¥0.063/1K tokens
+		"claude-3-haiku":   1,  // valid (input $0.25/million, output $1.25/million)  -> ¥0.0053/1K tokens
 
 		// 国产模型
 

@@ -71,6 +71,9 @@ coin_tables:
     # Anthropic
     claude-2: 25
     claude-instant-1: 5
+    claude-3-opus: 50
+    claude-3-sonnet: 5
+    claude-3-haiku: 1
     # 讯飞星火
     general: 3
     generalv2: 5

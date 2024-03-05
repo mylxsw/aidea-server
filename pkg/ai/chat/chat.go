@@ -377,7 +377,11 @@ func (ai *Imp) selectImp(model string) Chat {
 	case tencentai.ModelHyllm, tencentai.ModelHyllmStd, tencentai.ModelHyllmPro:
 		// 腾讯混元大模型
 		return ai.ai.Tencent
-	case string(anthropic.ModelClaude2), string(anthropic.ModelClaudeInstant):
+	case string(anthropic.ModelClaude2),
+		string(anthropic.ModelClaudeInstant),
+		string(anthropic.ModelClaude3Opus),
+		string(anthropic.ModelClaude3Sonnet),
+		string(anthropic.ModelClaude3Haiku):
 		// Anthropic
 		return ai.ai.Anthropic
 	case baichuan.ModelBaichuan2_53B:

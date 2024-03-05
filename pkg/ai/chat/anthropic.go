@@ -15,48 +15,51 @@ func NewAnthropicChat(ai *anthropic.Anthropic) *AnthropicChat {
 	return &AnthropicChat{ai: ai}
 }
 
-func (chat *AnthropicChat) initRequest(req Request) anthropic.Request {
+func (chat *AnthropicChat) initRequest(req Request) anthropic.MessageRequest {
 	req.Model = strings.TrimPrefix(req.Model, "Anthropic:")
 
-	var systemMessages anthropic.Messages
-	var contextMessages anthropic.Messages
+	var systemMessage string
+	var contextMessages []anthropic.Message
 
 	for _, msg := range req.Messages {
-		m := anthropic.Message{
-			Role:    msg.Role,
-			Content: msg.Content,
-		}
-
 		if msg.Role == "system" {
-			systemMessages = append(systemMessages, m)
+			if msg.Content != "" {
+				systemMessage = msg.Content
+			}
 		} else {
-			contextMessages = append(contextMessages, m)
+			if msg.MultipartContents != nil {
+				contents := make([]anthropic.MessageContent, 0)
+				for _, ct := range msg.MultipartContents {
+					item := anthropic.MessageContent{Type: ct.Type}
+					if ct.Type == "text" {
+						item.Text = ct.Text
+					} else if ct.ImageURL != nil {
+						item.Source = anthropic.NewImageSource(ct.ImageURL.URL)
+					}
+
+					contents = append(contents, item)
+				}
+
+				contextMessages = append(contextMessages, anthropic.Message{
+					Role:    msg.Role,
+					Content: contents,
+				})
+			} else {
+				contextMessages = append(contextMessages, anthropic.NewTextMessage(msg.Role, msg.Content))
+			}
 		}
 	}
 
-	if len(systemMessages) > 0 {
-		systemMessage := systemMessages[0]
-		finalSystemMessages := make(anthropic.Messages, 0)
-
-		systemMessage.Role = "user"
-		finalSystemMessages = append(
-			finalSystemMessages,
-			systemMessage,
-			anthropic.Message{
-				Role:    "assistant",
-				Content: "好的",
-			},
-		)
-
-		contextMessages = append(finalSystemMessages, contextMessages...)
+	res := anthropic.MessageRequest{
+		Model:    anthropic.Model(req.Model),
+		Messages: contextMessages,
 	}
 
-	// Bugfix: prompt must start with "\n\nHuman:" turn
-	if len(contextMessages) > 0 && contextMessages[0].Role != "user" {
-		contextMessages = contextMessages[1:]
+	if systemMessage != "" {
+		res.System = systemMessage
 	}
 
-	return anthropic.NewRequest(anthropic.Model(req.Model), contextMessages)
+	return res
 }
 
 func (chat *AnthropicChat) Chat(ctx context.Context, req Request) (*Response, error) {
@@ -69,9 +72,13 @@ func (chat *AnthropicChat) Chat(ctx context.Context, req Request) (*Response, er
 		return nil, fmt.Errorf("anthropic ai chat error: [%s] %s", res.Error.Type, res.Error.Message)
 	}
 
-	return &Response{
-		Text: res.Completion,
-	}, nil
+	ret := Response{Text: res.Text()}
+	if res.Usage != nil {
+		ret.InputTokens = res.Usage.InputTokens
+		ret.OutputTokens = res.Usage.OutputTokens
+	}
+
+	return &ret, nil
 }
 
 func (chat *AnthropicChat) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
@@ -103,7 +110,7 @@ func (chat *AnthropicChat) ChatStream(ctx context.Context, req Request) (<-chan 
 				select {
 				case <-ctx.Done():
 					return
-				case res <- Response{Text: data.Completion}:
+				case res <- Response{Text: data.Text()}:
 				}
 			}
 		}
@@ -115,5 +122,9 @@ func (chat *AnthropicChat) ChatStream(ctx context.Context, req Request) (<-chan 
 func (chat *AnthropicChat) MaxContextLength(model string) int {
 	// https://docs.anthropic.com/claude/reference/selecting-a-model
 	// 这里减掉 4000 用于输出
-	return 100000 - 4000
+	if model == string(anthropic.ModelClaudeInstant) {
+		return 100000 - 4096
+	}
+
+	return 200000 - 4096
 }
