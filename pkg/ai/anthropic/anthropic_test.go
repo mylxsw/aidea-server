@@ -17,7 +17,7 @@ func TestAnthropic_Chat(t *testing.T) {
 	client := anthropic.New("", os.Getenv("ANTHROPIC_API_KEY"), http.DefaultClient)
 
 	resp, err := client.Chat(context.TODO(), anthropic.MessageRequest{
-		Model: anthropic.ModelClaude3Opus,
+		Model: anthropic.ModelClaude3Haiku,
 		Messages: []anthropic.Message{
 			anthropic.NewTextMessage("user", "你是一名占卜师，我给你名字，你帮我占卜运势"),
 			anthropic.NewTextMessage("assistant", "OK，请告诉我你的名字"),
@@ -41,7 +41,7 @@ func TestAnthropic_ChatStream(t *testing.T) {
 	defer cancel()
 
 	resp, err := client.ChatStream(ctx, anthropic.MessageRequest{
-		Model: anthropic.ModelClaude3Sonnet,
+		Model: anthropic.ModelClaude3Haiku,
 		Messages: []anthropic.Message{
 			anthropic.NewTextMessage("user", "你是一名占卜师，我给你名字，你帮我占卜运势"),
 			anthropic.NewTextMessage("assistant", "OK，请告诉我你的名字"),

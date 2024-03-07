@@ -2,7 +2,6 @@ package coins
 
 import (
 	"math"
-	"time"
 )
 
 var coinTables = map[string]CoinTable{
@@ -165,23 +164,12 @@ func GetOpenAITextCoins(model string, wordCount int64) int64 {
 		return 50
 	}
 
-	// TODO 促销阶段，GPT-4 价格调整为 10 智慧果，满足任意截止:
-	// 1. 至 2023-11-01
-	// 2. 5000 美金消耗完毕
-	if time.Now().Before(time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC)) && (model == "gpt-4" || model == "gpt-4-8k") {
-		unit = 10
-	}
-
 	return int64(math.Ceil(float64(unit) * float64(wordCount) / 1000.0))
 }
 
-func GetOpenAITokensForCoins(model string, coins int64) int64 {
-	unit, ok := coinTables["openai"][model]
-	if !ok {
-		return 0
-	}
-
-	return int64(math.Ceil(float64(coins) / float64(unit) * 1000.0))
+// GetTextModelCoins 获取文本模型计费，该接口对于 Input 和 Output 分开计费
+func GetTextModelCoins(model string, inputToken, outputToken int64) int64 {
+	return GetOpenAITextCoins(model, inputToken+outputToken)
 }
 
 func GetVoiceCoins(model string) int64 {
