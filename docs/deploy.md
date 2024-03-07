@@ -130,3 +130,8 @@ mysql> SOURCE /Users/mylxsw/Workspace/codes/ai/ai-server/migrate/sql/2023092501-
 
    建议大家尽可能的自己去部署，遇到问题在 [GitHub Issues](https://github.com/mylxsw/aidea-server/issues)
    提出，如果实在懒得搞，可以找我来帮你部署，详情参考 [服务器代部署说明](./deploy-vip.md)。
+
+6. 七牛云对象存储 Kodo 在哪里配置图片样式？
+
+    ![image](https://github.com/mylxsw/aidea-server/assets/2330911/5a450205-66aa-4f26-9dc3-d4696a2abfae)
+
