@@ -461,3 +461,11 @@ free-chat-model: gpt-3.5-turbo
 ######## 微信开放平台 ########
 wechat-appid: ""
 wechat-secret: ""
+
+######## Stripe ########
+# 是否启用 Stripe 支付
+# https://stripe.com/docs/development/quickstart#api-keys
+enable-stripe: false
+stripe-publishable-key: ""
+stripe-secret-key: ""
+stripe-webhook-secret: ""

@@ -11,6 +11,10 @@ import (
 type PriceInfo struct {
 	// CoinTable 价格表
 	CoinTables map[string]CoinTable `json:"coin_tables" yaml:"coin_tables"`
+	// PreferUSD 是否优先使用美元计价
+	PreferUSD bool `json:"prefer_usd,omitempty" yaml:"prefer_usd,omitempty"`
+	// DefaultExchangeRate 默认人民币-美元汇率
+	DefaultExchangeRate float64 `json:"default_exchange_rate,omitempty" yaml:"default_exchange_rate,omitempty"`
 	// Products 在线支付产品列表
 	Products []Product `json:"products,omitempty" yaml:"products,omitempty"`
 	// FreeModels 免费模型列表
@@ -75,6 +79,11 @@ func LoadPriceInfo(tableFile string) error {
 	InviteGiftCoins = priceInfo.InviteGiftCoins
 	InvitedGiftCoins = priceInfo.InvitedGiftCoins
 	InvitePaymentGiftRate = priceInfo.InvitePaymentGiftRate
+	PreferUSD = priceInfo.PreferUSD
+
+	if priceInfo.DefaultExchangeRate > 0 {
+		DefaultExchangeRate = priceInfo.DefaultExchangeRate
+	}
 
 	return nil
 }
@@ -89,5 +98,7 @@ func DebugPrintPriceInfo() {
 		"invite_gift_coins":        InviteGiftCoins,
 		"invited_gift_coins":       InvitedGiftCoins,
 		"invite_payment_gift_rate": InvitePaymentGiftRate,
+		"prefer_usd":               PreferUSD,
+		"default_exchange_rate":    DefaultExchangeRate,
 	}).Debug("coins table loaded")
 }

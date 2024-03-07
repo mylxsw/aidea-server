@@ -284,6 +284,9 @@ type Config struct {
 	// 微信开放平台配置
 	WeChatAppID  string `json:"wechat_appid" yaml:"wechat_appid"`
 	WeChatSecret string `json:"wechat_secret" yaml:"wechat_secret"`
+
+	// Stripe 支付
+	Stripe StripeConfig `json:"stripe" yaml:"stripe"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -343,6 +346,15 @@ func Register(ins *app.App) {
 
 			coins.DebugPrintPriceInfo()
 		}
+
+		// 加载 Stripe 配置
+		stripe := StripeConfig{
+			Enabled:        ctx.Bool("enable-stripe"),
+			PublishableKey: ctx.String("stripe-publishable-key"),
+			SecretKey:      ctx.String("stripe-secret-key"),
+			WebhookSecret:  ctx.String("stripe-webhook-secret"),
+		}
+		stripe.Init()
 
 		return &Config{
 			Listen:              ctx.String("listen"),
@@ -569,6 +581,8 @@ func Register(ins *app.App) {
 
 			WeChatAppID:  ctx.String("wechat-appid"),
 			WeChatSecret: ctx.String("wechat-secret"),
+
+			Stripe: stripe,
 		}
 	})
 }

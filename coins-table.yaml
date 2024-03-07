@@ -1,4 +1,3 @@
-
 # 注册账号赠币数量
 signup_gift_coins: 100
 # 绑定手机赠币数量
@@ -27,10 +26,16 @@ free_models:
   - model: model_ernie_bot_turbo
     name: 文心一言 Turbo
     free_count: 5
-    
+
   - model: generalv2
     name: 讯飞星火 v2
     free_count: 5
+
+# 优先显示美元价格
+# 启用后，在充值页面将默认显示美元价格
+prefer_usd: false
+# 默认汇率（人民币-美元）
+default_exchange_rate: 7.1
 
 # 在线充值产品列表，这里为空时，将使用 internal/coins/ 中的 products 数据
 # 字段说明：
@@ -38,6 +43,7 @@ free_models:
 #   - name: 产品名称
 #   - quota: 购买后获得的智慧果数量
 #   - retail_price: 零售价，单位为分
+#   - retail_price_usd: 零售价，单位为美元（用于 Stripe 支付方式）
 #   - expire_policy: 有效期，可选值为 never, week, 2week, month, 3month, 6month, year
 #   - recommend: 是否推荐，推荐的产品会在充值页面显示 Best Deal 标识
 products:
@@ -59,10 +65,10 @@ products:
 coin_tables:
   # 图片生成价格：文生图、图生图、超分辨率、上色
   image:
-      default: 20
-      dall-e-3: 100
-      dall-e-3-hd: 150
-      dall-e-2: 20
+    default: 20
+    dall-e-3: 100
+    dall-e-3-hd: 150
+    dall-e-2: 20
   # 所有聊天模型都在这里配置，因为历史遗留原因，都归类到了 openai 下
   openai:
     # 百川大模型

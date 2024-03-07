@@ -6,6 +6,11 @@ import (
 	"fmt"
 	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
+	"github.com/stripe/stripe-go/v76"
+	"github.com/stripe/stripe-go/v76/customer"
+	"github.com/stripe/stripe-go/v76/ephemeralkey"
+	"github.com/stripe/stripe-go/v76/paymentintent"
+	"github.com/stripe/stripe-go/v76/webhook"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -42,40 +47,46 @@ func NewPaymentController(resolver infra.Resolver) web.Controller {
 	return &ctl
 }
 
-func (p *PaymentController) Register(router web.Router) {
+func (ctl *PaymentController) Register(router web.Router) {
 	router.Group("/payment", func(router web.Router) {
 		// 可以公开访问的可购买产品列表
-		router.Get("/products", p.AppleProducts)
-		router.Get("/others/products", p.AppleProducts) // @deprecated(since 1.0.9)
-		router.Get("/apple/products", p.AppleProducts)  // @deprecated(since 1.0.9)
-		router.Get("/alipay/products", p.AppleProducts) // @deprecated(since 1.0.8)
+		router.Get("/products", ctl.AppleProducts)
+		router.Get("/others/products", ctl.AppleProducts) // @deprecated(since 1.0.9)
+		router.Get("/apple/products", ctl.AppleProducts)  // @deprecated(since 1.0.9)
+		router.Get("/alipay/products", ctl.AppleProducts) // @deprecated(since 1.0.8)
 
 		// Apple 应用内支付
-		router.Post("/apple", p.CreateApplePayment)
-		router.Put("/apple/{id}", p.UpdateApplePayment)
-		router.Delete("/apple/{id}", p.CancelApplePayment)
-		router.Post("/apple/{id}/verify", p.VerifyApplePayment)
+		router.Post("/apple", ctl.CreateApplePayment)
+		router.Put("/apple/{id}", ctl.UpdateApplePayment)
+		router.Delete("/apple/{id}", ctl.CancelApplePayment)
+		router.Post("/apple/{id}/verify", ctl.VerifyApplePayment)
 
 		// 支付宝支付 @deprecated(since 1.0.8)
 		router.Group("/alipay", func(router web.Router) {
-			router.Post("/", p.CreateAlipay)
-			router.Post("/client-confirm", p.AlipayClientConfirm)
+			router.Post("/", ctl.CreateAlipay)
+			router.Post("/client-confirm", ctl.AlipayClientConfirm)
 		})
 
 		// 支付宝支付别名(IOS 完全去支付宝，避免审核被拒)
 		router.Group("/others", func(router web.Router) {
-			router.Post("/", p.CreateAlipay)
-			router.Post("/client-confirm", p.AlipayClientConfirm)
+			router.Post("/", ctl.CreateAlipay)
+			router.Post("/client-confirm", ctl.AlipayClientConfirm)
+		})
+
+		// Stripe 支付
+		router.Group("/stripe", func(router web.Router) {
+			router.Post("/payment-sheet", ctl.CreateStripePayment)
 		})
 
 		// 支付状态查询
 		router.Group("/status", func(router web.Router) {
-			router.Get("/{id}", p.QueryPaymentStatus)
+			router.Get("/{id}", ctl.QueryPaymentStatus)
 		})
 
 		// 支付结果回调通知
 		router.Group("/callback", func(router web.Router) {
-			router.Post("/alipay-notify", p.AlipayNotify)
+			router.Post("/alipay-notify", ctl.AlipayNotify)
+			router.Any("/stripe/webhook", ctl.StripeWebhook)
 		})
 
 	})
@@ -393,6 +404,11 @@ func (ctl *PaymentController) AppleProducts(ctx context.Context, webCtx web.Cont
 		if product.RetailPrice == 0 {
 			product.RetailPrice = product.Quota
 		}
+
+		if product.RetailPriceUSD <= 0 {
+			product.RetailPriceUSD = product.GetRetailPriceUSD()
+		}
+
 		return product
 	})
 
@@ -413,7 +429,8 @@ func (ctl *PaymentController) AppleProducts(ctx context.Context, webCtx web.Cont
 	})
 
 	return webCtx.JSON(web.M{
-		"consume": products,
+		"prefer_usd": coins.PreferUSD,
+		"consume":    products,
 		"note": `
 1. 您购买的智慧果需在有效期内使用，逾期未使用即失效；
 2. 智慧果不支持退款、提现或转赠他人；
@@ -613,5 +630,90 @@ func (ctl *PaymentController) CancelApplePayment(ctx context.Context, webCtx web
 	return webCtx.JSON(map[string]interface{}{
 		"status": "ok",
 		"id":     paymentId,
+	})
+}
+
+// StripeWebhook stripe webhook
+func (ctl *PaymentController) StripeWebhook(ctx context.Context, webCtx web.Context) web.Response {
+	payload := webCtx.Body()
+	signature := webCtx.Header("Stripe-Signature")
+
+	event, err := webhook.ConstructEventWithOptions(
+		payload,
+		signature,
+		ctl.conf.Stripe.WebhookSecret,
+		webhook.ConstructEventOptions{IgnoreAPIVersionMismatch: true},
+	)
+	if err != nil {
+		log.F(log.M{"payload": string(payload), "signature": signature}).Errorf("stripe verifying webhook signature error: %s", err)
+		return webCtx.JSONError("error verifying webhook signature", http.StatusBadRequest)
+	}
+
+	log.With(event).Infof("stripe webhook event: %s", event.Type)
+	// TODO
+
+	return webCtx.JSON(web.M{})
+}
+
+// CreateStripePayment 发起 Stripe 支付
+func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+
+	if !ctl.conf.Stripe.Enabled {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "Stripe 支付功能尚未开启"), http.StatusBadRequest)
+	}
+
+	productId := webCtx.Input("product_id")
+	if productId == "" {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	source := webCtx.Input("source")
+	if source == "" {
+		source = "app"
+	}
+
+	if !array.In(source, []string{"app", "web"}) {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	product := coins.GetProduct(productId)
+	if product == nil {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	c, err := customer.New(&stripe.CustomerParams{})
+	if err != nil {
+		log.WithFields(log.Fields{"product_id": productId, "source": source}).Error("create stripe c failed: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	ek, err := ephemeralkey.New(&stripe.EphemeralKeyParams{
+		Customer:      stripe.String(c.ID),
+		StripeVersion: stripe.String("2023-10-16"),
+	})
+	if err != nil {
+		log.WithFields(log.Fields{"product_id": productId, "source": source}).Error("create stripe ephemeral key failed: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	pi, err := paymentintent.New(&stripe.PaymentIntentParams{
+		Amount:   stripe.Int64(product.GetRetailPriceUSD()),
+		Currency: stripe.String(string(stripe.CurrencyUSD)),
+		Customer: stripe.String(c.ID),
+		AutomaticPaymentMethods: &stripe.PaymentIntentAutomaticPaymentMethodsParams{
+			Enabled: stripe.Bool(true),
+		},
+	})
+	if err != nil {
+		log.WithFields(log.Fields{"product_id": productId, "source": source}).Error("create stripe payment intent failed: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(web.M{
+		"payment_intent":  pi.ClientSecret,
+		"ephemeral_key":   ek.Secret,
+		"customer":        c.ID,
+		"publishable_key": ctl.conf.Stripe.PublishableKey,
+		"payment_id":      "1111111111",
 	})
 }

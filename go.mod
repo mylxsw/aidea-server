@@ -68,6 +68,7 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
+	github.com/stripe/stripe-go/v76 v76.19.0 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/hunyuan v1.0.857 // indirect
 	github.com/tideland/golib v4.24.2+incompatible // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect

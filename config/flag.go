@@ -232,4 +232,9 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("wechat-appid", "", "微信开放平台 APP ID")
 	ins.AddStringFlag("wechat-secret", "", "微信开放平台 APP Secret")
+
+	ins.AddBoolFlag("enable-stripe", "是否启用 stripe 支付")
+	ins.AddStringFlag("stripe-publishable-key", "", "stripe publishable key")
+	ins.AddStringFlag("stripe-secret-key", "", "stripe secret key")
+	ins.AddStringFlag("stripe-webhook-secret", "", "stripe webhook secret")
 }

@@ -154,6 +154,8 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 	}
 	return webCtx.JSON(web.M{
 		"wechat_signin_enabled": ctl.conf.WeChatAppID != "" && ctl.conf.WeChatSecret != "",
+		// 是否启用 StripeConfig 支付
+		"stripe_enabled": ctl.conf.Stripe.Enabled,
 		// 是否启用苹果 App 支付
 		"apple_pay_enabled": ctl.conf.EnableApplePay,
 		// 是否启用支付宝支付 @deprecated(since 1.0.8)
