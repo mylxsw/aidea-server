@@ -3,8 +3,9 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/stripe/stripe-go/v76"
 	"github.com/stripe/stripe-go/v76/customer"
@@ -32,12 +33,12 @@ import (
 )
 
 type PaymentController struct {
-	translater youdao.Translater  `autowire:"@"`
-	queue      *queue.Queue       `autowire:"@"`
-	payRepo    *repo2.PaymentRepo `autowire:"@"`
-	alipay     alipay.Alipay      `autowire:"@"`
-	applepay   applepay.ApplePay  `autowire:"@"`
-	conf       *config.Config     `autowire:"@"`
+	translater youdao.Translater `autowire:"@"`
+	queue      *queue.Queue      `autowire:"@"`
+	payRepo    *repo.PaymentRepo `autowire:"@"`
+	alipay     alipay.Alipay     `autowire:"@"`
+	applepay   applepay.ApplePay `autowire:"@"`
+	conf       *config.Config    `autowire:"@"`
 }
 
 func NewPaymentController(resolver infra.Resolver) web.Controller {
@@ -199,14 +200,14 @@ func (ctl *PaymentController) AlipayClientConfirm(ctx context.Context, webCtx we
 
 	his, err := ctl.payRepo.GetPaymentHistory(ctx, user.ID, res.AlipayTradeAppPayResponse.OutTradeNo)
 	if err != nil {
-		if err == repo2.ErrNotFound {
+		if err == repo.ErrNotFound {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 		}
 
 		log.WithFields(log.Fields{"err": err}).Error("get payment history failed")
 	}
 
-	if his.Status != int(repo2.PaymentStatusSuccess) {
+	if his.Status != int(repo.PaymentStatusSuccess) {
 		log.WithFields(log.Fields{
 			"his":    his,
 			"result": res,
@@ -223,7 +224,7 @@ func (ctl *PaymentController) QueryPaymentStatus(ctx context.Context, webCtx web
 	paymentId := webCtx.PathVar("id")
 	history, err := ctl.payRepo.GetPaymentHistory(ctx, user.ID, paymentId)
 	if err != nil {
-		if err == repo2.ErrNotFound {
+		if err == repo.ErrNotFound {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrNotFound), http.StatusNotFound)
 		}
 
@@ -232,18 +233,18 @@ func (ctl *PaymentController) QueryPaymentStatus(ctx context.Context, webCtx web
 
 	var note string
 	switch history.Status {
-	case repo2.PaymentStatusWaiting:
+	case repo.PaymentStatusWaiting:
 		note = "等待支付"
-	case repo2.PaymentStatusSuccess:
+	case repo.PaymentStatusSuccess:
 		note = "支付成功"
-	case repo2.PaymentStatusFailed:
+	case repo.PaymentStatusFailed:
 		note = "支付失败"
-	case repo2.PaymentStatusCanceled:
+	case repo.PaymentStatusCanceled:
 		note = "支付已取消"
 	}
 
 	return webCtx.JSON(web.M{
-		"success": history.Status == repo2.PaymentStatusSuccess,
+		"success": history.Status == repo.PaymentStatusSuccess,
 		"note":    note,
 	})
 }
@@ -328,9 +329,9 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 	var status int64
 	var note string
 	if tradeStatus == "TRADE_SUCCESS" {
-		status = int64(repo2.PaymentStatusSuccess)
+		status = int64(repo.PaymentStatusSuccess)
 	} else {
-		status = int64(repo2.PaymentStatusFailed)
+		status = int64(repo.PaymentStatusFailed)
 		switch tradeStatus {
 		case "WAIT_BUYER_PAY":
 			note = "交易创建，等待买家付款"
@@ -343,7 +344,8 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 
 	product := coins.GetProduct(productId)
 
-	aliPay := repo2.AlipayPayment{
+	env := ternary.If(ctl.conf.AlipaySandbox, "Sandbox", "Production")
+	aliPay := repo.AlipayPayment{
 		ProductID:      productId,
 		BuyerID:        buyerId,
 		InvoiceAmount:  priceStrToInt64Penny(receiptAmount),
@@ -355,13 +357,13 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 		BuyerLogonID:   buyerLogonId,
 		PurchaseAt:     time.Now(),
 		Status:         status,
-		Environment:    ternary.If(ctl.conf.AlipaySandbox, "Sandbox", "Production"),
+		Environment:    env,
 		Note:           note,
 	}
 	eventID, err := ctl.payRepo.CompleteAliPayment(ctx, int64(userId), paymentId, aliPay)
 	if err != nil {
 		// 如果已经处理过了，直接返回成功
-		if err == repo2.ErrPaymentHasBeenProcessed {
+		if errors.Is(err, repo.ErrPaymentHasBeenProcessed) {
 			return webCtx.Raw(func(w http.ResponseWriter) {
 				w.Write([]byte("success"))
 			})
@@ -382,7 +384,7 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 			PaymentID: paymentId,
 			Note:      product.Name,
 			Source:    "alipay-purchase",
-			Env:       "Production",
+			Env:       env,
 			CreatedAt: time.Now(),
 			EventID:   eventID,
 		}
@@ -548,7 +550,7 @@ func (ctl *PaymentController) VerifyApplePayment(ctx context.Context, webCtx web
 			"verify":     resp,
 		}).Error("verify payment failed")
 
-		applePayment.Status = int64(repo2.PaymentStatusFailed)
+		applePayment.Status = int64(repo.PaymentStatusFailed)
 		if _, err := ctl.payRepo.CompleteApplePayment(ctx, user.ID, paymentId, applePayment); err != nil {
 			log.WithFields(log.Fields{
 				"err":           err.Error(),
@@ -570,7 +572,7 @@ func (ctl *PaymentController) VerifyApplePayment(ctx context.Context, webCtx web
 		}).Error("verify payment: product id not match")
 	}
 
-	applePayment.Status = int64(repo2.PaymentStatusSuccess)
+	applePayment.Status = int64(repo.PaymentStatusSuccess)
 	eventID, err := ctl.payRepo.CompleteApplePayment(ctx, user.ID, paymentId, applePayment)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -650,9 +652,99 @@ func (ctl *PaymentController) StripeWebhook(ctx context.Context, webCtx web.Cont
 	}
 
 	log.With(event).Infof("stripe webhook event: %s", event.Type)
-	// TODO
+
+	switch event.Type {
+	case "charge.succeeded":
+		if err := ctl.handleStripeChargeSucceeded(ctx, event); err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("handle stripe charge succeeded failed")
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		}
+	case "payment_intent.succeeded":
+		if err := ctl.handleStripePaymentIntentSucceeded(ctx, event); err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("handle stripe payment intent succeeded failed")
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		}
+	}
 
 	return webCtx.JSON(web.M{})
+}
+
+// handleStripeChargeSucceeded 处理 Stripe 支付成功事件
+func (ctl *PaymentController) handleStripeChargeSucceeded(ctx context.Context, event stripe.Event) error {
+	metadata := event.Data.Object["metadata"].(map[string]any)
+	paymentID := metadata["payment_id"].(string)
+	userID, _ := strconv.Atoi(metadata["user_id"].(string))
+
+	pay := repo.StripePayment{}
+	if liveMode, ok := event.Data.Object["livemode"].(bool); ok {
+		pay.Environment = ternary.If(liveMode, "Production", "Test")
+	}
+
+	if receiptURL, ok := event.Data.Object["receipt_url"].(string); ok {
+		pay.ReceiptURL = receiptURL
+	}
+
+	if details, ok := event.Data.Object["payment_method_details"]; ok {
+		pay.Extra = details
+	}
+
+	return ctl.payRepo.UpdateStripePayment(ctx, int64(userID), paymentID, pay)
+}
+
+// handleStripePaymentIntentSucceeded 处理 Stripe 支付成功事件
+func (ctl *PaymentController) handleStripePaymentIntentSucceeded(ctx context.Context, event stripe.Event) error {
+	metadata := event.Data.Object["metadata"].(map[string]any)
+	paymentID := metadata["payment_id"].(string)
+	userID, _ := strconv.Atoi(metadata["user_id"].(string))
+	productID := metadata["product_id"].(string)
+
+	pay := repo.StripePayment{}
+	if liveMode, ok := event.Data.Object["livemode"].(bool); ok {
+		pay.Environment = ternary.If(liveMode, "Production", "Test")
+	}
+
+	pay.Amount = int64(event.Data.Object["amount"].(float64))
+	pay.AmountReceived = int64(event.Data.Object["amount_received"].(float64))
+
+	if currency, ok := event.Data.Object["currency"].(string); ok {
+		pay.Currency = currency
+	}
+
+	pay.Status = int64(repo.PaymentStatusSuccess)
+
+	eventID, err := ctl.payRepo.CompleteStripePayment(ctx, int64(userID), paymentID, pay)
+	if err != nil {
+		// 如果已经处理过了，直接返回成功
+		if errors.Is(err, repo.ErrPaymentHasBeenProcessed) {
+			return nil
+		}
+
+		log.WithFields(log.Fields{
+			"err":   err.Error(),
+			"event": event,
+		}).Error("complete payment failed")
+
+		return err
+	}
+
+	if eventID > 0 {
+		payload := queue.PaymentPayload{
+			UserID:    int64(userID),
+			ProductID: productID,
+			PaymentID: paymentID,
+			Note:      coins.GetProduct(productID).Name,
+			Source:    "stripe-purchase",
+			Env:       ternary.If(event.Data.Object["livemode"].(bool), "Production", "Test"),
+			CreatedAt: time.Now(),
+			EventID:   eventID,
+		}
+
+		if _, err := ctl.queue.Enqueue(&payload, queue.NewPaymentTask); err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("enqueue payment task failed")
+		}
+	}
+
+	return nil
 }
 
 // CreateStripePayment 发起 Stripe 支付
@@ -681,7 +773,18 @@ func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx we
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	c, err := customer.New(&stripe.CustomerParams{})
+	customerParams := &stripe.CustomerParams{}
+	if user.Phone != "" {
+		customerParams.Phone = stripe.String(user.Phone)
+	}
+	if user.Email != "" {
+		customerParams.Email = stripe.String(user.Email)
+	}
+	if user.Name != "" {
+		customerParams.Name = stripe.String(user.Name)
+	}
+
+	c, err := customer.New(customerParams)
 	if err != nil {
 		log.WithFields(log.Fields{"product_id": productId, "source": source}).Error("create stripe c failed: %s", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
@@ -696,16 +799,44 @@ func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx we
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	pi, err := paymentintent.New(&stripe.PaymentIntentParams{
+	paymentIntentParams := &stripe.PaymentIntentParams{
 		Amount:   stripe.Int64(product.GetRetailPriceUSD()),
 		Currency: stripe.String(string(stripe.CurrencyUSD)),
 		Customer: stripe.String(c.ID),
 		AutomaticPaymentMethods: &stripe.PaymentIntentAutomaticPaymentMethodsParams{
 			Enabled: stripe.Bool(true),
 		},
-	})
+	}
+
+	paymentID, err := ctl.payRepo.CreatePaymentID(user.ID)
+	if err != nil {
+		log.WithFields(log.Fields{"product_id": productId, "source": source}).Error("create stripe payment id failed: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	paymentIntentParams.AddMetadata("payment_id", paymentID)
+	paymentIntentParams.AddMetadata("user_id", strconv.Itoa(int(user.ID)))
+	paymentIntentParams.AddMetadata("product_id", productId)
+
+	pi, err := paymentintent.New(paymentIntentParams)
 	if err != nil {
 		log.WithFields(log.Fields{"product_id": productId, "source": source}).Error("create stripe payment intent failed: %s", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	// 创建支付记录
+	payment := repo.StripePayment{
+		CustomerID:    c.ID,
+		PaymentIntent: pi.ClientSecret,
+		ProductID:     productId,
+	}
+	if _, err := ctl.payRepo.CreateStripePayment(ctx, user.ID, paymentID, source, payment); err != nil {
+		log.WithFields(log.Fields{
+			"err":        err.Error(),
+			"product_id": productId,
+			"user_id":    user.ID,
+			"source":     source,
+		}).Error("create stripe payment failed")
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
@@ -714,6 +845,6 @@ func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx we
 		"ephemeral_key":   ek.Secret,
 		"customer":        c.ID,
 		"publishable_key": ctl.conf.Stripe.PublishableKey,
-		"payment_id":      "1111111111",
+		"payment_id":      paymentID,
 	})
 }

@@ -27,6 +27,8 @@ type Config struct {
 	DebugWithSQL bool `json:"debug_with_sql" yaml:"debug_with_sql"`
 	// 是否启用 API Keys 功能
 	EnableAPIKeys bool `json:"enable_api_keys" yaml:"enable_api_keys"`
+	// 是否是生产环境
+	IsProduction bool `json:"is_production" yaml:"is_production"`
 
 	// BaseURL 服务的基础 URL
 	BaseURL string `json:"base_url" yaml:"base_url"`
@@ -367,7 +369,8 @@ func Register(ins *app.App) {
 			DebugWithSQL:        ctx.Bool("debug-with-sql"),
 			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
 
-			BaseURL: strings.TrimSuffix(ctx.String("base-url"), "/"),
+			BaseURL:      strings.TrimSuffix(ctx.String("base-url"), "/"),
+			IsProduction: ctx.Bool("production"),
 
 			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),
 			EnableCustomHomeModels: ctx.Bool("enable-custom-home-models"),

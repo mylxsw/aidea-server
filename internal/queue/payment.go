@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/pkg/dingding"
 	"github.com/mylxsw/aidea-server/pkg/mail"
 	"github.com/mylxsw/aidea-server/pkg/repo"
@@ -58,6 +59,7 @@ func NewPaymentTask(payload any) *asynq.Task {
 }
 
 func BuildPaymentHandler(
+	conf *config.Config,
 	rep *repo.Repository,
 	mailer *mail.Sender,
 	que *Queue,
@@ -92,6 +94,18 @@ func BuildPaymentHandler(
 				}
 			}
 		}()
+
+		if payload.Env != "Production" && conf.IsProduction {
+			// 非生产环境下，不处理
+			log.WithFields(log.Fields{"payload": payload}).Warningf("生产环境下不处理非生产环境的支付事件: %s", payload.Env)
+
+			return rep.Queue.Update(
+				context.TODO(),
+				payload.GetID(),
+				repo.QueueTaskStatusSuccess,
+				EmptyResult{},
+			)
+		}
 
 		// 查询事件记录
 		event, err := rep.Event.GetEvent(ctx, payload.EventID)

@@ -105,7 +105,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		mux.HandleFunc(queue.TypeMailSend, queue.BuildMailSendHandler(mailer, rep))
 		mux.HandleFunc(queue.TypeSMSVerifyCodeSend, queue.BuildSMSVerifyCodeSendHandler(smsClient, rep))
 		mux.HandleFunc(queue.TypeSignup, queue.BuildSignupHandler(rep, mailer, ding))
-		mux.HandleFunc(queue.TypePayment, queue.BuildPaymentHandler(rep, mailer, que, ding))
+		mux.HandleFunc(queue.TypePayment, queue.BuildPaymentHandler(conf, rep, mailer, que, ding))
 		mux.HandleFunc(queue.TypeBindPhone, queue.BuildBindPhoneHandler(rep, mailer))
 		mux.HandleFunc(queue.TypeImageGenCompletion, queue.BuildImageCompletionHandler(conf, aiProvider, leapClient, stabaiClient, deepaiClient, fromstonClient, dashscopeClient, getimgaiClient, translater, uploader, rep, openaiClient, dalleClient))
 		mux.HandleFunc(queue.TypeFromStonCompletion, queue.BuildFromStonCompletionHandler(fromstonClient, uploader, rep))

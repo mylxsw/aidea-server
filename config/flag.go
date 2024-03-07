@@ -14,6 +14,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddDurationFlag("start-delay", 0, "服务启动延迟时间，用于在服务启动前做一些初始化工作，例如 Docker 环境下等待初始化数据库等")
 
 	ins.AddStringFlag("base-url", "", "Web 服务的基础 URL，例如 https://web.aicode.cc")
+	ins.AddBoolFlag("production", "是否为生产环境，生产环境下只有正式的支付渠道可用")
 	ins.AddStringFlag("socks5-proxy", "", "socks5 proxy")
 	ins.AddStringFlag("proxy-url", "", "HTTP 代理放置，支持 http、https、socks5，代理类型由 URL schema 决定，如果 scheme 为空，则默认为 http")
 	ins.AddStringFlag("db-uri", "root:12345@tcp(127.0.0.1:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local", "database url")

@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/internal/coins"
-	model2 "github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -36,26 +37,26 @@ func NewPaymentRepo(db *sql.DB) *PaymentRepo {
 	return &PaymentRepo{db: db}
 }
 
-func (repo *PaymentRepo) GetPaymentHistory(ctx context.Context, userID int64, paymentID string) (model2.PaymentHistory, error) {
+func (repo *PaymentRepo) GetPaymentHistory(ctx context.Context, userID int64, paymentID string) (model.PaymentHistory, error) {
 	q := query.Builder().
-		Where(model2.FieldPaymentHistoryPaymentId, paymentID).
-		Where(model2.FieldPaymentHistoryUserId, userID)
+		Where(model.FieldPaymentHistoryPaymentId, paymentID).
+		Where(model.FieldPaymentHistoryUserId, userID)
 
-	pay, err := model2.NewPaymentHistoryModel(repo.db).First(ctx, q)
+	pay, err := model.NewPaymentHistoryModel(repo.db).First(ctx, q)
 	if err != nil {
-		if err == query.ErrNoResult {
-			return model2.PaymentHistory{}, ErrNotFound
+		if errors.Is(err, query.ErrNoResult) {
+			return model.PaymentHistory{}, ErrNotFound
 		}
-		return model2.PaymentHistory{}, err
+		return model.PaymentHistory{}, err
 	}
 
 	return pay.ToPaymentHistory(), nil
 }
 
 func (repo *PaymentRepo) CreateAliPayment(ctx context.Context, userID int64, productID string, source string) (string, error) {
-	paymentID, err := uuid.GenerateUUID()
+	paymentID, err := repo.CreatePaymentID(userID)
 	if err != nil {
-		return "", fmt.Errorf("generate payment id failed: %w", err)
+		return "", err
 	}
 
 	product := coins.GetProduct(productID)
@@ -65,23 +66,23 @@ func (repo *PaymentRepo) CreateAliPayment(ctx context.Context, userID int64, pro
 
 	paymentID = fmt.Sprintf("%d-%s", userID, paymentID)
 	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
-		if _, err := model2.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
-			model2.FieldPaymentHistoryPaymentId:   paymentID,
-			model2.FieldPaymentHistoryUserId:      userID,
-			model2.FieldPaymentHistorySource:      "alipay-" + source,
-			model2.FieldPaymentHistoryStatus:      PaymentStatusWaiting,
-			model2.FieldPaymentHistoryRetailPrice: product.RetailPrice,
-			model2.FieldPaymentHistoryQuantity:    product.Quota,
-			model2.FieldPaymentHistoryValidUntil:  product.ExpiredAt(),
+		if _, err := model.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
+			model.FieldPaymentHistoryPaymentId:   paymentID,
+			model.FieldPaymentHistoryUserId:      userID,
+			model.FieldPaymentHistorySource:      "alipay-" + source,
+			model.FieldPaymentHistoryStatus:      PaymentStatusWaiting,
+			model.FieldPaymentHistoryRetailPrice: product.RetailPrice,
+			model.FieldPaymentHistoryQuantity:    product.Quota,
+			model.FieldPaymentHistoryValidUntil:  product.ExpiredAt(),
 		}); err != nil {
 			return fmt.Errorf("create payment history failed: %w", err)
 		}
 
-		if _, err := model2.NewAlipayHistoryModel(tx).Create(ctx, query.KV{
-			model2.FieldAlipayHistoryPaymentId: paymentID,
-			model2.FieldAlipayHistoryProductId: productID,
-			model2.FieldAlipayHistoryUserId:    userID,
-			model2.FieldAlipayHistoryStatus:    PaymentStatusWaiting,
+		if _, err := model.NewAlipayHistoryModel(tx).Create(ctx, query.KV{
+			model.FieldAlipayHistoryPaymentId: paymentID,
+			model.FieldAlipayHistoryProductId: productID,
+			model.FieldAlipayHistoryUserId:    userID,
+			model.FieldAlipayHistoryStatus:    PaymentStatusWaiting,
 		}); err != nil {
 			return fmt.Errorf("create alipay history failed: %w", err)
 		}
@@ -90,6 +91,180 @@ func (repo *PaymentRepo) CreateAliPayment(ctx context.Context, userID int64, pro
 	})
 
 	return paymentID, err
+}
+
+type StripePayment struct {
+	CustomerID string `json:"customer_id,omitempty"`
+	ProductID  string `json:"product_id,omitempty"`
+
+	Amount         int64  `json:"amount,omitempty"`
+	AmountReceived int64  `json:"amount_received,omitempty"`
+	Currency       string `json:"currency,omitempty"`
+
+	ReceiptURL    string `json:"receipt_url,omitempty"`
+	Environment   string `json:"environment,omitempty"`
+	PaymentIntent string `json:"payment_intent,omitempty"`
+	Status        int64  `json:"status,omitempty"`
+	Note          string `json:"note,omitempty"`
+	Extra         any    `json:"extra,omitempty"`
+}
+
+// CreatePaymentID 生成支付ID
+func (repo *PaymentRepo) CreatePaymentID(userID int64) (string, error) {
+	paymentID, err := uuid.GenerateUUID()
+	if err != nil {
+		return "", fmt.Errorf("generate payment id failed: %w", err)
+	}
+
+	return fmt.Sprintf("%d-%s", userID, paymentID), nil
+}
+
+func (repo *PaymentRepo) CreateStripePayment(ctx context.Context, userID int64, paymentID string, source string, pay StripePayment) (string, error) {
+	product := coins.GetProduct(pay.ProductID)
+	if product == nil {
+		return "", fmt.Errorf("product %s not found", pay.ProductID)
+	}
+
+	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
+		if _, err := model.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
+			model.FieldPaymentHistoryPaymentId:   paymentID,
+			model.FieldPaymentHistoryUserId:      userID,
+			model.FieldPaymentHistorySource:      "stripe-" + source,
+			model.FieldPaymentHistoryStatus:      PaymentStatusWaiting,
+			model.FieldPaymentHistoryRetailPrice: product.RetailPrice,
+			model.FieldPaymentHistoryQuantity:    product.Quota,
+			model.FieldPaymentHistoryValidUntil:  product.ExpiredAt(),
+		}); err != nil {
+			return fmt.Errorf("create payment history failed: %w", err)
+		}
+
+		data := query.KV{
+			model.FieldStripeHistoryPaymentId: paymentID,
+			model.FieldStripeHistoryProductId: pay.ProductID,
+			model.FieldStripeHistoryUserId:    userID,
+			model.FieldStripeHistoryStatus:    PaymentStatusWaiting,
+		}
+
+		if pay.CustomerID != "" {
+			data[model.FieldStripeHistoryCustomerId] = pay.CustomerID
+		}
+
+		if pay.PaymentIntent != "" {
+			data[model.FieldStripeHistoryPaymentIntent] = pay.PaymentIntent
+		}
+
+		if _, err := model.NewStripeHistoryModel(tx).Create(ctx, data); err != nil {
+			return fmt.Errorf("create stripe history failed: %w", err)
+		}
+
+		return nil
+	})
+
+	return paymentID, err
+}
+
+func (repo *PaymentRepo) UpdateStripePayment(ctx context.Context, userId int64, paymentID string, pay StripePayment) error {
+	q := query.Builder().
+		Where(model.FieldStripeHistoryPaymentId, paymentID).
+		Where(model.FieldStripeHistoryUserId, userId)
+	his, err := model.NewStripeHistoryModel(repo.db).First(ctx, q)
+	if err != nil {
+		return fmt.Errorf("get stripe history failed: %w", err)
+	}
+
+	saveFields := make([]string, 0)
+
+	if pay.Environment != "" {
+		his.Environment = null.StringFrom(pay.Environment)
+		saveFields = append(saveFields, model.FieldStripeHistoryEnvironment)
+	}
+	if pay.PaymentIntent != "" {
+		his.PaymentIntent = null.StringFrom(pay.PaymentIntent)
+		saveFields = append(saveFields, model.FieldStripeHistoryPaymentIntent)
+	}
+	if pay.ReceiptURL != "" {
+		his.ReceiptUrl = null.StringFrom(pay.ReceiptURL)
+		saveFields = append(saveFields, model.FieldStripeHistoryReceiptUrl)
+	}
+
+	if pay.Extra != nil {
+		data, _ := json.Marshal(pay.Extra)
+		his.Extra = null.StringFrom(string(data))
+		saveFields = append(saveFields, model.FieldStripeHistoryExtra)
+	}
+
+	if len(saveFields) == 0 {
+		return nil
+	}
+
+	return his.Save(ctx, saveFields...)
+}
+
+func (repo *PaymentRepo) CompleteStripePayment(ctx context.Context, userId int64, paymentID string, pay StripePayment) (eventID int64, err error) {
+	q := query.Builder().
+		Where(model.FieldPaymentHistoryPaymentId, paymentID).
+		Where(model.FieldPaymentHistoryUserId, userId)
+	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
+		his, err := model.NewPaymentHistoryModel(tx).First(ctx, q)
+		if err != nil {
+			return fmt.Errorf("get payment history failed: %w", err)
+		}
+
+		if his.Status.ValueOrZero() != PaymentStatusWaiting {
+			return ErrPaymentHasBeenProcessed
+		}
+
+		purchaseTime := time.Now()
+
+		if _, err := model.NewPaymentHistoryModel(tx).Update(ctx, q, model.PaymentHistoryN{
+			Status:      null.IntFrom(pay.Status),
+			Environment: null.StringFrom(pay.Environment),
+			PurchaseAt:  null.TimeFrom(purchaseTime),
+		}); err != nil {
+			return fmt.Errorf("update payment history failed: %w", err)
+		}
+
+		stripeHistory := model.StripeHistoryN{
+			Status:     null.IntFrom(pay.Status),
+			PurchaseAt: null.TimeFrom(purchaseTime),
+			Note:       ternary.If(pay.Note != "", null.StringFrom(pay.Note), null.NewString("", false)),
+		}
+
+		if pay.Amount > 0 {
+			stripeHistory.Amount = null.IntFrom(pay.Amount)
+		}
+		if pay.AmountReceived > 0 {
+			stripeHistory.AmountReceived = null.IntFrom(pay.AmountReceived)
+		}
+		if pay.Currency != "" {
+			stripeHistory.Currency = null.StringFrom(pay.Currency)
+		}
+		if pay.Environment != "" {
+			stripeHistory.Environment = null.StringFrom(pay.Environment)
+		}
+
+		if _, err := model.NewStripeHistoryModel(tx).Update(ctx, q, stripeHistory); err != nil {
+			return fmt.Errorf("update apple pay history failed: %w", err)
+		}
+
+		if pay.Status == PaymentStatusSuccess {
+			if eventID, err = model.NewEventsModel(tx).Save(ctx, model.EventsN{
+				EventType: null.StringFrom(EventTypePaymentCompleted),
+				Payload: null.StringFrom(string(must.Must(json.Marshal(PaymentCompletedEvent{
+					UserID:    userId,
+					ProductID: pay.ProductID,
+					PaymentID: paymentID,
+				})))),
+				Status: null.StringFrom(EventStatusWaiting),
+			}); err != nil {
+				return fmt.Errorf("create event failed: %w", err)
+			}
+		}
+
+		return nil
+	})
+
+	return eventID, err
 }
 
 type AlipayPayment struct {
@@ -110,10 +285,10 @@ type AlipayPayment struct {
 
 func (repo *PaymentRepo) CompleteAliPayment(ctx context.Context, userId int64, paymentID string, pay AlipayPayment) (eventID int64, err error) {
 	q := query.Builder().
-		Where(model2.FieldPaymentHistoryPaymentId, paymentID).
-		Where(model2.FieldPaymentHistoryUserId, userId)
+		Where(model.FieldPaymentHistoryPaymentId, paymentID).
+		Where(model.FieldPaymentHistoryUserId, userId)
 	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
-		his, err := model2.NewPaymentHistoryModel(tx).First(ctx, q)
+		his, err := model.NewPaymentHistoryModel(tx).First(ctx, q)
 		if err != nil {
 			return fmt.Errorf("get payment history failed: %w", err)
 		}
@@ -122,7 +297,7 @@ func (repo *PaymentRepo) CompleteAliPayment(ctx context.Context, userId int64, p
 			return ErrPaymentHasBeenProcessed
 		}
 
-		if _, err := model2.NewPaymentHistoryModel(tx).Update(ctx, q, model2.PaymentHistoryN{
+		if _, err := model.NewPaymentHistoryModel(tx).Update(ctx, q, model.PaymentHistoryN{
 			Status:      null.IntFrom(pay.Status),
 			Environment: null.StringFrom(pay.Environment),
 			PurchaseAt:  null.TimeFrom(pay.PurchaseAt),
@@ -130,7 +305,7 @@ func (repo *PaymentRepo) CompleteAliPayment(ctx context.Context, userId int64, p
 			return fmt.Errorf("update payment history failed: %w", err)
 		}
 
-		if _, err := model2.NewAlipayHistoryModel(tx).Update(ctx, q, model2.AlipayHistoryN{
+		if _, err := model.NewAlipayHistoryModel(tx).Update(ctx, q, model.AlipayHistoryN{
 			BuyerId:        null.StringFrom(pay.BuyerID),
 			InvoiceAmount:  null.IntFrom(pay.InvoiceAmount),
 			ReceiptAmount:  null.IntFrom(pay.ReceiptAmount),
@@ -147,7 +322,7 @@ func (repo *PaymentRepo) CompleteAliPayment(ctx context.Context, userId int64, p
 		}
 
 		if pay.Status == PaymentStatusSuccess {
-			if eventID, err = model2.NewEventsModel(tx).Save(ctx, model2.EventsN{
+			if eventID, err = model.NewEventsModel(tx).Save(ctx, model.EventsN{
 				EventType: null.StringFrom(EventTypePaymentCompleted),
 				Payload: null.StringFrom(string(must.Must(json.Marshal(PaymentCompletedEvent{
 					UserID:    userId,
@@ -166,10 +341,10 @@ func (repo *PaymentRepo) CompleteAliPayment(ctx context.Context, userId int64, p
 	return eventID, err
 }
 
-func (repo *PaymentRepo) GetAlipayHistory(ctx context.Context, paymentID string) (*model2.AlipayHistory, error) {
-	his, err := model2.NewAlipayHistoryModel(repo.db).First(ctx, query.Builder().Where(model2.FieldAlipayHistoryPaymentId, paymentID))
+func (repo *PaymentRepo) GetAlipayHistory(ctx context.Context, paymentID string) (*model.AlipayHistory, error) {
+	his, err := model.NewAlipayHistoryModel(repo.db).First(ctx, query.Builder().Where(model.FieldAlipayHistoryPaymentId, paymentID))
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
@@ -181,9 +356,9 @@ func (repo *PaymentRepo) GetAlipayHistory(ctx context.Context, paymentID string)
 }
 
 func (repo *PaymentRepo) CreateApplePayment(ctx context.Context, userID int64, productID string) (string, error) {
-	paymentID, err := uuid.GenerateUUID()
+	paymentID, err := repo.CreatePaymentID(userID)
 	if err != nil {
-		return "", fmt.Errorf("generate payment id failed: %w", err)
+		return "", err
 	}
 
 	product := coins.GetProduct(productID)
@@ -193,23 +368,23 @@ func (repo *PaymentRepo) CreateApplePayment(ctx context.Context, userID int64, p
 
 	paymentID = fmt.Sprintf("%d-%s", userID, paymentID)
 	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
-		if _, err := model2.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
-			model2.FieldPaymentHistoryPaymentId:   paymentID,
-			model2.FieldPaymentHistoryUserId:      userID,
-			model2.FieldPaymentHistorySource:      "apple",
-			model2.FieldPaymentHistoryStatus:      PaymentStatusWaiting,
-			model2.FieldPaymentHistoryRetailPrice: product.RetailPrice,
-			model2.FieldPaymentHistoryQuantity:    product.Quota,
-			model2.FieldPaymentHistoryValidUntil:  product.ExpiredAt(),
+		if _, err := model.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
+			model.FieldPaymentHistoryPaymentId:   paymentID,
+			model.FieldPaymentHistoryUserId:      userID,
+			model.FieldPaymentHistorySource:      "apple",
+			model.FieldPaymentHistoryStatus:      PaymentStatusWaiting,
+			model.FieldPaymentHistoryRetailPrice: product.RetailPrice,
+			model.FieldPaymentHistoryQuantity:    product.Quota,
+			model.FieldPaymentHistoryValidUntil:  product.ExpiredAt(),
 		}); err != nil {
 			return fmt.Errorf("create payment history failed: %w", err)
 		}
 
-		if _, err := model2.NewApplePayHistoryModel(tx).Create(ctx, query.KV{
-			model2.FieldApplePayHistoryPaymentId: paymentID,
-			model2.FieldApplePayHistoryProductId: productID,
-			model2.FieldApplePayHistoryUserId:    userID,
-			model2.FieldApplePayHistoryStatus:    PaymentStatusWaiting,
+		if _, err := model.NewApplePayHistoryModel(tx).Create(ctx, query.KV{
+			model.FieldApplePayHistoryPaymentId: paymentID,
+			model.FieldApplePayHistoryProductId: productID,
+			model.FieldApplePayHistoryUserId:    userID,
+			model.FieldApplePayHistoryStatus:    PaymentStatusWaiting,
 		}); err != nil {
 			return fmt.Errorf("create apple pay history failed: %w", err)
 		}
@@ -221,18 +396,18 @@ func (repo *PaymentRepo) CreateApplePayment(ctx context.Context, userID int64, p
 }
 
 func (repo *PaymentRepo) UpdateApplePayment(ctx context.Context, userId int64, paymentID string, source, serverVerifyData string) error {
-	q := query.Builder().Where(model2.FieldApplePayHistoryPaymentId, paymentID).
-		Where(model2.FieldApplePayHistoryUserId, userId).
-		Where(model2.FieldApplePayHistoryStatus, PaymentStatusWaiting)
-	if _, err := model2.NewApplePayHistoryModel(repo.db).Update(
+	q := query.Builder().Where(model.FieldApplePayHistoryPaymentId, paymentID).
+		Where(model.FieldApplePayHistoryUserId, userId).
+		Where(model.FieldApplePayHistoryStatus, PaymentStatusWaiting)
+	if _, err := model.NewApplePayHistoryModel(repo.db).Update(
 		ctx,
 		q,
-		model2.ApplePayHistoryN{
+		model.ApplePayHistoryN{
 			Source:           null.StringFrom(source),
 			ServerVerifyData: null.StringFrom(serverVerifyData),
 		},
-		model2.FieldApplePayHistorySource,
-		model2.FieldApplePayHistoryServerVerifyData,
+		model.FieldApplePayHistorySource,
+		model.FieldApplePayHistoryServerVerifyData,
 	); err != nil {
 		return err
 	}
@@ -250,10 +425,10 @@ type ApplePayment struct {
 
 func (repo *PaymentRepo) CompleteApplePayment(ctx context.Context, userId int64, paymentID string, applePayment *ApplePayment) (eventID int64, err error) {
 	q := query.Builder().
-		Where(model2.FieldPaymentHistoryPaymentId, paymentID).
-		Where(model2.FieldPaymentHistoryUserId, userId)
+		Where(model.FieldPaymentHistoryPaymentId, paymentID).
+		Where(model.FieldPaymentHistoryUserId, userId)
 	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
-		if _, err := model2.NewPaymentHistoryModel(tx).Update(ctx, q, model2.PaymentHistoryN{
+		if _, err := model.NewPaymentHistoryModel(tx).Update(ctx, q, model.PaymentHistoryN{
 			Status:      null.IntFrom(applePayment.Status),
 			Environment: null.StringFrom(applePayment.Environment),
 			PurchaseAt:  null.TimeFrom(applePayment.PurchaseAt),
@@ -261,7 +436,7 @@ func (repo *PaymentRepo) CompleteApplePayment(ctx context.Context, userId int64,
 			return fmt.Errorf("update payment history failed: %w", err)
 		}
 
-		if _, err := model2.NewApplePayHistoryModel(tx).Update(ctx, q, model2.ApplePayHistoryN{
+		if _, err := model.NewApplePayHistoryModel(tx).Update(ctx, q, model.ApplePayHistoryN{
 			Status:        null.IntFrom(applePayment.Status),
 			Environment:   null.StringFrom(applePayment.Environment),
 			PurchaseAt:    null.TimeFrom(applePayment.PurchaseAt),
@@ -277,7 +452,7 @@ func (repo *PaymentRepo) CompleteApplePayment(ctx context.Context, userId int64,
 		}
 
 		if applePayment.Status == PaymentStatusSuccess {
-			if eventID, err = model2.NewEventsModel(tx).Save(ctx, model2.EventsN{
+			if eventID, err = model.NewEventsModel(tx).Save(ctx, model.EventsN{
 				EventType: null.StringFrom(EventTypePaymentCompleted),
 				Payload: null.StringFrom(string(must.Must(json.Marshal(PaymentCompletedEvent{
 					UserID:    userId,
@@ -298,17 +473,17 @@ func (repo *PaymentRepo) CompleteApplePayment(ctx context.Context, userId int64,
 
 func (repo *PaymentRepo) CancelApplePayment(ctx context.Context, userId int64, paymentID string, reason string) error {
 	q := query.Builder().
-		Where(model2.FieldPaymentHistoryPaymentId, paymentID).
-		Where(model2.FieldPaymentHistoryUserId, userId)
+		Where(model.FieldPaymentHistoryPaymentId, paymentID).
+		Where(model.FieldPaymentHistoryUserId, userId)
 
 	return eloquent.Transaction(repo.db, func(tx query.Database) error {
-		if _, err := model2.NewPaymentHistoryModel(tx).Update(ctx, q, model2.PaymentHistoryN{
+		if _, err := model.NewPaymentHistoryModel(tx).Update(ctx, q, model.PaymentHistoryN{
 			Status: null.IntFrom(PaymentStatusCanceled),
 		}); err != nil {
 			return fmt.Errorf("update payment history failed: %w", err)
 		}
 
-		if _, err := model2.NewApplePayHistoryModel(tx).Update(ctx, q, model2.ApplePayHistoryN{
+		if _, err := model.NewApplePayHistoryModel(tx).Update(ctx, q, model.ApplePayHistoryN{
 			Status: null.IntFrom(PaymentStatusCanceled),
 			Note:   null.StringFrom(reason),
 		}); err != nil {
