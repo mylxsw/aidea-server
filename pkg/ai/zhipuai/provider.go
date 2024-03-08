@@ -1,4 +1,4 @@
-package tencentai
+package zhipuai
 
 import (
 	"github.com/mylxsw/aidea-server/config"
@@ -8,7 +8,7 @@ import (
 type Provider struct{}
 
 func (Provider) Register(binder infra.Binder) {
-	binder.MustSingleton(func(conf *config.Config) *TencentAI {
-		return New(conf.TencentSecretID, conf.TencentSecretKey)
+	binder.MustSingleton(func(conf *config.Config) *ZhipuAI {
+		return NewZhipuAI(conf.ZhipuAIKey)
 	})
 }

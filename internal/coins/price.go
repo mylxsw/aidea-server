@@ -2,7 +2,6 @@ package coins
 
 import (
 	"math"
-	"time"
 )
 
 var coinTables = map[string]CoinTable{
@@ -31,31 +30,40 @@ var coinTables = map[string]CoinTable{
 		"gpt-3.5-turbo":          3,   // valid $0.002/1K tokens -> ¥0.014/1K tokens
 		"gpt-3.5-turbo-0613":     3,   // valid $0.002/1K tokens -> ¥0.014/1K tokens
 		"gpt-3.5-turbo-1106":     3,   // valid $0.002/1K tokens -> ¥0.014/1K tokens
+		"gpt-3.5-turbo-0125":     3,   // valid $0.0015/1K tokens -> ¥0.011/1K tokens
 		"gpt-3.5-turbo-16k":      5,   // valid $0.004/1K tokens -> ¥0.028/1K tokens
 		"gpt-3.5-turbo-16k-0613": 5,   // valid $0.004/1K tokens -> ¥0.028/1K tokens
 		"gpt-4":                  50,  // valid $0.06/1K tokens  -> ¥0.42/1K tokens
 		"gpt-4-8k":               50,  // $0.06/1K tokens        -> ¥0.42/1K tokens
 		"gpt-4-32k":              100, // $0.12/1K tokens        -> ¥0.84/1K tokens
+		"gpt-4-turbo-preview":    30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
 		"gpt-4-1106-preview":     30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
+		"gpt-4-0125-preview":     30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
 		"gpt-4-vision-preview":   30,  // $0.03/1K tokens        -> ¥0.23/1K tokens
 
 		// Anthropic
 		"claude-instant-1": 5,  // valid (input $1.63/million, output $5.51/million)  -> ¥0.039/1K tokens
 		"claude-2":         25, // valid (input $11.2/million, output $32.68/million) -> ¥0.229/1K tokens
+		"claude-3-opus":    75, // valid (input $15/million, output $75/million)      -> ¥0.63/1K tokens
+		"claude-3-sonnet":  10, // valid (input $3/million, output $15/million)       -> ¥0.063/1K tokens
+		"claude-3-haiku":   1,  // valid (input $0.25/million, output $1.25/million)  -> ¥0.0053/1K tokens
 
 		// 国产模型
 
 		// 百度 https://console.bce.baidu.com/qianfan/chargemanage/list
-		"model_ernie_bot_turbo":       2,  // valid 文心一言 ¥0.008/1K tokens
-		"model_ernie_bot":             4,  // valid 文心一言 ¥0.012/1K tokens
-		"model_ernie_bot_4":           15, // valid 文心一言 4.0 ¥0.12/1K tokens
-		"model_badiu_llama2_70b":      6,  // valid llama2 70b ¥0.044元/千tokens
-		"model_baidu_llama2_7b_cn":    2,  // valid llama2 7b cn ¥0.006元/千tokens
-		"model_baidu_llama2_13b":      2,  // valid llama2 7b ¥0.008元/千tokens
-		"model_baidu_chatglm2_6b_32k": 2,  // valid chatglm2 6b ¥0.006/1K tokens
-		"model_baidu_aquila_chat7b":   2,  // valid aquila chat7b ¥0.006/1K tokens
-		"model_baidu_bloomz_7b":       2,  // valid bloomz 7b ¥0.006/1K tokens
-
+		"model_ernie_bot_turbo":             2,  // valid 文心一言 ¥0.008/1K tokens
+		"model_ernie_bot":                   4,  // valid 文心一言 ¥0.012/1K tokens
+		"model_ernie_bot_4":                 15, // valid 文心一言 4.0 ¥0.12/1K tokens
+		"model_badiu_llama2_70b":            6,  // valid llama2 70b ¥0.044元/千tokens
+		"model_baidu_llama2_7b_cn":          2,  // valid llama2 7b cn ¥0.006元/千tokens
+		"model_baidu_llama2_13b":            2,  // valid llama2 7b ¥0.008元/千tokens
+		"model_baidu_chatglm2_6b_32k":       2,  // valid chatglm2 6b ¥0.006/1K tokens
+		"model_baidu_aquila_chat7b":         2,  // valid aquila chat7b ¥0.006/1K tokens
+		"model_baidu_bloomz_7b":             2,  // valid bloomz 7b ¥0.006/1K tokens
+		"model_baidu_llama2_13b_cn":         2,  // valid chat_law ¥0.006元/1K tokens
+		"model_baidu_xuanyuan_70b":          5,  // valid xuanyuan 70b ¥0.035元/1K tokens
+		"model_baidu_chat_law":              2,  // valid chat_law ¥0.008元/1K tokens
+		"model_baidu_mixtral_8x7b_instruct": 5,  // valid mixtral 8x7b instruct ¥0.035元/1K tokens
 		// 阿里 https://help.aliyun.com/zh/dashscope/developer-reference/tongyi-thousand-questions-metering-and-billing
 		"qwen-v1":              1, // valid 通义千问 v1    ¥0.008/1K tokens
 		"qwen-plus-v1":         3, // valid 通义千问 plus v1 ¥0.02/1K tokens
@@ -69,16 +77,19 @@ var coinTables = map[string]CoinTable{
 		"qwen-vl-plus":         1, // 官方限时免费
 
 		// 讯飞星火 https://xinghuo.xfyun.cn/sparkapi
-		"generalv3": 5, // valid 讯飞星火 v3    ¥0.036/1K tokens
-		"generalv2": 5, // valid 讯飞星火 v2    ¥0.036/1K tokens
-		"general":   3, // valid 讯飞星火 v1.5  ¥0.018/1K tokens
+		"generalv3.5": 5, // valid 讯飞星火 v3.5  ¥0.036/1K tokens
+		"generalv3":   5, // valid 讯飞星火 v3    ¥0.036/1K tokens
+		"generalv2":   5, // valid 讯飞星火 v2    ¥0.036/1K tokens
+		"general":     3, // valid 讯飞星火 v1.5  ¥0.018/1K tokens
 
 		// 商汤（官方暂未公布价格）
 		"nova-ptc-xl-v1": 3, // 大参数量
 		"nova-ptc-xs-v1": 2, // 小参数量
 
 		// 腾讯
-		"hyllm": 15, // valid 腾讯混元大模型 ¥0.10/1K tokens
+		"hyllm":     3,  // valid 腾讯混元大模型 (Std) ¥0.10/1K tokens
+		"hyllm_std": 3,  // valid 腾讯混元小模型 Std ¥0.01/1K tokens
+		"hyllm_pro": 15, // valid 腾讯混元大模型 Pro ¥0.10/1K tokens
 
 		// 百川 https://platform.baichuan-ai.com/price
 		"Baichuan2-53B": 3, // valid 百川 53b ¥0.02/1K tokens
@@ -103,6 +114,16 @@ var coinTables = map[string]CoinTable{
 
 		// 天工 https://model-platform.tiangong.cn/pricing
 		"SkyChat-MegaVerse": 2, // valid ¥0.01/1K tokens
+
+		// 智谱 https://open.bigmodel.cn/pricing
+		"glm-4":       15, // valid ¥0.1/1K tokens
+		"glm-4v":      15, // valid ¥0.1/1K tokens
+		"glm-3-turbo": 1,  // valid ¥0.005/1K tokens
+
+		// 月之暗面 https://platform.moonshot.cn/pricing
+		"moonshot-v1-8k":   2,  // valid ¥0.012/1K tokens
+		"moonshot-v1-32k":  4,  // valid ¥0.024/1K tokens
+		"moonshot-v1-128k": 10, // valid ¥0.06/1K tokens
 	},
 
 	"voice-recognition": {
@@ -143,23 +164,12 @@ func GetOpenAITextCoins(model string, wordCount int64) int64 {
 		return 50
 	}
 
-	// TODO 促销阶段，GPT-4 价格调整为 10 智慧果，满足任意截止:
-	// 1. 至 2023-11-01
-	// 2. 5000 美金消耗完毕
-	if time.Now().Before(time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC)) && (model == "gpt-4" || model == "gpt-4-8k") {
-		unit = 10
-	}
-
 	return int64(math.Ceil(float64(unit) * float64(wordCount) / 1000.0))
 }
 
-func GetOpenAITokensForCoins(model string, coins int64) int64 {
-	unit, ok := coinTables["openai"][model]
-	if !ok {
-		return 0
-	}
-
-	return int64(math.Ceil(float64(coins) / float64(unit) * 1000.0))
+// GetTextModelCoins 获取文本模型计费，该接口对于 Input 和 Output 分开计费
+func GetTextModelCoins(model string, inputToken, outputToken int64) int64 {
+	return GetOpenAITextCoins(model, inputToken+outputToken)
 }
 
 func GetVoiceCoins(model string) int64 {

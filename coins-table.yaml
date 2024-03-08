@@ -71,10 +71,14 @@ coin_tables:
     # Anthropic
     claude-2: 25
     claude-instant-1: 5
+    claude-3-opus: 50
+    claude-3-sonnet: 5
+    claude-3-haiku: 1
     # 讯飞星火
     general: 3
     generalv2: 5
     generalv3: 5
+    "generalv3.5": 5
     # OpenAI
     gpt-3.5-turbo: 3
     gpt-3.5-turbo-16k: 5
@@ -84,7 +88,9 @@ coin_tables:
     gpt-4-8k: 45
     gpt-4-32k: 90
     # 腾讯混元大模型
-    hyllm: 15
+    hyllm: 3
+    hyllm_std: 3
+    hyllm_pro: 15
     # 文心千帆
     model_badiu_llama2_70b: 6 # 拼写错误，但是已经上线了，不能改了
     model_baidu_llama2_13b: 2
@@ -95,6 +101,10 @@ coin_tables:
     model_ernie_bot: 4
     model_ernie_bot_turbo: 2
     model_ernie_bot_4: 15
+    model_baidu_llama2_13b_cn: 2
+    model_baidu_xuanyuan_70b: 5
+    model_baidu_chat_law: 2
+    model_baidu_mixtral_8x7b_instruct: 5
     # 商汤日日新
     nova-ptc-xl-v1: 3
     nova-ptc-xs-v1: 2
@@ -113,3 +123,11 @@ coin_tables:
     "01-ai.yi-34b-chat": 1
     # 天工
     SkyChat-MegaVerse: 2
+    # 智谱
+    glm-4: 15
+    glm-4v: 15
+    glm-3-turbo: 1
+    # 月之暗面
+    moonshot-v1-8k: 2
+    moonshot-v1-32k: 4
+    moonshot-v1-128k: 10

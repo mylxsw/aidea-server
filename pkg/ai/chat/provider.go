@@ -8,6 +8,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
+	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
@@ -15,6 +16,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
+	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"github.com/mylxsw/aidea-server/pkg/file"
 	"github.com/mylxsw/glacier/infra"
 )
@@ -48,6 +50,8 @@ type AIProvider struct {
 	Google     *google.GoogleAI       `autowire:"@"`
 	OpenRouter *openrouter.OpenRouter `autowire:"@"`
 	Sky        *sky.Sky               `autowire:"@"`
+	Zhipu      *zhipuai.ZhipuAI       `autowire:"@"`
+	Moonshot   *moonshot.Moonshot     `autowire:"@"`
 }
 
 type AI struct {
@@ -64,6 +68,8 @@ type AI struct {
 	Google     *GoogleChat
 	Openrouter *OpenRouterChat
 	Sky        *SkyChat
+	Zhipu      *ZhipuChat
+	Moonshot   *MoonshotChat
 }
 
 func NewAI(
@@ -84,5 +90,7 @@ func NewAI(
 		Google:     NewGoogleChat(aiProvider.Google),
 		Openrouter: NewOpenRouterChat(aiProvider.OpenRouter),
 		Sky:        NewSkyChat(aiProvider.Sky),
+		Zhipu:      NewZhipuChat(aiProvider.Zhipu),
+		Moonshot:   NewMoonshotChat(aiProvider.Moonshot),
 	}
 }

@@ -11,7 +11,6 @@ import (
 
 func TestGetTokensForCoins(t *testing.T) {
 	fmt.Println(coins.GetOpenAITextCoins("gpt-3.5-turbo", 1000))
-	fmt.Println(coins.GetOpenAITokensForCoins("gpt-3.5-turbo", 5))
 }
 
 func TestPriceToCoins(t *testing.T) {

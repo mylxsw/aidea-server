@@ -69,10 +69,6 @@ func (ai *Sky) Chat(ctx context.Context, req Request) (*Response, error) {
 		return nil, err
 	}
 
-	if err != nil {
-		return nil, err
-	}
-
 	respData := resp.Body()
 
 	var chatResponse Response

@@ -98,6 +98,12 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("enable-gpt360", "是否启用 360 智脑大模型")
 	ins.AddStringFlag("gpt360-apikey", "", "360 智脑大模型 API Key")
 
+	ins.AddBoolFlag("enable-zhipuai", "是否启用智谱 AI")
+	ins.AddStringFlag("zhipuai-key", "", "智谱 AI API Key")
+
+	ins.AddBoolFlag("enable-moonshot", "是否启用月之暗面")
+	ins.AddStringFlag("moonshot-apikey", "", "月之暗面 API Key")
+
 	ins.AddStringSliceFlag("oneapi-support-models", []string{}, "one-server 支持的模型，可选项 chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2")
 	ins.AddBoolFlag("enable-oneapi", "是否启用 OneAPI")
 	ins.AddStringFlag("oneapi-server", "", "one-server server")
@@ -169,7 +175,6 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("tencent-smstemplateid", "", "腾讯短信验证码模板 ID")
 	ins.AddStringFlag("tencent-smssign", "AIdea", "腾讯短信签名")
 	ins.AddBoolFlag("tencent-voice", "是否使用腾讯的语音转文本服务，不启用则使用 OpenAI 的 Whisper 模型")
-	ins.AddIntFlag("tencent-appid", 0, "腾讯云 APP ID，用于腾讯混元大模型")
 	ins.AddBoolFlag("enable-tencentai", "是否启用腾讯混元大模型 AI 服务")
 
 	ins.AddStringFlag("aliyun-key", "", "aliyun app key")

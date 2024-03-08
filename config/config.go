@@ -115,6 +115,14 @@ type Config struct {
 	EnableGPT360 bool   `json:"enable_gpt360" yaml:"enable_gpt360"`
 	GPT360APIKey string `json:"gpt360_api_key" yaml:"gpt360_api_key"`
 
+	// 智谱
+	EnableZhipuAI bool   `json:"enable_zhipuai" yaml:"enable_zhipuai"`
+	ZhipuAIKey    string `json:"zhipuai_key" yaml:"zhipuai_key"`
+
+	// 月之暗面
+	EnableMoonshot bool   `json:"enable_moonshot" yaml:"enable_moonshot"`
+	MoonshotAPIKey string `json:"moonshot_api_key" yaml:"moonshot_api_key"`
+
 	// OneAPI 支持的模型列表
 	// one-server: https://github.com/songquanpeng/one-api
 	OneAPISupportModels []string `json:"oneapi_support_models" yaml:"oneapi_support_models"`
@@ -209,7 +217,6 @@ type Config struct {
 	UseTencentVoiceToText bool   `json:"use_tencent_voice_to_text" yaml:"use_tencent_voice_to_text"`
 	TencentSecretID       string `json:"tencent_secret_id" yaml:"tencent_secret_id"`
 	TencentSecretKey      string `json:"-" yaml:"tencent_secret_key"`
-	TencentAppID          int    `json:"tencent_app_id" yaml:"tencent_app_id"`
 	EnableTencentAI       bool   `json:"enable_tencent_ai" yaml:"enable_tencent_ai"`
 	TencentSMSSDKAppID    string `json:"tencent_sms_sdk_appid" yaml:"tencent_sms_sdk_appid"`
 	TencentSMSTemplateID  string `json:"tencent_sms_template_id" yaml:"tencent_sms_template_id"`
@@ -424,6 +431,12 @@ func Register(ins *app.App) {
 			EnableGPT360: ctx.Bool("enable-gpt360"),
 			GPT360APIKey: ctx.String("gpt360-apikey"),
 
+			EnableZhipuAI: ctx.Bool("enable-zhipuai"),
+			ZhipuAIKey:    ctx.String("zhipuai-key"),
+
+			EnableMoonshot: ctx.Bool("enable-moonshot"),
+			MoonshotAPIKey: ctx.String("moonshot-apikey"),
+
 			OneAPISupportModels: ctx.StringSlice("oneapi-support-models"),
 			EnableOneAPI:        ctx.Bool("enable-oneapi"),
 			OneAPIServer:        ctx.String("oneapi-server"),
@@ -502,7 +515,6 @@ func Register(ins *app.App) {
 			TencentSMSSDKAppID:    ctx.String("tencent-smssdkappid"),
 			TencentSMSTemplateID:  ctx.String("tencent-smstemplateid"),
 			TencentSMSSign:        ctx.String("tencent-smssign"),
-			TencentAppID:          ctx.Int("tencent-appid"),
 			EnableTencentAI:       ctx.Bool("enable-tencentai"),
 
 			AliyunAccessKeyID:   ctx.String("aliyun-key"),

@@ -10,11 +10,13 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
+	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
+	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -263,6 +265,10 @@ func NewChat(conf *config.Config, ai *AI) Chat {
 		virtualImpl = ai.Google
 	case "sky":
 		virtualImpl = ai.Sky
+	case "zhipu":
+		virtualImpl = ai.Zhipu
+	case "moonshot":
+		virtualImpl = ai.Moonshot
 	default:
 		if openrouter.SupportModel(impLowercase) {
 			virtualImpl = ai.Openrouter
@@ -330,6 +336,14 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.ai.Sky
 	}
 
+	if strings.HasPrefix(model, "zhipu:") {
+		return ai.ai.Zhipu
+	}
+
+	if strings.HasPrefix(model, "moonshot:") {
+		return ai.ai.Moonshot
+	}
+
 	// TODO 根据模型名称判断使用哪个 AI
 	switch model {
 	case string(baidu.ModelErnieBot),
@@ -340,7 +354,11 @@ func (ai *Imp) selectImp(model string) Chat {
 		baidu.ModelBloomz7B,
 		baidu.ModelLlama2_13b,
 		baidu.ModelLlama2_7b_CN,
-		baidu.ModelLlama2_70b:
+		baidu.ModelLlama2_13b_CN,
+		baidu.ModelLlama2_70b,
+		baidu.ModelXuanYuan70B,
+		baidu.ModelChatLaw,
+		baidu.ModelMixtral8x7bInstruct:
 		// 百度文心千帆
 		return ai.ai.Baidu
 	case dashscope.ModelQWenV1, dashscope.ModelQWenPlusV1,
@@ -350,16 +368,20 @@ func (ai *Imp) selectImp(model string) Chat {
 		dashscope.ModelQWen7BChat, dashscope.ModelQWen14BChat:
 		// 阿里灵积平台
 		return ai.ai.DashScope
-	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2), string(xfyun.ModelGeneralV3):
+	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2), string(xfyun.ModelGeneralV3), string(xfyun.ModelGeneralV35):
 		// 讯飞星火
 		return ai.ai.Xfyun
 	case string(sensenova.ModelNovaPtcXLV1), string(sensenova.ModelNovaPtcXSV1):
 		// 商汤日日新
 		return ai.ai.SenseNova
-	case tencentai.ModelHyllm:
+	case tencentai.ModelHyllm, tencentai.ModelHyllmStd, tencentai.ModelHyllmPro:
 		// 腾讯混元大模型
 		return ai.ai.Tencent
-	case string(anthropic.ModelClaude2), string(anthropic.ModelClaudeInstant):
+	case string(anthropic.ModelClaude2),
+		string(anthropic.ModelClaudeInstant),
+		string(anthropic.ModelClaude3Opus),
+		string(anthropic.ModelClaude3Sonnet),
+		string(anthropic.ModelClaude3Haiku):
 		// Anthropic
 		return ai.ai.Anthropic
 	case baichuan.ModelBaichuan2_53B:
@@ -378,6 +400,10 @@ func (ai *Imp) selectImp(model string) Chat {
 		return ai.ai.Google
 	case sky.ModelSkyChatMegaVerse:
 		return ai.ai.Sky
+	case zhipuai.ModelGLM4, zhipuai.ModelGLM3Turbo, zhipuai.ModelGLM4V:
+		return ai.ai.Zhipu
+	case moonshot.ModelMoonshotV1_8K, moonshot.ModelMoonshotV1_32K, moonshot.ModelMoonshotV1_128K:
+		return ai.ai.Moonshot
 	default:
 		if openrouter.SupportModel(model) {
 			return ai.ai.Openrouter

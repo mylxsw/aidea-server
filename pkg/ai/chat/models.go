@@ -7,9 +7,11 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
+	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
+	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"github.com/mylxsw/go-utils/str"
 	"strings"
 
@@ -103,7 +105,7 @@ func openAIModels(conf *config.Config) []Model {
 			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/gpt4.png",
 		},
 		{
-			ID:          "openai:gpt-4-1106-preview",
+			ID:          "openai:gpt-4-turbo-preview",
 			Name:        "GPT-4 Turbo",
 			ShortName:   "GPT-4 Turbo",
 			Description: "能力强，更精准",
@@ -167,6 +169,17 @@ func chinaModels(conf *config.Config) []Model {
 		ID:          "讯飞星火:" + string(xfyun.ModelGeneralV3),
 		Name:        "星火大模型 v3.0",
 		ShortName:   "星火 3.0",
+		Description: "科大讯飞研发的认知大模型，V3.0 能力全面升级，在数学、代码、医疗、教育等场景进行了专项优化，让大模型更懂你所需",
+		Category:    "讯飞星火",
+		IsChat:      true,
+		Disabled:    !conf.EnableXFYunAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/xfyun-v3.png",
+	})
+	models = append(models, Model{
+		ID:          "讯飞星火:" + string(xfyun.ModelGeneralV35),
+		Name:        "星火大模型 v3.5",
+		ShortName:   "星火 3.5",
 		Description: "科大讯飞研发的认知大模型，V3.0 能力全面升级，在数学、代码、医疗、教育等场景进行了专项优化，让大模型更懂你所需",
 		Category:    "讯飞星火",
 		IsChat:      true,
@@ -241,6 +254,17 @@ func chinaModels(conf *config.Config) []Model {
 		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/llama2-cn.png",
 	})
 	models = append(models, Model{
+		ID:          "文心千帆:" + baidu.ModelLlama2_13b_CN,
+		Name:        "Llama 2 13B 中文版",
+		ShortName:   "Llama2 13B",
+		Description: "由 Meta AI 研发并开源，在编码、推理及知识应用等场景表现优秀，当前版本是千帆团队的中文增强版本",
+		Category:    "文心千帆",
+		IsChat:      true,
+		Disabled:    !conf.EnableBaiduWXAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/llama2-cn.png",
+	})
+	models = append(models, Model{
 		ID:          "文心千帆:" + baidu.ModelChatGLM2_6B_32K,
 		Name:        "ChatGLM2 6B",
 		ShortName:   "ChatGLM2",
@@ -272,6 +296,39 @@ func chinaModels(conf *config.Config) []Model {
 		Disabled:    !conf.EnableBaiduWXAI,
 		VersionMin:  "1.0.3",
 		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/BLOOMZ.png",
+	})
+	models = append(models, Model{
+		ID:          "文心千帆:" + baidu.ModelXuanYuan70B,
+		Name:        "轩辕 70B",
+		ShortName:   "轩辕 70B",
+		Description: "由度小满开发，基于Llama2-70B模型进行中文增强的金融行业大模型，通用能力显著提升，在CMMLU/CEVAL等各项榜单中排名前列；金融域任务超越领先通用模型，支持金融知识问答、金融计算、金融分析等各项任务",
+		Category:    "文心千帆",
+		IsChat:      true,
+		Disabled:    !conf.EnableBaiduWXAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/xuanyuan.jpg",
+	})
+	models = append(models, Model{
+		ID:          "文心千帆:" + baidu.ModelChatLaw,
+		Name:        "ChatLaw",
+		ShortName:   "ChatLaw",
+		Description: "由壹万卷公司与北大深研院研发的法律行业大模型，在开源版本基础上进行了进一步架构升级，融入了法律意图识别、法律关键词提取、CoT推理增强等模块，实现了效果提升，以满足法律问答、法条检索等应用需求",
+		Category:    "文心千帆",
+		IsChat:      true,
+		Disabled:    !conf.EnableBaiduWXAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/chatlaw.png",
+	})
+	models = append(models, Model{
+		ID:          "文心千帆:" + baidu.ModelMixtral8x7bInstruct,
+		Name:        "Mixtral-8x7B-Instruct",
+		ShortName:   "Mixtral-8x7B-Instruct",
+		Description: "由 Mistral AI 发布的首个高质量稀疏专家混合模型 (MOE)，模型由8个70亿参数专家模型组成，在多个基准测试中表现优于 Llama-2-70B 及 GPT3.5，能够处理 32K 上下文，在代码生成任务中表现尤为优异",
+		Category:    "文心千帆",
+		IsChat:      true,
+		Disabled:    !conf.EnableBaiduWXAI,
+		VersionMin:  "1.0.3",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/mixtral.jpg",
 	})
 
 	if conf.EnableDashScopeAI {
@@ -391,8 +448,20 @@ func chinaModels(conf *config.Config) []Model {
 
 	models = append(models, Model{
 		ID:          "腾讯:" + tencentai.ModelHyllm,
-		Name:        "混元大模型",
+		Name:        "混元标准版",
 		ShortName:   "混元",
+		Description: "由腾讯研发的大语言模型，具备强大的中文创作能力，复杂语境下的逻辑推理能力，以及可靠的任务执行能力。这是标准版，当前已经标注为弃用，请直接使用混元标准版",
+		Category:    "腾讯",
+		IsChat:      true,
+		Disabled:    !conf.EnableTencentAI,
+		VersionMin:  "1.0.5",
+		AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/hunyuan.png",
+	})
+
+	models = append(models, Model{
+		ID:          "腾讯:" + tencentai.ModelHyllmPro,
+		Name:        "混元高级版",
+		ShortName:   "混元+",
 		Description: "由腾讯研发的大语言模型，具备强大的中文创作能力，复杂语境下的逻辑推理能力，以及可靠的任务执行能力",
 		Category:    "腾讯",
 		IsChat:      true,
@@ -509,6 +578,77 @@ func chinaModels(conf *config.Config) []Model {
 		})
 	}
 
+	if conf.EnableZhipuAI {
+		models = append(models, Model{
+			ID:          "zhipu:" + zhipuai.ModelGLM4,
+			Name:        "GLM-4",
+			ShortName:   "GLM-4",
+			Description: "智谱 AI 全自研的大语言模型，提供了更强大的问答和文本生成能力，适合于复杂的对话交互和深度内容创作设计的场景",
+			Category:    "zhipu",
+			IsChat:      true,
+			VersionMin:  "1.0.5",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/glm.png",
+		})
+		//models = append(models, Model{
+		//	ID:            "zhipu:" + zhipuai.ModelGLM4V,
+		//	Name:          "GLM-4V",
+		//	ShortName:     "GLM-4V",
+		//	Description:   "智谱 AI 全自研的大语言模型，实现了视觉语言特征的深度融合，支持视觉问答、图像字幕、视觉定位、复杂目标检测等各类图像理解任务",
+		//	Category:      "zhipu",
+		//	IsChat:        true,
+		//	VersionMin:    "1.0.5",
+		//	AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/glm.png",
+		//	SupportVision: true,
+		//})
+		models = append(models, Model{
+			ID:            "zhipu:" + zhipuai.ModelGLM3Turbo,
+			Name:          "GLM-3 Turbo",
+			ShortName:     "GLM-3",
+			Description:   "智谱 AI 全自研的大语言模型，适用于对知识量、推理能力、创造力要求较高的场景，比如广告文案、小说写作、知识类写作、代码生成等",
+			Category:      "zhipu",
+			IsChat:        true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/glm.png",
+			SupportVision: true,
+		})
+	}
+
+	if conf.EnableMoonshot {
+		models = append(models, Model{
+			ID:            "moonshot:" + moonshot.ModelMoonshotV1_8K,
+			Name:          "Moonshot 8K",
+			ShortName:     "Moonshot 8K",
+			Description:   "AI 创业公司月之暗面推出的大语言模型",
+			Category:      "moonshot",
+			IsChat:        true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/moonshot.png",
+			SupportVision: true,
+		})
+		models = append(models, Model{
+			ID:            "moonshot:" + moonshot.ModelMoonshotV1_32K,
+			Name:          "Moonshot 32K",
+			ShortName:     "Moonshot 32K",
+			Description:   "AI 创业公司月之暗面推出的大语言模型",
+			Category:      "moonshot",
+			IsChat:        true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/moonshot.png",
+			SupportVision: true,
+		})
+		models = append(models, Model{
+			ID:            "moonshot:" + moonshot.ModelMoonshotV1_128K,
+			Name:          "Moonshot 128K",
+			ShortName:     "Moonshot 128K",
+			Description:   "AI 创业公司月之暗面推出的大语言模型",
+			Category:      "moonshot",
+			IsChat:        true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/moonshot.png",
+			SupportVision: true,
+		})
+	}
+
 	return models
 }
 
@@ -562,6 +702,42 @@ func anthropicModels(conf *config.Config) []Model {
 			VersionMin:  "1.0.5",
 			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-2.png",
 		},
+		{
+			ID:            "Anthropic:" + string(anthropic.ModelClaude3Opus),
+			Name:          "Claude 3 Opus",
+			ShortName:     "Claude Opus",
+			Description:   "Anthropic's most powerful model for highly complex tasks.",
+			Category:      "Anthropic",
+			IsChat:        true,
+			Disabled:      !conf.EnableAnthropic,
+			SupportVision: true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-opus-bg.png",
+		},
+		{
+			ID:            "Anthropic:" + string(anthropic.ModelClaude3Sonnet),
+			Name:          "Claude 3 Sonnet",
+			ShortName:     "Claude Sonnet",
+			Description:   "Anthropic's most powerful model, Ideal balance of intelligence and speed for enterprise workloads.",
+			Category:      "Anthropic",
+			IsChat:        true,
+			Disabled:      !conf.EnableAnthropic,
+			SupportVision: true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-sonnet-bg.png",
+		},
+		{
+			ID:            "Anthropic:" + string(anthropic.ModelClaude3Haiku),
+			Name:          "Claude 3 Haiku",
+			ShortName:     "Claude Haiku",
+			Description:   "Anthropic's most powerful model, Fastest and most compact model for near-instant responsiveness.",
+			Category:      "Anthropic",
+			IsChat:        true,
+			Disabled:      true,
+			SupportVision: true,
+			VersionMin:    "1.0.5",
+			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-haiku-bg.png",
+		},
 	}
 }
 
@@ -587,7 +763,7 @@ func aideaModels(conf *config.Config) []Model {
 			IsChat:      true,
 			Disabled:    !conf.EnableVirtualModel,
 			VersionMin:  "1.0.5",
-			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/nanxian.png",
+			AvatarURL:   "https://ssl.aicode.cc/ai-server/assets/avatar/beichou.png",
 		},
 	}
 }

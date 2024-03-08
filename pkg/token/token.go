@@ -84,6 +84,22 @@ func (jt *Token) CreateToken(payloads Claims, expire time.Duration) string {
 	return str
 }
 
+// CreateCustomToken 创建自定义Token
+func (jt *Token) CreateCustomToken(header map[string]any, claims Claims) string {
+	tk := jwtlib.Token{
+		Header: header,
+		Claims: jwtlib.MapClaims(claims),
+		Method: jwtlib.SigningMethodHS256,
+	}
+
+	str, err := tk.SignedString([]byte(jt.key))
+	if err != nil {
+		return ""
+	}
+
+	return str
+}
+
 // ParseToken 解析Token
 func (jt *Token) ParseToken(tokenString string) (Claims, error) {
 	token, err := jwtlib.Parse(tokenString, func(token *jwtlib.Token) (interface{}, error) {

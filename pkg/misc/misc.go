@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/hashicorp/go-uuid"
-	"github.com/mylxsw/asteria/log"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -18,6 +16,9 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/hashicorp/go-uuid"
+	"github.com/mylxsw/asteria/log"
 
 	"gopkg.in/resty.v1"
 
@@ -238,6 +239,16 @@ func ImageToBase64Image(imagePath string) (string, error) {
 	return "data:" + mimeType + ";base64," + base64.StdEncoding.EncodeToString(data), nil
 }
 
+// Base64ImageMediaType 获取 base64 图片的 MIME 类型
+func Base64ImageMediaType(base64Image string) string {
+	return strings.TrimPrefix(strings.SplitN(base64Image, ";", 2)[0], "data:")
+}
+
+// RemoveImageBase64Prefix 移除 base64 图片的前缀
+func RemoveImageBase64Prefix(base64Image string) string {
+	return strings.SplitN(base64Image, ",", 2)[1]
+}
+
 // ImageToBase64ImageWithMime 把图片转换为 base64 编码图片
 func ImageToBase64ImageWithMime(imagePath string) (encoded string, mimeType string, err error) {
 	data, err := os.ReadFile(imagePath)
@@ -311,7 +322,8 @@ func NoError2[T any](_ T, err error) {
 
 // GenerateAPIToken 生成 API Token
 func GenerateAPIToken(name string, uid int64) string {
-	return fmt.Sprintf("%s.%d.%x", HashID(uid), time.Now().UnixNano(), sha1.Sum([]byte(fmt.Sprintf("%s:%d:%d:%d", name, uid, time.Now().UnixNano(), rand.Intn(9999999999)))))
+	randomNumber := rand.Int63n(int64(9999999999))
+	return fmt.Sprintf("%s.%d.%x", HashID(uid), time.Now().UnixNano(), sha1.Sum([]byte(fmt.Sprintf("%s:%d:%d:%d", name, uid, time.Now().UnixNano(), randomNumber))))
 }
 
 // UUID 生成一个 UUID

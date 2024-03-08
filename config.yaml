@@ -193,6 +193,18 @@ sky-appsecret: ""
 enable-gpt360: false
 gpt360-apikey: ""
 
+######## 智谱 #########
+
+# API 申请 https://open.bigmodel.cn
+enable-zhipuai: false
+zhipuai-key: ""
+
+######## 月之暗面 ########
+
+# API 申请 https://platform.moonshot.cn
+enable-moonshot: false
+moonshot-apikey: ""
+
 ######## ONEAPI ########
 
 # https://github.com/songquanpeng/one-api
@@ -347,8 +359,6 @@ tencent-smssign: "AIdea"
 # 混元大模型
 # API 申请：https://hunyuan.tencent.com/
 
-# 腾讯云 APP ID，用于混元大模型
-tencent-appid: 1256440000
 # 是否启用腾讯混元大模型
 enable-tencentai: false
 

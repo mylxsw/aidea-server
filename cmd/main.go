@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
+	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
+	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"github.com/mylxsw/aidea-server/pkg/file"
 	"github.com/mylxsw/aidea-server/pkg/wechat"
 	"math/rand"
@@ -160,6 +162,8 @@ func main() {
 		google.Provider{},
 		openrouter.Provider{},
 		sky.Provider{},
+		zhipuai.Provider{},
+		moonshot.Provider{},
 	)
 
 	app.MustRun(ins)
