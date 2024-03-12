@@ -116,7 +116,7 @@ mysql> SOURCE /Users/mylxsw/Workspace/codes/ai/ai-server/migrate/sql/2023092501-
    有空的时候会补充，但是不保证时间，大家普遍遇到的问题会随时更新。
 3. 是否支持 Docker 一键部署？
 
-   暂时没有提供，但是会有的，有时间了会更新，也欢迎大家贡献。
+   有，在这里 [mylxsw/aidea-docker](https://github.com/mylxsw/aidea-docker)。
 4. 部署了服务端之后，客户端要怎么修改才能使用自己的服务端呢？
 
    请 Fork 项目 [mylxsw/aidea](https://github.com/mylxsw/aidea)，然后修改 `lib/helper/constant.dart`
@@ -126,12 +126,18 @@ mysql> SOURCE /Users/mylxsw/Workspace/codes/ai/ai-server/migrate/sql/2023092501-
     // API 服务器地址
     const apiServerURL = 'https://api.aidea.com';
     ```
-5. 我不想自己安装，能否帮我部署一套？
+5. 有没有详细的数据库设计文档？
+
+   没有，但是有一份简要版的说明文档，参考 [常用表结构](./table-tutorials.md)
+6. 我不想自己安装，能否帮我部署一套？
 
    建议大家尽可能的自己去部署，遇到问题在 [GitHub Issues](https://github.com/mylxsw/aidea-server/issues)
    提出，如果实在懒得搞，可以找我来帮你部署，详情参考 [服务器代部署说明](./deploy-vip.md)。
 
-6. 七牛云对象存储 Kodo 在哪里配置图片样式？
+7. 七牛云对象存储 Kodo 在哪里配置图片样式？
 
     ![image](https://github.com/mylxsw/aidea-server/assets/2330911/5a450205-66aa-4f26-9dc3-d4696a2abfae)
 
+8. 新用户没有智慧果，无法使用聊天功能
+
+   请在数据库中，参考 `users` 表和 `quota` 表，手动为用户添加智慧果。
