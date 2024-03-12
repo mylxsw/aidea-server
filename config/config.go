@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"github.com/mylxsw/aidea-server/internal/coins"
+	"github.com/mylxsw/asteria/log"
 	"os"
 	"strings"
 
@@ -323,6 +324,10 @@ func Register(ins *app.App) {
 
 	// 配置文件读取
 	ins.Singleton(func(ctx infra.FlagContext) *Config {
+		if ctx.String("conf") == "" {
+			log.Warning("没有指定配置文件，使用默认配置（通过命令行选项 --conf config.yaml 指定配置文件）")
+		}
+
 		var appleSecret string
 		appleSecretFile := ctx.String("apple-secret")
 		if appleSecretFile != "" {
