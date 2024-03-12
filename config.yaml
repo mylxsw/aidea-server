@@ -12,6 +12,9 @@ enable-cors: true
 # 是否启用迁移，启用后，当数据结构有更新时，会自动更新数据库
 enable-migrate: true
 
+# 是否记录聊天记录到 messages 表
+enable-recordchat: true
+
 # 是否启用 Websocket 支持
 # 启用后，当客户端版本 >= 1.0.7 时，聊天协议使用 Websocket 代替 OpenAI 兼容的 SSE 协议
 enable-websocket: true
