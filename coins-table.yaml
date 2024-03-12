@@ -1,7 +1,7 @@
 # 注册账号赠币数量
-signup_gift_coins: 100
+signup_gift_coins: 1000
 # 绑定手机赠币数量
-bind_phone_gift_coins: 100
+bind_phone_gift_coins: 1000
 # 邀请赠币数量
 invite_gift_coins: 100
 # 被邀请赠币数量
