@@ -240,8 +240,13 @@ func ImageToBase64Image(imagePath string) (string, error) {
 }
 
 // Base64ImageMediaType 获取 base64 图片的 MIME 类型
-func Base64ImageMediaType(base64Image string) string {
-	return strings.TrimPrefix(strings.SplitN(base64Image, ";", 2)[0], "data:")
+func Base64ImageMediaType(base64Image string) (string, error) {
+	_, mimeType, err := DecodeBase64ImageWithMime(base64Image)
+	if err != nil {
+		return "", err
+	}
+
+	return mimeType, nil
 }
 
 // RemoveImageBase64Prefix 移除 base64 图片的前缀
