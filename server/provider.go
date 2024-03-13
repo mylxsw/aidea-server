@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/rate"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/token"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
@@ -196,14 +196,14 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 					var user *auth.User
 					if u, err := userSrv.GetUserByID(ctx, claims.Int64Value("id"), false); err != nil {
 						if needAuth {
-							if errors.Is(err, repo2.ErrNotFound) {
+							if errors.Is(err, repo.ErrNotFound) {
 								return errors.New("invalid auth credential, user not found")
 							}
 
 							return err
 						}
 					} else {
-						if u.Status == repo2.UserStatusDeleted {
+						if u.Status == repo.UserStatusDeleted {
 							if needAuth {
 								return ErrUserDestroyed
 							}

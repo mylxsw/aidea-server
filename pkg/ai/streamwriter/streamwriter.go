@@ -99,6 +99,18 @@ func New[T InitRequest[T]](enableWs bool, enableCors bool, r *http.Request, w ht
 				misc.NoError(wsConn.Close())
 				return nil, nil, err
 			}
+
+			go func() {
+				defer func() { _ = wsConn.Close() }()
+				for {
+					typ, msg, err := wsConn.ReadMessage()
+					if err != nil {
+						return
+					}
+
+					log.Warningf("receive message from websocket: (%d) %s", typ, string(msg))
+				}
+			}()
 		}
 	} else {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

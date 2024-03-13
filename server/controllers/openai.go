@@ -198,6 +198,9 @@ func (m FinalMessage) ToJSON() string {
 // Chat 聊天接口，接口参数参考 https://platform.openai.com/docs/api-reference/chat/create
 // 该接口会返回一个 SSE 流，接口参数 stream 总是为 true（忽略客户端设置）
 func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user *auth.UserOptional, quotaRepo *repo.QuotaRepo, w http.ResponseWriter, client *auth.ClientInfo) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	if user.User == nil && ctl.conf.FreeChatEnabled && client.IsIOS() {
 		// 匿名用户访问
 		user.User = &auth.User{
@@ -464,7 +467,7 @@ func (ctl *OpenAIController) handleChat(
 		return "", ErrChatResponseHasSent
 	}
 
-	replyText, err := ctl.writeChatResponse(ctx, req, stream, user, sw)
+	replyText, err := ctl.writeChatResponse(chatCtx, req, stream, user, sw)
 	if err != nil {
 		return replyText, err
 	}
