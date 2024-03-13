@@ -118,6 +118,11 @@ func (ctl *PaymentController) CreateAlipay(ctx context.Context, webCtx web.Conte
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
+	if !array.In("alipay", product.GetSupportMethods()) {
+		log.F(log.M{"user_id": user.ID}).Errorf("product %s not support alipay", productId)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
 	paymentID, err := ctl.payRepo.CreateAliPayment(ctx, user.ID, productId, source)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -770,6 +775,11 @@ func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx we
 
 	product := coins.GetProduct(productId)
 	if product == nil {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	if !array.In("stripe", product.GetSupportMethods()) {
+		log.F(log.M{"user_id": user.ID}).Errorf("product %s not support stripe", productId)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 

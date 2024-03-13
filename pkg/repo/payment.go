@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/go-utils/array"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -364,6 +365,10 @@ func (repo *PaymentRepo) CreateApplePayment(ctx context.Context, userID int64, p
 	product := coins.GetProduct(productID)
 	if product == nil {
 		return "", fmt.Errorf("product %s not found", productID)
+	}
+
+	if !array.In("apple_pay", product.GetSupportMethods()) {
+		return "", fmt.Errorf("product %s not support apple pay", productID)
 	}
 
 	paymentID = fmt.Sprintf("%d-%s", userID, paymentID)

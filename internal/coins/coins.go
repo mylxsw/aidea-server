@@ -66,6 +66,10 @@ func LoadPriceInfo(tableFile string) error {
 				item.Description = buildDescription(item.Quota)
 			}
 
+			if len(item.Methods) == 0 {
+				item.Methods = []string{"alipay", "apple_pay", "stripe"}
+			}
+
 			return item
 		})
 	}

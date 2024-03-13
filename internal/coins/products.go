@@ -29,6 +29,15 @@ type Product struct {
 	Recommend        bool         `json:"recommend,omitempty" yaml:"recommend,omitempty"`
 	Description      string       `json:"description,omitempty" yaml:"description,omitempty"`
 	PlatformLimit    Platform     `json:"platform_limits,omitempty" yaml:"platform_limits,omitempty"`
+	Methods          []string     `json:"methods,omitempty" yaml:"methods,omitempty"`
+}
+
+func (ap Product) GetSupportMethods() []string {
+	if len(ap.Methods) == 0 {
+		return []string{"alipay", "apple_pay", "stripe"}
+	}
+
+	return ap.Methods
 }
 
 func (ap Product) GetRetailPriceUSD() int64 {

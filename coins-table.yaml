@@ -46,6 +46,7 @@ default_exchange_rate: 7.1
 #   - retail_price_usd: 零售价，单位为美元（用于 Stripe 支付方式）
 #   - expire_policy: 有效期，可选值为 never, week, 2week, month, 3month, 6month, year
 #   - recommend: 是否推荐，推荐的产品会在充值页面显示 Best Deal 标识
+#   - methods: 支持的支付方式，可选值为 alipay, apple_pay, stripe，默认全部支持
 products:
   - id: cc.aicode.aidea.coins_600_2
     name: 6元700个
