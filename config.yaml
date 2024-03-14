@@ -64,6 +64,12 @@ enable-scheduler: true
 # 支持的短信通道，支持 aliyun, tencent，配置多个则随机选择
 sms-channels: [ "aliyun", "tencent" ]
 
+# 是否提示用户绑定手机号
+should-bind-phone: false
+  
+# Web 服务的基础 URL，例如 https://web.aicode.cc
+base-url: ""
+
 ######## OpenAI 配置 ########
 
 # 是否启用 OpenAI

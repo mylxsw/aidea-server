@@ -26,6 +26,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("enable-api-keys", "是否启用 API Keys 功能")
 	ins.AddBoolFlag("enable-model-rate-limit", "是否启用模型请求频率限制，当前限制只支持每分钟 5 次/用户")
 	ins.AddStringFlag("universal-link-config", "", "universal link 配置文件路径，留空则使用默认的 universal link，配置文件格式参考 https://developer.apple.com/documentation/xcode/supporting-associated-domains")
+	ins.AddBoolFlag("should-bind-phone", "是否需要绑定手机号码")
 
 	ins.AddStringFlag("redis-host", "127.0.0.1", "redis host")
 	ins.AddIntFlag("redis-port", 6379, "redis port")

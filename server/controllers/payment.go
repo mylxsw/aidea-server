@@ -203,9 +203,9 @@ func (ctl *PaymentController) AlipayClientConfirm(ctx context.Context, webCtx we
 		"result_parsed": res,
 	}).Debugf("alipay client confirm")
 
-	his, err := ctl.payRepo.GetPaymentHistory(ctx, user.ID, res.AlipayTradeAppPayResponse.OutTradeNo)
+	his, err := ctl.payRepo.GetPaymentHistory(ctx, res.AlipayTradeAppPayResponse.OutTradeNo)
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 		}
 
@@ -225,11 +225,11 @@ func (ctl *PaymentController) AlipayClientConfirm(ctx context.Context, webCtx we
 }
 
 // QueryPaymentStatus 查询支付状态
-func (ctl *PaymentController) QueryPaymentStatus(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+func (ctl *PaymentController) QueryPaymentStatus(ctx context.Context, webCtx web.Context) web.Response {
 	paymentId := webCtx.PathVar("id")
-	history, err := ctl.payRepo.GetPaymentHistory(ctx, user.ID, paymentId)
+	history, err := ctl.payRepo.GetPaymentHistory(ctx, paymentId)
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrNotFound), http.StatusNotFound)
 		}
 
@@ -769,7 +769,7 @@ func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx we
 		source = "app"
 	}
 
-	if !array.In(source, []string{"app", "web"}) {
+	if !array.In(source, []string{"app", "web", "pc"}) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
@@ -850,11 +850,24 @@ func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx we
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
+	proxyURL := ""
+	if source == "pc" && ctl.conf.BaseURL != "" {
+		proxyParams := url.Values{}
+		proxyParams.Set("id", paymentID)
+		proxyParams.Set("intent", pi.ClientSecret)
+		proxyParams.Set("price", fmt.Sprintf("$%s", strconv.Itoa(int(product.GetRetailPriceUSD()/100))))
+		proxyParams.Set("key", ctl.conf.Stripe.PublishableKey)
+		proxyParams.Set("finish_action", "close")
+
+		proxyURL = fmt.Sprintf("%s#/payment/proxy?%s", ctl.conf.BaseURL, proxyParams.Encode())
+	}
+
 	return webCtx.JSON(web.M{
 		"payment_intent":  pi.ClientSecret,
 		"ephemeral_key":   ek.Secret,
 		"customer":        c.ID,
 		"publishable_key": ctl.conf.Stripe.PublishableKey,
 		"payment_id":      paymentID,
+		"proxy_url":       proxyURL,
 	})
 }

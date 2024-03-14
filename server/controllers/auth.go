@@ -232,7 +232,7 @@ func (ctl *AuthController) SignInOrUpWithSMSCode(ctx context.Context, webCtx web
 		}
 	}
 
-	return webCtx.JSON(buildUserLoginRes(user, false, ctl.tk))
+	return webCtx.JSON(ctl.buildUserLoginRes(user, false, ctl.tk))
 }
 
 // bindWeChatWithToken 绑定微信
@@ -321,7 +321,7 @@ func (ctl *AuthController) BindPhone(ctx context.Context, webCtx web.Context, cu
 	// 检查验证码是否正确
 	realVerifyCode, err := ctl.rds.Get(ctx, fmt.Sprintf("auth:verify-code:%s:%s", verifyCodeId, username)).Result()
 	if err != nil {
-		if err != redis.Nil {
+		if !errors.Is(err, redis.Nil) {
 			log.WithFields(log.Fields{
 				"username": username,
 				"id":       verifyCodeId,
@@ -340,7 +340,7 @@ func (ctl *AuthController) BindPhone(ctx context.Context, webCtx web.Context, cu
 	// 检查用户信息
 	user, err := ctl.userRepo.GetUserByID(ctx, current.ID)
 	if err != nil {
-		if err == repo.ErrNotFound {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "用户不存在"), http.StatusBadRequest)
 		}
 
@@ -352,7 +352,7 @@ func (ctl *AuthController) BindPhone(ctx context.Context, webCtx web.Context, cu
 
 	if user.Phone != "" {
 		if user.Phone == username {
-			return webCtx.JSON(buildUserLoginRes(user, false, ctl.tk))
+			return webCtx.JSON(ctl.buildUserLoginRes(user, false, ctl.tk))
 		}
 
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "绑定失败，已绑定其它手机号"), http.StatusBadRequest)
@@ -360,7 +360,7 @@ func (ctl *AuthController) BindPhone(ctx context.Context, webCtx web.Context, cu
 
 	// 检查手机号是否绑定到其它账号
 	if u, err := ctl.userRepo.GetUserByPhone(ctx, username); err != nil {
-		if err != repo.ErrNotFound {
+		if !errors.Is(err, repo.ErrNotFound) {
 			log.WithFields(log.Fields{
 				"username": username,
 			}).Errorf("failed to get user: %s", err)
@@ -413,7 +413,7 @@ func (ctl *AuthController) BindPhone(ctx context.Context, webCtx web.Context, cu
 
 	user.Phone = username
 
-	return webCtx.JSON(buildUserLoginRes(user, isNewUser, ctl.tk))
+	return webCtx.JSON(ctl.buildUserLoginRes(user, isNewUser, ctl.tk))
 }
 
 func (ctl *AuthController) ResetPassword(ctx context.Context, webCtx web.Context, userRepo *repo.UserRepo, rds *redis.Client) web.Response {
@@ -461,7 +461,7 @@ func (ctl *AuthController) ResetPassword(ctx context.Context, webCtx web.Context
 	// 检查验证码是否正确
 	realVerifyCode, err := rds.Get(ctx, fmt.Sprintf("auth:verify-code:%s:%s", verifyCodeId, username)).Result()
 	if err != nil {
-		if err != redis.Nil {
+		if !errors.Is(err, redis.Nil) {
 			log.WithFields(log.Fields{
 				"username": username,
 				"id":       verifyCodeId,
@@ -972,7 +972,7 @@ func (ctl *AuthController) createAccount(ctx context.Context, webCtx web.Context
 		}
 	}
 
-	return webCtx.JSON(buildUserLoginRes(user, true, ctl.tk))
+	return webCtx.JSON(ctl.buildUserLoginRes(user, true, ctl.tk))
 }
 
 // SignInWithPassword 用户账号登录
@@ -1011,7 +1011,7 @@ func (ctl *AuthController) SignInWithPassword(ctx context.Context, webCtx web.Co
 		}
 	}
 
-	return webCtx.JSON(buildUserLoginRes(user, false, ctl.tk))
+	return webCtx.JSON(ctl.buildUserLoginRes(user, false, ctl.tk))
 }
 
 // TrySignInWithWechat 尝试使用微信登录，返回微信端用户信息 token + 用户是否存在
@@ -1099,7 +1099,7 @@ func (ctl *AuthController) SignInWithWechat(ctx context.Context, webCtx web.Cont
 		}
 	}
 
-	return webCtx.JSON(buildUserLoginRes(user, eventID > 0, ctl.tk))
+	return webCtx.JSON(ctl.buildUserLoginRes(user, eventID > 0, ctl.tk))
 }
 
 // BindWeChat 绑定微信
@@ -1178,7 +1178,7 @@ func (ctl *AuthController) SignInWithApple(ctx context.Context, webCtx web.Conte
 		}
 	}
 
-	return webCtx.JSON(buildUserLoginRes(user, isNewUser, ctl.tk))
+	return webCtx.JSON(ctl.buildUserLoginRes(user, isNewUser, ctl.tk))
 }
 
 func appleSignIn(
@@ -1261,18 +1261,19 @@ func appleSignIn(
 }
 
 // buildUserLoginRes 构建用户登录响应
-func buildUserLoginRes(user *model.Users, isSignup bool, tk *token.Token) web.M {
+func (ctl *AuthController) buildUserLoginRes(user *model.Users, isSignup bool, tk *token.Token) web.M {
 	if user.Phone != "" {
 		user.Phone = misc.MaskPhoneNumber(user.Phone)
 	}
 
 	return web.M{
-		"id":          user.Id,
-		"name":        user.Realname,
-		"email":       user.Email,
-		"phone":       user.Phone,
-		"is_new_user": isSignup,
-		"reward":      coins.BindPhoneGiftCoins,
+		"id":              user.Id,
+		"name":            user.Realname,
+		"email":           user.Email,
+		"phone":           user.Phone,
+		"is_new_user":     isSignup,
+		"need_bind_phone": ctl.conf.ShouldBindPhone && user.Phone == "",
+		"reward":          coins.BindPhoneGiftCoins,
 		"token": tk.CreateToken(token.Claims{
 			"id": user.Id,
 		}, 6*30*24*time.Hour),

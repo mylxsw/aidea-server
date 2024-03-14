@@ -31,6 +31,9 @@ type Config struct {
 	// 是否是生产环境
 	IsProduction bool `json:"is_production" yaml:"is_production"`
 
+	// 是否提示用户绑定手机
+	ShouldBindPhone bool `json:"should_bind_phone" yaml:"should_bind_phone"`
+
 	// BaseURL 服务的基础 URL
 	BaseURL string `json:"base_url" yaml:"base_url"`
 
@@ -373,6 +376,7 @@ func Register(ins *app.App) {
 			EnableWebsocket:     ctx.Bool("enable-websocket"),
 			DebugWithSQL:        ctx.Bool("debug-with-sql"),
 			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
+			ShouldBindPhone:     ctx.Bool("should-bind-phone"),
 
 			BaseURL:      strings.TrimSuffix(ctx.String("base-url"), "/"),
 			IsProduction: ctx.Bool("production"),

@@ -38,10 +38,9 @@ func NewPaymentRepo(db *sql.DB) *PaymentRepo {
 	return &PaymentRepo{db: db}
 }
 
-func (repo *PaymentRepo) GetPaymentHistory(ctx context.Context, userID int64, paymentID string) (model.PaymentHistory, error) {
+func (repo *PaymentRepo) GetPaymentHistory(ctx context.Context, paymentID string) (model.PaymentHistory, error) {
 	q := query.Builder().
-		Where(model.FieldPaymentHistoryPaymentId, paymentID).
-		Where(model.FieldPaymentHistoryUserId, userID)
+		Where(model.FieldPaymentHistoryPaymentId, paymentID)
 
 	pay, err := model.NewPaymentHistoryModel(repo.db).First(ctx, q)
 	if err != nil {
