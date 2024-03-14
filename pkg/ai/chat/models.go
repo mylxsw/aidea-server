@@ -733,7 +733,7 @@ func anthropicModels(conf *config.Config) []Model {
 			Description:   "Anthropic's most powerful model, Fastest and most compact model for near-instant responsiveness.",
 			Category:      "Anthropic",
 			IsChat:        true,
-			Disabled:      true,
+			Disabled:      false,
 			SupportVision: true,
 			VersionMin:    "1.0.5",
 			AvatarURL:     "https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-haiku-bg.png",

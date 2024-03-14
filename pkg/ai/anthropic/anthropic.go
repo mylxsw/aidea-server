@@ -51,7 +51,7 @@ func (ai *Anthropic) resolveModel(model Model) Model {
 	case "claude-3-sonnet":
 		return "claude-3-sonnet-20240229"
 	case "claude-3-haiku":
-		return "claude-3-haiku-20240229"
+		return "claude-3-haiku-20240307"
 	default:
 		return model
 	}
