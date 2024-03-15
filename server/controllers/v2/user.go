@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
@@ -24,6 +23,7 @@ type UserController struct {
 	translater youdao.Translater `autowire:"@"`
 	repo       *repo.Repository  `autowire:"@"`
 	conf       *config.Config    `autowire:"@"`
+	svc        *service.Service  `autowire:"@"`
 }
 
 func NewUserController(resolver infra.Resolver) web.Controller {
@@ -54,8 +54,8 @@ func (ctl *UserController) UpdateCustomHomeModels(ctx context.Context, webCtx we
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	models := array.ToMap(chat.Models(ctl.conf, true), func(item chat.Model, _ int) string {
-		return item.ID
+	models := array.ToMap(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) string {
+		return item.ModelId
 	})
 
 	homeModels := array.Map(params, func(item string, _ int) repo.HomeModelV2 {
@@ -77,7 +77,7 @@ func (ctl *UserController) UpdateCustomHomeModels(ctx context.Context, webCtx we
 			res.Name = room.Name
 			model, ok := models[room.Vendor+":"+room.Model]
 			if ok {
-				res.SupportVision = model.SupportVision
+				res.SupportVision = model.Meta.Vision
 			}
 		case service.HomeModelTypeRooms:
 			room, err := ctl.repo.Room.Room(ctx, user.ID, int64(must.Must(strconv.Atoi(res.ID))))
@@ -88,7 +88,7 @@ func (ctl *UserController) UpdateCustomHomeModels(ctx context.Context, webCtx we
 			res.Name = room.Name
 			model, ok := models[room.Vendor+":"+room.Model]
 			if ok {
-				res.SupportVision = model.SupportVision
+				res.SupportVision = model.Meta.Vision
 			}
 		case service.HomeModelTypeModel:
 			model, ok := models[res.ID]
@@ -97,7 +97,7 @@ func (ctl *UserController) UpdateCustomHomeModels(ctx context.Context, webCtx we
 			}
 
 			res.Name = model.ShortName
-			res.SupportVision = model.SupportVision
+			res.SupportVision = model.Meta.Vision
 		}
 
 		return res

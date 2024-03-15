@@ -4,19 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/ai/anthropic"
-	"github.com/mylxsw/aidea-server/pkg/ai/baichuan"
-	"github.com/mylxsw/aidea-server/pkg/ai/baidu"
-	"github.com/mylxsw/aidea-server/pkg/ai/dashscope"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
-	"github.com/mylxsw/aidea-server/pkg/ai/gpt360"
-	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
-	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
-	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
-	"github.com/mylxsw/aidea-server/pkg/ai/sky"
-	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
-	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
-	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
+	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/service"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -138,8 +129,7 @@ func (req Request) Init() Request {
 		modelSegs = modelSegs[1:]
 	}
 
-	model := strings.Join(modelSegs, ":")
-	req.Model = model
+	req.Model = strings.Join(modelSegs, ":")
 
 	// 获取 room id
 	// 这里复用了参数 N
@@ -203,14 +193,6 @@ func (req Request) Fix(chat Chat, maxContextLength int64, maxTokenCount int) (*R
 }
 
 func (req Request) ResolveCalFeeModel(conf *config.Config) string {
-	if req.Model == "nanxian" {
-		return conf.VirtualModel.NanxianRel
-	}
-
-	if req.Model == "beichou" {
-		return conf.VirtualModel.BeichouRel
-	}
-
 	return req.Model
 }
 
@@ -233,188 +215,92 @@ type Chat interface {
 }
 
 type Imp struct {
-	ai      *AI
-	virtual *VirtualChat
+	ai  *AI
+	svc *service.Service
 }
 
-func NewChat(conf *config.Config, ai *AI) Chat {
-	var virtualImpl Chat
-	impLowercase := strings.ToLower(conf.VirtualModel.Implementation)
-	switch impLowercase {
-	case "openai":
-		virtualImpl = ai.OpenAI
-	case "baidu", "文心千帆":
-		virtualImpl = ai.Baidu
-	case "dashscope", "灵积":
-		virtualImpl = ai.DashScope
-	case "xfyun", "讯飞星火":
-		virtualImpl = ai.Xfyun
-	case "sense_nova", "商汤日日新":
-		virtualImpl = ai.SenseNova
-	case "tencent", "腾讯":
-		virtualImpl = ai.Tencent
-	case "anthropic":
-		virtualImpl = ai.Anthropic
-	case "baichuan", "百川":
-		virtualImpl = ai.Baichuan
-	case "gpt360", "360智脑":
-		virtualImpl = ai.GPT360
-	case "chatglm_turbo", "chatglm_pro", "chatglm_lite", "chatglm_std", "PaLM-2":
-		virtualImpl = ai.OneAPI
-	case "google":
-		virtualImpl = ai.Google
-	case "sky":
-		virtualImpl = ai.Sky
-	case "zhipu":
-		virtualImpl = ai.Zhipu
-	case "moonshot":
-		virtualImpl = ai.Moonshot
-	default:
-		if openrouter.SupportModel(impLowercase) {
-			virtualImpl = ai.Openrouter
-		} else {
-			virtualImpl = ai.OpenAI
+func NewChat(svc *service.Service, ai *AI) Chat {
+	return &Imp{ai: ai, svc: svc}
+}
+
+func (ai *Imp) selectProvider(modelId string) repo.Model {
+	pro := ai.svc.Chat.Model(context.Background(), modelId)
+	if pro == nil {
+		pro = &repo.Model{
+			Providers: []repo.ModelProvider{
+				{Name: service.ProviderOpenAI},
+			},
+			Models: model.Models{
+				ModelId: modelId,
+			},
+			Meta: repo.ModelMeta{
+				Restricted: true,
+				MaxContext: 4000,
+			},
 		}
 	}
 
-	return &Imp{
-		ai:      ai,
-		virtual: NewVirtualChat(virtualImpl, conf.VirtualModel),
-	}
+	return *pro
 }
 
-func (ai *Imp) selectImp(model string) Chat {
-	if strings.HasPrefix(model, "灵积:") {
-		return ai.ai.DashScope
-	}
-
-	if strings.HasPrefix(model, "文心千帆:") {
-		return ai.ai.Baidu
-	}
-
-	if strings.HasPrefix(model, "讯飞星火:") {
+func (ai *Imp) selectImp(provider repo.ModelProvider) Chat {
+	switch provider.Name {
+	case service.ProviderOpenAI:
+		return ai.ai.OpenAI
+	case service.ProviderXunFei:
 		return ai.ai.Xfyun
-	}
-
-	if strings.HasPrefix(model, "商汤日日新:") {
+	case service.ProviderWenXin:
+		return ai.ai.Baidu
+	case service.ProviderDashscope:
+		return ai.ai.DashScope
+	case service.ProviderSenseNova:
 		return ai.ai.SenseNova
-	}
-
-	if strings.HasPrefix(model, "腾讯:") {
+	case service.ProviderTencent:
 		return ai.ai.Tencent
-	}
-
-	if strings.HasPrefix(model, "Anthropic:") {
-		return ai.ai.Anthropic
-	}
-
-	if strings.HasPrefix(model, "百川:") {
+	case service.ProviderBaiChuan:
 		return ai.ai.Baichuan
-	}
-
-	if strings.HasPrefix(model, "virtual:") {
-		return ai.virtual
-	}
-
-	if strings.HasPrefix(model, "360智脑:") {
+	case service.Provider360:
 		return ai.ai.GPT360
-	}
-
-	if strings.HasPrefix(model, "oneapi:") {
+	case service.ProviderOneAPI:
 		return ai.ai.OneAPI
-	}
-
-	if strings.HasPrefix(model, "google:") {
-		return ai.ai.Google
-	}
-
-	if strings.HasPrefix(model, "openrouter:") {
+	case service.ProviderOpenRouter:
 		return ai.ai.Openrouter
-	}
-
-	if strings.HasPrefix(model, "sky:") {
+	case service.ProviderSky:
 		return ai.ai.Sky
-	}
-
-	if strings.HasPrefix(model, "zhipu:") {
+	case service.ProviderZhipu:
 		return ai.ai.Zhipu
-	}
-
-	if strings.HasPrefix(model, "moonshot:") {
+	case service.ProviderMoonshot:
 		return ai.ai.Moonshot
-	}
-
-	// TODO 根据模型名称判断使用哪个 AI
-	switch model {
-	case string(baidu.ModelErnieBot),
-		baidu.ModelErnieBotTurbo,
-		baidu.ModelErnieBot4,
-		baidu.ModelAquilaChat7B,
-		baidu.ModelChatGLM2_6B_32K,
-		baidu.ModelBloomz7B,
-		baidu.ModelLlama2_13b,
-		baidu.ModelLlama2_7b_CN,
-		baidu.ModelLlama2_13b_CN,
-		baidu.ModelLlama2_70b,
-		baidu.ModelXuanYuan70B,
-		baidu.ModelChatLaw,
-		baidu.ModelMixtral8x7bInstruct:
-		// 百度文心千帆
-		return ai.ai.Baidu
-	case dashscope.ModelQWenV1, dashscope.ModelQWenPlusV1,
-		dashscope.ModelQWen7BV1, dashscope.ModelQWen7BChatV1,
-		dashscope.ModelQWenMax, dashscope.ModelQWenMaxLongContext, dashscope.ModelQWenVLPlus,
-		dashscope.ModelQWenTurbo, dashscope.ModelQWenPlus, dashscope.ModelBaiChuan7BChatV1,
-		dashscope.ModelQWen7BChat, dashscope.ModelQWen14BChat:
-		// 阿里灵积平台
-		return ai.ai.DashScope
-	case string(xfyun.ModelGeneralV1_5), string(xfyun.ModelGeneralV2), string(xfyun.ModelGeneralV3), string(xfyun.ModelGeneralV35):
-		// 讯飞星火
-		return ai.ai.Xfyun
-	case string(sensenova.ModelNovaPtcXLV1), string(sensenova.ModelNovaPtcXSV1):
-		// 商汤日日新
-		return ai.ai.SenseNova
-	case tencentai.ModelHyllm, tencentai.ModelHyllmStd, tencentai.ModelHyllmPro:
-		// 腾讯混元大模型
-		return ai.ai.Tencent
-	case string(anthropic.ModelClaude2),
-		string(anthropic.ModelClaudeInstant),
-		string(anthropic.ModelClaude3Opus),
-		string(anthropic.ModelClaude3Sonnet),
-		string(anthropic.ModelClaude3Haiku):
-		// Anthropic
-		return ai.ai.Anthropic
-	case baichuan.ModelBaichuan2_53B:
-		// 百川
-		return ai.ai.Baichuan
-	case gpt360.Model360GPT_S2_V9:
-		// 360智脑
-		return ai.ai.GPT360
-	case ModelNanXian, ModelBeiChou:
-		// 虚拟模型
-		return ai.virtual
-	case "chatglm_turbo", "chatglm_pro", "chatglm_lite", "chatglm_std", "PaLM-2":
-		// oneapi
-		return ai.ai.OneAPI
-	case google.ModelGeminiPro, google.ModelGeminiProVision:
+	case service.ProviderGoogle:
 		return ai.ai.Google
-	case sky.ModelSkyChatMegaVerse:
-		return ai.ai.Sky
-	case zhipuai.ModelGLM4, zhipuai.ModelGLM3Turbo, zhipuai.ModelGLM4V:
-		return ai.ai.Zhipu
-	case moonshot.ModelMoonshotV1_8K, moonshot.ModelMoonshotV1_32K, moonshot.ModelMoonshotV1_128K:
-		return ai.ai.Moonshot
-	default:
-		if openrouter.SupportModel(model) {
-			return ai.ai.Openrouter
-		}
+	case service.ProviderAnthropic:
+		return ai.ai.Anthropic
 	}
 
 	return ai.ai.OpenAI
 }
 
 func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
-	return ai.selectImp(req.Model).Chat(ctx, req)
+	mod := ai.selectProvider(req.Model)
+	pro := mod.SelectProvider()
+
+	if pro.Prompt != "" {
+		systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
+		chatMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" })
+
+		if len(systemPrompts) > 0 {
+			systemPrompts[0].Content = pro.Prompt + "\n" + systemPrompts[0].Content
+			systemPrompts = Messages{systemPrompts[0]}
+		}
+
+		req.Messages = append(systemPrompts, chatMessages...)
+	}
+
+	if pro.ModelRewrite != "" {
+		req.Model = pro.ModelRewrite
+	}
+
+	return ai.selectImp(pro).Chat(ctx, req)
 }
 
 func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
@@ -429,9 +315,33 @@ func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, er
 		return item
 	})
 
-	return ai.selectImp(req.Model).ChatStream(ctx, req)
+	mod := ai.selectProvider(req.Model)
+	pro := mod.SelectProvider()
+
+	if pro.Prompt != "" {
+		systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
+		chatMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" })
+
+		if len(systemPrompts) > 0 {
+			systemPrompts[0].Content = pro.Prompt + "\n" + systemPrompts[0].Content
+			systemPrompts = Messages{systemPrompts[0]}
+		}
+
+		req.Messages = append(systemPrompts, chatMessages...)
+	}
+
+	if pro.ModelRewrite != "" {
+		req.Model = pro.ModelRewrite
+	}
+
+	return ai.selectImp(pro).ChatStream(ctx, req)
 }
 
 func (ai *Imp) MaxContextLength(model string) int {
-	return ai.selectImp(model).MaxContextLength(model)
+	mod := ai.selectProvider(model)
+	if mod.Meta.MaxContext > 0 {
+		return mod.Meta.MaxContext
+	}
+
+	return ai.selectImp(mod.SelectProvider()).MaxContextLength(model)
 }

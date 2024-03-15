@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
@@ -43,6 +42,7 @@ type UserController struct {
 	conf       *config.Config           `autowire:"@"`
 	userSrv    *service.UserService     `autowire:"@"`
 	secSrv     *service.SecurityService `autowire:"@"`
+	svc        *service.Service         `autowire:"@"`
 }
 
 // NewUserController 创建用户控制器
@@ -604,7 +604,7 @@ func (ctl *UserController) CustomHomeModels(ctx context.Context, webCtx web.Cont
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	supportModels := array.ToMap(chat.Models(ctl.conf, true), func(item chat.Model, _ int) string { return item.RealID() })
+	supportModels := array.ToMap(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) string { return item.ModelId })
 	for _, m := range models {
 		if _, ok := supportModels[m]; !ok {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)

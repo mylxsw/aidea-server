@@ -215,13 +215,6 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("img2img-recognition-provider", "", "图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语，目前支持 xfyun，留空则表示不启用")
 
-	ins.AddBoolFlag("enable-virtual-model", "是否启用虚拟模型")
-	ins.AddStringFlag("virtual-model-implementation", "openai", "虚拟模型实现厂商")
-	ins.AddStringFlag("virtual-model-nanxian-rel", "gpt-3.5-turbo", "南贤大模型实现")
-	ins.AddStringFlag("virtual-model-nanxian-prompt", "", "南贤大模型内置提示语")
-	ins.AddStringFlag("virtual-model-beichou-rel", "gpt-4", "北丑大模型实现")
-	ins.AddStringFlag("virtual-model-beichou-prompt", "", "北丑大模型内置提示语")
-
 	ins.AddStringFlag("price-table-file", "", "价格表文件路径，留空则使用默认价格表")
 
 	ins.AddStringFlag("font-path", "", "字体文件路径")

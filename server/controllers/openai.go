@@ -257,8 +257,8 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		// 支持 V2 版本的 homeModel 请求
 		// model 格式为 v2@{type}|{id}
 		if strings.HasPrefix(req.Model, "v2@") {
-			models := array.ToMap(chat.Models(ctl.conf, true), func(item chat.Model, _ int) string {
-				return item.ID
+			models := array.ToMap(ctl.chatSrv.Models(ctx, true), func(item repo.Model, _ int) string {
+				return item.ModelId
 			})
 			homeModel, err := ctl.userSrv.QueryHomeModel(ctx, models, user.User.ID, strings.TrimPrefix(req.Model, "v2@"))
 			if err != nil {

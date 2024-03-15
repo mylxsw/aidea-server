@@ -1,0 +1,39 @@
+package: model
+
+models:
+  - name: models
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: model_id
+          type: string
+          tag: json:"model_id"
+        - name: name
+          type: string
+          tag: json:"name"
+        - name: short_name
+          type: string
+          tag: json:"short_name,omitempty"
+        - name: description
+          type: string
+          tag: json:"description,omitempty"
+        - name: avatar_url
+          type: string
+          tag: json:"avatar_url,omitempty"
+        - name: status
+          type: int64
+          tag: json:"status"
+        - name: version_min
+          type: string
+          tag: json:"version_min,omitempty"
+        - name: version_max
+          type: string
+          tag: json:"version_max,omitempty"
+        - name: meta_json
+          type: string
+          tag: json:"-"
+        - name: providers_json
+          type: string
+          tag: json:"-"

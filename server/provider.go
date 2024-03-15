@@ -284,7 +284,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		controllers.NewPromptController(resolver),
 		controllers.NewExampleController(resolver),
 		controllers.NewProxiesController(conf),
-		controllers.NewModelController(conf),
+		controllers.NewModelController(resolver),
 		controllers.NewCreativeIslandController(resolver, conf),
 		controllers.NewCreativeController(resolver, conf),
 		controllers.NewImageController(resolver),

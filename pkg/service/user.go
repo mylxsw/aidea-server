@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
@@ -59,14 +58,6 @@ var (
 // FreeChatStatisticsForModel 用户免费聊天次数统计
 func (srv *UserService) FreeChatStatisticsForModel(ctx context.Context, userID int64, model string) (*FreeChatState, error) {
 	realModel := model
-	if srv.conf.VirtualModel.NanxianRel != "" && realModel == chat.ModelNanXian {
-		realModel = srv.conf.VirtualModel.NanxianRel
-	}
-
-	if srv.conf.VirtualModel.BeichouRel != "" && realModel == chat.ModelBeiChou {
-		realModel = srv.conf.VirtualModel.BeichouRel
-	}
-
 	freeModel := coins.GetFreeModel(realModel)
 	if freeModel == nil || freeModel.FreeCount <= 0 {
 		return nil, ErrorModelNotFree
@@ -89,14 +80,6 @@ func (srv *UserService) freeChatCacheKey(userID int64, model string) string {
 
 // FreeChatRequestCounts 免费模型使用次数：每天免费 n 次
 func (srv *UserService) FreeChatRequestCounts(ctx context.Context, userID int64, model string) (leftCount int, maxCount int) {
-	if srv.conf.VirtualModel.NanxianRel != "" && model == chat.ModelNanXian {
-		model = srv.conf.VirtualModel.NanxianRel
-	}
-
-	if srv.conf.VirtualModel.BeichouRel != "" && model == chat.ModelBeiChou {
-		model = srv.conf.VirtualModel.BeichouRel
-	}
-
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
@@ -127,14 +110,6 @@ func (srv *UserService) FreeChatRequestCounts(ctx context.Context, userID int64,
 
 // UpdateFreeChatCount 更新免费聊天次数使用情况
 func (srv *UserService) UpdateFreeChatCount(ctx context.Context, userID int64, model string) error {
-	if srv.conf.VirtualModel.NanxianRel != "" && model == chat.ModelNanXian {
-		model = srv.conf.VirtualModel.NanxianRel
-	}
-
-	if srv.conf.VirtualModel.BeichouRel != "" && model == chat.ModelBeiChou {
-		model = srv.conf.VirtualModel.BeichouRel
-	}
-
 	if !coins.IsFreeModel(model) {
 		return nil
 	}
@@ -300,7 +275,7 @@ const (
 	HomeModelTypeRoomEnterprise = "room_enterprise"
 )
 
-func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]chat.Model, userID int64, homeModelUniqueKey string) (*HomeModel, error) {
+func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]repo.Model, userID int64, homeModelUniqueKey string) (*HomeModel, error) {
 	segs := strings.SplitN(homeModelUniqueKey, "|", 2)
 	if len(segs) != 2 {
 		return nil, fmt.Errorf("invalid home model format")
@@ -322,7 +297,7 @@ func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]ch
 		res.AvatarURL = room.AvatarUrl
 		mod, ok := models[room.Vendor+":"+room.Model]
 		if ok {
-			res.SupportVision = mod.SupportVision
+			res.SupportVision = mod.Meta.Vision
 			res.ModelName = mod.Name
 		}
 	case HomeModelTypeRooms:
@@ -337,7 +312,7 @@ func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]ch
 		res.AvatarURL = room.AvatarUrl
 		mod, ok := models[room.Vendor+":"+room.Model]
 		if ok {
-			res.SupportVision = mod.SupportVision
+			res.SupportVision = mod.Meta.Vision
 			res.ModelID = room.Model
 		}
 	case HomeModelTypeModel:
@@ -351,9 +326,9 @@ func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]ch
 		}
 
 		res.Name = mod.ShortName
-		res.ModelID = mod.ID
-		res.SupportVision = mod.SupportVision
-		res.AvatarURL = mod.AvatarURL
+		res.ModelID = mod.ModelId
+		res.SupportVision = mod.Meta.Vision
+		res.AvatarURL = mod.AvatarUrl
 	}
 
 	return &res, nil

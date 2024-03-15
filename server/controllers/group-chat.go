@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	chat2 "github.com/mylxsw/aidea-server/pkg/ai/chat"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	chat "github.com/mylxsw/aidea-server/pkg/ai/chat"
+	repo "github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"math/rand"
@@ -28,9 +28,10 @@ import (
 
 type GroupChatController struct {
 	conf    *config.Config       `autowire:"@"`
-	repo    *repo2.Repository    `autowire:"@"`
+	repo    *repo.Repository     `autowire:"@"`
 	queue   *queue.Queue         `autowire:"@"`
 	userSrv *service.UserService `autowire:"@"`
+	svc     *service.Service     `autowire:"@"`
 }
 
 func NewGroupChatController(resolver infra.Resolver) web.Controller {
@@ -57,9 +58,9 @@ func (ctl *GroupChatController) Register(router web.Router) {
 }
 
 type GroupCreateRequest struct {
-	Name      string         `json:"name"`
-	AvatarURL string         `json:"avatar_url,omitempty"`
-	Members   []repo2.Member `json:"members,omitempty"`
+	Name      string        `json:"name"`
+	AvatarURL string        `json:"avatar_url,omitempty"`
+	Members   []repo.Member `json:"members,omitempty"`
 }
 
 // CreateGroup 创建群组
@@ -72,19 +73,19 @@ func (ctl *GroupChatController) CreateGroup(ctx context.Context, webCtx web.Cont
 
 	if len(req.Members) == 0 {
 		req.Members = array.Map(
-			array.Filter(chat2.Models(ctl.conf, false), func(m chat2.Model, _ int) bool {
+			array.Filter(ctl.svc.Chat.Models(ctx, false), func(m repo.Model, _ int) bool {
 				return true
 			}),
-			func(m chat2.Model, _ int) repo2.Member {
-				return repo2.Member{
-					ModelID:   m.RealID(),
+			func(m repo.Model, _ int) repo.Member {
+				return repo.Member{
+					ModelID:   m.ModelId,
 					ModelName: m.ShortName,
 				}
 			},
 		)
 	}
 
-	req.Members = array.Map(req.Members, func(mem repo2.Member, _ int) repo2.Member {
+	req.Members = array.Map(req.Members, func(mem repo.Member, _ int) repo.Member {
 		segs := strings.Split(mem.ModelID, ":")
 		if len(segs) == 2 {
 			mem.ModelID = segs[1]
@@ -142,15 +143,15 @@ func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, u
 
 	grp, err := ctl.repo.ChatGroup.GetGroup(ctx, int64(groupID), user.ID)
 	if err != nil {
-		if errors.Is(err, repo2.ErrNotFound) {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError("group not found", http.StatusNotFound)
 		}
 
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
-	models := array.ToMap(chat2.Models(ctl.conf, true), func(item chat2.Model, _ int) string {
-		return item.RealID()
+	models := array.ToMap(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) string {
+		return item.ModelId
 	})
 
 	return webCtx.JSON(web.M{
@@ -162,7 +163,7 @@ func (ctl *GroupChatController) Group(ctx context.Context, webCtx web.Context, u
 					ID:        mem.Id,
 					ModelId:   mem.ModelId,
 					ModelName: mem.ModelName,
-					AvatarURL: models[mem.ModelId].AvatarURL,
+					AvatarURL: models[mem.ModelId].AvatarUrl,
 					Status:    mem.Status,
 				}
 			},
@@ -247,8 +248,8 @@ type GroupChatRequest struct {
 }
 
 type GroupChatMember struct {
-	ID       int64          `json:"id"`
-	Messages chat2.Messages `json:"messages"`
+	ID       int64         `json:"id"`
+	Messages chat.Messages `json:"messages"`
 }
 
 func (req GroupChatRequest) AvailableMembers(supportMembers []int64) []int64 {
@@ -268,12 +269,12 @@ type GroupChatTask struct {
 }
 
 type Question struct {
-	Question string                      `json:"question"`
-	Answers  []repo2.ChatGroupMessageRes `json:"answers"`
+	Question string                     `json:"question"`
+	Answers  []repo.ChatGroupMessageRes `json:"answers"`
 }
 
 type GroupChatMessages struct {
-	Messages  chat2.Messages
+	Messages  chat.Messages
 	NeedCoins int64
 }
 
@@ -296,7 +297,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	// 查询群组信息
 	grp, err := ctl.repo.ChatGroup.GetGroup(ctx, int64(groupID), user.ID)
 	if err != nil {
-		if errors.Is(err, repo2.ErrNotFound) {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError("group not found", http.StatusNotFound)
 		}
 
@@ -304,10 +305,10 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	}
 
 	failedMessageWriter := func(errorMessage string) int64 {
-		questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo2.ChatGroupMessage{
+		questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
 			Message: req.Message,
-			Role:    int64(repo2.MessageRoleUser),
-			Status:  repo2.MessageStatusFailed,
+			Role:    int64(repo.MessageRoleUser),
+			Status:  repo.MessageStatusFailed,
 			Error:   errorMessage,
 		})
 		if err != nil {
@@ -343,13 +344,13 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	qas := buildQuestionFromChatGroupMessages(contextMessages)
 	messagesPerMembers := make(map[int64]GroupChatMessages)
 	for _, memberID := range availableMembers {
-		memberMessages := make(chat2.Messages, 0)
+		memberMessages := make(chat.Messages, 0)
 		for _, qa := range qas {
-			memberMessages = append(memberMessages, chat2.Message{Role: "user", Content: qa.Question})
+			memberMessages = append(memberMessages, chat.Message{Role: "user", Content: qa.Question})
 			// 从多个回复中选择一个，选择策略如下
 			// 1. 如果有当前 member_id 的回复，优先选择
 			// 2. 没有当前 member_id 的回复，则随便选择一个
-			selectedAnswer := array.Filter(qa.Answers, func(ans repo2.ChatGroupMessageRes, _ int) bool { return ans.MemberId == memberID })
+			selectedAnswer := array.Filter(qa.Answers, func(ans repo.ChatGroupMessageRes, _ int) bool { return ans.MemberId == memberID })
 			if len(selectedAnswer) == 0 {
 				selectedAnswer = qa.Answers
 			}
@@ -358,10 +359,10 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 				continue
 			}
 
-			memberMessages = append(memberMessages, chat2.Message{Role: "assistant", Content: selectedAnswer[0].Message})
+			memberMessages = append(memberMessages, chat.Message{Role: "assistant", Content: selectedAnswer[0].Message})
 		}
 
-		memberMessages = append(memberMessages, chat2.Message{Role: "user", Content: req.Message})
+		memberMessages = append(memberMessages, chat.Message{Role: "user", Content: req.Message})
 		messagesPerMembers[memberID] = GroupChatMessages{Messages: memberMessages}
 	}
 
@@ -378,7 +379,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 
 		mpm := messagesPerMembers[memID]
 
-		count, err := chat2.MessageTokenCount(mpm.Messages, membersMap[memID].ModelId)
+		count, err := chat.MessageTokenCount(mpm.Messages, membersMap[memID].ModelId)
 		if err != nil {
 			log.F(log.M{"member_id": memID, "req": req}).Errorf("calc message token count failed: %v", err)
 			return coins.GetOpenAITextCoins(membersMap[memID].ModelId, 1000)
@@ -416,10 +417,10 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	}
 
 	// 记录用户提问问题
-	questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo2.ChatGroupMessage{
+	questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
 		Message: req.Message,
-		Role:    int64(repo2.MessageRoleUser),
-		Status:  repo2.MessageStatusSucceed,
+		Role:    int64(repo.MessageRoleUser),
+		Status:  repo.MessageStatusSucceed,
 	})
 	if err != nil {
 		log.With(req).Errorf("add chat message failed: %s", err)
@@ -434,11 +435,11 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	// 为每一个成员创建聊天记录（待处理任务）
 	tasks := make([]GroupChatTask, 0)
 	for memberID, mpm := range messagesPerMembers {
-		answerID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo2.ChatGroupMessage{
-			Role:     int64(repo2.MessageRoleAssistant),
+		answerID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, grp.Group.Id, user.ID, repo.ChatGroupMessage{
+			Role:     int64(repo.MessageRoleAssistant),
 			Pid:      questionID,
 			MemberId: memberID,
-			Status:   repo2.MessageStatusWaiting,
+			Status:   repo.MessageStatusWaiting,
 		})
 		if err != nil {
 			log.With(req).Errorf("add chat message failed: %s", err)
@@ -485,17 +486,17 @@ func (ctl *GroupChatController) ChatSystem(ctx context.Context, webCtx web.Conte
 		return webCtx.JSONError("invalid group id", http.StatusBadRequest)
 	}
 
-	messageType := repo2.ResolveGroupMessageTypeToRole(webCtx.Input("message_type"))
+	messageType := repo.ResolveGroupMessageTypeToRole(webCtx.Input("message_type"))
 	message := webCtx.Input("message")
 
 	if messageType == 0 {
 		return webCtx.JSONError("invalid message type", http.StatusBadRequest)
 	}
 
-	questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, int64(groupID), user.ID, repo2.ChatGroupMessage{
+	questionID, err := ctl.repo.ChatGroup.AddChatMessage(ctx, int64(groupID), user.ID, repo.ChatGroupMessage{
 		Message: message,
 		Role:    messageType,
-		Status:  repo2.MessageStatusSucceed,
+		Status:  repo.MessageStatusSucceed,
 	})
 	if err != nil {
 		log.F(log.M{
@@ -506,18 +507,18 @@ func (ctl *GroupChatController) ChatSystem(ctx context.Context, webCtx web.Conte
 		return webCtx.JSONError("internal server error", http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(web.M{"data": repo2.ChatGroupMessageRes{
+	return webCtx.JSON(web.M{"data": repo.ChatGroupMessageRes{
 		ChatGroupMessage: model.ChatGroupMessage{
 			Id:        questionID,
 			Message:   message,
 			Role:      1,
-			Status:    repo2.MessageStatusSucceed,
+			Status:    repo.MessageStatusSucceed,
 			UserId:    user.ID,
 			GroupId:   int64(groupID),
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		},
-		Type: repo2.ResolveGroupMessageType(messageType),
+		Type: repo.ResolveGroupMessageType(messageType),
 	}})
 }
 
@@ -576,10 +577,10 @@ func (ctl *GroupChatController) ChatMessageStatus(ctx context.Context, webCtx we
 	})
 }
 
-func buildQuestionFromChatGroupMessages(contextMessages []repo2.ChatGroupMessageRes) []Question {
+func buildQuestionFromChatGroupMessages(contextMessages []repo.ChatGroupMessageRes) []Question {
 	cutoffIndex := -1
 	for i := 0; i < len(contextMessages); i++ {
-		if repo2.ResolveGroupMessageType(contextMessages[i].Role) == "contextBreak" {
+		if repo.ResolveGroupMessageType(contextMessages[i].Role) == "contextBreak" {
 			cutoffIndex = i
 			break
 		}
@@ -589,12 +590,12 @@ func buildQuestionFromChatGroupMessages(contextMessages []repo2.ChatGroupMessage
 		contextMessages = contextMessages[:cutoffIndex]
 	}
 
-	questions := array.Reverse(array.Filter(contextMessages, func(msg repo2.ChatGroupMessageRes, _ int) bool { return msg.Role == int64(repo2.MessageRoleUser) }))
+	questions := array.Reverse(array.Filter(contextMessages, func(msg repo.ChatGroupMessageRes, _ int) bool { return msg.Role == int64(repo.MessageRoleUser) }))
 	answers := array.GroupBy(
-		array.Reverse(array.Filter(contextMessages, func(msg repo2.ChatGroupMessageRes, _ int) bool {
-			return msg.Role == int64(repo2.MessageRoleAssistant) && msg.Status == int64(repo2.MessageStatusSucceed)
+		array.Reverse(array.Filter(contextMessages, func(msg repo.ChatGroupMessageRes, _ int) bool {
+			return msg.Role == int64(repo.MessageRoleAssistant) && msg.Status == int64(repo.MessageStatusSucceed)
 		})),
-		func(msg repo2.ChatGroupMessageRes) int64 { return msg.Pid },
+		func(msg repo.ChatGroupMessageRes) int64 { return msg.Pid },
 	)
 
 	qas := make([]Question, 0)

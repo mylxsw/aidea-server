@@ -2,7 +2,6 @@ package v2
 
 import (
 	"context"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/server/auth"
@@ -21,6 +20,7 @@ type ModelController struct {
 	conf    *config.Config       `autowire:"@"`
 	repo    *repo.Repository     `autowire:"@"`
 	userSrv *service.UserService `autowire:"@"`
+	svc     *service.Service     `autowire:"@"`
 }
 
 // NewModelController 创建模型控制器
@@ -71,23 +71,23 @@ func (ctl *ModelController) Styles(ctx context.Context, webCtx web.Context) web.
 func (ctl *ModelController) GetAllHomeModels(ctx context.Context, webCtx web.Context, user *auth.UserOptional) web.Response {
 	homeModels := make([]service.HomeModel, 0)
 
-	models := chat.Models(ctl.conf, true)
-	modelIDMap := array.ToMap(models, func(item chat.Model, _ int) string {
-		return item.RealID()
+	models := ctl.svc.Chat.Models(ctx, true)
+	modelIDMap := array.ToMap(models, func(item repo.Model, _ int) string {
+		return item.ModelId
 	})
 
 	// 类型：model
 	homeModels = append(
 		homeModels,
-		array.Map(models, func(item chat.Model, _ int) service.HomeModel {
+		array.Map(models, func(item repo.Model, _ int) service.HomeModel {
 			return service.HomeModel{
 				Type:          service.HomeModelTypeModel,
-				ID:            item.ID,
+				ID:            item.ModelId,
 				Name:          item.Name,
-				ModelID:       item.ID,
+				ModelID:       item.ModelId,
 				ModelName:     item.Name,
-				AvatarURL:     item.AvatarURL,
-				SupportVision: item.SupportVision,
+				AvatarURL:     item.AvatarUrl,
+				SupportVision: item.Meta.Vision,
 			}
 		})...,
 	)
@@ -106,9 +106,9 @@ func (ctl *ModelController) GetAllHomeModels(ctx context.Context, webCtx web.Con
 				ID:            strconv.Itoa(int(item.Id)),
 				Name:          item.Name,
 				AvatarURL:     item.AvatarUrl,
-				ModelID:       model.ID,
+				ModelID:       model.ModelId,
 				ModelName:     model.Name,
-				SupportVision: model.SupportVision,
+				SupportVision: model.Meta.Vision,
 			}
 		})...,
 	)
@@ -129,9 +129,9 @@ func (ctl *ModelController) GetAllHomeModels(ctx context.Context, webCtx web.Con
 					ID:            strconv.Itoa(int(item.Id)),
 					Name:          item.Name,
 					AvatarURL:     item.AvatarUrl,
-					ModelID:       model.ID,
+					ModelID:       model.ModelId,
 					ModelName:     model.Name,
-					SupportVision: model.SupportVision,
+					SupportVision: model.Meta.Vision,
 				}
 			})...,
 		)
@@ -151,8 +151,8 @@ func (ctl *ModelController) GetHomeModelsItem(ctx context.Context, webCtx web.Co
 
 	key := webCtx.PathVar("key")
 
-	models := array.ToMap(chat.Models(ctl.conf, true), func(item chat.Model, _ int) string {
-		return item.RealID()
+	models := array.ToMap(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) string {
+		return item.ModelId
 	})
 	homeModel, err := ctl.userSrv.QueryHomeModel(ctx, models, userID, key)
 	if err != nil {

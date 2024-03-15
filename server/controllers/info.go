@@ -3,8 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/go-utils/ternary"
 	"github.com/redis/go-redis/v9"
@@ -26,6 +26,7 @@ type InfoController struct {
 	conf    *config.Config       `autowire:"@"`
 	userSvc *service.UserService `autowire:"@"`
 	rds     *redis.Client        `autowire:"@"`
+	svc     *service.Service     `autowire:"@"`
 }
 
 // NewInfoController 创建信息控制器
@@ -208,12 +209,12 @@ func (ctl *InfoController) loadHomeModels(ctx context.Context, conf *config.Conf
 		if err != nil {
 			log.F(log.M{"user": user, "client": client}).Errorf("get user custom config failed: %s", err)
 		} else if cus != nil && len(cus.HomeModels) > 0 {
-			supportModels := array.ToMap(chat.Models(ctl.conf, false), func(item chat.Model, _ int) string { return item.RealID() })
+			supportModels := array.ToMap(ctl.svc.Chat.Models(ctx, false), func(item repo.Model, _ int) string { return item.ModelId })
 			for i, m := range cus.HomeModels[:2] {
 				if matched, ok := supportModels[m]; ok {
-					homeModels[i].ModelID = matched.RealID()
+					homeModels[i].ModelID = matched.ModelId
 					homeModels[i].Name = matched.ShortName
-					homeModels[i].SupportVision = matched.SupportVision
+					homeModels[i].SupportVision = matched.Meta.Vision
 				}
 			}
 		}
@@ -226,14 +227,14 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		return false, []HomeModel{
 			{
-				Name:     "南贤 3.5",
+				Name:     "Chat 3.5",
 				ModelID:  "nanxian",
 				Desc:     "速度快，成本低",
 				Color:    "FF67AC5C",
 				Powerful: false,
 			},
 			{
-				Name:     "北丑 4.0",
+				Name:     "Chat 4.0",
 				ModelID:  "beichou",
 				Desc:     "能力强，更精准",
 				Color:    "FF714BD7",
@@ -395,12 +396,12 @@ func (ctl *InfoController) loadDefaultHomeModelsV2(conf *config.Config, client *
 	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		return false, []service.HomeModel{
 			{
-				Name: "南贤 3.5",
+				Name: "Chat 3.5",
 				ID:   "virtual:nanxian",
 				Type: service.HomeModelTypeModel,
 			},
 			{
-				Name: "北丑 4.0",
+				Name: "Chat 4.0",
 				ID:   "virtual:beichou",
 				Type: service.HomeModelTypeModel,
 			},

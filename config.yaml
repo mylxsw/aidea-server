@@ -446,14 +446,6 @@ default-txt2img-model: sb-stable-diffusion-xl-1024-v1-0
 # 图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语，目前支持 xfyun，留空则表示不启用
 img2img-recognition-provider: ""
 
-######## 虚拟模型配置 ########
-enable-virtual-model: false
-virtual-model-implementation: "openai"
-virtual-model-nanxian-rel: "gpt-3.5-turbo"
-virtual-model-nanxian-prompt: ""
-virtual-model-beichou-rel: "gpt-4"
-virtual-model-beichou-prompt: ""
-
 ######## 价格相关 ########
 # 智慧果收费标准、充值、赠送相关配置
 # 系统内置默认规则，在 internal/coins 中定义，不指定该选项使用默认配置

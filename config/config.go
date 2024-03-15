@@ -269,10 +269,6 @@ type Config struct {
 	// 图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语
 	ImageToImageRecognitionProvider string `json:"img2img-recognition-provider" yaml:"img2img-recognition-provider"`
 
-	// 虚拟模型
-	EnableVirtualModel bool         `json:"enable_virtual_model" yaml:"enable_virtual_model"`
-	VirtualModel       VirtualModel `json:"virtual_model" yaml:"virtual_model"`
-
 	// 字体文件路径
 	FontPath string `json:"font_path" yaml:"font_path"`
 	// 服务状态页面
@@ -316,14 +312,6 @@ type AppleSignIn struct {
 
 func (conf *Config) RedisAddr() string {
 	return fmt.Sprintf("%s:%d", conf.RedisHost, conf.RedisPort)
-}
-
-type VirtualModel struct {
-	Implementation string `json:"implementation"`
-	NanxianRel     string `json:"nanxian_rel"`
-	NanxianPrompt  string `json:"nanxian_prompt"`
-	BeichouRel     string `json:"beichou_rel"`
-	BeichouPrompt  string `json:"beichou_prompt"`
 }
 
 func Register(ins *app.App) {
@@ -573,15 +561,6 @@ func Register(ins *app.App) {
 			DefaultTextToImageModel:  ctx.String("default-txt2img-model"),
 
 			ImageToImageRecognitionProvider: ctx.String("img2img-recognition-provider"),
-
-			EnableVirtualModel: ctx.Bool("enable-virtual-model"),
-			VirtualModel: VirtualModel{
-				Implementation: ctx.String("virtual-model-implementation"),
-				NanxianRel:     ctx.String("virtual-model-nanxian-rel"),
-				NanxianPrompt:  strings.TrimSpace(ctx.String("virtual-model-nanxian-prompt")),
-				BeichouRel:     ctx.String("virtual-model-beichou-rel"),
-				BeichouPrompt:  strings.TrimSpace(ctx.String("virtual-model-beichou-prompt")),
-			},
 
 			FontPath:          ctx.String("font-path"),
 			ServiceStatusPage: ctx.String("service-status-page"),
