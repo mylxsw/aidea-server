@@ -72,28 +72,29 @@ const (
 
 type ChannelType struct {
 	Name    string `json:"name"`
+	Display string `json:"display,omitempty"`
 	Dynamic bool   `json:"dynamic"`
 }
 
 // ChannelTypes 支持的渠道类型列表
 func (svc *ChatService) ChannelTypes() []ChannelType {
 	return []ChannelType{
-		{Name: ProviderOpenAI, Dynamic: true},
-		{Name: ProviderOneAPI, Dynamic: true},
-		{Name: ProviderOpenRouter, Dynamic: true},
+		{Name: ProviderOpenAI, Dynamic: true, Display: "OpenAI"},
+		{Name: ProviderOneAPI, Dynamic: true, Display: "OneAPI"},
+		{Name: ProviderOpenRouter, Dynamic: true, Display: "OpenRouter"},
 
-		{Name: ProviderXunFei, Dynamic: false},
-		{Name: ProviderWenXin, Dynamic: false},
-		{Name: ProviderDashscope, Dynamic: false},
-		{Name: ProviderSenseNova, Dynamic: false},
-		{Name: ProviderTencent, Dynamic: false},
-		{Name: ProviderBaiChuan, Dynamic: false},
-		{Name: Provider360, Dynamic: false},
-		{Name: ProviderSky, Dynamic: false},
-		{Name: ProviderZhipu, Dynamic: false},
-		{Name: ProviderMoonshot, Dynamic: false},
-		{Name: ProviderGoogle, Dynamic: false},
-		{Name: ProviderAnthropic, Dynamic: false},
+		{Name: ProviderXunFei, Dynamic: false, Display: "讯飞星火"},
+		{Name: ProviderWenXin, Dynamic: false, Display: "文心千帆"},
+		{Name: ProviderDashscope, Dynamic: false, Display: "阿里灵积"},
+		{Name: ProviderSenseNova, Dynamic: false, Display: "商汤"},
+		{Name: ProviderTencent, Dynamic: false, Display: "腾讯"},
+		{Name: ProviderBaiChuan, Dynamic: false, Display: "百川"},
+		{Name: Provider360, Dynamic: false, Display: "360"},
+		{Name: ProviderSky, Dynamic: false, Display: "昆仑万维"},
+		{Name: ProviderZhipu, Dynamic: false, Display: "智谱"},
+		{Name: ProviderMoonshot, Dynamic: false, Display: "月之暗面"},
+		{Name: ProviderGoogle, Dynamic: false, Display: "Google"},
+		{Name: ProviderAnthropic, Dynamic: false, Display: "Anthropic"},
 	}
 }
 
