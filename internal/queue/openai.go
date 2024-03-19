@@ -162,7 +162,7 @@ func BuildOpenAICompletionHandler(client openai2.Client, rep *repo2.Repository, 
 		)
 
 		if outputTokens > 0 {
-			payload.Quota = coins.GetTextModelCoins(mod, int64(inputTokens), int64(outputTokens))
+			payload.Quota = coins.GetTextModelCoins(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
 		}
 
 		// 更新创作岛历史记录

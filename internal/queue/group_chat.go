@@ -144,7 +144,9 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 		quotaConsumed := ternary.IfLazy(
 			leftCount > 0,
 			func() int64 { return 0 },
-			func() int64 { return coins.GetTextModelCoins(mod, int64(inputTokens), int64(outputTokens)) },
+			func() int64 {
+				return coins.GetTextModelCoins(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
+			},
 		)
 
 		// 更新消息状态

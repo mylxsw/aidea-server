@@ -1,7 +1,6 @@
 package coins
 
 import (
-	"github.com/mylxsw/aidea-server/pkg/repo"
 	"math"
 )
 
@@ -168,15 +167,21 @@ func GetOpenAITextCoins(model string, wordCount int64) int64 {
 	return int64(math.Ceil(float64(unit) * float64(wordCount) / 1000.0))
 }
 
+type ModelInfo struct {
+	ModelId     string
+	InputPrice  int
+	OutputPrice int
+}
+
 // GetTextModelCoins 获取文本模型计费，该接口对于 Input 和 Output 分开计费
-func GetTextModelCoins(model *repo.Model, inputToken, outputToken int64) int64 {
-	if model != nil && (model.Meta.OutputPrice > 0 || model.Meta.InputPrice > 0) {
-		if model.Meta.InputPrice <= 0 {
-			model.Meta.InputPrice = model.Meta.OutputPrice
+func GetTextModelCoins(model ModelInfo, inputToken, outputToken int64) int64 {
+	if model.OutputPrice > 0 || model.InputPrice > 0 {
+		if model.InputPrice <= 0 {
+			model.InputPrice = model.OutputPrice
 		}
 
-		inputPrice := math.Ceil(float64(model.Meta.InputPrice) * float64(inputToken) / 1000.0)
-		outputPrice := math.Ceil(float64(model.Meta.OutputPrice) * float64(outputToken) / 1000.0)
+		inputPrice := math.Ceil(float64(model.InputPrice) * float64(inputToken) / 1000.0)
+		outputPrice := math.Ceil(float64(model.OutputPrice) * float64(outputToken) / 1000.0)
 
 		return int64(inputPrice + outputPrice)
 	}

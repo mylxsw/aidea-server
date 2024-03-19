@@ -859,7 +859,7 @@ func (ctl *CreativeIslandController) completionsOpenAI(ctx context.Context, webC
 
 	// 粗略估算本次请求消耗的 Token 数量，待实际完成后再计费
 	consumeWordCount, _ := openaiHelper.NumTokensFromMessages(messages, item.Model)
-	quotaConsumed := coins.GetTextModelCoins(mod, int64(consumeWordCount), 500)
+	quotaConsumed := coins.GetTextModelCoins(mod.ToCoinModel(), int64(consumeWordCount), 500)
 
 	if evaluate {
 		// 评估时，返回本次请求消耗的 Token 数量，+1 是假定输出内容消耗 1 个智慧果

@@ -389,10 +389,10 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		count, err := chat.MessageTokenCount(mpm.Messages, membersMap[memID].ModelId)
 		if err != nil {
 			log.F(log.M{"member_id": memID, "req": req}).Errorf("calc message token count failed: %v", err)
-			return coins.GetTextModelCoins(&mod, 500, 500)
+			return coins.GetTextModelCoins(mod.ToCoinModel(), 500, 500)
 		}
 
-		mpm.NeedCoins = coins.GetTextModelCoins(&mod, int64(count), 500)
+		mpm.NeedCoins = coins.GetTextModelCoins(mod.ToCoinModel(), int64(count), 500)
 		messagesPerMembers[memID] = mpm
 
 		return mpm.NeedCoins

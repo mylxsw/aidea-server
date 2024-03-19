@@ -99,7 +99,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		aiProvider *chat.AIProvider,
 	) {
 		log.Debugf("register all queue handlers")
-		mux.HandleFunc(queue.TypeOpenAICompletion, queue.BuildOpenAICompletionHandler(openaiClient, rep))
+		mux.HandleFunc(queue.TypeOpenAICompletion, queue.BuildOpenAICompletionHandler(openaiClient, rep, svc))
 		mux.HandleFunc(queue.TypeDeepAICompletion, queue.BuildDeepAICompletionHandler(deepaiClient, translater, uploader, rep, openaiClient))
 		mux.HandleFunc(queue.TypeStabilityAICompletion, queue.BuildStabilityAICompletionHandler(stabaiClient, translater, uploader, rep, openaiClient))
 		mux.HandleFunc(queue.TypeLeapAICompletion, queue.BuildLeapAICompletionHandler(leapClient, translater, uploader, rep, openaiClient))

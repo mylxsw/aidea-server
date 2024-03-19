@@ -640,7 +640,7 @@ func (ctl *OpenAIController) queryChatQuota(
 	}
 
 	// 假设本次请求将会消耗 500 个输出 Token
-	return quota, coins.GetTextModelCoins(mod, inputTokenCount, 500), nil
+	return quota, coins.GetTextModelCoins(mod.ToCoinModel(), inputTokenCount, 500), nil
 }
 
 func (ctl *OpenAIController) rateLimitPass(ctx context.Context, client *auth.ClientInfo, user *auth.User) error {
@@ -712,7 +712,7 @@ func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText st
 		}}, req.Model,
 	)
 
-	quotaConsumed := coins.GetTextModelCoins(mod, int64(inputTokens), int64(outputTokens))
+	quotaConsumed := coins.GetTextModelCoins(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
 
 	// 免费请求，不扣除智慧果
 	if isFreeRequest || replyText == "" {

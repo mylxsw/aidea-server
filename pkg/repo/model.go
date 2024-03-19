@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/eloquent/query"
@@ -23,6 +24,14 @@ type Model struct {
 	model.Models
 	Meta      ModelMeta       `json:"meta,omitempty"`
 	Providers []ModelProvider `json:"providers,omitempty"`
+}
+
+func (m Model) ToCoinModel() coins.ModelInfo {
+	return coins.ModelInfo{
+		ModelId:     m.ModelId,
+		InputPrice:  m.Meta.InputPrice,
+		OutputPrice: m.Meta.OutputPrice,
+	}
 }
 
 func (m Model) SelectProvider() ModelProvider {
