@@ -75,7 +75,7 @@ func (ctl *UserController) UpdateCustomHomeModels(ctx context.Context, webCtx we
 			}
 
 			res.Name = room.Name
-			model, ok := models[room.Vendor+":"+room.Model]
+			model, ok := models[service.PureModelID(room.Model)]
 			if ok {
 				res.SupportVision = model.Meta.Vision
 			}
@@ -86,12 +86,12 @@ func (ctl *UserController) UpdateCustomHomeModels(ctx context.Context, webCtx we
 			}
 
 			res.Name = room.Name
-			model, ok := models[room.Vendor+":"+room.Model]
+			model, ok := models[service.PureModelID(room.Model)]
 			if ok {
 				res.SupportVision = model.Meta.Vision
 			}
 		case service.HomeModelTypeModel:
-			model, ok := models[res.ID]
+			model, ok := models[service.PureModelID(res.ID)]
 			if !ok {
 				panic(fmt.Errorf("model not found: %s", res.ID))
 			}

@@ -449,10 +449,9 @@ func Register(ins *app.App) {
 			EnableMoonshot: ctx.Bool("enable-moonshot"),
 			MoonshotAPIKey: ctx.String("moonshot-apikey"),
 
-			OneAPISupportModels: ctx.StringSlice("oneapi-support-models"),
-			EnableOneAPI:        ctx.Bool("enable-oneapi"),
-			OneAPIServer:        ctx.String("oneapi-server"),
-			OneAPIKey:           ctx.String("oneapi-key"),
+			EnableOneAPI: ctx.Bool("enable-oneapi"),
+			OneAPIServer: ctx.String("oneapi-server"),
+			OneAPIKey:    ctx.String("oneapi-key"),
 
 			OpenRouterSupportModels: ctx.StringSlice("openrouter-support-models"),
 			EnableOpenRouter:        ctx.Bool("enable-openrouter"),

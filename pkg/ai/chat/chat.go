@@ -5,9 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
+	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
+	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/pkg/youdao"
+	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/glacier/infra"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -215,15 +222,24 @@ type Chat interface {
 }
 
 type Imp struct {
-	ai  *AI
-	svc *service.Service
+	ai       *AI
+	svc      *service.Service
+	proxy    *proxy.Proxy
+	resolver infra.Resolver
 }
 
-func NewChat(svc *service.Service, ai *AI) Chat {
-	return &Imp{ai: ai, svc: svc}
+func NewChat(conf *config.Config, resolver infra.Resolver, svc *service.Service, ai *AI) Chat {
+	var proxyDialer *proxy.Proxy
+	if conf.SupportProxy() {
+		resolver.MustResolve(func(pp *proxy.Proxy) {
+			proxyDialer = pp
+		})
+	}
+
+	return &Imp{ai: ai, svc: svc, proxy: proxyDialer, resolver: resolver}
 }
 
-func (ai *Imp) selectProvider(modelId string) repo.Model {
+func (ai *Imp) queryModel(modelId string) repo.Model {
 	pro := ai.svc.Chat.Model(context.Background(), modelId)
 	if pro == nil {
 		pro = &repo.Model{
@@ -243,8 +259,43 @@ func (ai *Imp) selectProvider(modelId string) repo.Model {
 	return *pro
 }
 
+// selectImp 选择合适的 AI 服务提供商
+//
+// 并不是所有类型的渠道都支持动态配置（根据数据库 channels 中的配置创建客户端），目前只有 openai/oneapi/openrouter 支持
+// 首先 根据 Channel ID 选择对应的 AI 服务提供商，如果 Channel ID 不存在或者对应的 AI 服务提供商不支持，则根据 Model ID 选择对应的 AI 服务提供商
+// 如果 Model ID 也不存在或者对应的 AI 服务提供商不支持，则使用 OpenAI 作为默认的 AI 服务提供商
 func (ai *Imp) selectImp(provider repo.ModelProvider) Chat {
-	switch provider.Name {
+	if provider.ID > 0 {
+		ch, err := ai.svc.Chat.Channel(context.Background(), provider.ID)
+		if err != nil {
+			log.F(log.M{"provider": provider}).Errorf("get channel %d failed: %v", provider.ID, err)
+		} else {
+			switch ch.Type {
+			case service.ProviderOpenAI:
+				return ai.createOpenAIClient(ch)
+			case service.ProviderOneAPI:
+				return ai.createOneAPIClient(ch)
+			case service.ProviderOpenRouter:
+				return ai.createOpenRouterClient(ch)
+			default:
+				if ret := ai.selectProvider(ch.Type); ret != nil {
+					return ret
+				}
+			}
+		}
+	}
+
+	if ret := ai.selectProvider(provider.Name); ret != nil {
+		return ret
+	}
+
+	log.Errorf("unsupported provider: %s, using openai instead", provider.Name)
+
+	return ai.ai.OpenAI
+}
+
+func (ai *Imp) selectProvider(name string) Chat {
+	switch name {
 	case service.ProviderOpenAI:
 		return ai.ai.OpenAI
 	case service.ProviderXunFei:
@@ -275,13 +326,14 @@ func (ai *Imp) selectImp(provider repo.ModelProvider) Chat {
 		return ai.ai.Google
 	case service.ProviderAnthropic:
 		return ai.ai.Anthropic
+	default:
 	}
 
-	return ai.ai.OpenAI
+	return nil
 }
 
 func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
-	mod := ai.selectProvider(req.Model)
+	mod := ai.queryModel(req.Model)
 	pro := mod.SelectProvider()
 
 	if pro.Prompt != "" {
@@ -315,7 +367,7 @@ func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, er
 		return item
 	})
 
-	mod := ai.selectProvider(req.Model)
+	mod := ai.queryModel(req.Model)
 	pro := mod.SelectProvider()
 
 	if pro.Prompt != "" {
@@ -338,10 +390,60 @@ func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, er
 }
 
 func (ai *Imp) MaxContextLength(model string) int {
-	mod := ai.selectProvider(model)
+	mod := ai.queryModel(model)
 	if mod.Meta.MaxContext > 0 {
 		return mod.Meta.MaxContext
 	}
 
 	return ai.selectImp(mod.SelectProvider()).MaxContextLength(model)
+}
+
+// createOpenAIClient 创建一个 OpenAI Client
+func (ai *Imp) createOpenAIClient(ch *repo.Channel) Chat {
+	conf := openai.Config{
+		Enable:        true,
+		OpenAIServers: []string{ch.Server},
+		OpenAIKeys:    []string{ch.Secret},
+		AutoProxy:     ch.Meta.UsingProxy,
+	}
+
+	if ch.Meta.OpenAIAzure {
+		conf.OpenAIAzure = true
+		conf.OpenAIAPIVersion = ch.Meta.OpenAIAzureAPIVersion
+	}
+
+	return NewOpenAIChat(openai.NewOpenAIClient(&conf, ai.proxy))
+}
+
+// createOneAPIClient 创建一个 OneAPI Client
+func (ai *Imp) createOneAPIClient(ch *repo.Channel) Chat {
+	conf := openai.Config{
+		Enable:        true,
+		OpenAIServers: []string{ch.Server},
+		OpenAIKeys:    []string{ch.Secret},
+		AutoProxy:     ch.Meta.UsingProxy,
+	}
+
+	var trans youdao.Translater
+	_ = ai.resolver.Resolve(func(t youdao.Translater) {
+		trans = t
+	})
+
+	return NewOneAPIChat(oneapi.New(openai.NewOpenAIClient(&conf, ai.proxy), trans))
+}
+
+// createOpenRouterClient 创建一个 OpenRouter Client
+func (ai *Imp) createOpenRouterClient(ch *repo.Channel) Chat {
+	if ch.Server == "" {
+		ch.Server = "https://openrouter.ai/api/v1"
+	}
+
+	conf := openai.Config{
+		Enable:        true,
+		OpenAIServers: []string{ch.Server},
+		OpenAIKeys:    []string{ch.Secret},
+		AutoProxy:     ch.Meta.UsingProxy,
+	}
+
+	return NewOpenRouterChat(openrouter.NewOpenRouter(openai.NewOpenAIClient(&conf, ai.proxy)))
 }

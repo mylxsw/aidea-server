@@ -1,6 +1,7 @@
 package coins
 
 import (
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"math"
 )
 
@@ -156,8 +157,8 @@ func PriceToCoins(price float64, serviceFeeRate float64) int64 {
 	return int64(math.Ceil((price * 100) * (1 + serviceFeeRate)))
 }
 
-// 智慧果计费
-
+// GetOpenAITextCoins 智慧果计费
+// @Deprecated
 func GetOpenAITextCoins(model string, wordCount int64) int64 {
 	unit, ok := coinTables["openai"][model]
 	if !ok {
@@ -168,8 +169,19 @@ func GetOpenAITextCoins(model string, wordCount int64) int64 {
 }
 
 // GetTextModelCoins 获取文本模型计费，该接口对于 Input 和 Output 分开计费
-func GetTextModelCoins(model string, inputToken, outputToken int64) int64 {
-	return GetOpenAITextCoins(model, inputToken+outputToken)
+func GetTextModelCoins(model *repo.Model, inputToken, outputToken int64) int64 {
+	if model != nil && (model.Meta.OutputPrice > 0 || model.Meta.InputPrice > 0) {
+		if model.Meta.InputPrice <= 0 {
+			model.Meta.InputPrice = model.Meta.OutputPrice
+		}
+
+		inputPrice := math.Ceil(float64(model.Meta.InputPrice) * float64(inputToken) / 1000.0)
+		outputPrice := math.Ceil(float64(model.Meta.OutputPrice) * float64(outputToken) / 1000.0)
+
+		return int64(inputPrice + outputPrice)
+	}
+
+	return GetOpenAITextCoins(model.ModelId, inputToken+outputToken)
 }
 
 func GetVoiceCoins(model string) int64 {

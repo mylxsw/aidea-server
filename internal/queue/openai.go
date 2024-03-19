@@ -3,8 +3,10 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	openai2 "github.com/mylxsw/aidea-server/pkg/ai/openai"
 	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -55,7 +57,7 @@ func NewOpenAICompletionTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeOpenAICompletion, data)
 }
 
-func BuildOpenAICompletionHandler(client openai2.Client, rep *repo2.Repository) TaskHandler {
+func BuildOpenAICompletionHandler(client openai2.Client, rep *repo2.Repository, svc *service.Service) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload OpenAICompletionPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -106,6 +108,12 @@ func BuildOpenAICompletionHandler(client openai2.Client, rep *repo2.Repository) 
 			}
 		}()
 
+		mod := svc.Chat.Model(ctx, payload.Model)
+		if mod == nil || mod.Status == repo2.ModelStatusDisabled {
+			log.WithFields(log.Fields{"payload": payload}).Errorf("model not found or disabled")
+			return err
+		}
+
 		contextTokenCount, err := openai2.NumTokensFromMessages(payload.Prompts, payload.Model)
 		if err != nil {
 			log.WithFields(log.Fields{"payload": payload}).Errorf("get context token count failed: %s", err)
@@ -128,11 +136,6 @@ func BuildOpenAICompletionHandler(client openai2.Client, rep *repo2.Repository) 
 
 		log.F(log.M{"req": req, "resp": resp}).Debugf("create completion success")
 
-		// 修改为实际消耗的 Token 数量
-		if resp.Usage.TotalTokens > 0 {
-			payload.Quota = coins.GetOpenAITextCoins(payload.Model, int64(resp.Usage.TotalTokens))
-		}
-
 		content := array.Reduce(
 			resp.Choices,
 			func(carry string, item openai.ChatCompletionChoice) string {
@@ -140,6 +143,27 @@ func BuildOpenAICompletionHandler(client openai2.Client, rep *repo2.Repository) 
 			},
 			"",
 		)
+
+		// 修改为实际消耗的 Token 数量
+		inputTokens, _ := chat.MessageTokenCount(
+			array.Map(req.Messages, func(item openai.ChatCompletionMessage, _ int) chat.Message {
+				return chat.Message{
+					Role:    item.Role,
+					Content: item.Content,
+				}
+			}),
+			req.Model,
+		)
+		outputTokens, _ := chat.MessageTokenCount(
+			chat.Messages{{
+				Role:    "assistant",
+				Content: content,
+			}}, req.Model,
+		)
+
+		if outputTokens > 0 {
+			payload.Quota = coins.GetTextModelCoins(mod, int64(inputTokens), int64(outputTokens))
+		}
 
 		// 更新创作岛历史记录
 		updateReq := repo2.CreativeRecordUpdateRequest{

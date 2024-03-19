@@ -299,8 +299,15 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		leftCount, maxFreeCount = 1, 0
 	}
 
+	// 查询模型信息
+	mod := ctl.chatSrv.Model(ctx, req.Model)
+	if mod == nil || mod.Status == repo.ModelStatusDisabled {
+		misc.NoError(sw.WriteErrorStream(errors.New("当前模型暂不可用"), http.StatusNotFound))
+		return
+	}
+
 	if leftCount <= 0 {
-		quota, needCoins, err := ctl.queryChatQuota(ctx, quotaRepo, user.User, sw, webCtx, req, inputTokenCount, maxFreeCount)
+		quota, needCoins, err := ctl.queryChatQuota(ctx, user.User, sw, webCtx, inputTokenCount, mod)
 		if err != nil {
 			return
 		}
@@ -385,7 +392,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 
 	// 返回自定义控制信息，告诉客户端当前消耗情况
-	realTokenConsumed, quotaConsumed = ctl.resolveConsumeQuota(req, replyText, leftCount > 0)
+	realTokenConsumed, quotaConsumed = ctl.resolveConsumeQuota(req, replyText, leftCount > 0, mod)
 
 	func() {
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -618,13 +625,11 @@ func (*OpenAIController) buildFinalSystemMessage(
 // queryChatQuota 检查用户智慧果余量是否足够
 func (ctl *OpenAIController) queryChatQuota(
 	ctx context.Context,
-	quotaRepo *repo.QuotaRepo,
 	user *auth.User,
 	sw *streamwriter.StreamWriter,
 	webCtx web.Context,
-	req *chat.Request,
 	inputTokenCount int64,
-	maxFreeCount int,
+	mod *repo.Model,
 ) (quota *service.UserQuota, needCoins int64, err error) {
 	quota, err = ctl.userSrv.UserQuota(ctx, user.ID)
 	if err != nil {
@@ -634,8 +639,8 @@ func (ctl *OpenAIController) queryChatQuota(
 		return nil, 0, err
 	}
 
-	// 假设本次请求将会消耗 3 个智慧果
-	return quota, coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), inputTokenCount) + 3, nil
+	// 假设本次请求将会消耗 500 个输出 Token
+	return quota, coins.GetTextModelCoins(mod, inputTokenCount, 500), nil
 }
 
 func (ctl *OpenAIController) rateLimitPass(ctx context.Context, client *auth.ClientInfo, user *auth.User) error {
@@ -698,21 +703,23 @@ func (ctl *OpenAIController) saveChatAnswer(ctx context.Context, user *auth.User
 	return 0
 }
 
-func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText string, isFreeRequest bool) (int, int64) {
-	messages := append(req.Messages, chat.Message{
-		Role:    "assistant",
-		Content: replyText,
-	})
+func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText string, isFreeRequest bool, mod *repo.Model) (int, int64) {
+	inputTokens, _ := chat.MessageTokenCount(req.Messages, req.Model)
+	outputTokens, _ := chat.MessageTokenCount(
+		chat.Messages{{
+			Role:    "assistant",
+			Content: replyText,
+		}}, req.Model,
+	)
 
-	realTokenConsumed, _ := chat.MessageTokenCount(messages, req.Model)
-	quotaConsumed := coins.GetOpenAITextCoins(req.ResolveCalFeeModel(ctl.conf), int64(realTokenConsumed))
+	quotaConsumed := coins.GetTextModelCoins(mod, int64(inputTokens), int64(outputTokens))
 
 	// 免费请求，不扣除智慧果
 	if isFreeRequest || replyText == "" {
 		quotaConsumed = 0
 	}
 
-	return realTokenConsumed, quotaConsumed
+	return inputTokens + outputTokens, quotaConsumed
 }
 
 // makeChatQuestionFailed 更新聊天问题为失败状态

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/chat"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	repo "github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"time"
 
@@ -58,7 +58,7 @@ func NewGroupChatTask(payload any) *asynq.Task {
 	return asynq.NewTask(TypeGroupChat, data)
 }
 
-func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo2.Repository, userSrv *service.UserService) TaskHandler {
+func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Repository, svc *service.Service) TaskHandler {
 	return func(ctx context.Context, task *asynq.Task) (err error) {
 		var payload GroupChatPayload
 		if err := json.Unmarshal(task.Payload(), &payload); err != nil {
@@ -77,9 +77,9 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo2.Reposit
 			}
 			if err != nil {
 				// 更新消息状态为失败
-				msg := repo2.ChatGroupMessageUpdate{
+				msg := repo.ChatGroupMessageUpdate{
 					Message: err.Error(),
-					Status:  repo2.MessageStatusFailed,
+					Status:  repo.MessageStatusFailed,
 					Error:   err.Error(),
 				}
 				if err := rep.ChatGroup.UpdateChatMessage(ctx, payload.GroupID, payload.UserID, payload.MessageID, msg); err != nil {
@@ -90,7 +90,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo2.Reposit
 				if err := rep.Queue.Update(
 					context.TODO(),
 					payload.GetID(),
-					repo2.QueueTaskStatusFailed,
+					repo.QueueTaskStatusFailed,
 					ErrorResult{
 						Errors: []string{err.Error()},
 					},
@@ -101,14 +101,19 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo2.Reposit
 
 			// 无论如何，都要释放用户被冻结的智慧果
 			if payload.FreezedCoins > 0 {
-				if err := userSrv.UnfreezeUserQuota(ctx, payload.UserID, payload.FreezedCoins); err != nil {
+				if err := svc.User.UnfreezeUserQuota(ctx, payload.UserID, payload.FreezedCoins); err != nil {
 					log.F(log.M{"payload": payload}).Errorf("群聊任务执行失败，释放用户冻结的智慧果失败: %s", err)
 				}
 			}
 		}()
 
+		mod := svc.Chat.Model(ctx, payload.ModelID)
+		if mod == nil || mod.Status == repo.ModelStatusDisabled {
+			panic(fmt.Errorf("model %s not found or disabled", payload.ModelID))
+		}
+
 		req, _, err := (chat.Request{
-			Model:    payload.ModelID,
+			Model:    mod.ModelId,
 			Messages: payload.ContextMessages,
 		}).Init().Fix(ct, 5, 1024*200)
 		if err != nil {
@@ -125,34 +130,42 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo2.Reposit
 			panic(fmt.Errorf("chat failed: %s %s", resp.ErrorCode, resp.Error))
 		}
 
-		tokenConsumed := int64(resp.InputTokens + resp.OutputTokens)
+		inputTokens, _ := chat.MessageTokenCount(req.Messages, req.Model)
+		outputTokens, _ := chat.MessageTokenCount(
+			chat.Messages{{
+				Role:    "assistant",
+				Content: resp.Text,
+			}}, req.Model,
+		)
+
+		tokenConsumed := int64(inputTokens + outputTokens)
 		// 免费请求不计费
-		leftCount, _ := userSrv.FreeChatRequestCounts(ctx, payload.UserID, req.Model)
+		leftCount, _ := svc.User.FreeChatRequestCounts(ctx, payload.UserID, req.Model)
 		quotaConsumed := ternary.IfLazy(
 			leftCount > 0,
 			func() int64 { return 0 },
-			func() int64 { return coins.GetOpenAITextCoins(req.ResolveCalFeeModel(conf), tokenConsumed) },
+			func() int64 { return coins.GetTextModelCoins(mod, int64(inputTokens), int64(outputTokens)) },
 		)
 
 		// 更新消息状态
-		msg := repo2.ChatGroupMessageUpdate{
+		msg := repo.ChatGroupMessageUpdate{
 			Message:       resp.Text,
 			TokenConsumed: tokenConsumed,
 			QuotaConsumed: quotaConsumed,
-			Status:        repo2.MessageStatusSucceed,
+			Status:        repo.MessageStatusSucceed,
 		}
 		if err := rep.ChatGroup.UpdateChatMessage(ctx, payload.GroupID, payload.UserID, payload.MessageID, msg); err != nil {
 			panic(fmt.Errorf("update chat message failed: %w", err))
 		}
 
 		// 更新免费聊天次数
-		if err := userSrv.UpdateFreeChatCount(ctx, payload.UserID, req.Model); err != nil {
+		if err := svc.User.UpdateFreeChatCount(ctx, payload.UserID, req.Model); err != nil {
 			log.With(payload).Errorf("update free chat count failed: %s", err)
 		}
 
 		// 扣除智慧果
 		if quotaConsumed > 0 {
-			if err := rep.Quota.QuotaConsume(ctx, payload.UserID, quotaConsumed, repo2.NewQuotaUsedMeta("group_chat", req.Model)); err != nil {
+			if err := rep.Quota.QuotaConsume(ctx, payload.UserID, quotaConsumed, repo.NewQuotaUsedMeta("group_chat", req.Model)); err != nil {
 				log.Errorf("used quota add failed: %s", err)
 			}
 		}
@@ -160,7 +173,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo2.Reposit
 		return rep.Queue.Update(
 			context.TODO(),
 			payload.GetID(),
-			repo2.QueueTaskStatusSuccess,
+			repo.QueueTaskStatusSuccess,
 			EmptyResult{},
 		)
 	}

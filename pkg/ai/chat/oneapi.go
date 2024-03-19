@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
 	oai "github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"strings"
 
 	"github.com/mylxsw/asteria/log"
@@ -31,12 +32,45 @@ func (chat *OneAPIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 			Content: msg.Content,
 		}
 
+		if len(msg.MultipartContents) > 0 {
+			m.Content = ""
+			m.MultiContent = array.Map(msg.MultipartContents, func(item *MultipartContent, _ int) openai.ChatMessagePart {
+				ret := openai.ChatMessagePart{
+					Text: item.Text,
+					Type: item.Type,
+				}
+				if item.Type == "image_url" && item.ImageURL != nil {
+					url := item.ImageURL.URL
+					if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+						encoded, err := uploader.DownloadRemoteFileAsBase64(context.TODO(), item.ImageURL.URL)
+						if err == nil {
+							url = encoded
+						} else {
+							log.With(err).Errorf("download remote image failed: %s", item.ImageURL.URL)
+						}
+					}
+
+					ret.ImageURL = &openai.ChatMessageImageURL{
+						URL:    url,
+						Detail: item.ImageURL.Detail,
+					}
+				}
+
+				return ret
+			})
+		}
+
 		if msg.Role == "system" {
 			systemMessages = append(systemMessages, m)
 		} else {
 			contextMessages = append(contextMessages, m)
 		}
 	}
+
+	// 限制每次请求的最大字数
+	//if (req.MaxTokens > 4096 || req.MaxTokens <= 0) && strings.HasPrefix(req.ArtisticType, "gpt-4") {
+	//	req.MaxTokens = 1024
+	//}
 
 	msgs, tokenCount, err := oai.ReduceChatCompletionMessages(
 		contextMessages,

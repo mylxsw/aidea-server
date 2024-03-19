@@ -90,6 +90,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		fromstonClient *fromston.Fromston,
 		dashscopeClient *dashscope.DashScope,
 		rep *repo.Repository,
+		svc *service.Service,
 		ct chat.Chat,
 		conf *config.Config,
 		userSvc *service.UserService,
@@ -114,7 +115,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		mux.HandleFunc(queue.TypeImageDownloader, queue.BuildImageDownloaderHandler(conf, uploader, rep))
 		mux.HandleFunc(queue.TypeImageUpscale, queue.BuildImageUpscaleHandler(deepaiClient, stabaiClient, uploader, rep))
 		mux.HandleFunc(queue.TypeImageColorization, queue.BuildImageColorizationHandler(deepaiClient, uploader, rep))
-		mux.HandleFunc(queue.TypeGroupChat, queue.BuildGroupChatHandler(conf, ct, rep, userSvc))
+		mux.HandleFunc(queue.TypeGroupChat, queue.BuildGroupChatHandler(conf, ct, rep, svc))
 		mux.HandleFunc(queue.TypeDalleCompletion, queue.BuildDalleCompletionHandler(dalleClient, uploader, rep))
 		mux.HandleFunc(queue.TypeArtisticTextCompletion, queue.BuildArtisticTextCompletionHandler(leptonClient, translater, uploader, rep, openaiClient))
 		mux.HandleFunc(queue.TypeImageToVideoCompletion, queue.BuildImageToVideoCompletionHandler(stabaiClient, rep))

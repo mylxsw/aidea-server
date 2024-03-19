@@ -295,7 +295,7 @@ func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]re
 		res.ModelID = room.Model
 		res.Prompt = room.Prompt
 		res.AvatarURL = room.AvatarUrl
-		mod, ok := models[room.Vendor+":"+room.Model]
+		mod, ok := models[PureModelID(room.Model)]
 		if ok {
 			res.SupportVision = mod.Meta.Vision
 			res.ModelName = mod.Name
@@ -310,19 +310,15 @@ func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]re
 		res.ModelID = room.Model
 		res.Prompt = room.SystemPrompt
 		res.AvatarURL = room.AvatarUrl
-		mod, ok := models[room.Vendor+":"+room.Model]
+		mod, ok := models[PureModelID(room.Model)]
 		if ok {
 			res.SupportVision = mod.Meta.Vision
 			res.ModelID = room.Model
 		}
 	case HomeModelTypeModel:
-		mod, ok := models[res.ID]
+		mod, ok := models[PureModelID(res.ID)]
 		if !ok {
-			segs := strings.Split(res.ID, ":")
-			mod, ok = models[segs[len(segs)-1]]
-			if !ok {
-				return nil, fmt.Errorf("model not found: %s", res.ID)
-			}
+			return nil, fmt.Errorf("model not found: %s", res.ID)
 		}
 
 		res.Name = mod.ShortName

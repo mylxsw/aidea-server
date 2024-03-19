@@ -1,0 +1,24 @@
+package: model
+
+models:
+  - name: channels
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: name
+          type: string
+          tag: json:"name"
+        - name: type
+          type: string
+          tag: json:"type"
+        - name: server
+          type: string
+          tag: json:"server,omitempty"
+        - name: secret
+          type: string
+          tag: json:"secret,omitempty"
+        - name: meta_json
+          type: string
+          tag: json:"-"

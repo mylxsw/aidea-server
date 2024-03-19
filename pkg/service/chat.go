@@ -70,6 +70,34 @@ const (
 	ProviderAnthropic  = "Anthropic"
 )
 
+type ChannelType struct {
+	Name    string `json:"name"`
+	Dynamic bool   `json:"dynamic"`
+}
+
+// ChannelTypes 支持的渠道类型列表
+func (svc *ChatService) ChannelTypes() []ChannelType {
+	return []ChannelType{
+		{Name: ProviderOpenAI, Dynamic: true},
+		{Name: ProviderOneAPI, Dynamic: true},
+		{Name: ProviderOpenRouter, Dynamic: true},
+
+		{Name: ProviderXunFei, Dynamic: false},
+		{Name: ProviderWenXin, Dynamic: false},
+		{Name: ProviderDashscope, Dynamic: false},
+		{Name: ProviderSenseNova, Dynamic: false},
+		{Name: ProviderTencent, Dynamic: false},
+		{Name: ProviderBaiChuan, Dynamic: false},
+		{Name: Provider360, Dynamic: false},
+		{Name: ProviderSky, Dynamic: false},
+		{Name: ProviderZhipu, Dynamic: false},
+		{Name: ProviderMoonshot, Dynamic: false},
+		{Name: ProviderGoogle, Dynamic: false},
+		{Name: ProviderAnthropic, Dynamic: false},
+	}
+}
+
+// TODO 缓存
 func (svc *ChatService) Models(ctx context.Context, returnAll bool) []repo.Model {
 	models, err := svc.rep.Model.GetModels(ctx)
 	if err != nil {
@@ -91,11 +119,18 @@ func (svc *ChatService) Models(ctx context.Context, returnAll bool) []repo.Model
 	})
 }
 
-func (svc *ChatService) Model(ctx context.Context, modelID string) *repo.Model {
+func PureModelID(modelID string) string {
 	segs := strings.SplitN(modelID, ":", 2)
 	if len(segs) > 1 {
-		modelID = segs[1]
+		return segs[1]
 	}
+
+	return modelID
+}
+
+// TODO 缓存
+func (svc *ChatService) Model(ctx context.Context, modelID string) *repo.Model {
+	modelID = PureModelID(modelID)
 
 	ret, err := svc.rep.Model.GetModel(ctx, modelID)
 	if err != nil {
@@ -175,4 +210,16 @@ func (svc *ChatService) isModelEnabled(item repo.Model) bool {
 	}
 
 	return false
+}
+
+// Channels 返回所有支持的渠道
+// TODO 缓存
+func (svc *ChatService) Channels(ctx context.Context) ([]repo.Channel, error) {
+	return svc.rep.Model.GetChannels(ctx)
+}
+
+// Channel 返回制定的渠道信息
+// TODO 缓存
+func (svc *ChatService) Channel(ctx context.Context, id int64) (*repo.Channel, error) {
+	return svc.rep.Model.GetChannel(ctx, id)
 }

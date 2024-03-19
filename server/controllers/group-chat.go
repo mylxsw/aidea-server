@@ -324,6 +324,12 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 		req.MemberIDs = []int64{grp.Members[rand.Intn(len(grp.Members))].Id}
 	}
 
+	mods := array.ToMap(ctl.svc.Chat.Models(ctx, true), func(m repo.Model, _ int) string { return m.ModelId })
+	grp.Members = array.Filter(grp.Members, func(m model.ChatGroupMember, _ int) bool {
+		_, ok := mods[service.PureModelID(m.ModelId)]
+		return ok
+	})
+
 	availableMembers := req.AvailableMembers(array.Map(grp.Members, func(m model.ChatGroupMember, _ int) int64 { return m.Id }))
 	if len(availableMembers) == 0 {
 		failedMessageWriter("没有匹配的成员")
@@ -379,14 +385,14 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 
 		mpm := messagesPerMembers[memID]
 
+		mod := mods[membersMap[memID].ModelId]
 		count, err := chat.MessageTokenCount(mpm.Messages, membersMap[memID].ModelId)
 		if err != nil {
 			log.F(log.M{"member_id": memID, "req": req}).Errorf("calc message token count failed: %v", err)
-			return coins.GetOpenAITextCoins(membersMap[memID].ModelId, 1000)
+			return coins.GetTextModelCoins(&mod, 500, 500)
 		}
 
-		// 假设每次聊天消耗 3 个智慧果
-		mpm.NeedCoins = coins.GetOpenAITextCoins(membersMap[memID].ModelId, int64(count)) + 3
+		mpm.NeedCoins = coins.GetTextModelCoins(&mod, int64(count), 500)
 		messagesPerMembers[memID] = mpm
 
 		return mpm.NeedCoins

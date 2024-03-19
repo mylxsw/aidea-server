@@ -38,6 +38,7 @@ type CreativeIslandController struct {
 	trans        youdao.Translater        `autowire:"@"`
 	creativeRepo *repo.CreativeRepo       `autowire:"@"`
 	securitySrv  *service.SecurityService `autowire:"@"`
+	svc          *service.Service         `autowire:"@"`
 }
 
 // NewCreativeIslandController create a new CreativeIslandController
@@ -109,7 +110,7 @@ func (ctl *CreativeIslandController) gallery(ctx context.Context, webCtx web.Con
 			}
 
 			item.Arguments = ""
-			
+
 			return ret
 		}),
 	})
@@ -845,15 +846,20 @@ func (ctl *CreativeIslandController) completionsOpenAI(ctx context.Context, webC
 		messages = append(messages, openai.ChatCompletionMessage{Role: "user", Content: prompt})
 	}
 
+	mod := ctl.svc.Chat.Model(ctx, item.Model)
+	if mod == nil || mod.Status == repo.ModelStatusDisabled {
+		return webCtx.JSONError("model not found", http.StatusNotFound)
+	}
+
 	quota, err := ctl.quotaRepo.GetUserQuota(ctx, user.ID)
 	if err != nil {
 		log.Errorf("get user quota failed: %s", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.trans, err.Error()), http.StatusInternalServerError)
 	}
 
-	// 粗略估算本次请求消耗的 Token 数量，输出内容暂不计费，待实际完成后再计费
+	// 粗略估算本次请求消耗的 Token 数量，待实际完成后再计费
 	consumeWordCount, _ := openaiHelper.NumTokensFromMessages(messages, item.Model)
-	quotaConsumed := coins.GetOpenAITextCoins(item.Model, int64(consumeWordCount))
+	quotaConsumed := coins.GetTextModelCoins(mod, int64(consumeWordCount), 500)
 
 	if evaluate {
 		// 评估时，返回本次请求消耗的 Token 数量，+1 是假定输出内容消耗 1 个智慧果

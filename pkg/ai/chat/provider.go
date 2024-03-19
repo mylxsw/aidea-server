@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/pkg/ai/anthropic"
 	"github.com/mylxsw/aidea-server/pkg/ai/baichuan"
 	"github.com/mylxsw/aidea-server/pkg/ai/baidu"
@@ -31,8 +32,8 @@ func (Provider) Register(binder infra.Binder) {
 		return &aiProvider
 	})
 	binder.MustSingleton(NewAI)
-	binder.MustSingleton(func(svc *service.Service, ai *AI) Chat {
-		return NewChat(svc, ai)
+	binder.MustSingleton(func(conf *config.Config, resolver infra.Resolver, svc *service.Service, ai *AI) Chat {
+		return NewChat(conf, resolver, svc, ai)
 	})
 }
 

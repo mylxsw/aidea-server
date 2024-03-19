@@ -106,7 +106,6 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("enable-moonshot", "是否启用月之暗面")
 	ins.AddStringFlag("moonshot-apikey", "", "月之暗面 API Key")
 
-	ins.AddStringSliceFlag("oneapi-support-models", []string{}, "one-server 支持的模型，可选项 chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2")
 	ins.AddBoolFlag("enable-oneapi", "是否启用 OneAPI")
 	ins.AddStringFlag("oneapi-server", "", "one-server server")
 	ins.AddStringFlag("oneapi-key", "", "one-server key")
