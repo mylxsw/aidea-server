@@ -60,7 +60,7 @@ const (
 	ProviderSenseNova  = "商汤日日新"
 	ProviderTencent    = "腾讯"
 	ProviderBaiChuan   = "百川"
-	Provider360        = "360智脑"
+	Provider360        = "360"
 	ProviderOneAPI     = "oneapi"
 	ProviderOpenRouter = "openrouter"
 	ProviderSky        = "sky"

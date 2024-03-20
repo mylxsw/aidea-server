@@ -118,6 +118,9 @@ type Request struct {
 	// 业务定制字段
 	RoomID    int64 `json:"-"`
 	WebSocket bool  `json:"-"`
+
+	// TempModel 用户可以指定临时模型来进行当前对话，实现临时切换模型的功能
+	TempModel string `json:"temp_model,omitempty"`
 }
 
 func (req Request) assembleMessage() string {
@@ -336,12 +339,12 @@ func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
 	mod := ai.queryModel(req.Model)
 	pro := mod.SelectProvider()
 
-	if pro.Prompt != "" {
+	if mod.Meta.Prompt != "" {
 		systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
 		chatMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" })
 
 		if len(systemPrompts) > 0 {
-			systemPrompts[0].Content = pro.Prompt + "\n" + systemPrompts[0].Content
+			systemPrompts[0].Content = mod.Meta.Prompt + "\n" + systemPrompts[0].Content
 			systemPrompts = Messages{systemPrompts[0]}
 		}
 
@@ -370,12 +373,12 @@ func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, er
 	mod := ai.queryModel(req.Model)
 	pro := mod.SelectProvider()
 
-	if pro.Prompt != "" {
+	if mod.Meta.Prompt != "" {
 		systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
 		chatMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" })
 
 		if len(systemPrompts) > 0 {
-			systemPrompts[0].Content = pro.Prompt + "\n" + systemPrompts[0].Content
+			systemPrompts[0].Content = mod.Meta.Prompt + "\n" + systemPrompts[0].Content
 			systemPrompts = Messages{systemPrompts[0]}
 		}
 

@@ -45,6 +45,11 @@ func (ctl *ChannelController) ChannelTypes(ctx context.Context, webCtx web.Conte
 	})
 }
 
+type Channel struct {
+	repo.Channel
+	DisplayName string `json:"display_name,omitempty"`
+}
+
 // Channels 返回所有的渠道列表
 func (ctl *ChannelController) Channels(ctx context.Context, webCtx web.Context) web.Response {
 	channels, err := ctl.repo.Model.GetChannels(ctx)
@@ -52,13 +57,22 @@ func (ctl *ChannelController) Channels(ctx context.Context, webCtx web.Context) 
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	channels = array.Map(channels, func(item repo.Channel, _ int) repo.Channel {
+	types := array.ToMap(ctl.svc.Chat.ChannelTypes(), func(t service.ChannelType, _ int) string {
+		return t.Name
+	})
+
+	data := array.Map(channels, func(item repo.Channel, _ int) Channel {
 		item.Secret = ""
-		return item
+		ret := Channel{Channel: item}
+		if ret.Id == 0 {
+			ret.DisplayName = types[item.Name].Display
+		}
+
+		return ret
 	})
 
 	return webCtx.JSON(web.M{
-		"data": channels,
+		"data": data,
 	})
 }
 
@@ -72,6 +86,14 @@ func (ctl *ChannelController) Channel(ctx context.Context, webCtx web.Context) w
 	channel, err := ctl.repo.Model.GetChannel(ctx, int64(channelID))
 	if err != nil {
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
+	}
+
+	data := Channel{Channel: *channel}
+	if data.Id == 0 {
+		types := array.ToMap(ctl.svc.Chat.ChannelTypes(), func(t service.ChannelType, _ int) string {
+			return t.Name
+		})
+		data.DisplayName = types[channel.Name].Display
 	}
 
 	return webCtx.JSON(web.M{"data": channel})

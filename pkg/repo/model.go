@@ -94,6 +94,9 @@ type ModelMeta struct {
 	InputPrice int `json:"input_price,omitempty"`
 	// OutputPrice 输出 Token 价格（智慧果/1K Token）
 	OutputPrice int `json:"output_price,omitempty"`
+
+	// Prompt 全局的系统提示语
+	Prompt string `json:"prompt,omitempty"`
 }
 
 type ModelProvider struct {
@@ -103,8 +106,6 @@ type ModelProvider struct {
 	Name string `json:"name,omitempty"`
 	// ModelRewrite 模型名称重写，如果为空，则使用模型的名称
 	ModelRewrite string `json:"model_rewrite,omitempty"`
-	// Prompt 全局的系统提示语
-	Prompt string `json:"prompt,omitempty"`
 }
 
 // SupportProvider check if the model support the provider
@@ -118,9 +119,16 @@ func (m Model) SupportProvider(providerName string) *ModelProvider {
 	return nil
 }
 
+type QueryOption func(builder query.SQLBuilder) query.SQLBuilder
+
 // GetModels return all models
-func (repo *ModelRepo) GetModels(ctx context.Context) ([]Model, error) {
-	models, err := model.NewModelsModel(repo.db).Get(ctx, query.Builder())
+func (repo *ModelRepo) GetModels(ctx context.Context, options ...QueryOption) ([]Model, error) {
+	q := query.Builder()
+	for _, opt := range options {
+		q = opt(q)
+	}
+	
+	models, err := model.NewModelsModel(repo.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}

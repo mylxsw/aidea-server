@@ -273,6 +273,11 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			}
 		}
 
+		// 每次对话用户可以手动选择要使用的模型
+		if req.TempModel != "" {
+			req.Model = req.TempModel
+		}
+
 		// 模型最大上下文长度限制
 		maxContextLen = ctl.loadRoomContextLen(ctx, req.RoomID, user.User.ID)
 		req, inputTokenCount, err = req.Fix(ctl.chat, maxContextLen, ternary.If(user.User.ID > 0, 1000*200, 1000))

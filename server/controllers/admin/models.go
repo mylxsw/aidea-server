@@ -4,8 +4,10 @@ import (
 	"context"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/eloquent/query"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
+	"github.com/mylxsw/go-utils/array"
 	"net/http"
 )
 
@@ -32,8 +34,22 @@ func (ctl *ModelController) Register(router web.Router) {
 }
 
 // Models 返回所有的模型列表
+// - sort: 排序字段，支持 id:desc, 默认为空
 func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context) web.Response {
-	models, err := ctl.repo.Model.GetModels(ctx)
+	sort := webCtx.Input("sort")
+	if !array.In(sort, []string{"", "id:desc"}) {
+		return webCtx.JSONError("invalid sort parameter", http.StatusBadRequest)
+	}
+
+	opt := func(q query.SQLBuilder) query.SQLBuilder {
+		if sort == "id:desc" {
+			q = q.OrderBy("id", "desc")
+		}
+
+		return q
+	}
+
+	models, err := ctl.repo.Model.GetModels(ctx, opt)
 	if err != nil {
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}

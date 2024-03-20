@@ -135,7 +135,7 @@ func (ctl *ExampleController) Example(ctx web.Context) web.Response {
 
 	return ctx.JSON(array.Filter(examples, func(example repo.PromptExample, _ int) bool {
 		// TODO
-		return array.In(model, example.Models) || arrayContains(model, example.Models)
+		return array.In(model, example.Models) || arrayContains(model, example.Models) || len(example.Tags) == 0
 	}))
 
 }
