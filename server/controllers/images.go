@@ -124,6 +124,7 @@ func (ctl *ImageController) Avatar(ctx context.Context, webCtx web.Context) web.
 			"https://ssl.aicode.cc/ai-server/assets/avatar/wenxinyiyan-4.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/llama2.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/chatglm.png-avatar",
+			"https://ssl.aicode.cc/ai-server/assets/avatar/glm.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/aquila.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/BLOOMZ.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/qwen-turbo.jpeg-avatar",
@@ -139,6 +140,10 @@ func (ctl *ImageController) Avatar(ctx context.Context, webCtx web.Context) web.
 			"https://ssl.aicode.cc/ai-server/assets/avatar/sky.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/nanxian.png-avatar",
 			"https://ssl.aicode.cc/ai-server/assets/avatar/beichou.png-avatar",
+			"https://ssl.aicode.cc/ai-server/assets/avatar/moonshot.png-avatar",
+			"https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-haiku-bg.png-avatar",
+			"https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-sonnet-bg.png-avatar",
+			"https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-opus-bg.png-avatar",
 		},
 	})
 }
