@@ -753,3 +753,22 @@ func (repo *UserRepo) DeleteAPIKey(ctx context.Context, userID int64, keyID int6
 	_, err := model.NewUserApiKeyModel(repo.db).UpdateFields(ctx, update, q)
 	return err
 }
+
+// Users 查询用户列表
+func (repo *UserRepo) Users(ctx context.Context, page, perPage int64, options ...QueryOption) ([]model.Users, query.PaginateMeta, error) {
+	q := query.Builder()
+	for _, opt := range options {
+		q = opt(q)
+	}
+
+	users, meta, err := model.NewUsersModel(repo.db).Paginate(ctx, page, perPage, q)
+	if err != nil {
+		return nil, query.PaginateMeta{}, err
+	}
+
+	return array.Map(users, func(item model.UsersN, _ int) model.Users {
+		user := item.ToUsers()
+		user.Password = ""
+		return user
+	}), meta, nil
+}

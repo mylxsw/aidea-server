@@ -119,15 +119,13 @@ func (m Model) SupportProvider(providerName string) *ModelProvider {
 	return nil
 }
 
-type QueryOption func(builder query.SQLBuilder) query.SQLBuilder
-
 // GetModels return all models
 func (repo *ModelRepo) GetModels(ctx context.Context, options ...QueryOption) ([]Model, error) {
 	q := query.Builder()
 	for _, opt := range options {
 		q = opt(q)
 	}
-	
+
 	models, err := model.NewModelsModel(repo.db).Get(ctx, q)
 	if err != nil {
 		return nil, err

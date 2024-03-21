@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/eloquent/query"
 	"time"
 
 	"github.com/mylxsw/eloquent/event"
@@ -22,6 +23,8 @@ const (
 	EventStatusSucceed = "succeed"
 	EventStatusFailed  = "failed"
 )
+
+type QueryOption func(builder query.SQLBuilder) query.SQLBuilder
 
 type Provider struct{}
 

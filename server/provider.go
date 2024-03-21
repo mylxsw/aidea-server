@@ -327,6 +327,8 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		admin.NewCreativeIslandController(resolver),
 		admin.NewModelController(resolver),
 		admin.NewChannelController(resolver),
+		admin.NewQuotaController(resolver),
+		admin.NewUserController(resolver),
 	)
 
 	// 公开访问信息
