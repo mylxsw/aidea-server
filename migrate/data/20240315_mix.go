@@ -6,6 +6,7 @@ func Migrate20240315Mix(m *migrate.Manager) {
 	m.Schema("20240315-ddl").Create("models", func(builder *migrate.Builder) {
 		builder.Increments("id")
 		builder.Timestamps(0)
+		builder.SoftDeletes("deleted_at", 0)
 
 		builder.String("model_id", 100).Nullable(false).Comment("模型ID")
 		builder.String("name", 100).Nullable(false).Comment("模型名称")
@@ -22,6 +23,7 @@ func Migrate20240315Mix(m *migrate.Manager) {
 	m.Schema("20240315-ddl").Create("channels", func(builder *migrate.Builder) {
 		builder.Increments("id")
 		builder.Timestamps(0)
+		builder.SoftDeletes("deleted_at", 0)
 
 		builder.String("type", 100).Nullable(false).Comment("渠道类型")
 		builder.String("name", 100).Nullable(false).Comment("渠道名称")

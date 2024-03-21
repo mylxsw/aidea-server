@@ -13,6 +13,11 @@ import (
 
 func init() {
 
+	// AddChannelsGlobalScope assign a global scope to a model for soft delete
+	AddGlobalScopeForChannels("soft_delete", func(builder query.Condition) {
+		builder.WhereNull("deleted_at")
+	})
+
 }
 
 // ChannelsN is a Channels object, all fields are nullable
@@ -28,6 +33,7 @@ type ChannelsN struct {
 	MetaJson  null.String `json:"-"`
 	CreatedAt null.Time
 	UpdatedAt null.Time
+	DeletedAt null.Time
 }
 
 // As convert object to other type
@@ -51,6 +57,7 @@ type channelsOriginal struct {
 	MetaJson  null.String
 	CreatedAt null.Time
 	UpdatedAt null.Time
+	DeletedAt null.Time
 }
 
 // Staled identify whether the object has been modified
@@ -83,6 +90,9 @@ func (inst *ChannelsN) Staled(onlyFields ...string) bool {
 			return true
 		}
 		if inst.UpdatedAt != inst.original.UpdatedAt {
+			return true
+		}
+		if inst.DeletedAt != inst.original.DeletedAt {
 			return true
 		}
 	} else {
@@ -119,6 +129,10 @@ func (inst *ChannelsN) Staled(onlyFields ...string) bool {
 				}
 			case "updated_at":
 				if inst.UpdatedAt != inst.original.UpdatedAt {
+					return true
+				}
+			case "deleted_at":
+				if inst.DeletedAt != inst.original.DeletedAt {
 					return true
 				}
 			default:
@@ -163,6 +177,9 @@ func (inst *ChannelsN) StaledKV(onlyFields ...string) query.KV {
 		if inst.UpdatedAt != inst.original.UpdatedAt {
 			kv["updated_at"] = inst.UpdatedAt
 		}
+		if inst.DeletedAt != inst.original.DeletedAt {
+			kv["deleted_at"] = inst.DeletedAt
+		}
 	} else {
 		for _, f := range onlyFields {
 			switch strcase.ToSnake(f) {
@@ -198,6 +215,10 @@ func (inst *ChannelsN) StaledKV(onlyFields ...string) query.KV {
 			case "updated_at":
 				if inst.UpdatedAt != inst.original.UpdatedAt {
 					kv["updated_at"] = inst.UpdatedAt
+				}
+			case "deleted_at":
+				if inst.DeletedAt != inst.original.DeletedAt {
+					kv["deleted_at"] = inst.DeletedAt
 				}
 			default:
 			}
@@ -306,6 +327,7 @@ type Channels struct {
 	MetaJson  string `json:"-"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	DeletedAt time.Time
 }
 
 func (w Channels) ToChannelsN(allows ...string) ChannelsN {
@@ -320,6 +342,7 @@ func (w Channels) ToChannelsN(allows ...string) ChannelsN {
 			MetaJson:  null.StringFrom(w.MetaJson),
 			CreatedAt: null.TimeFrom(w.CreatedAt),
 			UpdatedAt: null.TimeFrom(w.UpdatedAt),
+			DeletedAt: null.TimeFrom(w.DeletedAt),
 		}
 	}
 
@@ -343,6 +366,8 @@ func (w Channels) ToChannelsN(allows ...string) ChannelsN {
 			res.CreatedAt = null.TimeFrom(w.CreatedAt)
 		case "updated_at":
 			res.UpdatedAt = null.TimeFrom(w.UpdatedAt)
+		case "deleted_at":
+			res.DeletedAt = null.TimeFrom(w.DeletedAt)
 		default:
 		}
 	}
@@ -367,6 +392,7 @@ func (w *ChannelsN) ToChannels() Channels {
 		MetaJson:  w.MetaJson.String,
 		CreatedAt: w.CreatedAt.Time,
 		UpdatedAt: w.UpdatedAt.Time,
+		DeletedAt: w.DeletedAt.Time,
 	}
 }
 
@@ -397,6 +423,7 @@ const (
 	FieldChannelsMetaJson  = "meta_json"
 	FieldChannelsCreatedAt = "created_at"
 	FieldChannelsUpdatedAt = "updated_at"
+	FieldChannelsDeletedAt = "deleted_at"
 )
 
 // ChannelsFields return all fields in Channels model
@@ -410,6 +437,7 @@ func ChannelsFields() []string {
 		"meta_json",
 		"created_at",
 		"updated_at",
+		"deleted_at",
 	}
 }
 
@@ -431,6 +459,11 @@ func NewChannelsModel(db query.Database) *ChannelsModel {
 // GetDB return database instance
 func (m *ChannelsModel) GetDB() query.Database {
 	return m.db.GetDB()
+}
+
+// WithTrashed force soft deleted models to appear in a result set
+func (m *ChannelsModel) WithTrashed() *ChannelsModel {
+	return m.WithoutGlobalScopes("soft_delete")
 }
 
 func (m *ChannelsModel) clone() *ChannelsModel {
@@ -548,6 +581,7 @@ func (m *ChannelsModel) Get(ctx context.Context, builders ...query.SQLBuilder) (
 			"meta_json",
 			"created_at",
 			"updated_at",
+			"deleted_at",
 		)
 	}
 
@@ -572,6 +606,8 @@ func (m *ChannelsModel) Get(ctx context.Context, builders ...query.SQLBuilder) (
 		case "created_at":
 			selectFields = append(selectFields, f)
 		case "updated_at":
+			selectFields = append(selectFields, f)
+		case "deleted_at":
 			selectFields = append(selectFields, f)
 		}
 	}
@@ -599,6 +635,8 @@ func (m *ChannelsModel) Get(ctx context.Context, builders ...query.SQLBuilder) (
 				scanFields = append(scanFields, &channelsVar.CreatedAt)
 			case "updated_at":
 				scanFields = append(scanFields, &channelsVar.UpdatedAt)
+			case "deleted_at":
+				scanFields = append(scanFields, &channelsVar.DeletedAt)
 			}
 		}
 
@@ -727,17 +765,44 @@ func (m *ChannelsModel) UpdateById(ctx context.Context, id int64, channels Chann
 	return m.Condition(query.Builder().Where("id", "=", id)).UpdateFields(ctx, channels.StaledKV(onlyFields...))
 }
 
-// Delete remove a model
-func (m *ChannelsModel) Delete(ctx context.Context, builders ...query.SQLBuilder) (int64, error) {
+// ForceDelete permanently remove a soft deleted model from the database
+func (m *ChannelsModel) ForceDelete(ctx context.Context, builders ...query.SQLBuilder) (int64, error) {
+	m2 := m.WithTrashed()
 
-	sqlStr, params := m.query.Merge(builders...).AppendCondition(m.applyScope()).Table(m.tableName).ResolveDelete()
+	sqlStr, params := m2.query.Merge(builders...).AppendCondition(m2.applyScope()).Table(m2.tableName).ResolveDelete()
 
-	res, err := m.db.ExecContext(ctx, sqlStr, params...)
+	res, err := m2.db.ExecContext(ctx, sqlStr, params...)
 	if err != nil {
 		return 0, err
 	}
 
 	return res.RowsAffected()
+}
+
+// ForceDeleteById permanently remove a soft deleted model from the database by id
+func (m *ChannelsModel) ForceDeleteById(ctx context.Context, id int64) (int64, error) {
+	return m.Condition(query.Builder().Where("id", "=", id)).ForceDelete(ctx)
+}
+
+// Restore restore a soft deleted model into an active state
+func (m *ChannelsModel) Restore(ctx context.Context, builders ...query.SQLBuilder) (int64, error) {
+	m2 := m.WithTrashed()
+	return m2.UpdateFields(ctx, query.KV{
+		"deleted_at": nil,
+	}, builders...)
+}
+
+// RestoreById restore a soft deleted model into an active state by id
+func (m *ChannelsModel) RestoreById(ctx context.Context, id int64) (int64, error) {
+	return m.Condition(query.Builder().Where("id", "=", id)).Restore(ctx)
+}
+
+// Delete remove a model
+func (m *ChannelsModel) Delete(ctx context.Context, builders ...query.SQLBuilder) (int64, error) {
+
+	return m.UpdateFields(ctx, query.KV{
+		"deleted_at": time.Now(),
+	}, builders...)
 
 }
 

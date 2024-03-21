@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"errors"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/glacier/infra"
@@ -166,6 +167,10 @@ func (ctl *ChannelController) Delete(ctx context.Context, webCtx web.Context) we
 	}
 
 	if err := ctl.repo.Model.DeleteChannel(ctx, int64(channelID)); err != nil {
+		if errors.Is(err, repo.ErrViolationOfBusinessConstraint) {
+			return webCtx.JSONError(err.Error(), http.StatusPreconditionFailed)
+		}
+		
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 

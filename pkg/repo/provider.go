@@ -15,7 +15,8 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("not found")
+	ErrNotFound                      = errors.New("not found")
+	ErrViolationOfBusinessConstraint = errors.New("violation of business constraint")
 )
 
 const (

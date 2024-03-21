@@ -3,6 +3,7 @@ package: model
 models:
   - name: channels
     definition:
+      soft_delete: true
       fields:
         - name: id
           type: int64

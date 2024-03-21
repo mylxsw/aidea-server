@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/asteria/log"
@@ -12,6 +13,7 @@ import (
 	"github.com/mylxsw/eloquent/query"
 	"github.com/mylxsw/go-utils/array"
 	"gopkg.in/guregu/null.v3"
+	"math/rand"
 	"strings"
 )
 
@@ -43,7 +45,7 @@ func (m Model) SelectProvider() ModelProvider {
 	}
 
 	// TODO 更好的选择策略
-	return m.Providers[0]
+	return m.Providers[rand.Intn(len(m.Providers))]
 }
 
 const (
@@ -367,7 +369,11 @@ func (repo *ModelRepo) DeleteChannel(ctx context.Context, channelID int64) error
 	})
 
 	if len(relatedModels) > 0 {
-		return errors.New("当前渠道下有关联的模型，无法删除：" + strings.Join(array.Map(relatedModels, func(item Model, _ int) string { return item.Name }), ","))
+		return fmt.Errorf(
+			"当前渠道下有关联的模型，无法删除：%s (%w)",
+			strings.Join(array.Map(relatedModels, func(item Model, _ int) string { return item.Name }), ","),
+			ErrViolationOfBusinessConstraint,
+		)
 	}
 
 	_, err = model.NewChannelsModel(repo.db).Delete(ctx, query.Builder().Where(model.FieldChannelsId, channelID))
