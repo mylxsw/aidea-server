@@ -346,8 +346,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
-	var realTokenConsumed int
-	var quotaConsumed int64
+	var quotaConsume QuotaConsume
 
 	startTime := time.Now()
 	defer func() {
@@ -358,11 +357,12 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			"elapse":  time.Since(startTime).Seconds(),
 		}).
 			Infof(
-				"接收到聊天请求，模型 %s, 上下文消息数量 %d, 输入 token 数量 %d，总计 token 数量 %d",
+				"接收到聊天请求，模型 %s, 上下文消息数量 %d, 输入 token 数量 %d，输出 token 数量 %d，消耗智慧果 %d",
 				req.Model,
 				len(req.Messages),
-				inputTokenCount,
-				realTokenConsumed,
+				ternary.If(quotaConsume.InputTokens > int(inputTokenCount), quotaConsume.InputTokens, int(inputTokenCount)),
+				quotaConsume.OutputTokens,
+				quotaConsume.TotalPrice,
 			)
 	}()
 
@@ -397,21 +397,21 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 
 	// 返回自定义控制信息，告诉客户端当前消耗情况
-	realTokenConsumed, quotaConsumed = ctl.resolveConsumeQuota(req, replyText, leftCount > 0, mod)
+	quotaConsume = ctl.resolveConsumeQuota(req, replyText, leftCount > 0, mod)
 
 	func() {
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
 		// 写入用户消息
-		answerID := ctl.saveChatAnswer(ctx, user.User, replyText, quotaConsumed, realTokenConsumed, req, questionID, chatErrorMessage)
+		answerID := ctl.saveChatAnswer(ctx, user.User, replyText, quotaConsume.TotalPrice, quotaConsume.TotalTokens(), req, questionID, chatErrorMessage)
 
 		if errors.Is(ErrChatResponseEmpty, err) {
 			misc.NoError(sw.WriteErrorStream(err, http.StatusInternalServerError))
 		} else {
 			if !ctl.apiMode {
 				// final 消息为定制消息，用于告诉 AIdea 客户端当前的资源消耗情况以及服务端信息
-				finalWord := ctl.buildFinalSystemMessage(questionID, answerID, user.User, quotaConsumed, realTokenConsumed, req, maxContextLen, chatErrorMessage)
+				finalWord := ctl.buildFinalSystemMessage(questionID, answerID, user.User, quotaConsume.TotalPrice, quotaConsume.TotalTokens(), req, maxContextLen, chatErrorMessage)
 				misc.NoError(sw.WriteStream(finalWord))
 			}
 		}
@@ -433,12 +433,18 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 
 	// 扣除智慧果
-	if leftCount <= 0 && quotaConsumed > 0 {
+	if leftCount <= 0 && quotaConsume.TotalPrice > 0 {
 		func() {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			if err := quotaRepo.QuotaConsume(ctx, user.User.ID, quotaConsumed, repo.NewQuotaUsedMeta("chat", req.Model)); err != nil {
+			meta := repo.NewQuotaUsedMeta("chat", req.Model)
+			meta.InputToken = quotaConsume.InputTokens
+			meta.OutputToken = quotaConsume.OutputTokens
+			meta.InputPrice = quotaConsume.InputPrice
+			meta.OutputPrice = quotaConsume.OutputPrice
+
+			if err := quotaRepo.QuotaConsume(ctx, user.User.ID, quotaConsume.TotalPrice, meta); err != nil {
 				log.Errorf("used quota add failed: %s", err)
 			}
 		}()
@@ -708,7 +714,19 @@ func (ctl *OpenAIController) saveChatAnswer(ctx context.Context, user *auth.User
 	return 0
 }
 
-func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText string, isFreeRequest bool, mod *repo.Model) (int, int64) {
+type QuotaConsume struct {
+	InputTokens  int
+	OutputTokens int
+	InputPrice   float64
+	OutputPrice  float64
+	TotalPrice   int64
+}
+
+func (qc QuotaConsume) TotalTokens() int {
+	return qc.InputTokens + qc.OutputTokens
+}
+
+func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText string, isFreeRequest bool, mod *repo.Model) QuotaConsume {
 	inputTokens, _ := chat.MessageTokenCount(req.Messages, req.Model)
 	outputTokens, _ := chat.MessageTokenCount(
 		chat.Messages{{
@@ -717,14 +735,18 @@ func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText st
 		}}, req.Model,
 	)
 
-	quotaConsumed := coins.GetTextModelCoins(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
+	ret := QuotaConsume{
+		InputTokens:  inputTokens,
+		OutputTokens: outputTokens,
+	}
+	ret.InputPrice, ret.OutputPrice, ret.TotalPrice = coins.GetTextModelCoinsDetail(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
 
 	// 免费请求，不扣除智慧果
 	if isFreeRequest || replyText == "" {
-		quotaConsumed = 0
+		ret.TotalPrice = 0
 	}
 
-	return inputTokens + outputTokens, quotaConsumed
+	return ret
 }
 
 // makeChatQuestionFailed 更新聊天问题为失败状态

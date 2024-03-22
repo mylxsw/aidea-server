@@ -173,20 +173,27 @@ type ModelInfo struct {
 	OutputPrice int
 }
 
-// GetTextModelCoins 获取文本模型计费，该接口对于 Input 和 Output 分开计费
-func GetTextModelCoins(model ModelInfo, inputToken, outputToken int64) int64 {
+func GetTextModelCoinsDetail(model ModelInfo, inputToken, outputToken int64) (inputPrice float64, outputPrice float64, totalPrice int64) {
 	if model.OutputPrice > 0 || model.InputPrice > 0 {
 		if model.InputPrice <= 0 {
 			model.InputPrice = model.OutputPrice
 		}
 
-		inputPrice := math.Ceil(float64(model.InputPrice) * float64(inputToken) / 1000.0)
-		outputPrice := math.Ceil(float64(model.OutputPrice) * float64(outputToken) / 1000.0)
+		inputPrice = float64(model.InputPrice) * float64(inputToken) / 1000.0
+		outputPrice = float64(model.OutputPrice) * float64(outputToken) / 1000.0
+		totalPrice = int64(math.Ceil(inputPrice + outputPrice))
 
-		return int64(inputPrice + outputPrice)
+		return inputPrice, outputPrice, totalPrice
 	}
 
-	return GetOpenAITextCoins(model.ModelId, inputToken+outputToken)
+	totalPrice = GetOpenAITextCoins(model.ModelId, inputToken+outputToken)
+	return 0, float64(totalPrice), totalPrice
+}
+
+// GetTextModelCoins 获取文本模型计费，该接口对于 Input 和 Output 分开计费
+func GetTextModelCoins(model ModelInfo, inputToken, outputToken int64) int64 {
+	_, _, totalPrice := GetTextModelCoinsDetail(model, inputToken, outputToken)
+	return totalPrice
 }
 
 func GetVoiceCoins(model string) int64 {

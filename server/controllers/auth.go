@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
@@ -16,8 +17,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/mylxsw/aidea-server/internal/coins"
 
 	"github.com/Timothylock/go-signin-with-apple/apple"
 	"github.com/hashicorp/go-uuid"
@@ -1086,9 +1085,10 @@ func (ctl *AuthController) SignInWithWechat(ctx context.Context, webCtx web.Cont
 
 	if eventID > 0 {
 		payload := queue.SignupPayload{
-			UserID:    user.Id,
-			EventID:   eventID,
-			CreatedAt: time.Now(),
+			UserID:        user.Id,
+			EventID:       eventID,
+			WeChatUnionID: unionID,
+			CreatedAt:     time.Now(),
 		}
 
 		if _, err := ctl.queue.Enqueue(&payload, queue.NewSignupTask, asynq.Queue("user")); err != nil {
@@ -1262,8 +1262,10 @@ func appleSignIn(
 
 // buildUserLoginRes 构建用户登录响应
 func (ctl *AuthController) buildUserLoginRes(user *model.Users, isSignup bool, tk *token.Token) web.M {
+	reward := coins.SignupGiftCoins
 	if user.Phone != "" {
 		user.Phone = misc.MaskPhoneNumber(user.Phone)
+		reward = coins.BindPhoneGiftCoins
 	}
 
 	return web.M{
@@ -1273,7 +1275,7 @@ func (ctl *AuthController) buildUserLoginRes(user *model.Users, isSignup bool, t
 		"phone":           user.Phone,
 		"is_new_user":     isSignup,
 		"need_bind_phone": ctl.conf.ShouldBindPhone && user.Phone == "",
-		"reward":          coins.BindPhoneGiftCoins,
+		"reward":          reward,
 		"token": tk.CreateToken(token.Claims{
 			"id": user.Id,
 		}, 6*30*24*time.Hour),

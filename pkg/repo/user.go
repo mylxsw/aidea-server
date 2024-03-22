@@ -422,7 +422,7 @@ func (repo *UserRepo) WeChatSignIn(ctx context.Context, unionID string, nickname
 
 			if eventID, err = model.NewEventsModel(tx).Save(ctx, model.EventsN{
 				EventType: null.StringFrom(EventTypeUserCreated),
-				Payload:   null.StringFrom(string(must.Must(json.Marshal(UserCreatedEvent{UserID: user.Id, From: "wechat"})))),
+				Payload:   null.StringFrom(string(must.Must(json.Marshal(UserCreatedEvent{UserID: user.Id, From: UserCreatedEventSourceWechat})))),
 				Status:    null.StringFrom(EventStatusWaiting),
 			}); err != nil {
 				log.With(user).Errorf("create event failed: %s", err)

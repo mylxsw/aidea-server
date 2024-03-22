@@ -8,6 +8,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
+	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
@@ -57,6 +58,37 @@ type ImageURL struct {
 }
 
 type Messages []Message
+
+func (m Messages) ToLogEntry() Messages {
+	ret := make(Messages, len(m))
+	for i, msg := range m {
+		mm := Message{
+			Role:    msg.Role,
+			Content: misc.SubString(msg.Content, 20),
+		}
+
+		if msg.MultipartContents != nil {
+			mm.MultipartContents = make([]*MultipartContent, len(msg.MultipartContents))
+			for j, part := range msg.MultipartContents {
+				mm.MultipartContents[j] = &MultipartContent{
+					Type: part.Type,
+					Text: misc.SubString(part.Text, 20),
+				}
+
+				if part.ImageURL != nil {
+					mm.MultipartContents[j].ImageURL = &ImageURL{
+						URL:    misc.SubString(part.ImageURL.URL, 20),
+						Detail: part.ImageURL.Detail,
+					}
+				}
+			}
+		}
+
+		ret[i] = mm
+	}
+
+	return ret
+}
 
 func (ms Messages) HasImage() bool {
 	for _, msg := range ms {
@@ -380,6 +412,8 @@ func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, er
 		if len(systemPrompts) > 0 {
 			systemPrompts[0].Content = mod.Meta.Prompt + "\n" + systemPrompts[0].Content
 			systemPrompts = Messages{systemPrompts[0]}
+		} else {
+			systemPrompts = Messages{{Role: "system", Content: mod.Meta.Prompt}}
 		}
 
 		req.Messages = append(systemPrompts, chatMessages...)
@@ -388,6 +422,8 @@ func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, er
 	if pro.ModelRewrite != "" {
 		req.Model = pro.ModelRewrite
 	}
+
+	log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Debug("chat stream request")
 
 	return ai.selectImp(pro).ChatStream(ctx, req)
 }
