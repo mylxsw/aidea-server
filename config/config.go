@@ -289,6 +289,10 @@ type Config struct {
 
 	// Stripe 支付
 	Stripe StripeConfig `json:"stripe" yaml:"stripe"`
+
+	// 首页默认常用模型
+	DefaultHomeModels    []string `json:"default_home_models" yaml:"default_home_models"`
+	DefaultHomeModelsIOS []string `json:"default_home_models_ios" yaml:"default_home_models_ios"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -573,6 +577,9 @@ func Register(ins *app.App) {
 			WeChatSecret: ctx.String("wechat-secret"),
 
 			Stripe: stripe,
+
+			DefaultHomeModels:    ctx.StringSlice("default-home-models"),
+			DefaultHomeModelsIOS: ctx.StringSlice("default-home-models-ios"),
 		}
 	})
 }

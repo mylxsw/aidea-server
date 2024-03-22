@@ -360,7 +360,8 @@ const termsOfUser = `<h1 id="-">用户协议</h1>
 `
 
 func (ctl *InfoController) loadHomeModelsV2(ctx context.Context, conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
-	enableOpenAI, homeModels = ctl.loadDefaultHomeModelsV2(ctl.conf, client, user)
+
+	enableOpenAI, homeModels = ctl.loadDefaultHomeModelsV2(ctx, ctl.conf, client, user)
 
 	if user.User != nil && conf.EnableCustomHomeModels {
 		cus, err := ctl.userSvc.CustomConfig(ctx, user.User.ID)
@@ -392,32 +393,46 @@ func (ctl *InfoController) loadHomeModelsV2(ctx context.Context, conf *config.Co
 	return enableOpenAI, homeModels
 }
 
-func (ctl *InfoController) loadDefaultHomeModelsV2(conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
-	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
-		return false, []service.HomeModel{
-			{
-				Name: "Chat 3.5",
-				ID:   "virtual:nanxian",
+func (ctl *InfoController) loadDefaultHomeModelsV2(ctx context.Context, conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
+	models := array.ToMap(ctl.svc.Chat.Models(ctx, false), func(item repo.Model, _ int) string {
+		return item.ModelId
+	})
+
+	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) && len(ctl.conf.DefaultHomeModelsIOS) > 0 {
+		iosHomeModelsLen := len(ctl.conf.DefaultHomeModelsIOS)
+		homeModelsLen := len(ctl.conf.DefaultHomeModels)
+
+		homeModels = make([]service.HomeModel, ternary.If(iosHomeModelsLen > homeModelsLen, iosHomeModelsLen, homeModelsLen))
+		for i, m := range ctl.conf.DefaultHomeModels {
+			matched, ok := models[m]
+			if !ok {
+				log.Errorf("load default home model failed: %s at %d not found", m, i+1)
+				continue
+			}
+
+			homeModels[i] = service.HomeModel{
+				Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+				ID:   matched.ModelId,
 				Type: service.HomeModelTypeModel,
-			},
-			{
-				Name: "Chat 4.0",
-				ID:   "virtual:beichou",
-				Type: service.HomeModelTypeModel,
-			},
+			}
+		}
+		return false, homeModels
+	}
+
+	homeModels = make([]service.HomeModel, len(ctl.conf.DefaultHomeModels))
+	for i, m := range ctl.conf.DefaultHomeModels {
+		matched, ok := models[m]
+		if !ok {
+			log.Errorf("load default home model failed: %s at %d not found", m, i+1)
+			continue
+		}
+
+		homeModels[i] = service.HomeModel{
+			Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+			ID:   matched.ModelId,
+			Type: service.HomeModelTypeModel,
 		}
 	}
 
-	return conf.EnableOpenAI, []service.HomeModel{
-		{
-			Name: "GPT-3.5",
-			ID:   "openai:gpt-3.5-turbo",
-			Type: service.HomeModelTypeModel,
-		},
-		{
-			Name: "GPT-4 Turbo",
-			ID:   "openai:gpt-4-turbo-preview",
-			Type: service.HomeModelTypeModel,
-		},
-	}
+	return conf.EnableOpenAI, homeModels
 }

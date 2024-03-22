@@ -231,4 +231,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("stripe-publishable-key", "", "stripe publishable key")
 	ins.AddStringFlag("stripe-secret-key", "", "stripe secret key")
 	ins.AddStringFlag("stripe-webhook-secret", "", "stripe webhook secret")
+
+	ins.AddStringSliceFlag("default-home-models", []string{"gpt-3.5-turbo", "gpt-4"}, "默认的首页模型，值取自数据表 models.model_id")
+	ins.AddStringSliceFlag("default-home-models-ios", []string{"chat-3.5", "chat-4"}, "默认的首页模型（IOS），值取自数据表 models.model_id")
 }

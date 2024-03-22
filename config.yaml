@@ -472,3 +472,9 @@ enable-stripe: false
 stripe-publishable-key: ""
 stripe-secret-key: ""
 stripe-webhook-secret: ""
+
+######## 默认首页模型 ########
+# 首页默认展示的模型，取值为表 models.model_id 的值
+default-home-models: ["gpt-3.5-turbo", "gpt-4"]
+# IOS 系统默认首页模型，取值为表 models.model_id 的值，如果为空，则使用 default-home-models
+default-home-models-ios: ["chat-3.5", "chat-4"]
