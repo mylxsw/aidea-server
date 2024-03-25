@@ -230,6 +230,15 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 		req.MaxContext = 10
 	}
 
+	mod := ctl.svc.Chat.Model(ctx, req.Model)
+	if mod == nil {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "暂不支持该模型"), http.StatusBadRequest)
+	}
+
+	if req.AvatarURL == "" {
+		req.AvatarURL = mod.AvatarUrl
+	}
+
 	room := model.Rooms{
 		Name:           req.Name,
 		UserId:         user.ID,
@@ -247,7 +256,7 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 
 	id, err := ctl.roomRepo.Create(ctx, user.ID, &room, true)
 	if err != nil {
-		if err == repo.ErrRoomNameExists {
+		if errors.Is(err, repo.ErrRoomNameExists) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人名称已存在"), http.StatusBadRequest)
 		}
 

@@ -21,6 +21,11 @@ const (
 	ModelNovaPtcXLV1 Model = "nova-ptc-xl-v1"
 	// ModelNovaPtcXSV1 官方大语言模型（通用），小参数量
 	ModelNovaPtcXSV1 Model = "nova-ptc-xs-v1"
+
+	ModelSenseChat      Model = "SenseChat"
+	ModelSenseChat32K   Model = "SenseChat-32K"
+	ModelSenseChat128K  Model = "SenseChat-128K"
+	ModelSenseChatTurbo Model = "SenseChat-Turbo"
 )
 
 var (

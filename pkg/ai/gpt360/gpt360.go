@@ -18,6 +18,8 @@ const (
 	Model360CV_S0_V5 = "360CV_S0_V5"
 	// 360CV_StyleTransfer_V1 ¥0.1 / images
 	Model360CV_StyleTransfer_V1 = "360CV_StyleTransfer_V1"
+	Model360GPT_Turbo           = "360gpt-turbo"
+	Model360GPT_Pro             = "360gpt-pro"
 )
 
 type GPT360 struct {
@@ -29,9 +31,9 @@ func NewGPT360(apiKey string) *GPT360 {
 }
 
 type ChatRequest struct {
-	Model    string   `json:"model"`
-	Messages Messages `json:"messages"`
-	Stream   bool     `json:"stream"`
+	Model       string   `json:"model"`
+	Messages    Messages `json:"messages"`
+	Stream      bool     `json:"stream"`
 	Temperature float64  `json:"temperature,omitempty"`
 	// MaxTokens 大于等于1小于等于2048，默认值是2048，代表输出结果的最大token数
 	MaxTokens int `json:"max_tokens,omitempty"`

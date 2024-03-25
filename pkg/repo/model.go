@@ -113,12 +113,23 @@ type ModelProvider struct {
 // SupportProvider check if the model support the provider
 func (m Model) SupportProvider(providerName string) *ModelProvider {
 	for _, p := range m.Providers {
-		if p.Name == providerName {
+		if p.Name == providerName && p.ID <= 0 {
 			return &p
 		}
 	}
 
 	return nil
+}
+
+func (m Model) SupportDynamicProvider() bool {
+	for _, p := range m.Providers {
+		if p.ID > 0 {
+			return true
+		}
+	}
+
+	return false
+
 }
 
 // GetModels return all models

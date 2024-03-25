@@ -124,11 +124,16 @@ func (ctl *ModelController) GetAllHomeModels(ctx context.Context, webCtx web.Con
 			homeModels,
 			array.Map(rooms, func(item repo.Room, _ int) service.HomeModel {
 				model := modelIDMap[item.Model]
+				avatarUrl := item.AvatarUrl
+				if avatarUrl == "" {
+					avatarUrl = model.AvatarUrl
+				}
+				
 				return service.HomeModel{
 					Type:          service.HomeModelTypeRooms,
 					ID:            strconv.Itoa(int(item.Id)),
 					Name:          item.Name,
-					AvatarURL:     item.AvatarUrl,
+					AvatarURL:     avatarUrl,
 					ModelID:       model.ModelId,
 					ModelName:     model.Name,
 					SupportVision: model.Meta.Vision,

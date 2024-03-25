@@ -124,6 +124,11 @@ var coinTables = map[string]CoinTable{
 		"moonshot-v1-8k":   2,  // valid ¥0.012/1K tokens
 		"moonshot-v1-32k":  4,  // valid ¥0.024/1K tokens
 		"moonshot-v1-128k": 10, // valid ¥0.06/1K tokens
+
+		// 零一万物 https://platform.lingyiwanwu.com/docs
+		"yi-34b-chat":      1, // valid ¥0.0025/1K tokens
+		"yi-34b-chat-200k": 2, // valid ¥0.012/1K tokens
+		"yi-vl-plus":       1, // valid ¥0.006/1K tokens
 	},
 
 	"voice-recognition": {

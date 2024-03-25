@@ -210,7 +210,7 @@ func (svc *ChatService) isModelEnabled(item repo.Model) bool {
 		return true
 	}
 
-	return false
+	return item.SupportDynamicProvider()
 }
 
 // Channels 返回所有支持的渠道

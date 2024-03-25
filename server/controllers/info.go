@@ -416,6 +416,21 @@ func (ctl *InfoController) loadDefaultHomeModelsV2(ctx context.Context, conf *co
 				Type: service.HomeModelTypeModel,
 			}
 		}
+
+		for i, m := range ctl.conf.DefaultHomeModelsIOS {
+			matched, ok := models[m]
+			if !ok {
+				log.Errorf("load default home model for ios failed: %s at %d not found", m, i+1)
+				continue
+			}
+
+			homeModels[i] = service.HomeModel{
+				Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+				ID:   matched.ModelId,
+				Type: service.HomeModelTypeModel,
+			}
+		}
+
 		return false, homeModels
 	}
 

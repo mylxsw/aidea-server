@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
 	oai "github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"strings"
 
@@ -47,6 +48,11 @@ func (chat *OneAPIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 							url = encoded
 						} else {
 							log.With(err).Errorf("download remote image failed: %s", item.ImageURL.URL)
+						}
+					} else {
+						imageMimeType, err := misc.Base64ImageMediaType(url)
+						if err == nil {
+							url = misc.AddImageBase64Prefix(misc.RemoveImageBase64Prefix(url), imageMimeType)
 						}
 					}
 

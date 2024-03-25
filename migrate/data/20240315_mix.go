@@ -13,7 +13,7 @@ func Migrate20240315Mix(m *migrate.Manager) {
 		builder.String("short_name", 100).Nullable(true).Comment("模型简称")
 		builder.String("description", 255).Nullable(true).Comment("模型描述")
 		builder.String("avatar_url", 255).Nullable(true).Comment("模型头像")
-		builder.TinyInteger("status", false, true).Nullable(false).Comment("模型状态：0-禁用，1-启用")
+		builder.TinyInteger("status", false, true).Nullable(false).Comment("模型状态：2-禁用，1-启用")
 		builder.String("version_min", 20).Nullable(true).Comment("最低版本")
 		builder.String("version_max", 20).Nullable(true).Comment("最高版本")
 		builder.Json("meta_json").Nullable(true).Comment("模型元信息，JSON 格式")
