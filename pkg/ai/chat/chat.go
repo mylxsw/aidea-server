@@ -369,7 +369,7 @@ func (ai *Imp) selectProvider(name string) Chat {
 
 func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
 	mod := ai.queryModel(req.Model)
-	pro := mod.SelectProvider()
+	pro := mod.SelectProvider(ctx)
 
 	if mod.Meta.Prompt != "" {
 		systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
@@ -403,7 +403,7 @@ func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, er
 	})
 
 	mod := ai.queryModel(req.Model)
-	pro := mod.SelectProvider()
+	pro := mod.SelectProvider(ctx)
 
 	if mod.Meta.Prompt != "" {
 		systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
@@ -434,7 +434,7 @@ func (ai *Imp) MaxContextLength(model string) int {
 		return mod.Meta.MaxContext
 	}
 
-	return ai.selectImp(mod.SelectProvider()).MaxContextLength(model)
+	return ai.selectImp(mod.SelectProvider(context.Background())).MaxContextLength(model)
 }
 
 // createOpenAIClient 创建一个 OpenAI Client

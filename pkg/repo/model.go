@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/internal/coins"
+	"github.com/mylxsw/aidea-server/pkg/ai/control"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/eloquent"
@@ -39,13 +40,28 @@ func (m Model) ToCoinModel() coins.ModelInfo {
 	}
 }
 
-func (m Model) SelectProvider() ModelProvider {
+func (m Model) SelectProvider(ctx context.Context) ModelProvider {
 	if len(m.Providers) == 0 {
 		return ModelProvider{Name: "openai"}
 	}
 
+	if len(m.Providers) == 1 {
+		return m.Providers[0]
+	}
+
 	// TODO 更好的选择策略
-	return m.Providers[rand.Intn(len(m.Providers))]
+	// 临时方案：1主多备，优先使用第一个供应商，如果第一个供应商不可用，则随机选择一个备用供应商
+	ctl := control.FromContext(ctx)
+	if ctl.PreferBackup {
+		idx := rand.Intn(len(m.Providers))
+		if idx == 0 {
+			idx++
+		}
+		
+		return m.Providers[idx]
+	}
+
+	return m.Providers[0]
 }
 
 const (

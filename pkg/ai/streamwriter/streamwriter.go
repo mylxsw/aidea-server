@@ -21,6 +21,9 @@ type StreamWriter struct {
 	once      sync.Once
 	sseInited bool
 	debug     bool
+
+	onClosedSync sync.Once
+	onClosed     func()
 }
 
 var corsHeaders = http.Header{
@@ -44,21 +47,35 @@ func (sw *StreamWriter) Close() {
 		log.Debugf("close stream writer")
 	}
 
-	if sw.ws != nil {
-		misc.NoError(sw.ws.Close())
-	} else {
-		if sw.sseInited {
-			// 写入结束标志
-			_, _ = sw.w.Write([]byte("data: [DONE]\n\n"))
-			if f, ok := sw.w.(http.Flusher); ok {
-				f.Flush()
-			}
-		}
-	}
+	sw.handleClosed()
 }
 
 type InitRequest[T any] interface {
 	Init() T
+}
+
+func (sw *StreamWriter) SetOnClosed(cb func()) {
+	sw.onClosed = cb
+}
+
+func (sw *StreamWriter) handleClosed() {
+	sw.onClosedSync.Do(func() {
+		if sw.ws != nil {
+			_ = sw.ws.Close()
+		} else {
+			if sw.sseInited {
+				// 写入结束标志
+				_, _ = sw.w.Write([]byte("data: [DONE]\n\n"))
+				if f, ok := sw.w.(http.Flusher); ok {
+					f.Flush()
+				}
+			}
+		}
+
+		if sw.onClosed != nil {
+			sw.onClosed()
+		}
+	})
 }
 
 func New[T InitRequest[T]](enableWs bool, enableCors bool, r *http.Request, w http.ResponseWriter) (*StreamWriter, *T, error) {
@@ -101,7 +118,9 @@ func New[T InitRequest[T]](enableWs bool, enableCors bool, r *http.Request, w ht
 			}
 
 			go func() {
-				defer func() { _ = wsConn.Close() }()
+				defer func() {
+					sw.handleClosed()
+				}()
 				for {
 					typ, msg, err := wsConn.ReadMessage()
 					if err != nil {

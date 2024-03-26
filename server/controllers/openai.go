@@ -235,6 +235,9 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 	defer sw.Close()
 
+	subCtx, subCancel := context.WithCancel(ctx)
+	sw.SetOnClosed(subCancel)
+
 	// 匿名用户，使用免费模型代替
 	if user.User.ID == 0 && ctl.conf.FreeChatModel != "" {
 		req.Model = ctl.conf.FreeChatModel
@@ -257,10 +260,10 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		// 支持 V2 版本的 homeModel 请求
 		// model 格式为 v2@{type}|{id}
 		if strings.HasPrefix(req.Model, "v2@") {
-			models := array.ToMap(ctl.chatSrv.Models(ctx, true), func(item repo.Model, _ int) string {
+			models := array.ToMap(ctl.chatSrv.Models(subCtx, true), func(item repo.Model, _ int) string {
 				return item.ModelId
 			})
-			homeModel, err := ctl.userSrv.QueryHomeModel(ctx, models, user.User.ID, strings.TrimPrefix(req.Model, "v2@"))
+			homeModel, err := ctl.userSrv.QueryHomeModel(subCtx, models, user.User.ID, strings.TrimPrefix(req.Model, "v2@"))
 			if err != nil {
 				misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
 				return
@@ -279,7 +282,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}
 
 		// 模型最大上下文长度限制
-		maxContextLen = ctl.loadRoomContextLen(ctx, req.RoomID, user.User.ID)
+		maxContextLen = ctl.loadRoomContextLen(subCtx, req.RoomID, user.User.ID)
 		req, inputTokenCount, err = req.Fix(ctl.chat, maxContextLen, ternary.If(user.User.ID > 0, 1000*200, 1000))
 		if err != nil {
 			misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
@@ -298,21 +301,21 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
 	var leftCount, maxFreeCount int
 	if user.User.ID > 0 {
-		leftCount, maxFreeCount = ctl.userSrv.FreeChatRequestCounts(ctx, user.User.ID, req.Model)
+		leftCount, maxFreeCount = ctl.userSrv.FreeChatRequestCounts(subCtx, user.User.ID, req.Model)
 	} else {
 		// 匿名用户，每次都是免费的，不限制次数，通过流控来限制访问
 		leftCount, maxFreeCount = 1, 0
 	}
 
 	// 查询模型信息
-	mod := ctl.chatSrv.Model(ctx, req.Model)
+	mod := ctl.chatSrv.Model(subCtx, req.Model)
 	if mod == nil || mod.Status == repo.ModelStatusDisabled {
 		misc.NoError(sw.WriteErrorStream(errors.New("当前模型暂不可用"), http.StatusNotFound))
 		return
 	}
 
 	if leftCount <= 0 {
-		quota, needCoins, err := ctl.queryChatQuota(ctx, user.User, sw, webCtx, inputTokenCount, mod)
+		quota, needCoins, err := ctl.queryChatQuota(subCtx, user.User, sw, webCtx, inputTokenCount, mod)
 		if err != nil {
 			return
 		}
@@ -367,10 +370,10 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}()
 
 	// 写入用户消息
-	questionID := ctl.saveChatQuestion(ctx, user.User, req)
+	questionID := ctl.saveChatQuestion(subCtx, user.User, req)
 
 	// 发起聊天请求并返回 SSE/WS 流
-	replyText, err := ctl.handleChat(ctx, req, user.User, sw, webCtx, questionID, 0)
+	replyText, err := ctl.handleChat(subCtx, req, user.User, sw, webCtx, questionID, 0)
 	if errors.Is(err, ErrChatResponseHasSent) {
 		return
 	}
@@ -383,7 +386,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		if startTime.Add(60 * time.Second).After(time.Now()) {
 			log.F(log.M{"req": req, "user_id": user.User.ID}).Warningf("聊天响应为空，尝试再次请求，模型：%s", req.Model)
 
-			replyText, err = ctl.handleChat(ctx, req, user.User, sw, webCtx, questionID, 1)
+			replyText, err = ctl.handleChat(subCtx, req, user.User, sw, webCtx, questionID, 1)
 			if errors.Is(err, ErrChatResponseHasSent) {
 				return
 			}
