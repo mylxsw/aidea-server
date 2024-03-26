@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mylxsw/aidea-server/config"
+	"github.com/mylxsw/aidea-server/internal/coins"
+	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
@@ -223,4 +225,152 @@ func (svc *ChatService) Channels(ctx context.Context) ([]repo.Channel, error) {
 // TODO 缓存
 func (svc *ChatService) Channel(ctx context.Context, id int64) (*repo.Channel, error) {
 	return svc.rep.Model.GetChannel(ctx, id)
+}
+
+// DailyFreeModels 返回每日免费模型列表
+func (svc *ChatService) DailyFreeModels(ctx context.Context) ([]coins.ModelWithName, error) {
+	models, err := svc.rep.Model.DailyFreeModels(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return array.UniqBy(append(coins.FreeModels(), array.Map(models, func(item model.ModelsDailyFree, _ int) coins.ModelWithName {
+		return coins.ModelWithName{
+			ID:        item.Id,
+			Model:     item.ModelId,
+			Name:      item.Name,
+			Info:      item.Info,
+			FreeCount: int(item.FreeCount),
+			EndAt:     item.EndAt,
+		}
+	})...), func(item coins.ModelWithName) string {
+		return item.Model
+	}), nil
+}
+
+// GetDailyFreeModel 获取每日免费模型信息
+func (svc *ChatService) GetDailyFreeModel(ctx context.Context, modelId string) (*coins.ModelWithName, error) {
+	res := coins.GetFreeModel(modelId)
+	if res != nil {
+		return res, nil
+	}
+
+	item, err := svc.rep.Model.GetDailyFreeModel(ctx, modelId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &coins.ModelWithName{
+		ID:        item.Id,
+		Model:     item.ModelId,
+		Name:      item.Name,
+		Info:      item.Info,
+		FreeCount: int(item.FreeCount),
+		EndAt:     item.EndAt,
+	}, nil
+}
+
+type FreeChatState struct {
+	coins.ModelWithName
+	LeftCount int `json:"left_count"`
+	MaxCount  int `json:"max_count"`
+}
+
+// FreeChatStatistics 用户免费聊天次数统计
+func (svc *ChatService) FreeChatStatistics(ctx context.Context, userID int64) []FreeChatState {
+	freeModels, err := svc.DailyFreeModels(ctx)
+	if err != nil {
+		log.Errorf("get daily free models failed: %v", err)
+		return nil
+	}
+
+	return array.Map(freeModels, func(item coins.ModelWithName, _ int) FreeChatState {
+		leftCount, maxCount := svc.freeChatRequestCounts(ctx, userID, &item)
+		return FreeChatState{
+			ModelWithName: item,
+			LeftCount:     leftCount,
+			MaxCount:      maxCount,
+		}
+	})
+}
+
+var (
+	ErrorModelNotFree = fmt.Errorf("model is not free")
+)
+
+// FreeChatStatisticsForModel 用户免费聊天次数统计
+func (svc *ChatService) FreeChatStatisticsForModel(ctx context.Context, userID int64, model string) (*FreeChatState, error) {
+	freeModel, err := svc.GetDailyFreeModel(ctx, model)
+	if err != nil || freeModel.FreeCount <= 0 {
+		return nil, ErrorModelNotFree
+	}
+
+	leftCount, maxCount := svc.freeChatRequestCounts(ctx, userID, freeModel)
+	return &FreeChatState{
+		ModelWithName: *freeModel,
+		LeftCount:     leftCount,
+		MaxCount:      maxCount,
+	}, nil
+}
+
+func (svc *ChatService) freeChatCacheKey(userID int64, model string) string {
+	return fmt.Sprintf("free-chat:uid:%d:model:%s", userID, model)
+}
+
+func (svc *ChatService) FreeChatRequestCounts(ctx context.Context, userID int64, modelId string) (leftCount int, maxCount int) {
+	mod, _ := svc.GetDailyFreeModel(ctx, modelId)
+	return svc.freeChatRequestCounts(ctx, userID, mod)
+}
+
+// freeChatRequestCounts 免费模型使用次数：每天免费 n 次
+func (svc *ChatService) freeChatRequestCounts(ctx context.Context, userID int64, model *coins.ModelWithName) (leftCount int, maxCount int) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+
+	if model == nil || model.FreeCount > 0 {
+		leftCount, maxCount = model.FreeCount, model.FreeCount
+
+		optCount, err := svc.limiter.OperationCount(ctx, svc.freeChatCacheKey(userID, model.Model))
+		if err != nil {
+			log.WithFields(log.Fields{
+				"user_id": userID,
+				"model":   model,
+			}).Errorf("get chat operation count failed: %s", err)
+		}
+
+		leftCount = maxCount - int(optCount)
+		if leftCount < 0 {
+			leftCount = 0
+		}
+
+		return leftCount, maxCount
+	} else {
+		leftCount, maxCount = 0, 0
+	}
+
+	return leftCount, maxCount
+}
+
+// UpdateFreeChatCount 更新免费聊天次数使用情况
+func (svc *ChatService) UpdateFreeChatCount(ctx context.Context, userID int64, model string) error {
+	_, err := svc.GetDailyFreeModel(ctx, model)
+	if err != nil {
+		return err
+	}
+
+	secondsRemain := misc.TodayRemainTimeSeconds()
+	if err := svc.limiter.OperationIncr(
+		ctx,
+		svc.freeChatCacheKey(userID, model),
+		time.Duration(secondsRemain)*time.Second,
+	); err != nil {
+		log.WithFields(log.Fields{
+			"user_id": userID,
+			"model":   model,
+		}).Errorf("incr chat operation count failed: %s", err)
+
+		return err
+	}
+
+	return nil
 }

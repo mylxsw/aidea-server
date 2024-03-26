@@ -377,7 +377,7 @@ func (ctl *GroupChatController) Chat(ctx context.Context, webCtx web.Context, us
 	// 检查用户当前是否有足够的费用发起本次对话
 	membersMap := array.ToMap(grp.Members, func(mem model.ChatGroupMember, _ int) int64 { return mem.Id })
 	coinCounts := array.Map(availableMembers, func(memID int64, _ int) int64 {
-		leftCount, _ := ctl.userSrv.FreeChatRequestCounts(ctx, user.ID, membersMap[memID].ModelId)
+		leftCount, _ := ctl.svc.Chat.FreeChatRequestCounts(ctx, user.ID, membersMap[memID].ModelId)
 		if leftCount > 0 {
 			// 免费额度内
 			return 0

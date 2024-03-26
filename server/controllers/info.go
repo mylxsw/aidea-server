@@ -63,7 +63,7 @@ var qrCodes = []string{
 // FreeChatCounts 免费聊天额度统计
 func (ctl *InfoController) FreeChatCounts(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
 	userID := ternary.IfLazy(user.User != nil, func() int64 { return user.User.ID }, func() int64 { return 0 })
-	freeModels := ctl.userSvc.FreeChatStatistics(ctx, userID)
+	freeModels := ctl.svc.Chat.FreeChatStatistics(ctx, userID)
 	if client.IsCNLocalMode(ctl.conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		freeModels = array.Filter(freeModels, func(m service.FreeChatState, _ int) bool {
 			return !m.NonCN

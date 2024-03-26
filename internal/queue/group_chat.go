@@ -140,7 +140,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 
 		tokenConsumed := int64(inputTokens + outputTokens)
 		// 免费请求不计费
-		leftCount, _ := svc.User.FreeChatRequestCounts(ctx, payload.UserID, req.Model)
+		leftCount, _ := svc.Chat.FreeChatRequestCounts(ctx, payload.UserID, req.Model)
 		quotaConsumed := ternary.IfLazy(
 			leftCount > 0,
 			func() int64 { return 0 },
@@ -161,7 +161,7 @@ func BuildGroupChatHandler(conf *config.Config, ct chat.Chat, rep *repo.Reposito
 		}
 
 		// 更新免费聊天次数
-		if err := svc.User.UpdateFreeChatCount(ctx, payload.UserID, req.Model); err != nil {
+		if err := svc.Chat.UpdateFreeChatCount(ctx, payload.UserID, req.Model); err != nil {
 			log.With(payload).Errorf("update free chat count failed: %s", err)
 		}
 

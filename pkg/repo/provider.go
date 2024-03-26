@@ -17,6 +17,7 @@ import (
 var (
 	ErrNotFound                      = errors.New("not found")
 	ErrViolationOfBusinessConstraint = errors.New("violation of business constraint")
+	ErrAlreadyExists                 = errors.New("already exists")
 )
 
 const (

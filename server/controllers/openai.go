@@ -301,7 +301,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
 	var leftCount, maxFreeCount int
 	if user.User.ID > 0 {
-		leftCount, maxFreeCount = ctl.userSrv.FreeChatRequestCounts(subCtx, user.User.ID, req.Model)
+		leftCount, maxFreeCount = ctl.chatSrv.FreeChatRequestCounts(subCtx, user.User.ID, req.Model)
 	} else {
 		// 匿名用户，每次都是免费的，不限制次数，通过流控来限制访问
 		leftCount, maxFreeCount = 1, 0
@@ -426,7 +426,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			if err := ctl.userSrv.UpdateFreeChatCount(ctx, user.User.ID, req.Model); err != nil {
+			if err := ctl.chatSrv.UpdateFreeChatCount(ctx, user.User.ID, req.Model); err != nil {
 				log.WithFields(log.Fields{
 					"user_id": user.User.ID,
 					"model":   req.Model,

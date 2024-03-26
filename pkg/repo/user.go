@@ -742,7 +742,7 @@ func (repo *UserRepo) CreateAPIKey(ctx context.Context, userID int64, name strin
 
 // DeleteAPIKey 删除一个 API Key
 func (repo *UserRepo) DeleteAPIKey(ctx context.Context, userID int64, keyID int64) error {
-	//_, err := model.NewUserApiKeyModel(repo.db).Delete(ctx, query.Builder().
+	//_, err := model.NewUserApiKeyModel(repo.db).DeleteModel(ctx, query.Builder().
 	//	Where(model.FieldUserApiKeyUserId, userID).
 	//	Where(model.FieldUserApiKeyId, keyID),
 	//)

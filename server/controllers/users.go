@@ -553,7 +553,7 @@ func (ctl *UserController) UserQuotaUsageDetails(ctx context.Context, webCtx web
 
 // UserFreeChatCounts 用户免费聊天次数统计
 func (ctl *UserController) UserFreeChatCounts(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
-	freeModels := ctl.userSrv.FreeChatStatistics(ctx, user.ID)
+	freeModels := ctl.svc.Chat.FreeChatStatistics(ctx, user.ID)
 	if client.IsCNLocalMode(ctl.conf) && !user.ExtraPermissionUser() {
 		freeModels = array.Filter(freeModels, func(m service.FreeChatState, _ int) bool {
 			return !m.NonCN
@@ -571,7 +571,7 @@ func (ctl *UserController) UserFreeChatCountsForModel(ctx context.Context, webCt
 	segs := strings.Split(modelID, ":")
 	modelID = segs[len(segs)-1]
 
-	res, err := ctl.userSrv.FreeChatStatisticsForModel(ctx, user.ID, modelID)
+	res, err := ctl.svc.Chat.FreeChatStatisticsForModel(ctx, user.ID, modelID)
 	if err != nil {
 		if errors.Is(err, service.ErrorModelNotFree) {
 			return webCtx.JSON(service.FreeChatState{

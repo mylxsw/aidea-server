@@ -32,6 +32,17 @@ func Migrate20240315Mix(m *migrate.Manager) {
 		builder.Json("meta_json").Comment("其它配置信息，如是否使用代理等")
 	})
 
+	m.Schema("20240315-ddl").Create("models_daily_free", func(builder *migrate.Builder) {
+		builder.Increments("id")
+		builder.Timestamps(0)
+
+		builder.String("model_id", 100).Nullable(false).Comment("模型ID")
+		builder.String("name", 100).Nullable(false).Comment("模型名称")
+		builder.Integer("free_count", false, true).Nullable(false).Comment("免费次数")
+		builder.String("info", 255).Nullable(true).Comment("信息")
+		builder.Timestamp("end_at", 0).Nullable(true).Comment("截止时间")
+	})
+
 	m.Schema("20240315-dml").Raw("models", func() []string {
 		return []string{
 			`INSERT INTO models (id, created_at, updated_at, model_id, name, short_name, description, avatar_url, status, version_min, version_max, meta_json, providers_json) VALUES (1, '2024-03-15 17:03:11', null, 'gpt-3.5-turbo', 'GPT-3.5', null, '速度快，成本低', 'https://ssl.aicode.cc/ai-server/assets/avatar/gpt35.png-avatar', 1, null, null, '{"restricted": true, "max_context": 3500}', '[{"name": "openai"}]')`,

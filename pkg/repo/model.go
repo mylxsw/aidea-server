@@ -16,6 +16,7 @@ import (
 	"gopkg.in/guregu/null.v3"
 	"math/rand"
 	"strings"
+	"time"
 )
 
 type ModelRepo struct {
@@ -57,7 +58,7 @@ func (m Model) SelectProvider(ctx context.Context) ModelProvider {
 		if idx == 0 {
 			idx++
 		}
-		
+
 		return m.Providers[idx]
 	}
 
@@ -404,5 +405,88 @@ func (repo *ModelRepo) DeleteChannel(ctx context.Context, channelID int64) error
 	}
 
 	_, err = model.NewChannelsModel(repo.db).Delete(ctx, query.Builder().Where(model.FieldChannelsId, channelID))
+	return err
+}
+
+// DailyFreeModels 返回每日免费模型
+func (repo *ModelRepo) DailyFreeModels(ctx context.Context) ([]model.ModelsDailyFree, error) {
+	models, err := model.NewModelsDailyFreeModel(repo.db).Get(ctx, query.Builder())
+	if err != nil {
+		return nil, err
+	}
+
+	return array.Map(models, func(m model.ModelsDailyFreeN, _ int) model.ModelsDailyFree { return m.ToModelsDailyFree() }), nil
+}
+
+// GetDailyFreeModel 返回指定的免费模型
+func (repo *ModelRepo) GetDailyFreeModel(ctx context.Context, modelId string) (*model.ModelsDailyFree, error) {
+	m, err := model.NewModelsDailyFreeModel(repo.db).First(ctx, query.Builder().Where(model.FieldModelsDailyFreeModelId, modelId))
+	if err != nil {
+		if errors.Is(err, query.ErrNoResult) {
+			return nil, ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	ret := m.ToModelsDailyFree()
+	return &ret, nil
+}
+
+// AddDailyFreeModel 新增每日免费模型
+func (repo *ModelRepo) AddDailyFreeModel(ctx context.Context, mod coins.ModelWithName) error {
+	return eloquent.Transaction(repo.db, func(tx query.Database) error {
+		exists, err := model.NewModelsDailyFreeModel(tx).Exists(ctx, query.Builder().Where(model.FieldModelsDailyFreeModelId, mod.Model))
+		if err != nil {
+			return err
+		}
+
+		if exists {
+			return ErrAlreadyExists
+		}
+
+		data := query.KV{
+			model.FieldModelsDailyFreeModelId:   mod.Model,
+			model.FieldModelsDailyFreeName:      mod.Name,
+			model.FieldModelsDailyFreeInfo:      mod.Info,
+			model.FieldModelsDailyFreeFreeCount: mod.FreeCount,
+		}
+
+		if mod.EndAt.After(time.Now()) {
+			data[model.FieldModelsDailyFreeEndAt] = mod.EndAt
+		}
+
+		_, err = model.NewModelsDailyFreeModel(tx).Create(ctx, data)
+		return err
+	})
+}
+
+// UpdateDailyFreeModel 更新每日免费模型
+func (repo *ModelRepo) UpdateDailyFreeModel(ctx context.Context, modelId string, mod coins.ModelWithName) error {
+	m, err := model.NewModelsDailyFreeModel(repo.db).First(ctx, query.Builder().Where(model.FieldModelsDailyFreeModelId, modelId))
+	if err != nil {
+		if errors.Is(err, query.ErrNoResult) {
+			return ErrNotFound
+		}
+
+		return err
+	}
+
+	m.Name = null.StringFrom(mod.Name)
+	m.Info = null.StringFrom(mod.Info)
+	m.FreeCount = null.IntFrom(int64(mod.FreeCount))
+
+	if mod.EndAt.After(time.Now()) {
+		m.EndAt = null.TimeFrom(mod.EndAt)
+	} else if mod.EndAt.Before(time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)) {
+		m.EndAt = null.TimeFromPtr(nil)
+	}
+
+	return m.Save(ctx)
+}
+
+// DeleteDailyFreeModel 删除每日免费模型
+func (repo *ModelRepo) DeleteDailyFreeModel(ctx context.Context, modelId string) error {
+	_, err := model.NewModelsDailyFreeModel(repo.db).Delete(ctx, query.Builder().Where(model.FieldModelsDailyFreeModelId, modelId))
 	return err
 }

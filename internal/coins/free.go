@@ -7,38 +7,10 @@ import (
 	"github.com/mylxsw/go-utils/array"
 )
 
-var freeModels = []ModelWithName{
-	{Model: "generalv2", Name: "讯飞星火 v2", FreeCount: 5},
-	{Model: "nova-ptc-xl-v1", Name: "商汤日日新（大参数量）", FreeCount: 5},
-	{Model: "nova-ptc-xs-v1", Name: "商汤日日新（小参数量）", FreeCount: 5},
-	{Model: "model_ernie_bot_turbo", Name: "文心一言 Turbo", FreeCount: 5},
-	{Model: "model_baidu_bloomz_7b", Name: "Bloomz 7B", FreeCount: 5},
-	{Model: "model_baidu_aquila_chat7b", Name: "Aquila Chat 7B", FreeCount: 5},
-	{Model: "model_baidu_chatglm2_6b_32k", Name: "ChatGLM2 6B 32K", FreeCount: 5},
-	{Model: "Baichuan2-53B", Name: "百川 53B", FreeCount: 5},
-	{Model: "360GPT_S2_V9", Name: "360 智脑", FreeCount: 5},
-	{Model: "gpt-3.5-turbo", Name: "GPT 3.5 Turbo", FreeCount: 5, NonCN: true},
-	{
-		Model:     "gpt-4",
-		Name:      "GPT 4",
-		FreeCount: 3,
-		// TODO 促销阶段，GPT-4 价格调整
-		EndAt: time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC),
-		Info:  "活动截止至北京时间 2023-11-01 08:00:00",
-		NonCN: true,
-	},
-	{Model: "gpt-3.5-turbo", Name: "南贤", FreeCount: 5},
-	{
-		Model:     "gpt-4",
-		Name:      "北丑",
-		FreeCount: 3,
-		// TODO 促销阶段，GPT-4 价格调整
-		EndAt: time.Date(2023, 11, 1, 0, 0, 0, 0, time.UTC),
-		Info:  "活动截止至北京时间 2023-11-01 08:00:00",
-	},
-}
+var freeModels []ModelWithName
 
 type ModelWithName struct {
+	ID        int64     `json:"id,omitempty" yaml:"id,omitempty"`
 	Model     string    `json:"model" yaml:"model"`
 	Name      string    `json:"name,omitempty" yaml:"name,omitempty"`
 	Info      string    `json:"info,omitempty" yaml:"info,omitempty"`
