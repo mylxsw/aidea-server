@@ -327,7 +327,7 @@ func (svc *ChatService) freeChatRequestCounts(ctx context.Context, userID int64,
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
-	if model != nil || model.FreeCount > 0 {
+	if model != nil && model.FreeCount > 0 {
 		leftCount, maxCount = model.FreeCount, model.FreeCount
 
 		optCount, err := svc.limiter.OperationCount(ctx, svc.freeChatCacheKey(userID, model.Model))
