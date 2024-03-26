@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/coins"
@@ -355,6 +356,10 @@ func (svc *ChatService) freeChatRequestCounts(ctx context.Context, userID int64,
 func (svc *ChatService) UpdateFreeChatCount(ctx context.Context, userID int64, model string) error {
 	_, err := svc.GetDailyFreeModel(ctx, model)
 	if err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			return nil
+		}
+		
 		return err
 	}
 
