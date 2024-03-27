@@ -497,3 +497,43 @@ func (repo *PaymentRepo) CancelApplePayment(ctx context.Context, userId int64, p
 		return nil
 	})
 }
+
+// GetPaymentHistories 获取支付历史记录
+func (repo *PaymentRepo) GetPaymentHistories(ctx context.Context, page, perPage int64, options ...QueryOption) ([]model.PaymentHistory, query.PaginateMeta, error) {
+	q := query.Builder()
+	for _, opt := range options {
+		q = opt(q)
+	}
+
+	histories, meta, err := model.NewPaymentHistoryModel(repo.db).Paginate(ctx, page, perPage, q)
+	if err != nil {
+		return nil, query.PaginateMeta{}, err
+	}
+
+	return array.Map(histories, func(item model.PaymentHistoryN, _ int) model.PaymentHistory {
+		res := item.ToPaymentHistory()
+		switch res.Source {
+		case "apple":
+			res.Source = "Apple"
+		case "alipay-app":
+			res.Source = "支付宝-App"
+		case "alipay-web":
+			res.Source = "支付宝-Web"
+		case "alipay":
+			res.Source = "支付宝"
+		case "alipay-wap":
+			res.Source = "支付宝-Wap"
+		case "stripe":
+			res.Source = "Stripe"
+		case "stripe-pc":
+			res.Source = "Stripe-PC"
+		case "stripe-web":
+			res.Source = "Stripe-Web"
+		case "stripe-app":
+			res.Source = "Stripe-App"
+		default:
+
+		}
+		return res
+	}), meta, nil
+}

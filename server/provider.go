@@ -330,6 +330,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		admin.NewQuotaController(resolver),
 		admin.NewUserController(resolver),
 		admin.NewSettingController(resolver),
+		admin.NewPaymentController(resolver),
 	)
 
 	// 公开访问信息
