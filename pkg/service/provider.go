@@ -9,6 +9,7 @@ func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(NewSecurityService)
 	binder.MustSingleton(NewGalleryService)
 	binder.MustSingleton(NewChatService)
+	binder.MustSingleton(NewSettingService)
 
 	binder.MustSingleton(func(resolver infra.Resolver) *Service {
 		var svc Service
@@ -23,4 +24,5 @@ type Service struct {
 	Security *SecurityService `autowire:"@"`
 	Gallery  *GalleryService  `autowire:"@"`
 	Chat     *ChatService     `autowire:"@"`
+	Setting  *SettingService  `autowire:"@"`
 }

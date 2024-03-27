@@ -46,6 +46,7 @@ func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(NewArticleRepo)
 	binder.MustSingleton(NewNotificationRepo)
 	binder.MustSingleton(NewModelRepo)
+	binder.MustSingleton(NewSettingRepo)
 
 	// MySQL 数据库连接
 	binder.MustSingleton(func(conf *config.Config) (*sql.DB, error) {
@@ -107,4 +108,5 @@ type Repository struct {
 	Notification *NotificationRepo `autowire:"@"`
 	Article      *ArticleRepo      `autowire:"@"`
 	Model        *ModelRepo        `autowire:"@"`
+	Setting      *SettingRepo      `autowire:"@"`
 }

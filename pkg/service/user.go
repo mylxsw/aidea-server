@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
@@ -96,8 +97,8 @@ func (srv *UserService) UserQuota(ctx context.Context, userID int64) (*UserQuota
 		return nil, fmt.Errorf("get user quota failed: %w", err)
 	}
 
-	freezed, err := srv.rds.Get(ctx, srv.userQuotaFreezedCacheKey(userID)).Int()
-	if err != nil && err != redis.Nil {
+	frozen, err := srv.rds.Get(ctx, srv.userQuotaFreezedCacheKey(userID)).Int()
+	if err != nil && !errors.Is(err, redis.Nil) {
 		log.F(log.M{"user_id": userID, "quota": quota}).Errorf("查询用户冻结的配额失败: %s", err)
 
 		return &UserQuota{Rest: quota.Rest, Quota: quota.Quota, Used: quota.Used}, nil
@@ -107,7 +108,7 @@ func (srv *UserService) UserQuota(ctx context.Context, userID int64) (*UserQuota
 		Rest:    quota.Rest,
 		Quota:   quota.Quota,
 		Used:    quota.Used,
-		Freezed: int64(freezed),
+		Freezed: int64(frozen),
 	}, nil
 }
 

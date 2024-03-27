@@ -76,6 +76,12 @@ func (ctl *UserController) Users(ctx context.Context, webCtx web.Context) web.Re
 				builder.Where(model.FieldUsersPhone, query.LIKE, keyword+"%").
 					OrWhere(model.FieldUsersRealname, query.LIKE, keyword+"%").
 					OrWhere(model.FieldUsersEmail, query.LIKE, keyword+"%")
+
+				// 如果是数字，则尝试按照 ID 搜索
+				ki, err := strconv.Atoi(keyword)
+				if err == nil {
+					builder.OrWhere(model.FieldUsersId, ki)
+				}
 			})
 		}
 
@@ -96,7 +102,7 @@ func (ctl *UserController) Users(ctx context.Context, webCtx web.Context) web.Re
 	})
 }
 
-// UserResponse 用户详情
+// User 用户详情
 func (ctl *UserController) User(ctx context.Context, webCtx web.Context) web.Response {
 	userId, err := strconv.Atoi(webCtx.PathVar("id"))
 	if err != nil {
