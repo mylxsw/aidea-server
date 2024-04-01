@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/Vernacular-ai/godub/converter"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -357,4 +358,25 @@ func Md5(data []byte) string {
 	h := md5.New()
 	h.Write(data)
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// WavToMp3 将 wav 文件转换为 mp3 文件
+func WavToMp3(wavFileName, mp3FileName string) error {
+	w, _ := os.Create(mp3FileName)
+	defer w.Close()
+
+	return converter.NewConverter(w).
+		WithBitRate(64000).
+		WithDstFormat("mp3").
+		Convert(wavFileName)
+}
+
+// FileSize 获取文件大小
+func FileSize(tempPath string) int64 {
+	fileInfo, err := os.Stat(tempPath)
+	if err != nil {
+		return 0
+	}
+
+	return fileInfo.Size()
 }

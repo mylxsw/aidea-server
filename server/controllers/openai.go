@@ -131,20 +131,41 @@ func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	if uploadedFile.Size() > 1024*1024*2 {
+	if uploadedFile.Size() > 1024*1024*10 {
+		log.F(log.M{"file": uploadedFile.GetTempFilename(), "size": float64(uploadedFile.Size()) / 1024.0 / 1024.0}).Errorf("uploaded video file too large")
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrFileTooLarge), http.StatusBadRequest)
 	}
 
-	tempPath := uploadedFile.GetTempFilename() + "." + uploadedFile.Extension()
-	if err := uploadedFile.Store(tempPath); err != nil {
-		misc.NoError(uploadedFile.Delete())
-		log.Errorf("store file failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	var tempPath string
+	if uploadedFile.Size() >= 2*1024*1024 {
+		if err := misc.WavToMp3(uploadedFile.SavePath, uploadedFile.GetTempFilename()+".mp3"); err != nil {
+			log.F(log.M{"size": float64(uploadedFile.Size()) / 1024.0 / 1024.0}).Warningf("convert wav to mp3 failed: %s", err)
+		} else {
+			misc.NoError(os.Remove(uploadedFile.GetTempFilename()))
+			tempPath = uploadedFile.GetTempFilename() + ".mp3"
+
+			log.F(log.M{
+				"size":    float64(uploadedFile.Size()) / 1024.0 / 1024.0,
+				"file":    tempPath,
+				"resized": float64(misc.FileSize(tempPath)) / 1024.0 / 1024.0,
+			}).Debug("convert m4a to mp3 file")
+		}
+	}
+
+	if !strings.HasSuffix(tempPath, ".mp3") {
+		tempPath = uploadedFile.GetTempFilename() + "." + uploadedFile.Extension()
+		if err := uploadedFile.Store(tempPath); err != nil {
+			misc.NoError(uploadedFile.Delete())
+			log.Errorf("store file failed: %s", err)
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		}
 	}
 
 	defer func() { misc.NoError(os.Remove(tempPath)) }()
 
-	log.Debugf("upload file: %s", tempPath)
+	log.F(log.M{
+		"size": float64(uploadedFile.Size()) / 1024.0 / 1024.0,
+	}).Debugf("upload file: %s", tempPath)
 
 	var resp openai.AudioResponse
 
@@ -155,6 +176,8 @@ func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web
 			log.Errorf("tencent voice to text failed: %s", err)
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 		}
+
+		log.F(log.M{"text": res, "file": tempPath, "size": float64(uploadedFile.Size()) / 1024.0 / 1024.0}).Debugf("tencent voice to text success")
 
 		resp = openai.AudioResponse{Text: res}
 	} else {
