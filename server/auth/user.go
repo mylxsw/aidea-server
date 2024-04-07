@@ -22,7 +22,7 @@ type User struct {
 	IsSetPassword bool      `json:"is_set_password,omitempty"`
 	CreatedAt     time.Time `json:"created_at"`
 	UnionID       string    `json:"union_id,omitempty"`
-	withLab       bool      `json:"-"`
+	withLab       bool
 }
 
 func (u User) InternalUser() bool {

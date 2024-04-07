@@ -7,6 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/eloquent/query"
 	"time"
 
 	"github.com/mylxsw/eloquent/event"
@@ -14,7 +15,9 @@ import (
 )
 
 var (
-	ErrNotFound = errors.New("not found")
+	ErrNotFound                      = errors.New("not found")
+	ErrViolationOfBusinessConstraint = errors.New("violation of business constraint")
+	ErrAlreadyExists                 = errors.New("already exists")
 )
 
 const (
@@ -22,6 +25,8 @@ const (
 	EventStatusSucceed = "succeed"
 	EventStatusFailed  = "failed"
 )
+
+type QueryOption func(builder query.SQLBuilder) query.SQLBuilder
 
 type Provider struct{}
 
@@ -40,6 +45,8 @@ func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(NewFileStorageRepo)
 	binder.MustSingleton(NewArticleRepo)
 	binder.MustSingleton(NewNotificationRepo)
+	binder.MustSingleton(NewModelRepo)
+	binder.MustSingleton(NewSettingRepo)
 
 	// MySQL 数据库连接
 	binder.MustSingleton(func(conf *config.Config) (*sql.DB, error) {
@@ -100,4 +107,6 @@ type Repository struct {
 	FileStorage  *FileStorageRepo  `autowire:"@"`
 	Notification *NotificationRepo `autowire:"@"`
 	Article      *ArticleRepo      `autowire:"@"`
+	Model        *ModelRepo        `autowire:"@"`
+	Setting      *SettingRepo      `autowire:"@"`
 }

@@ -2,9 +2,9 @@ package v2
 
 import (
 	"context"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"net/http"
 
@@ -21,6 +21,7 @@ type RoomController struct {
 	conf       *config.Config    `autowire:"@"`
 	roomRepo   *repo.RoomRepo    `autowire:"@"`
 	translater youdao.Translater `autowire:"@"`
+	svc        *service.Service  `autowire:"@"`
 }
 
 func NewRoomController(resolver infra.Resolver) web.Controller {
@@ -51,6 +52,11 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
+	models := array.ToMap(
+		ctl.svc.Chat.Models(ctx, true),
+		func(item repo.Model, _ int) string { return item.ModelId },
+	)
+
 	var suggests []repo.GalleryRoom
 	if len(rooms) == 0 {
 		suggests, err = ctl.roomRepo.GallerySuggests(ctx, 11)
@@ -61,69 +67,17 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 
 		cnLocalMode := client.IsCNLocalMode(ctl.conf) && !user.ExtraPermissionUser()
 		suggests = array.Filter(suggests, func(item repo.GalleryRoom, _ int) bool {
+			mod, ok := models[item.Model]
+			if !ok {
+				return false
+			}
+
 			// 如果启用了国产化模式，则过滤掉 openai 和 Anthropic 的模型
-			if cnLocalMode && item.RoomType == "system" && array.In(item.Vendor, []string{"openai", "Anthropic", "google"}) {
+			if cnLocalMode && item.RoomType == "system" && mod.Meta.Restricted {
 				return false
 			}
 
-			// 检查模型是否满足条件
-			if !ctl.conf.EnableOpenAI && item.Vendor == "openai" {
-				return false
-			}
-
-			if !ctl.conf.EnableBaiduWXAI && item.Vendor == "文心千帆" {
-				return false
-			}
-
-			if !ctl.conf.EnableDashScopeAI && item.Vendor == "灵积" {
-				return false
-			}
-
-			if !ctl.conf.EnableXFYunAI && item.Vendor == "讯飞星火" {
-				return false
-			}
-
-			if !ctl.conf.EnableSenseNovaAI && item.Vendor == "商汤日日新" {
-				return false
-			}
-
-			if !ctl.conf.EnableTencentAI && item.Vendor == "腾讯" {
-				return false
-			}
-
-			if !ctl.conf.EnableAnthropic && item.Vendor == "Anthropic" {
-				return false
-			}
-
-			if !ctl.conf.EnableBaichuan && item.Vendor == "百川" {
-				return false
-			}
-
-			if !ctl.conf.EnableGPT360 && item.Vendor == "360智脑" {
-				return false
-			}
-
-			if !ctl.conf.EnableGoogleAI && item.Vendor == "google" {
-				return false
-			}
-
-			if !ctl.conf.EnableOneAPI && item.Vendor == "oneapi" {
-				return false
-			}
-
-			if !ctl.conf.EnableOpenRouter && item.Vendor == "openrouter" {
-				return false
-			}
-
-			if !ctl.conf.EnableSky && item.Vendor == "sky" {
-				return false
-			}
-
-			if !ctl.conf.EnableZhipuAI && item.Vendor == "zhipu" {
-				return false
-			}
-
-			if !ctl.conf.EnableMoonshot && item.Vendor == "moonshot" {
+			if mod.Status == repo.ModelStatusDisabled {
 				return false
 			}
 
@@ -143,19 +97,14 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 		})
 	}
 
-	models := array.ToMap(
-		chat.Models(ctl.conf, true),
-		func(item chat.Model, _ int) string { return item.RealID() },
-	)
-
 	return webCtx.JSON(web.M{
 		"data": array.Map(rooms, func(item repo.Room, _ int) repo.Room {
 			// 替换成员列表为头像列表
 			members := make([]string, 0)
 			if len(item.Members) > 0 {
 				for _, member := range item.Members {
-					if mod, ok := models[member]; ok && mod.AvatarURL != "" {
-						members = append(members, mod.AvatarURL)
+					if mod, ok := models[member]; ok && mod.AvatarUrl != "" {
+						members = append(members, mod.AvatarUrl)
 					}
 				}
 
@@ -163,8 +112,8 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 			}
 
 			if item.AvatarUrl == "" {
-				if mod, ok := models[item.Model]; ok && mod.AvatarURL != "" {
-					item.AvatarUrl = mod.AvatarURL
+				if mod, ok := models[item.Model]; ok && mod.AvatarUrl != "" {
+					item.AvatarUrl = mod.AvatarUrl
 				}
 			}
 

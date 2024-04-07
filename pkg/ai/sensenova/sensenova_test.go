@@ -34,7 +34,7 @@ func TestSenseNova_Chat(t *testing.T) {
 func TestSenseNova_ChatStream(t *testing.T) {
 	client := sensenova.New(os.Getenv("SENSENOVA_KEY_ID"), os.Getenv("SENSENOVA_KEY_SECRET"))
 	resp, err := client.ChatStream(context.TODO(), sensenova.Request{
-		Model: sensenova.ModelNovaPtcXLV1,
+		Model: sensenova.ModelSenseChatTurbo,
 		Messages: []sensenova.Message{
 			{
 				Role:    "system",

@@ -28,6 +28,11 @@ type Config struct {
 	DebugWithSQL bool `json:"debug_with_sql" yaml:"debug_with_sql"`
 	// 是否启用 API Keys 功能
 	EnableAPIKeys bool `json:"enable_api_keys" yaml:"enable_api_keys"`
+	// 是否是生产环境
+	IsProduction bool `json:"is_production" yaml:"is_production"`
+
+	// 是否提示用户绑定手机
+	ShouldBindPhone bool `json:"should_bind_phone" yaml:"should_bind_phone"`
 
 	// BaseURL 服务的基础 URL
 	BaseURL string `json:"base_url" yaml:"base_url"`
@@ -264,10 +269,6 @@ type Config struct {
 	// 图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语
 	ImageToImageRecognitionProvider string `json:"img2img-recognition-provider" yaml:"img2img-recognition-provider"`
 
-	// 虚拟模型
-	EnableVirtualModel bool         `json:"enable_virtual_model" yaml:"enable_virtual_model"`
-	VirtualModel       VirtualModel `json:"virtual_model" yaml:"virtual_model"`
-
 	// 字体文件路径
 	FontPath string `json:"font_path" yaml:"font_path"`
 	// 服务状态页面
@@ -285,6 +286,13 @@ type Config struct {
 	// 微信开放平台配置
 	WeChatAppID  string `json:"wechat_appid" yaml:"wechat_appid"`
 	WeChatSecret string `json:"wechat_secret" yaml:"wechat_secret"`
+
+	// Stripe 支付
+	Stripe StripeConfig `json:"stripe" yaml:"stripe"`
+
+	// 首页默认常用模型
+	DefaultHomeModels    []string `json:"default_home_models" yaml:"default_home_models"`
+	DefaultHomeModelsIOS []string `json:"default_home_models_ios" yaml:"default_home_models_ios"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -308,14 +316,6 @@ type AppleSignIn struct {
 
 func (conf *Config) RedisAddr() string {
 	return fmt.Sprintf("%s:%d", conf.RedisHost, conf.RedisPort)
-}
-
-type VirtualModel struct {
-	Implementation string `json:"implementation"`
-	NanxianRel     string `json:"nanxian_rel"`
-	NanxianPrompt  string `json:"nanxian_prompt"`
-	BeichouRel     string `json:"beichou_rel"`
-	BeichouPrompt  string `json:"beichou_prompt"`
 }
 
 func Register(ins *app.App) {
@@ -349,6 +349,15 @@ func Register(ins *app.App) {
 			coins.DebugPrintPriceInfo()
 		}
 
+		// 加载 Stripe 配置
+		stripe := StripeConfig{
+			Enabled:        ctx.Bool("enable-stripe"),
+			PublishableKey: ctx.String("stripe-publishable-key"),
+			SecretKey:      ctx.String("stripe-secret-key"),
+			WebhookSecret:  ctx.String("stripe-webhook-secret"),
+		}
+		stripe.Init()
+
 		return &Config{
 			Listen:              ctx.String("listen"),
 			DBURI:               ctx.String("db-uri"),
@@ -359,8 +368,10 @@ func Register(ins *app.App) {
 			EnableWebsocket:     ctx.Bool("enable-websocket"),
 			DebugWithSQL:        ctx.Bool("debug-with-sql"),
 			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
+			ShouldBindPhone:     ctx.Bool("should-bind-phone"),
 
-			BaseURL: strings.TrimSuffix(ctx.String("base-url"), "/"),
+			BaseURL:      strings.TrimSuffix(ctx.String("base-url"), "/"),
+			IsProduction: ctx.Bool("production"),
 
 			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),
 			EnableCustomHomeModels: ctx.Bool("enable-custom-home-models"),
@@ -442,10 +453,9 @@ func Register(ins *app.App) {
 			EnableMoonshot: ctx.Bool("enable-moonshot"),
 			MoonshotAPIKey: ctx.String("moonshot-apikey"),
 
-			OneAPISupportModels: ctx.StringSlice("oneapi-support-models"),
-			EnableOneAPI:        ctx.Bool("enable-oneapi"),
-			OneAPIServer:        ctx.String("oneapi-server"),
-			OneAPIKey:           ctx.String("oneapi-key"),
+			EnableOneAPI: ctx.Bool("enable-oneapi"),
+			OneAPIServer: ctx.String("oneapi-server"),
+			OneAPIKey:    ctx.String("oneapi-key"),
 
 			OpenRouterSupportModels: ctx.StringSlice("openrouter-support-models"),
 			EnableOpenRouter:        ctx.Bool("enable-openrouter"),
@@ -555,15 +565,6 @@ func Register(ins *app.App) {
 
 			ImageToImageRecognitionProvider: ctx.String("img2img-recognition-provider"),
 
-			EnableVirtualModel: ctx.Bool("enable-virtual-model"),
-			VirtualModel: VirtualModel{
-				Implementation: ctx.String("virtual-model-implementation"),
-				NanxianRel:     ctx.String("virtual-model-nanxian-rel"),
-				NanxianPrompt:  strings.TrimSpace(ctx.String("virtual-model-nanxian-prompt")),
-				BeichouRel:     ctx.String("virtual-model-beichou-rel"),
-				BeichouPrompt:  strings.TrimSpace(ctx.String("virtual-model-beichou-prompt")),
-			},
-
 			FontPath:          ctx.String("font-path"),
 			ServiceStatusPage: ctx.String("service-status-page"),
 
@@ -574,6 +575,11 @@ func Register(ins *app.App) {
 
 			WeChatAppID:  ctx.String("wechat-appid"),
 			WeChatSecret: ctx.String("wechat-secret"),
+
+			Stripe: stripe,
+
+			DefaultHomeModels:    ctx.StringSlice("default-home-models"),
+			DefaultHomeModelsIOS: ctx.StringSlice("default-home-models-ios"),
 		}
 	})
 }

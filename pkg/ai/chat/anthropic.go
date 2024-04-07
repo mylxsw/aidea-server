@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/anthropic"
 	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/ternary"
 	"strings"
 )
@@ -17,7 +18,7 @@ func NewAnthropicChat(ai *anthropic.Anthropic) *AnthropicChat {
 	return &AnthropicChat{ai: ai}
 }
 
-func (chat *AnthropicChat) initRequest(req Request) anthropic.MessageRequest {
+func (chat *AnthropicChat) initRequest(req Request) (anthropic.MessageRequest, error) {
 	req.Model = strings.TrimPrefix(req.Model, "Anthropic:")
 
 	var systemMessage string
@@ -36,8 +37,14 @@ func (chat *AnthropicChat) initRequest(req Request) anthropic.MessageRequest {
 					if ct.Type == "text" {
 						item.Text = ct.Text
 					} else if ct.ImageURL != nil {
+						imageMimeType, err := misc.Base64ImageMediaType(ct.ImageURL.URL)
+						if err != nil {
+							log.F(log.M{"url": ct.ImageURL.URL}).Errorf("parse image mime type failed: %v", err)
+							return anthropic.MessageRequest{}, err
+						}
+
 						item.Source = anthropic.NewImageSource(
-							misc.Base64ImageMediaType(ct.ImageURL.URL),
+							imageMimeType,
 							misc.RemoveImageBase64Prefix(ct.ImageURL.URL),
 						)
 					}
@@ -64,11 +71,16 @@ func (chat *AnthropicChat) initRequest(req Request) anthropic.MessageRequest {
 		res.System = systemMessage
 	}
 
-	return res
+	return res, nil
 }
 
 func (chat *AnthropicChat) Chat(ctx context.Context, req Request) (*Response, error) {
-	res, err := chat.ai.Chat(ctx, chat.initRequest(req))
+	r, err := chat.initRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := chat.ai.Chat(ctx, r)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +99,12 @@ func (chat *AnthropicChat) Chat(ctx context.Context, req Request) (*Response, er
 }
 
 func (chat *AnthropicChat) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
-	stream, err := chat.ai.ChatStream(ctx, chat.initRequest(req))
+	r, err := chat.initRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	stream, err := chat.ai.ChatStream(ctx, r)
 	if err != nil {
 		return nil, err
 	}

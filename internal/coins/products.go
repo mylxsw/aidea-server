@@ -2,6 +2,7 @@ package coins
 
 import (
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -22,11 +23,30 @@ type Product struct {
 	Name             string       `json:"name,omitempty" yaml:"name,omitempty"`
 	Quota            int64        `json:"quota,omitempty" yaml:"quota,omitempty"`
 	RetailPrice      int64        `json:"retail_price,omitempty" yaml:"retail_price,omitempty"`
+	RetailPriceUSD   int64        `json:"retail_price_usd,omitempty" yaml:"retail_price_usd,omitempty"`
 	ExpirePolicy     ExpirePolicy `json:"expire_policy,omitempty" yaml:"expire_policy,omitempty"`
 	ExpirePolicyText string       `json:"expire_policy_text,omitempty" yaml:"expire_policy_text,omitempty"`
 	Recommend        bool         `json:"recommend,omitempty" yaml:"recommend,omitempty"`
 	Description      string       `json:"description,omitempty" yaml:"description,omitempty"`
 	PlatformLimit    Platform     `json:"platform_limits,omitempty" yaml:"platform_limits,omitempty"`
+	Methods          []string     `json:"methods,omitempty" yaml:"methods,omitempty"`
+}
+
+func (ap Product) GetSupportMethods() []string {
+	if len(ap.Methods) == 0 {
+		return []string{"alipay", "apple_pay", "stripe"}
+	}
+
+	return ap.Methods
+}
+
+func (ap Product) GetRetailPriceUSD() int64 {
+	if ap.RetailPriceUSD > 0 {
+		return ap.RetailPriceUSD
+	}
+
+	// TODO 简单粗暴的汇率转换
+	return int64(math.Ceil(float64(ap.RetailPrice) / DefaultExchangeRate))
 }
 
 type Platform string
@@ -104,6 +124,12 @@ func IsProduct(productId string) bool {
 
 	return false
 }
+
+// PreferUSD 是否优先使用美元计价
+var PreferUSD = false
+
+// DefaultExchangeRate 默认人民币-美元汇率
+var DefaultExchangeRate = 7.1
 
 var Products = []Product{
 	{

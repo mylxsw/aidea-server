@@ -1,0 +1,52 @@
+
+package: model
+
+models:
+  - name: stripe_history
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: user_id
+          type: int64
+          tag: json:"user_id,omitempty"
+        - name: payment_id
+          type: string
+          tag: json:"payment_id,omitempty"
+        - name: product_id
+          type: string
+          tag: json:"product_id,omitempty"
+        - name: customer_id
+          type: string
+          tag: json:"customer_id,omitempty"
+        - name: extra
+          type: string
+          tag: json:"extra,omitempty"
+        - name: receipt_url
+          type: string
+          tag: json:"receipt_url,omitempty"
+        - name: amount
+          type: int64
+          tag: json:"amount,omitempty"
+        - name: amount_received
+          type: int64
+          tag: json:"amount_received,omitempty"
+        - name: currency
+          type: string
+          tag: json:"currency,omitempty"
+        - name: environment
+          type: string
+          tag: json:"environment"
+        - name: payment_intent
+          type: string
+          tag: json:"payment_intent,omitempty"
+        - name: status
+          type: int
+          tag: json:"status,omitempty"
+        - name: purchase_at
+          type: time.Time
+          tag: json:"purchase_at"
+        - name: note
+          type: string
+          tag: json:"note"

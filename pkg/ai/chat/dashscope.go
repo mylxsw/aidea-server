@@ -63,7 +63,7 @@ func (ds *DashScopeChat) initRequest(req Request) dashscope.ChatRequest {
 
 	input := dashscope.ChatInput{}
 
-	if req.Model == dashscope.ModelQWenVLPlus {
+	if req.Model == dashscope.ModelQWenVLPlus || req.Model == dashscope.ModelQWenVLMax || strings.Contains(req.Model, "-vl-") {
 		input.Messages = array.Map(contextMessages, func(msg Message, _ int) dashscope.Message {
 			contents := make([]dashscope.MessageContent, 0)
 			if len(msg.MultipartContents) == 0 {

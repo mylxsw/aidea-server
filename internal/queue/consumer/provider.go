@@ -90,6 +90,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		fromstonClient *fromston.Fromston,
 		dashscopeClient *dashscope.DashScope,
 		rep *repo.Repository,
+		svc *service.Service,
 		ct chat.Chat,
 		conf *config.Config,
 		userSvc *service.UserService,
@@ -98,14 +99,14 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		aiProvider *chat.AIProvider,
 	) {
 		log.Debugf("register all queue handlers")
-		mux.HandleFunc(queue.TypeOpenAICompletion, queue.BuildOpenAICompletionHandler(openaiClient, rep))
+		mux.HandleFunc(queue.TypeOpenAICompletion, queue.BuildOpenAICompletionHandler(openaiClient, rep, svc))
 		mux.HandleFunc(queue.TypeDeepAICompletion, queue.BuildDeepAICompletionHandler(deepaiClient, translater, uploader, rep, openaiClient))
 		mux.HandleFunc(queue.TypeStabilityAICompletion, queue.BuildStabilityAICompletionHandler(stabaiClient, translater, uploader, rep, openaiClient))
 		mux.HandleFunc(queue.TypeLeapAICompletion, queue.BuildLeapAICompletionHandler(leapClient, translater, uploader, rep, openaiClient))
 		mux.HandleFunc(queue.TypeMailSend, queue.BuildMailSendHandler(mailer, rep))
 		mux.HandleFunc(queue.TypeSMSVerifyCodeSend, queue.BuildSMSVerifyCodeSendHandler(smsClient, rep))
 		mux.HandleFunc(queue.TypeSignup, queue.BuildSignupHandler(rep, mailer, ding))
-		mux.HandleFunc(queue.TypePayment, queue.BuildPaymentHandler(rep, mailer, que, ding))
+		mux.HandleFunc(queue.TypePayment, queue.BuildPaymentHandler(conf, rep, mailer, que, ding))
 		mux.HandleFunc(queue.TypeBindPhone, queue.BuildBindPhoneHandler(rep, mailer))
 		mux.HandleFunc(queue.TypeImageGenCompletion, queue.BuildImageCompletionHandler(conf, aiProvider, leapClient, stabaiClient, deepaiClient, fromstonClient, dashscopeClient, getimgaiClient, translater, uploader, rep, openaiClient, dalleClient))
 		mux.HandleFunc(queue.TypeFromStonCompletion, queue.BuildFromStonCompletionHandler(fromstonClient, uploader, rep))
@@ -114,7 +115,7 @@ func (p Provider) Boot(resolver infra.Resolver) {
 		mux.HandleFunc(queue.TypeImageDownloader, queue.BuildImageDownloaderHandler(conf, uploader, rep))
 		mux.HandleFunc(queue.TypeImageUpscale, queue.BuildImageUpscaleHandler(deepaiClient, stabaiClient, uploader, rep))
 		mux.HandleFunc(queue.TypeImageColorization, queue.BuildImageColorizationHandler(deepaiClient, uploader, rep))
-		mux.HandleFunc(queue.TypeGroupChat, queue.BuildGroupChatHandler(conf, ct, rep, userSvc))
+		mux.HandleFunc(queue.TypeGroupChat, queue.BuildGroupChatHandler(conf, ct, rep, svc))
 		mux.HandleFunc(queue.TypeDalleCompletion, queue.BuildDalleCompletionHandler(dalleClient, uploader, rep))
 		mux.HandleFunc(queue.TypeArtisticTextCompletion, queue.BuildArtisticTextCompletionHandler(leptonClient, translater, uploader, rep, openaiClient))
 		mux.HandleFunc(queue.TypeImageToVideoCompletion, queue.BuildImageToVideoCompletionHandler(stabaiClient, rep))

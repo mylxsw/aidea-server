@@ -233,6 +233,8 @@ func SupportSystemMessage(model Model) bool {
 type Model string
 
 const (
+	ModelErnieSpeed8K   Model = "model_ernie_speed_8k"
+	ModelErnieSpeed128K Model = "model_ernie_speed_128k"
 	// ModelErnieBot ERNIE-Bot是百度自行研发的大语言模型，覆盖海量中文数据，具有更强的对话问答、内容创作生成等能力。
 	// ¥0.012元/千tokens
 	ModelErnieBot Model = "model_ernie_bot"
@@ -272,6 +274,7 @@ const (
 	// ModelMixtral8x7bInstruct 由Mistral AI发布的首个高质量稀疏专家混合模型 (MOE)，模型由8个70亿参数专家模型组成，在多个基准测试中表现优于Llama-2-70B及GPT3.5，能够处理32K上下文，在代码生成任务中表现尤为优异
 	// ¥0.035元/千tokens
 	ModelMixtral8x7bInstruct = "model_baidu_mixtral_8x7b_instruct"
+	ModelGemma7B             = "model_baidu_gemma_7b"
 )
 
 func (ai *BaiduAIImpl) Chat(ctx context.Context, model Model, req ChatRequest) (*ChatResponse, error) {
@@ -307,6 +310,10 @@ func (ai *BaiduAIImpl) Chat(ctx context.Context, model Model, req ChatRequest) (
 func (ai *BaiduAIImpl) modelURL(model Model) string {
 	var url string
 	switch model {
+	case ModelErnieSpeed8K:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie_speed"
+	case ModelErnieSpeed128K:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/ernie-speed-128k"
 	case ModelErnieBot:
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/completions"
 	case ModelErnieBotTurbo:
@@ -333,6 +340,8 @@ func (ai *BaiduAIImpl) modelURL(model Model) string {
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/chatlaw"
 	case ModelMixtral8x7bInstruct:
 		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/mixtral_8x7b_instruct"
+	case ModelGemma7B:
+		url = "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat/gemma_7b_it"
 	default:
 		panic("invalid model")
 	}

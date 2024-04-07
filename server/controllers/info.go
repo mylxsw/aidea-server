@@ -3,8 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/go-utils/ternary"
 	"github.com/redis/go-redis/v9"
@@ -26,6 +26,7 @@ type InfoController struct {
 	conf    *config.Config       `autowire:"@"`
 	userSvc *service.UserService `autowire:"@"`
 	rds     *redis.Client        `autowire:"@"`
+	svc     *service.Service     `autowire:"@"`
 }
 
 // NewInfoController 创建信息控制器
@@ -62,7 +63,7 @@ var qrCodes = []string{
 // FreeChatCounts 免费聊天额度统计
 func (ctl *InfoController) FreeChatCounts(ctx context.Context, webCtx web.Context, user *auth.UserOptional, client *auth.ClientInfo) web.Response {
 	userID := ternary.IfLazy(user.User != nil, func() int64 { return user.User.ID }, func() int64 { return 0 })
-	freeModels := ctl.userSvc.FreeChatStatistics(ctx, userID)
+	freeModels := ctl.svc.Chat.FreeChatStatistics(ctx, userID)
 	if client.IsCNLocalMode(ctl.conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		freeModels = array.Filter(freeModels, func(m service.FreeChatState, _ int) bool {
 			return !m.NonCN
@@ -104,7 +105,7 @@ func (ctl *InfoController) Redirect(ctx context.Context, webCtx web.Context) web
 	return webCtx.HTML(fmt.Sprintf(htmlTemplate, "Redirect", fmt.Sprintf(`<div style="margin: 0; text-align: center; margin-top: 50px;"><a href="%s">NSFW</a></div>`, url)))
 }
 
-const CurrentVersion = "1.0.12"
+const CurrentVersion = "1.0.14"
 
 func (ctl *InfoController) VersionCheck(ctx web.Context) web.Response {
 	clientVersion := ctx.Input("version")
@@ -154,6 +155,8 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 	}
 	return webCtx.JSON(web.M{
 		"wechat_signin_enabled": ctl.conf.WeChatAppID != "" && ctl.conf.WeChatSecret != "",
+		// 是否启用 StripeConfig 支付
+		"stripe_enabled": ctl.conf.Stripe.Enabled,
 		// 是否启用苹果 App 支付
 		"apple_pay_enabled": ctl.conf.EnableApplePay,
 		// 是否启用支付宝支付 @deprecated(since 1.0.8)
@@ -206,12 +209,12 @@ func (ctl *InfoController) loadHomeModels(ctx context.Context, conf *config.Conf
 		if err != nil {
 			log.F(log.M{"user": user, "client": client}).Errorf("get user custom config failed: %s", err)
 		} else if cus != nil && len(cus.HomeModels) > 0 {
-			supportModels := array.ToMap(chat.Models(ctl.conf, false), func(item chat.Model, _ int) string { return item.RealID() })
+			supportModels := array.ToMap(ctl.svc.Chat.Models(ctx, false), func(item repo.Model, _ int) string { return item.ModelId })
 			for i, m := range cus.HomeModels[:2] {
 				if matched, ok := supportModels[m]; ok {
-					homeModels[i].ModelID = matched.RealID()
+					homeModels[i].ModelID = matched.ModelId
 					homeModels[i].Name = matched.ShortName
-					homeModels[i].SupportVision = matched.SupportVision
+					homeModels[i].SupportVision = matched.Meta.Vision
 				}
 			}
 		}
@@ -224,14 +227,14 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		return false, []HomeModel{
 			{
-				Name:     "南贤 3.5",
+				Name:     "Chat 3.5",
 				ModelID:  "nanxian",
 				Desc:     "速度快，成本低",
 				Color:    "FF67AC5C",
 				Powerful: false,
 			},
 			{
-				Name:     "北丑 4.0",
+				Name:     "Chat 4.0",
 				ModelID:  "beichou",
 				Desc:     "能力强，更精准",
 				Color:    "FF714BD7",
@@ -357,7 +360,8 @@ const termsOfUser = `<h1 id="-">用户协议</h1>
 `
 
 func (ctl *InfoController) loadHomeModelsV2(ctx context.Context, conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
-	enableOpenAI, homeModels = ctl.loadDefaultHomeModelsV2(ctl.conf, client, user)
+
+	enableOpenAI, homeModels = ctl.loadDefaultHomeModelsV2(ctx, ctl.conf, client, user)
 
 	if user.User != nil && conf.EnableCustomHomeModels {
 		cus, err := ctl.userSvc.CustomConfig(ctx, user.User.ID)
@@ -389,32 +393,61 @@ func (ctl *InfoController) loadHomeModelsV2(ctx context.Context, conf *config.Co
 	return enableOpenAI, homeModels
 }
 
-func (ctl *InfoController) loadDefaultHomeModelsV2(conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
-	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
-		return false, []service.HomeModel{
-			{
-				Name: "南贤 3.5",
-				ID:   "virtual:nanxian",
+func (ctl *InfoController) loadDefaultHomeModelsV2(ctx context.Context, conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
+	models := array.ToMap(ctl.svc.Chat.Models(ctx, false), func(item repo.Model, _ int) string {
+		return item.ModelId
+	})
+
+	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) && len(ctl.conf.DefaultHomeModelsIOS) > 0 {
+		iosHomeModelsLen := len(ctl.conf.DefaultHomeModelsIOS)
+		homeModelsLen := len(ctl.conf.DefaultHomeModels)
+
+		homeModels = make([]service.HomeModel, ternary.If(iosHomeModelsLen > homeModelsLen, iosHomeModelsLen, homeModelsLen))
+		for i, m := range ctl.conf.DefaultHomeModels {
+			matched, ok := models[m]
+			if !ok {
+				log.Errorf("load default home model failed: %s at %d not found", m, i+1)
+				continue
+			}
+
+			homeModels[i] = service.HomeModel{
+				Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+				ID:   matched.ModelId,
 				Type: service.HomeModelTypeModel,
-			},
-			{
-				Name: "北丑 4.0",
-				ID:   "virtual:beichou",
+			}
+		}
+
+		for i, m := range ctl.conf.DefaultHomeModelsIOS {
+			matched, ok := models[m]
+			if !ok {
+				log.Errorf("load default home model for ios failed: %s at %d not found", m, i+1)
+				continue
+			}
+
+			homeModels[i] = service.HomeModel{
+				Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+				ID:   matched.ModelId,
 				Type: service.HomeModelTypeModel,
-			},
+			}
+		}
+
+		return false, homeModels
+	}
+
+	homeModels = make([]service.HomeModel, len(ctl.conf.DefaultHomeModels))
+	for i, m := range ctl.conf.DefaultHomeModels {
+		matched, ok := models[m]
+		if !ok {
+			log.Errorf("load default home model failed: %s at %d not found", m, i+1)
+			continue
+		}
+
+		homeModels[i] = service.HomeModel{
+			Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+			ID:   matched.ModelId,
+			Type: service.HomeModelTypeModel,
 		}
 	}
 
-	return conf.EnableOpenAI, []service.HomeModel{
-		{
-			Name: "GPT-3.5",
-			ID:   "openai:gpt-3.5-turbo",
-			Type: service.HomeModelTypeModel,
-		},
-		{
-			Name: "GPT-4 Turbo",
-			ID:   "openai:gpt-4-turbo-preview",
-			Type: service.HomeModelTypeModel,
-		},
-	}
+	return conf.EnableOpenAI, homeModels
 }

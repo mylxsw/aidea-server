@@ -5,7 +5,6 @@ import (
 	openai2 "github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
-	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
 	"github.com/sashabaranov/go-openai"
 )
@@ -39,8 +38,6 @@ func (oa *OneAPI) translate(request openai.ChatCompletionRequest) openai.ChatCom
 			return item
 		})
 	}
-
-	log.With(request).Debugf("request")
 
 	return request
 }

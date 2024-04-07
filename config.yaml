@@ -1,5 +1,9 @@
 ######## 基本配置 ########
 
+# 是否是生产环境
+# 是否为生产环境，生产环境下只有正式的支付渠道可用，测试渠道将不会真实充值
+production: true
+
 # Web 服务监听地址
 listen: 0.0.0.0:8080
 
@@ -59,6 +63,12 @@ enable-scheduler: true
 
 # 支持的短信通道，支持 aliyun, tencent，配置多个则随机选择
 sms-channels: [ "aliyun", "tencent" ]
+
+# 是否提示用户绑定手机号
+should-bind-phone: false
+  
+# Web 服务的基础 URL，例如 https://web.aicode.cc
+base-url: ""
 
 ######## OpenAI 配置 ########
 
@@ -212,8 +222,6 @@ moonshot-apikey: ""
 
 # https://github.com/songquanpeng/one-api
 
-# 支持的模型列表，当前支持：chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2
-oneapi-support-models: [ ]
 enable-oneapi: false
 oneapi-server: ""
 oneapi-key: ""
@@ -436,14 +444,6 @@ default-txt2img-model: sb-stable-diffusion-xl-1024-v1-0
 # 图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语，目前支持 xfyun，留空则表示不启用
 img2img-recognition-provider: ""
 
-######## 虚拟模型配置 ########
-enable-virtual-model: false
-virtual-model-implementation: "openai"
-virtual-model-nanxian-rel: "gpt-3.5-turbo"
-virtual-model-nanxian-prompt: ""
-virtual-model-beichou-rel: "gpt-4"
-virtual-model-beichou-prompt: ""
-
 ######## 价格相关 ########
 # 智慧果收费标准、充值、赠送相关配置
 # 系统内置默认规则，在 internal/coins 中定义，不指定该选项使用默认配置
@@ -464,3 +464,17 @@ free-chat-model: gpt-3.5-turbo
 ######## 微信开放平台 ########
 wechat-appid: ""
 wechat-secret: ""
+
+######## Stripe ########
+# 是否启用 Stripe 支付
+# https://stripe.com/docs/development/quickstart#api-keys
+enable-stripe: false
+stripe-publishable-key: ""
+stripe-secret-key: ""
+stripe-webhook-secret: ""
+
+######## 默认首页模型 ########
+# 首页默认展示的模型，取值为表 models.model_id 的值
+default-home-models: ["gpt-3.5-turbo", "gpt-4"]
+# IOS 系统默认首页模型，取值为表 models.model_id 的值，如果为空，则使用 default-home-models
+default-home-models-ios: ["chat-3.5", "chat-4"]

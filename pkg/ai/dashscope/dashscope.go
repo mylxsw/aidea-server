@@ -40,6 +40,7 @@ const (
 	ModelQWenMaxLongContext = "qwen-max-longcontext"
 	// ModelQWenVLPlus 通义千问VL plus支持灵活的交互方式，包括多图、多轮问答、创作等能力的模型，大幅提升了图片文字处理能力，增加可处理分辨率范围，增强视觉推理和决策能力
 	ModelQWenVLPlus = "qwen-vl-plus"
+	ModelQWenVLMax  = "qwen-vl-max"
 
 	// 通义千问7B
 	ModelQWen7BV1     = "qwen-7b-v1"
@@ -161,7 +162,7 @@ func (ds *DashScope) Chat(ctx context.Context, req ChatRequest) (*ChatResponse, 
 		return nil, err
 	}
 	endpoint := ternary.IfElse(
-		req.Model == ModelQWenVLPlus,
+		req.Model == ModelQWenVLPlus || req.Model == ModelQWenVLMax || strings.Contains(req.Model, "-vl-"),
 		"/api/v1/services/aigc/multimodal-generation/generation",
 		"/api/v1/services/aigc/text-generation/generation",
 	)
@@ -200,7 +201,7 @@ func (ds *DashScope) ChatStream(ctx context.Context, req ChatRequest) (<-chan Ch
 	}
 
 	endpoint := ternary.IfElse(
-		req.Model == ModelQWenVLPlus,
+		req.Model == ModelQWenVLPlus || req.Model == ModelQWenVLMax || strings.Contains(req.Model, "-vl-"),
 		"/api/v1/services/aigc/multimodal-generation/generation",
 		"/api/v1/services/aigc/text-generation/generation",
 	)

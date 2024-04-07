@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/rate"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/token"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
@@ -91,7 +91,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v1/payment/apple",    // Apple 支付管理
 		"/v1/payment/alipay",   // 支付宝支付管理 @deprecated(since 1.0.8)
 		"/v1/payment/others",   // 支付宝支付管理
-		"/v1/payment/status",   // 支付状态查询
+		"/v1/payment/stripe",   // Stripe 支付管理
 		"/v1/auth/bind-phone",  // 绑定手机号码
 		"/v1/auth/bind-wechat", // 绑定微信
 		"/v1/rooms",            // 数字人管理
@@ -195,14 +195,14 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 					var user *auth.User
 					if u, err := userSrv.GetUserByID(ctx, claims.Int64Value("id"), false); err != nil {
 						if needAuth {
-							if errors.Is(err, repo2.ErrNotFound) {
+							if errors.Is(err, repo.ErrNotFound) {
 								return errors.New("invalid auth credential, user not found")
 							}
 
 							return err
 						}
 					} else {
-						if u.Status == repo2.UserStatusDeleted {
+						if u.Status == repo.UserStatusDeleted {
 							if needAuth {
 								return ErrUserDestroyed
 							}
@@ -284,7 +284,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		controllers.NewPromptController(resolver),
 		controllers.NewExampleController(resolver),
 		controllers.NewProxiesController(conf),
-		controllers.NewModelController(conf),
+		controllers.NewModelController(resolver),
 		controllers.NewCreativeIslandController(resolver, conf),
 		controllers.NewCreativeController(resolver, conf),
 		controllers.NewImageController(resolver),
@@ -325,6 +325,12 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 	r.Controllers(
 		"/v1/admin",
 		admin.NewCreativeIslandController(resolver),
+		admin.NewModelController(resolver),
+		admin.NewChannelController(resolver),
+		admin.NewQuotaController(resolver),
+		admin.NewUserController(resolver),
+		admin.NewSettingController(resolver),
+		admin.NewPaymentController(resolver),
 	)
 
 	// 公开访问信息

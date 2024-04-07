@@ -422,7 +422,7 @@ func (repo *UserRepo) WeChatSignIn(ctx context.Context, unionID string, nickname
 
 			if eventID, err = model.NewEventsModel(tx).Save(ctx, model.EventsN{
 				EventType: null.StringFrom(EventTypeUserCreated),
-				Payload:   null.StringFrom(string(must.Must(json.Marshal(UserCreatedEvent{UserID: user.Id, From: "wechat"})))),
+				Payload:   null.StringFrom(string(must.Must(json.Marshal(UserCreatedEvent{UserID: user.Id, From: UserCreatedEventSourceWechat})))),
 				Status:    null.StringFrom(EventStatusWaiting),
 			}); err != nil {
 				log.With(user).Errorf("create event failed: %s", err)
@@ -742,7 +742,7 @@ func (repo *UserRepo) CreateAPIKey(ctx context.Context, userID int64, name strin
 
 // DeleteAPIKey 删除一个 API Key
 func (repo *UserRepo) DeleteAPIKey(ctx context.Context, userID int64, keyID int64) error {
-	//_, err := model.NewUserApiKeyModel(repo.db).Delete(ctx, query.Builder().
+	//_, err := model.NewUserApiKeyModel(repo.db).DeleteModel(ctx, query.Builder().
 	//	Where(model.FieldUserApiKeyUserId, userID).
 	//	Where(model.FieldUserApiKeyId, keyID),
 	//)
@@ -752,4 +752,23 @@ func (repo *UserRepo) DeleteAPIKey(ctx context.Context, userID int64, keyID int6
 
 	_, err := model.NewUserApiKeyModel(repo.db).UpdateFields(ctx, update, q)
 	return err
+}
+
+// Users 查询用户列表
+func (repo *UserRepo) Users(ctx context.Context, page, perPage int64, options ...QueryOption) ([]model.Users, query.PaginateMeta, error) {
+	q := query.Builder()
+	for _, opt := range options {
+		q = opt(q)
+	}
+
+	users, meta, err := model.NewUsersModel(repo.db).Paginate(ctx, page, perPage, q)
+	if err != nil {
+		return nil, query.PaginateMeta{}, err
+	}
+
+	return array.Map(users, func(item model.UsersN, _ int) model.Users {
+		user := item.ToUsers()
+		user.Password = ""
+		return user
+	}), meta, nil
 }
