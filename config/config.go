@@ -286,6 +286,12 @@ type Config struct {
 	// 微信开放平台配置
 	WeChatAppID  string `json:"wechat_appid" yaml:"wechat_appid"`
 	WeChatSecret string `json:"wechat_secret" yaml:"wechat_secret"`
+	// 微信支付配置
+	WeChatPayEnabled            bool   `json:"wechat_pay_enabled" yaml:"wechat_pay_enabled"`
+	WeChatPayMchID              string `json:"wechat_pay_mchid" yaml:"wechat_pay_mchid"`
+	WeChatPayCertSerialNumber   string `json:"wechat_pay_cert_serial_number" yaml:"wechat_pay_cert_serial_number"`
+	WeChatPayCertPrivateKeyPath string `json:"wechat_pay_cert_private_key_path" yaml:"wechat_pay_cert_private_key_path"`
+	WeChatPayAPIv3Key           string `json:"wechat_pay_apiv3_key" yaml:"wechat_pay_apiv3_key"`
 
 	// Stripe 支付
 	Stripe StripeConfig `json:"stripe" yaml:"stripe"`
@@ -573,8 +579,13 @@ func Register(ins *app.App) {
 			FreeChatDailyGlobalLimit: ctx.Int("free-chat-daily-global-limit"),
 			FreeChatModel:            ctx.String("free-chat-model"),
 
-			WeChatAppID:  ctx.String("wechat-appid"),
-			WeChatSecret: ctx.String("wechat-secret"),
+			WeChatAppID:                 ctx.String("wechat-appid"),
+			WeChatSecret:                ctx.String("wechat-secret"),
+			WeChatPayEnabled:            ctx.Bool("wechatpay-enabled"),
+			WeChatPayMchID:              ctx.String("wechatpay-mchid"),
+			WeChatPayCertSerialNumber:   ctx.String("wechatpay-cert-serial-number"),
+			WeChatPayCertPrivateKeyPath: ctx.String("wechatpay-cert-private-key-path"),
+			WeChatPayAPIv3Key:           ctx.String("wechatpay-api-v3-key"),
 
 			Stripe: stripe,
 

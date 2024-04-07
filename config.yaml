@@ -465,6 +465,17 @@ free-chat-model: gpt-3.5-turbo
 wechat-appid: ""
 wechat-secret: ""
 
+# 是否启用微信支付
+wechatpay-enabled: false
+# 微信支付商户号
+wechatpay-mchid: "1600000000"
+# 微信支付 API 证书序列号
+wechatpay-cert-serial-number: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# 微信支付 APIv3 密钥
+wechatpay-api-v3-key: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# 微信支付商户证书私钥路径
+wechatpay-cert-private-key-path: "path/to/apiclient_cert.pem"
+
 ######## Stripe ########
 # 是否启用 Stripe 支付
 # https://stripe.com/docs/development/quickstart#api-keys

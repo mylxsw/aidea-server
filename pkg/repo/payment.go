@@ -7,11 +7,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/internal/coins"
+	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/go-utils/array"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
 	"github.com/mylxsw/eloquent"
 	"github.com/mylxsw/eloquent/query"
 	"github.com/mylxsw/go-utils/must"
@@ -54,18 +54,13 @@ func (repo *PaymentRepo) GetPaymentHistory(ctx context.Context, paymentID string
 }
 
 func (repo *PaymentRepo) CreateAliPayment(ctx context.Context, userID int64, productID string, source string) (string, error) {
-	paymentID, err := repo.CreatePaymentID(userID)
-	if err != nil {
-		return "", err
-	}
-
 	product := coins.GetProduct(productID)
 	if product == nil {
 		return "", fmt.Errorf("product %s not found", productID)
 	}
 
-	paymentID = fmt.Sprintf("%d-%s", userID, paymentID)
-	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
+	paymentID := misc.PaymentID(userID)
+	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
 		if _, err := model.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
 			model.FieldPaymentHistoryPaymentId:   paymentID,
 			model.FieldPaymentHistoryUserId:      userID,
@@ -107,16 +102,6 @@ type StripePayment struct {
 	Status        int64  `json:"status,omitempty"`
 	Note          string `json:"note,omitempty"`
 	Extra         any    `json:"extra,omitempty"`
-}
-
-// CreatePaymentID 生成支付ID
-func (repo *PaymentRepo) CreatePaymentID(userID int64) (string, error) {
-	paymentID, err := uuid.GenerateUUID()
-	if err != nil {
-		return "", fmt.Errorf("generate payment id failed: %w", err)
-	}
-
-	return fmt.Sprintf("%d-%s", userID, paymentID), nil
 }
 
 func (repo *PaymentRepo) CreateStripePayment(ctx context.Context, userID int64, paymentID string, source string, pay StripePayment) (string, error) {
@@ -356,11 +341,6 @@ func (repo *PaymentRepo) GetAlipayHistory(ctx context.Context, paymentID string)
 }
 
 func (repo *PaymentRepo) CreateApplePayment(ctx context.Context, userID int64, productID string) (string, error) {
-	paymentID, err := repo.CreatePaymentID(userID)
-	if err != nil {
-		return "", err
-	}
-
 	product := coins.GetProduct(productID)
 	if product == nil {
 		return "", fmt.Errorf("product %s not found", productID)
@@ -370,8 +350,8 @@ func (repo *PaymentRepo) CreateApplePayment(ctx context.Context, userID int64, p
 		return "", fmt.Errorf("product %s not support apple pay", productID)
 	}
 
-	paymentID = fmt.Sprintf("%d-%s", userID, paymentID)
-	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
+	paymentID := misc.PaymentID(userID)
+	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
 		if _, err := model.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
 			model.FieldPaymentHistoryPaymentId:   paymentID,
 			model.FieldPaymentHistoryUserId:      userID,

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/stripe/stripe-go/v76"
@@ -370,7 +371,7 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 		// 如果已经处理过了，直接返回成功
 		if errors.Is(err, repo.ErrPaymentHasBeenProcessed) {
 			return webCtx.Raw(func(w http.ResponseWriter) {
-				w.Write([]byte("success"))
+				_, _ = w.Write([]byte("success"))
 			})
 		}
 
@@ -818,12 +819,7 @@ func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx we
 		},
 	}
 
-	paymentID, err := ctl.payRepo.CreatePaymentID(user.ID)
-	if err != nil {
-		log.WithFields(log.Fields{"product_id": productId, "source": source}).Error("create stripe payment id failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
-	}
-
+	paymentID := misc.PaymentID(user.ID)
 	paymentIntentParams.AddMetadata("payment_id", paymentID)
 	paymentIntentParams.AddMetadata("user_id", strconv.Itoa(int(user.ID)))
 	paymentIntentParams.AddMetadata("product_id", productId)
