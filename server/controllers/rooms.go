@@ -3,10 +3,10 @@ package controllers
 import (
 	"context"
 	"errors"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
-	repo2 "github.com/mylxsw/aidea-server/pkg/repo"
+	repo "github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"net/http"
 	"strconv"
@@ -25,9 +25,10 @@ import (
 
 // RoomController 数字人
 type RoomController struct {
-	roomRepo   *repo2.RoomRepo   `autowire:"@"`
+	roomRepo   *repo.RoomRepo    `autowire:"@"`
 	translater youdao.Translater `autowire:"@"`
 	conf       *config.Config    `autowire:"@"`
+	svc        *service.Service  `autowire:"@"`
 }
 
 func NewRoomController(resolver infra.Resolver) web.Controller {
@@ -65,71 +66,24 @@ func (ctl *RoomController) Galleries(ctx context.Context, webCtx web.Context, cl
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
+	models := array.ToMap(
+		ctl.svc.Chat.Models(ctx, true),
+		func(item repo.Model, _ int) string { return item.ModelId },
+	)
+
 	cnLocalMode := client.IsCNLocalMode(ctl.conf) && (user.User == nil || !user.User.ExtraPermissionUser())
-	rooms = array.Filter(rooms, func(item repo2.GalleryRoom, _ int) bool {
+	rooms = array.Filter(rooms, func(item repo.GalleryRoom, _ int) bool {
+		mod, ok := models[item.Model]
+		if !ok {
+			return false
+		}
+
 		// 如果启用了国产化模式，则过滤掉 openai 和 Anthropic 的模型
-		if cnLocalMode && item.RoomType == "system" && array.In(item.Vendor, []string{"openai", "Anthropic", "google"}) {
+		if cnLocalMode && item.RoomType == "system" && mod.Meta.Restricted {
 			return false
 		}
 
-		// 检查模型是否满足条件
-		if !ctl.conf.EnableOpenAI && item.Vendor == "openai" {
-			return false
-		}
-
-		if !ctl.conf.EnableBaiduWXAI && item.Vendor == "文心千帆" {
-			return false
-		}
-
-		if !ctl.conf.EnableDashScopeAI && item.Vendor == "灵积" {
-			return false
-		}
-
-		if !ctl.conf.EnableXFYunAI && item.Vendor == "讯飞星火" {
-			return false
-		}
-
-		if !ctl.conf.EnableSenseNovaAI && item.Vendor == "商汤日日新" {
-			return false
-		}
-
-		if !ctl.conf.EnableTencentAI && item.Vendor == "腾讯" {
-			return false
-		}
-
-		if !ctl.conf.EnableAnthropic && item.Vendor == "Anthropic" {
-			return false
-		}
-
-		if !ctl.conf.EnableBaichuan && item.Vendor == "百川" {
-			return false
-		}
-
-		if !ctl.conf.EnableGPT360 && item.Vendor == "360智脑" {
-			return false
-		}
-
-		if !ctl.conf.EnableGoogleAI && item.Vendor == "google" {
-			return false
-		}
-
-		if !ctl.conf.EnableOneAPI && item.Vendor == "oneapi" {
-			return false
-		}
-
-		if !ctl.conf.EnableOpenRouter && item.Vendor == "openrouter" {
-			return false
-		}
-
-		if !ctl.conf.EnableSky && item.Vendor == "sky" {
-			return false
-		}
-
-		if !ctl.conf.EnableZhipuAI && item.Vendor == "zhipu" {
-			return false
-		}
-
-		if !ctl.conf.EnableMoonshot && item.Vendor == "moonshot" {
+		if mod.Status == repo.ModelStatusDisabled {
 			return false
 		}
 
@@ -176,7 +130,7 @@ func (ctl *RoomController) GalleryItem(ctx context.Context, webCtx web.Context) 
 
 	room, err := ctl.roomRepo.GalleryItem(ctx, int64(id))
 	if err != nil {
-		if errors.Is(err, repo2.ErrNotFound) {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "not found"), http.StatusNotFound)
 		}
 
@@ -240,13 +194,13 @@ func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Conte
 			Vendor:         vendor,
 			SystemPrompt:   item.Prompt,
 			MaxContext:     item.MaxContext,
-			RoomType:       repo2.RoomTypePreset,
+			RoomType:       repo.RoomTypePreset,
 			InitMessage:    item.InitMessage,
 			AvatarId:       item.AvatarId,
 			AvatarUrl:      item.AvatarUrl,
 			LastActiveTime: time.Now(),
 		}, true); err != nil {
-			if errors.Is(err, repo2.ErrRoomNameExists) {
+			if errors.Is(err, repo.ErrRoomNameExists) {
 				continue
 			}
 
@@ -276,6 +230,15 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 		req.MaxContext = 10
 	}
 
+	mod := ctl.svc.Chat.Model(ctx, req.Model)
+	if mod == nil {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "暂不支持该模型"), http.StatusBadRequest)
+	}
+
+	if req.AvatarURL == "" {
+		req.AvatarURL = mod.AvatarUrl
+	}
+
 	room := model.Rooms{
 		Name:           req.Name,
 		UserId:         user.ID,
@@ -284,7 +247,7 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 		Vendor:         req.Vendor,
 		SystemPrompt:   req.SystemPrompt,
 		MaxContext:     req.MaxContext,
-		RoomType:       repo2.RoomTypeCustom,
+		RoomType:       repo.RoomTypeCustom,
 		LastActiveTime: time.Now(),
 		AvatarId:       req.AvatarID,
 		AvatarUrl:      req.AvatarURL,
@@ -293,7 +256,7 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 
 	id, err := ctl.roomRepo.Create(ctx, user.ID, &room, true)
 	if err != nil {
-		if err == repo2.ErrRoomNameExists {
+		if errors.Is(err, repo.ErrRoomNameExists) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人名称已存在"), http.StatusBadRequest)
 		}
 
@@ -308,9 +271,9 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 
 // Rooms 获取用户的数字人列表
 func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
-	roomTypes := []int{repo2.RoomTypePreset, repo2.RoomTypePresetCustom, repo2.RoomTypeCustom}
+	roomTypes := []int{repo.RoomTypePreset, repo.RoomTypePresetCustom, repo.RoomTypeCustom}
 	if misc.VersionNewer(client.Version, "1.0.6") {
-		roomTypes = append(roomTypes, repo2.RoomTypeGroupChat)
+		roomTypes = append(roomTypes, repo.RoomTypeGroupChat)
 	}
 
 	rooms, err := ctl.roomRepo.Rooms(ctx, user.ID, roomTypes, RoomsQueryLimit)
@@ -330,12 +293,12 @@ func (ctl *RoomController) Room(ctx context.Context, webCtx web.Context, user *a
 	}
 
 	if roomID == 1 {
-		return webCtx.JSON(repo2.GetDefaultRoom())
+		return webCtx.JSON(repo.GetDefaultRoom())
 	}
 
 	room, err := ctl.roomRepo.Room(ctx, user.ID, int64(roomID))
 	if err != nil {
-		if errors.Is(err, repo2.ErrNotFound) {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人不存在"), http.StatusNotFound)
 		}
 
@@ -344,9 +307,9 @@ func (ctl *RoomController) Room(ctx context.Context, webCtx web.Context, user *a
 	}
 
 	if room.AvatarUrl == "" {
-		for _, mod := range chat.Models(ctl.conf, true) {
-			if mod.RealID() == room.Model {
-				room.AvatarUrl = mod.AvatarURL
+		for _, mod := range ctl.svc.Chat.Models(ctx, true) {
+			if mod.ModelId == room.Model {
+				room.AvatarUrl = mod.AvatarUrl
 				break
 			}
 		}
@@ -462,7 +425,7 @@ func (ctl *RoomController) UpdateRoom(ctx context.Context, webCtx web.Context, u
 
 	room, err := ctl.roomRepo.Room(ctx, user.ID, int64(req.RoomID))
 	if err != nil {
-		if errors.Is(err, repo2.ErrNotFound) {
+		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人不存在"), http.StatusNotFound)
 		}
 
@@ -525,7 +488,7 @@ func (ctl *RoomController) UpdateRoom(ctx context.Context, webCtx web.Context, u
 
 	if changed {
 		// 房间内容发生了变化，需要标记为自定义房间
-		room.RoomType = repo2.RoomTypePresetCustom
+		room.RoomType = repo.RoomTypePresetCustom
 	}
 
 	if err := ctl.roomRepo.Update(ctx, user.ID, req.RoomID, room); err != nil {

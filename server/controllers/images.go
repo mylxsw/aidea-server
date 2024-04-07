@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/service"
 	"net/http"
 	"strconv"
 
@@ -10,7 +11,9 @@ import (
 	"github.com/mylxsw/glacier/web"
 )
 
-type ImageController struct{}
+type ImageController struct {
+	svc *service.SettingService `autowire:"@"`
+}
 
 func NewImageController(resolver infra.Resolver) web.Controller {
 	ctl := ImageController{}
@@ -57,89 +60,7 @@ type ImagePreset struct {
 
 func (ctl *ImageController) Avatar(ctx context.Context, webCtx web.Context) web.Response {
 	return webCtx.JSON(web.M{
-		"avatars": []string{
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-14.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-17.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-2.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-21.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-22.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-3.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-4.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-5.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-6.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-7.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-8.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-20230630-9.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-1.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-10.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-11.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-12.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-13.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-14.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-15.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-16.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-17.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-18.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-19.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-2.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-22.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-23.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-24.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-25.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-26.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-27.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-28.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-29.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-3.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-30.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-31.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-32.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-33.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-34.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-35.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-36.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-37.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-38.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-39.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-4.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-40.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-41.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-42.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-43.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-44.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-45.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-46.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-5.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-6.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-7.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-8.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/ava-9.JPG-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/gpt35.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/gpt4.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/xfyun-v1.5.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/xfyun-v2.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/xfyun-v3.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/wenxinyiyan-turbo.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/creative/wenxinyiyan.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/wenxinyiyan-4.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/llama2.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/chatglm.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/aquila.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/BLOOMZ.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/qwen-turbo.jpeg-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/qwen-max.jpeg-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/baichuan.jpg-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/sensenova.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/hunyuan.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/gpt360.jpg-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/gemini.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-instant.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/anthropic-claude-2.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/yi-01.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/sky.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/nanxian.png-avatar",
-			"https://ssl.aicode.cc/ai-server/assets/avatar/beichou.png-avatar",
-		},
+		"avatars": ctl.svc.Avatars(ctx),
 	})
 }
 

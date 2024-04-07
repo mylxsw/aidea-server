@@ -33,7 +33,7 @@ func TestGPT360_Chat(t *testing.T) {
 func TestGPT360_ChatStream(t *testing.T) {
 	client := gpt360.NewGPT360(os.Getenv("GPT360_API_KEY"))
 	resp, err := client.ChatStream(context.TODO(), gpt360.ChatRequest{
-		Model: gpt360.Model360GPT_S2_V9,
+		Model: gpt360.Model360GPT_Pro,
 		Messages: []gpt360.Message{
 			{
 				Role:    "system",

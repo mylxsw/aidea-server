@@ -1,0 +1,24 @@
+package: model
+
+models:
+  - name: models_daily_free
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: model_id
+          type: string
+          tag: json:"model_id"
+        - name: name
+          type: string
+          tag: json:"name"
+        - name: info
+          type: string
+          tag: json:"info,omitempty"
+        - name: free_count
+          type: int64
+          tag: json:"free_count"
+        - name: end_at
+          type: time.Time
+          tag: json:"end_at,omitempty"

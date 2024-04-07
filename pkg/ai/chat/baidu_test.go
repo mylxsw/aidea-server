@@ -25,7 +25,7 @@ func TestBaiduAIChat_Chat(t *testing.T) {
 	defer cancel()
 
 	response, err := client.Chat(ctx, chat2.Request{
-		Model: baidu.ModelChatGLM2_6B_32K,
+		Model: baidu.ModelGemma7B,
 		Messages: []chat2.Message{
 			{
 				Role:    "system",

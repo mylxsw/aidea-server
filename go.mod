@@ -35,6 +35,7 @@ require (
 )
 
 require (
+	github.com/Vernacular-ai/godub v0.1.6 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.4 // indirect
 	github.com/alibabacloud-go/debug v0.0.0-20190504072949-9472017b5c68 // indirect
 	github.com/alibabacloud-go/endpoint-util v1.1.0 // indirect
@@ -52,6 +53,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/schema v1.2.0 // indirect
@@ -68,8 +70,10 @@ require (
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
+	github.com/stripe/stripe-go/v76 v76.19.0 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/hunyuan v1.0.857 // indirect
 	github.com/tideland/golib v4.24.2+incompatible // indirect
+	github.com/tink-ab/tempfile v0.0.0-20180226111222-33beb0518f1a // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	golang.org/x/image v0.14.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect

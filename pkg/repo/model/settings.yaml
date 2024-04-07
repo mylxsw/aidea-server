@@ -1,0 +1,15 @@
+package: model
+
+models:
+  - name: setting
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: key
+          type: string
+          tag: json:"key"
+        - name: value
+          type: string
+          tag: json:"value"

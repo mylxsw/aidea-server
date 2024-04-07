@@ -123,14 +123,14 @@ func BuildSignupHandler(rep *repo.Repository, mailer *mail.Sender, ding *dingdin
 		// 为用户分配默认配额
 		// 1. 如果是邮箱注册，不赠送智慧果，只有在用户绑定手机后才赠送
 		// 2. 如果是手机注册，直接赠送智慧果
-		if eventPayload.From == repo.UserCreatedEventSourceEmail || eventPayload.From == repo.UserCreatedEventSourceWechat {
-			if coins.SignupGiftCoins > 0 {
-				if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, int64(coins.SignupGiftCoins), time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
-					log.WithFields(log.Fields{"user_id": eventPayload.UserID}).Errorf("create user quota failed: %s", err)
-				}
+		if coins.SignupGiftCoins > 0 {
+			if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, int64(coins.SignupGiftCoins), time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
+				log.WithFields(log.Fields{"user_id": eventPayload.UserID}).Errorf("create user quota failed: %s", err)
 			}
-		} else if eventPayload.From == repo.UserCreatedEventSourcePhone {
-			if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, int64(coins.BindPhoneGiftCoins), time.Now().AddDate(0, 1, 0), "新用户注册赠送", ""); err != nil {
+		}
+
+		if eventPayload.From == repo.UserCreatedEventSourcePhone {
+			if _, err := rep.Quota.AddUserQuota(ctx, eventPayload.UserID, int64(coins.BindPhoneGiftCoins), time.Now().AddDate(0, 1, 0), "绑定手机赠送", ""); err != nil {
 				log.WithFields(log.Fields{"user_id": eventPayload.UserID}).Errorf("create user quota failed: %s", err)
 			}
 		}

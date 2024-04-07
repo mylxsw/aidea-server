@@ -78,14 +78,16 @@ func (ctl *UploadController) UploadInit(ctx context.Context, webCtx web.Context,
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "文件用途不正确"), http.StatusBadRequest)
 	}
 
-	quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
-	if err != nil {
-		log.Errorf("get user quota failed: %s", err)
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
-	}
+	if !user.InternalUser() {
+		quota, err := quotaRepo.GetUserQuota(ctx, user.ID)
+		if err != nil {
+			log.Errorf("get user quota failed: %s", err)
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		}
 
-	if quota.Quota < quota.Used+coins.GetUploadCoins() {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
+		if quota.Quota < quota.Used+coins.GetUploadCoins() {
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough), http.StatusPaymentRequired)
+		}
 	}
 
 	expireAfterDays := uploader.DefaultUploadExpireAfterDays
@@ -93,6 +95,9 @@ func (ctl *UploadController) UploadInit(ctx context.Context, webCtx web.Context,
 	case uploader.UploadUsageChat:
 		// 聊天图片默认7天过期
 		expireAfterDays = 7
+	case uploader.UploadUsageAvatar:
+		// 头像上传永不过期
+		expireAfterDays = 0
 	}
 
 	return webCtx.JSON(ctl.uploader.Init(name, int(user.ID), usage, 5, expireAfterDays, true, "client"))
@@ -207,7 +212,7 @@ func (ctl *UploadController) AuditCallback(ctx context.Context, webCtx web.Conte
 		log.With(ret).Errorf(
 			"图片包含违禁内容：%s。\n\n[访问地址](%s)",
 			strings.Join(ret.Labels(), "|"),
-			fmt.Sprintf("%s/public/r/%s", ctl.conf.BaseURL, key),
+			fmt.Sprintf("https://ai-api.aicode.cc/public/r/%s", key),
 		)
 
 		err := ctl.fs.UpdateByKey(ctx, ret.InputKey, repo.StorageFileStatusDisabled, strings.Join(ret.Labels(), "|"))

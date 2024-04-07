@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
@@ -43,6 +42,7 @@ type UserController struct {
 	conf       *config.Config           `autowire:"@"`
 	userSrv    *service.UserService     `autowire:"@"`
 	secSrv     *service.SecurityService `autowire:"@"`
+	svc        *service.Service         `autowire:"@"`
 }
 
 // NewUserController 创建用户控制器
@@ -553,7 +553,7 @@ func (ctl *UserController) UserQuotaUsageDetails(ctx context.Context, webCtx web
 
 // UserFreeChatCounts 用户免费聊天次数统计
 func (ctl *UserController) UserFreeChatCounts(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
-	freeModels := ctl.userSrv.FreeChatStatistics(ctx, user.ID)
+	freeModels := ctl.svc.Chat.FreeChatStatistics(ctx, user.ID)
 	if client.IsCNLocalMode(ctl.conf) && !user.ExtraPermissionUser() {
 		freeModels = array.Filter(freeModels, func(m service.FreeChatState, _ int) bool {
 			return !m.NonCN
@@ -571,7 +571,7 @@ func (ctl *UserController) UserFreeChatCountsForModel(ctx context.Context, webCt
 	segs := strings.Split(modelID, ":")
 	modelID = segs[len(segs)-1]
 
-	res, err := ctl.userSrv.FreeChatStatisticsForModel(ctx, user.ID, modelID)
+	res, err := ctl.svc.Chat.FreeChatStatisticsForModel(ctx, user.ID, modelID)
 	if err != nil {
 		if errors.Is(err, service.ErrorModelNotFree) {
 			return webCtx.JSON(service.FreeChatState{
@@ -604,7 +604,7 @@ func (ctl *UserController) CustomHomeModels(ctx context.Context, webCtx web.Cont
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
-	supportModels := array.ToMap(chat.Models(ctl.conf, true), func(item chat.Model, _ int) string { return item.RealID() })
+	supportModels := array.ToMap(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) string { return item.ModelId })
 	for _, m := range models {
 		if _, ok := supportModels[m]; !ok {
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)

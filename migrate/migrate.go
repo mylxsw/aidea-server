@@ -23,6 +23,8 @@ func Migrate(ctx context.Context, db *sql.DB) error {
 	data.Migrate20240125DML(m)
 	data.Migrate20240131DDL(m)
 	data.Migrate20240221DDL(m)
+	data.Migrate20240307DDL(m)
+	data.Migrate20240315Mix(m)
 
 	return m.Run(ctx)
 }

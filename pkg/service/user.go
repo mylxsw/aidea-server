@@ -3,9 +3,8 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
-	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
@@ -14,9 +13,7 @@ import (
 	"time"
 
 	"github.com/mylxsw/aidea-server/config"
-	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/asteria/log"
-	"github.com/mylxsw/go-utils/array"
 	"github.com/mylxsw/go-utils/must"
 	"github.com/redis/go-redis/v9"
 )
@@ -32,128 +29,6 @@ type UserService struct {
 
 func NewUserService(conf *config.Config, userRepo *repo.UserRepo, roomRepo *repo.RoomRepo, quotaRepo *repo.QuotaRepo, rds *redis.Client, limiter *rate.RateLimiter) *UserService {
 	return &UserService{conf: conf, userRepo: userRepo, roomRepo: roomRepo, quotaRepo: quotaRepo, rds: rds, limiter: limiter}
-}
-
-type FreeChatState struct {
-	coins.ModelWithName
-	LeftCount int `json:"left_count"`
-	MaxCount  int `json:"max_count"`
-}
-
-// FreeChatStatistics 用户免费聊天次数统计
-func (srv *UserService) FreeChatStatistics(ctx context.Context, userID int64) []FreeChatState {
-	return array.Map(coins.FreeModels(), func(item coins.ModelWithName, _ int) FreeChatState {
-		leftCount, maxCount := srv.FreeChatRequestCounts(ctx, userID, item.Model)
-		return FreeChatState{
-			ModelWithName: item,
-			LeftCount:     leftCount,
-			MaxCount:      maxCount,
-		}
-	})
-}
-
-var (
-	ErrorModelNotFree = fmt.Errorf("model is not free")
-)
-
-// FreeChatStatisticsForModel 用户免费聊天次数统计
-func (srv *UserService) FreeChatStatisticsForModel(ctx context.Context, userID int64, model string) (*FreeChatState, error) {
-	realModel := model
-	if srv.conf.VirtualModel.NanxianRel != "" && realModel == chat.ModelNanXian {
-		realModel = srv.conf.VirtualModel.NanxianRel
-	}
-
-	if srv.conf.VirtualModel.BeichouRel != "" && realModel == chat.ModelBeiChou {
-		realModel = srv.conf.VirtualModel.BeichouRel
-	}
-
-	freeModel := coins.GetFreeModel(realModel)
-	if freeModel == nil || freeModel.FreeCount <= 0 {
-		return nil, ErrorModelNotFree
-	}
-
-	// 填充免费模型名称
-	freeModel.Model = model
-
-	leftCount, maxCount := srv.FreeChatRequestCounts(ctx, userID, realModel)
-	return &FreeChatState{
-		ModelWithName: *freeModel,
-		LeftCount:     leftCount,
-		MaxCount:      maxCount,
-	}, nil
-}
-
-func (srv *UserService) freeChatCacheKey(userID int64, model string) string {
-	return fmt.Sprintf("free-chat:uid:%d:model:%s", userID, model)
-}
-
-// FreeChatRequestCounts 免费模型使用次数：每天免费 n 次
-func (srv *UserService) FreeChatRequestCounts(ctx context.Context, userID int64, model string) (leftCount int, maxCount int) {
-	if srv.conf.VirtualModel.NanxianRel != "" && model == chat.ModelNanXian {
-		model = srv.conf.VirtualModel.NanxianRel
-	}
-
-	if srv.conf.VirtualModel.BeichouRel != "" && model == chat.ModelBeiChou {
-		model = srv.conf.VirtualModel.BeichouRel
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-
-	freeModel := coins.GetFreeModel(model)
-	if freeModel != nil && freeModel.FreeCount > 0 {
-		leftCount, maxCount = freeModel.FreeCount, freeModel.FreeCount
-
-		optCount, err := srv.limiter.OperationCount(ctx, srv.freeChatCacheKey(userID, model))
-		if err != nil {
-			log.WithFields(log.Fields{
-				"user_id": userID,
-				"model":   model,
-			}).Errorf("get chat operation count failed: %s", err)
-		}
-
-		leftCount = maxCount - int(optCount)
-		if leftCount < 0 {
-			leftCount = 0
-		}
-
-		return leftCount, maxCount
-	} else {
-		leftCount, maxCount = 0, 0
-	}
-
-	return leftCount, maxCount
-}
-
-// UpdateFreeChatCount 更新免费聊天次数使用情况
-func (srv *UserService) UpdateFreeChatCount(ctx context.Context, userID int64, model string) error {
-	if srv.conf.VirtualModel.NanxianRel != "" && model == chat.ModelNanXian {
-		model = srv.conf.VirtualModel.NanxianRel
-	}
-
-	if srv.conf.VirtualModel.BeichouRel != "" && model == chat.ModelBeiChou {
-		model = srv.conf.VirtualModel.BeichouRel
-	}
-
-	if !coins.IsFreeModel(model) {
-		return nil
-	}
-
-	secondsRemain := misc.TodayRemainTimeSeconds()
-	if err := srv.limiter.OperationIncr(
-		ctx,
-		srv.freeChatCacheKey(userID, model),
-		time.Duration(secondsRemain)*time.Second,
-	); err != nil {
-		log.WithFields(log.Fields{
-			"user_id": userID,
-			"model":   model,
-		}).Errorf("incr chat operation count failed: %s", err)
-
-		return err
-	}
-
-	return nil
 }
 
 // GetUserByID 根据用户ID获取用户信息，带缓存（10分钟）
@@ -222,8 +97,8 @@ func (srv *UserService) UserQuota(ctx context.Context, userID int64) (*UserQuota
 		return nil, fmt.Errorf("get user quota failed: %w", err)
 	}
 
-	freezed, err := srv.rds.Get(ctx, srv.userQuotaFreezedCacheKey(userID)).Int()
-	if err != nil && err != redis.Nil {
+	frozen, err := srv.rds.Get(ctx, srv.userQuotaFreezedCacheKey(userID)).Int()
+	if err != nil && !errors.Is(err, redis.Nil) {
 		log.F(log.M{"user_id": userID, "quota": quota}).Errorf("查询用户冻结的配额失败: %s", err)
 
 		return &UserQuota{Rest: quota.Rest, Quota: quota.Quota, Used: quota.Used}, nil
@@ -233,7 +108,7 @@ func (srv *UserService) UserQuota(ctx context.Context, userID int64) (*UserQuota
 		Rest:    quota.Rest,
 		Quota:   quota.Quota,
 		Used:    quota.Used,
-		Freezed: int64(freezed),
+		Freezed: int64(frozen),
 	}, nil
 }
 
@@ -300,7 +175,7 @@ const (
 	HomeModelTypeRoomEnterprise = "room_enterprise"
 )
 
-func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]chat.Model, userID int64, homeModelUniqueKey string) (*HomeModel, error) {
+func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]repo.Model, userID int64, homeModelUniqueKey string) (*HomeModel, error) {
 	segs := strings.SplitN(homeModelUniqueKey, "|", 2)
 	if len(segs) != 2 {
 		return nil, fmt.Errorf("invalid home model format")
@@ -320,9 +195,9 @@ func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]ch
 		res.ModelID = room.Model
 		res.Prompt = room.Prompt
 		res.AvatarURL = room.AvatarUrl
-		mod, ok := models[room.Vendor+":"+room.Model]
+		mod, ok := models[PureModelID(room.Model)]
 		if ok {
-			res.SupportVision = mod.SupportVision
+			res.SupportVision = mod.Meta.Vision
 			res.ModelName = mod.Name
 		}
 	case HomeModelTypeRooms:
@@ -335,25 +210,21 @@ func (srv *UserService) QueryHomeModel(ctx context.Context, models map[string]ch
 		res.ModelID = room.Model
 		res.Prompt = room.SystemPrompt
 		res.AvatarURL = room.AvatarUrl
-		mod, ok := models[room.Vendor+":"+room.Model]
+		mod, ok := models[PureModelID(room.Model)]
 		if ok {
-			res.SupportVision = mod.SupportVision
+			res.SupportVision = mod.Meta.Vision
 			res.ModelID = room.Model
 		}
 	case HomeModelTypeModel:
-		mod, ok := models[res.ID]
+		mod, ok := models[PureModelID(res.ID)]
 		if !ok {
-			segs := strings.Split(res.ID, ":")
-			mod, ok = models[segs[len(segs)-1]]
-			if !ok {
-				return nil, fmt.Errorf("model not found: %s", res.ID)
-			}
+			return nil, fmt.Errorf("model not found: %s", res.ID)
 		}
 
 		res.Name = mod.ShortName
-		res.ModelID = mod.ID
-		res.SupportVision = mod.SupportVision
-		res.AvatarURL = mod.AvatarURL
+		res.ModelID = mod.ModelId
+		res.SupportVision = mod.Meta.Vision
+		res.AvatarURL = mod.AvatarUrl
 	}
 
 	return &res, nil

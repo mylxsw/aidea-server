@@ -1,8 +1,11 @@
 package controllers
 
 import (
-	"github.com/mylxsw/aidea-server/pkg/ai/chat"
+	"context"
 	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/glacier/infra"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/server/auth"
@@ -12,12 +15,16 @@ import (
 
 // ModelController 模型控制器
 type ModelController struct {
-	conf *config.Config
+	conf *config.Config   `autowire:"@"`
+	svc  *service.Service `autowire:"@"`
 }
 
 // NewModelController 创建模型控制器
-func NewModelController(conf *config.Config) web.Controller {
-	return &ModelController{conf: conf}
+func NewModelController(resolver infra.Resolver) web.Controller {
+	ctl := &ModelController{}
+	resolver.MustAutoWire(ctl)
+
+	return ctl
 }
 
 func (ctl *ModelController) Register(router web.Router) {
@@ -26,46 +33,62 @@ func (ctl *ModelController) Register(router web.Router) {
 	})
 }
 
+type Model struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	ShortName   string `json:"short_name"`
+	Description string `json:"description"`
+	AvatarURL   string `json:"avatar_url,omitempty"`
+	Category    string `json:"category"`
+	IsImage     bool   `json:"is_image"`
+	Disabled    bool   `json:"disabled"`
+	VersionMin  string `json:"version_min,omitempty"`
+	VersionMax  string `json:"version_max,omitempty"`
+	Tag         string `json:"tag,omitempty"`
+
+	IsChat        bool `json:"is_chat"`
+	SupportVision bool `json:"support_vision,omitempty"`
+}
+
 // Models 获取模型列表
-func (ctl *ModelController) Models(ctx web.Context, client *auth.ClientInfo, user *auth.UserOptional) web.Response {
-	if client.Version == "" || misc.VersionNewer(client.Version, "1.0.6") {
-		models := array.Map(chat.Models(ctl.conf, true), func(item chat.Model, _ int) chat.Model {
-			if item.Disabled {
-				return item
-			}
-
-			if client.Version != "" && item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
-				item.Disabled = true
-				return item
-			}
-
-			if client.Version != "" && item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
-				item.Disabled = true
-				return item
-			}
-
-			if client.IsCNLocalMode(ctl.conf) && item.IsSensitiveModel() && (user.User == nil || !user.User.ExtraPermissionUser()) {
-				item.Disabled = true
-				return item
-			}
-
-			return item
-		})
-
-		return ctx.JSON(models)
-	}
-
-	models := array.Filter(chat.Models(ctl.conf, false), func(item chat.Model, _ int) bool {
-		if item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
-			return false
+func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, client *auth.ClientInfo, user *auth.UserOptional) web.Response {
+	models := array.Map(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) Model {
+		ret := Model{
+			ID:            item.ModelId,
+			Name:          item.Name,
+			ShortName:     item.ShortName,
+			Description:   item.Description,
+			AvatarURL:     item.AvatarUrl,
+			Category:      "",
+			IsImage:       false,
+			Disabled:      item.Status == repo.ModelStatusDisabled,
+			VersionMin:    item.VersionMin,
+			VersionMax:    item.VersionMax,
+			IsChat:        true,
+			SupportVision: item.Meta.Vision,
 		}
 
-		if item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
-			return false
+		if ret.Disabled {
+			return ret
 		}
 
-		return !(client.IsCNLocalMode(ctl.conf) && item.IsSensitiveModel() && (user.User == nil || !user.User.ExtraPermissionUser()))
+		if client.Version != "" && item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
+			ret.Disabled = true
+			return ret
+		}
+
+		if client.Version != "" && item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
+			ret.Disabled = true
+			return ret
+		}
+
+		if client.IsCNLocalMode(ctl.conf) && item.Meta.Restricted && (user.User == nil || !user.User.ExtraPermissionUser()) {
+			ret.Disabled = true
+			return ret
+		}
+
+		return ret
 	})
 
-	return ctx.JSON(models)
+	return webCtx.JSON(models)
 }

@@ -14,6 +14,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddDurationFlag("start-delay", 0, "服务启动延迟时间，用于在服务启动前做一些初始化工作，例如 Docker 环境下等待初始化数据库等")
 
 	ins.AddStringFlag("base-url", "", "Web 服务的基础 URL，例如 https://web.aicode.cc")
+	ins.AddBoolFlag("production", "是否为生产环境，生产环境下只有正式的支付渠道可用")
 	ins.AddStringFlag("socks5-proxy", "", "socks5 proxy")
 	ins.AddStringFlag("proxy-url", "", "HTTP 代理放置，支持 http、https、socks5，代理类型由 URL schema 决定，如果 scheme 为空，则默认为 http")
 	ins.AddStringFlag("db-uri", "root:12345@tcp(127.0.0.1:3306)/aiserver?charset=utf8mb4&parseTime=True&loc=Local", "database url")
@@ -25,6 +26,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("enable-api-keys", "是否启用 API Keys 功能")
 	ins.AddBoolFlag("enable-model-rate-limit", "是否启用模型请求频率限制，当前限制只支持每分钟 5 次/用户")
 	ins.AddStringFlag("universal-link-config", "", "universal link 配置文件路径，留空则使用默认的 universal link，配置文件格式参考 https://developer.apple.com/documentation/xcode/supporting-associated-domains")
+	ins.AddBoolFlag("should-bind-phone", "是否需要绑定手机号码")
 
 	ins.AddStringFlag("redis-host", "127.0.0.1", "redis host")
 	ins.AddIntFlag("redis-port", 6379, "redis port")
@@ -104,7 +106,6 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("enable-moonshot", "是否启用月之暗面")
 	ins.AddStringFlag("moonshot-apikey", "", "月之暗面 API Key")
 
-	ins.AddStringSliceFlag("oneapi-support-models", []string{}, "one-server 支持的模型，可选项 chatglm_turbo, chatglm_pro, chatglm_std, chatglm_lite, PaLM-2")
 	ins.AddBoolFlag("enable-oneapi", "是否启用 OneAPI")
 	ins.AddStringFlag("oneapi-server", "", "one-server server")
 	ins.AddStringFlag("oneapi-key", "", "one-server key")
@@ -213,13 +214,6 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("img2img-recognition-provider", "", "图生图图像识别处理模型，用于识别图像内容，生成图生图的提示语，目前支持 xfyun，留空则表示不启用")
 
-	ins.AddBoolFlag("enable-virtual-model", "是否启用虚拟模型")
-	ins.AddStringFlag("virtual-model-implementation", "openai", "虚拟模型实现厂商")
-	ins.AddStringFlag("virtual-model-nanxian-rel", "gpt-3.5-turbo", "南贤大模型实现")
-	ins.AddStringFlag("virtual-model-nanxian-prompt", "", "南贤大模型内置提示语")
-	ins.AddStringFlag("virtual-model-beichou-rel", "gpt-4", "北丑大模型实现")
-	ins.AddStringFlag("virtual-model-beichou-prompt", "", "北丑大模型内置提示语")
-
 	ins.AddStringFlag("price-table-file", "", "价格表文件路径，留空则使用默认价格表")
 
 	ins.AddStringFlag("font-path", "", "字体文件路径")
@@ -232,4 +226,12 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("wechat-appid", "", "微信开放平台 APP ID")
 	ins.AddStringFlag("wechat-secret", "", "微信开放平台 APP Secret")
+
+	ins.AddBoolFlag("enable-stripe", "是否启用 stripe 支付")
+	ins.AddStringFlag("stripe-publishable-key", "", "stripe publishable key")
+	ins.AddStringFlag("stripe-secret-key", "", "stripe secret key")
+	ins.AddStringFlag("stripe-webhook-secret", "", "stripe webhook secret")
+
+	ins.AddStringSliceFlag("default-home-models", []string{"gpt-3.5-turbo", "gpt-4"}, "默认的首页模型，值取自数据表 models.model_id")
+	ins.AddStringSliceFlag("default-home-models-ios", []string{"chat-3.5", "chat-4"}, "默认的首页模型（IOS），值取自数据表 models.model_id")
 }

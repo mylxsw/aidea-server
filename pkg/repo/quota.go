@@ -145,8 +145,12 @@ func (repo *QuotaRepo) GetUserQuota(ctx context.Context, userID int64) (*QuotaSu
 }
 
 type QuotaUsedMeta struct {
-	Models []string `json:"models"`
-	Tag    string   `json:"tag"`
+	Models      []string `json:"models"`
+	Tag         string   `json:"tag"`
+	InputToken  int      `json:"input_token,omitempty"`
+	OutputToken int      `json:"output_token,omitempty"`
+	InputPrice  float64  `json:"input_price,omitempty"`
+	OutputPrice float64  `json:"output_price,omitempty"`
 }
 
 func NewQuotaUsedMeta(tag string, models ...string) QuotaUsedMeta {
