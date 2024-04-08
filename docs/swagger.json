@@ -1,0 +1,1688 @@
+{
+    "schemes": [
+        "http"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "AIdea API",
+        "title": "AIdea API",
+        "contact": {
+            "name": "mylxsw",
+            "url": "https://ai.aicode.cc",
+            "email": "mylxsw@aicode.cc"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "paths": {
+        "/v1/admin/channel-types": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Channel"
+                ],
+                "summary": "Return the list of all channel types.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataArray-service_ChannelType"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/channels": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Channel"
+                ],
+                "summary": "Return the list of all channels.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataArray-admin_Channel"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Channel"
+                ],
+                "summary": "Add channel",
+                "parameters": [
+                    {
+                        "description": "Channel Add Request",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/repo.ChannelAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.IDResponse-int64"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/channels/{channel_id}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Channel"
+                ],
+                "summary": "Return detailed information for the specified channel.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataObj-admin_Channel"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Channel"
+                ],
+                "summary": "Update channel information",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Channel Update Request",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/repo.ChannelUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Channel"
+                ],
+                "summary": "Delete channel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel ID",
+                        "name": "channel_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/creative-island/histories/{id}/forbid": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:CreativeIsland"
+                ],
+                "summary": "Violation of the Creation Island historical records ban",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "History ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/free-models/daily": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:FreeModels"
+                ],
+                "summary": "Return all the free model listings.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataArray-model_ModelsDailyFree"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:FreeModels"
+                ],
+                "summary": "add free model",
+                "parameters": [
+                    {
+                        "description": "Model information",
+                        "name": "model",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/coins.ModelWithName"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/free-models/daily/{model_id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:FreeModels"
+                ],
+                "summary": "Return the specified free model information.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Model ID",
+                        "name": "model_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataObj-model_ModelsDailyFree"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:FreeModels"
+                ],
+                "summary": "Update free models",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Model ID",
+                        "name": "model_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Model information",
+                        "name": "model",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/coins.ModelWithName"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:FreeModels"
+                ],
+                "summary": "Delete free model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Model ID",
+                        "name": "model_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/messages/{user_id}/rooms": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Messages"
+                ],
+                "summary": "Get a list of all chat rooms for the specified user.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataArray-repo_Room"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/messages/{user_id}/rooms/{room_id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Messages"
+                ],
+                "summary": "Get the specified chat room information for the specified user.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Room ID",
+                        "name": "room_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataObj-repo_Room"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/messages/{user_id}/rooms/{room_id}/messages": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Messages"
+                ],
+                "summary": "Get the latest 200 messages in the specified chat room for the specified user.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Room ID",
+                        "name": "room_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataArray-model_ChatMessages"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/models": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Models"
+                ],
+                "summary": "Return the list of all models.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Sort fields, support id:desc",
+                        "name": "sort",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataArray-repo_Model"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Models"
+                ],
+                "summary": "Add model",
+                "parameters": [
+                    {
+                        "description": "Model information",
+                        "name": "model",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/repo.ModelAddReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.IDResponse-int64"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/models/{model_id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Models"
+                ],
+                "summary": "Retrieve detailed information for the specified model.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Model ID",
+                        "name": "model_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataObj-repo_Model"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Models"
+                ],
+                "summary": "update model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Model ID",
+                        "name": "model_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Model information",
+                        "name": "model",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/repo.ModelUpdateReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Models"
+                ],
+                "summary": "delete model",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Model ID",
+                        "name": "model_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/payments/histories": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Payment"
+                ],
+                "summary": "View all payment history records",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Per Page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Keyword",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.Pagination-model_PaymentHistory"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/quotas/assign": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Quotas"
+                ],
+                "summary": "Assign smart fruits to users",
+                "parameters": [
+                    {
+                        "description": "AssignQuotaReq",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/admin.AssignQuotaReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/quotas/users/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Quotas"
+                ],
+                "summary": "User Smart Fruit Details",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/admin.UserQuotaResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/settings": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Settings"
+                ],
+                "summary": "Get all configuration items.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataArray-model_Setting"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/settings/key/{key}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Settings"
+                ],
+                "summary": "Get the specified configuration item.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Configuration item key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataObj-model_Setting"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/settings/key/{key}/reload": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Settings"
+                ],
+                "summary": "Reload the specified configuration item.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Configuration item key",
+                        "name": "key",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/settings/reload": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Settings"
+                ],
+                "summary": "Reload all configuration items.",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.EmptyResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/users": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:User"
+                ],
+                "summary": "Return the list of all users",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Per Page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Support searching by phone number, name, and email (prefix fuzzy matching)",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.Pagination-admin_UserResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/admin/users/{id}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:User"
+                ],
+                "summary": "User details",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataObj-admin_UserResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "admin.AssignQuotaReq": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "description": "Note 备注",
+                    "type": "string"
+                },
+                "quota": {
+                    "description": "Quota 分配智慧果数量",
+                    "type": "integer"
+                },
+                "user_id": {
+                    "description": "UserID 用户 ID",
+                    "type": "integer"
+                },
+                "valid_period": {
+                    "description": "ValidPeriod 有效期，单位小时",
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.Channel": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "meta": {
+                    "$ref": "#/definitions/repo.ChannelMeta"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "server": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "admin.UserQuotaResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "description": "Details Smart Fruit User Details",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/repo.Quota"
+                    }
+                },
+                "total": {
+                    "description": "Total remaining Smart Fruit",
+                    "type": "integer"
+                }
+            }
+        },
+        "admin.UserResponse": {
+            "type": "object",
+            "properties": {
+                "apple_uid": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "invite_by": {
+                    "type": "integer"
+                },
+                "invite_code": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "prefer_signin_method": {
+                    "type": "string"
+                },
+                "realname": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "union_id": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "user_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "coins.ModelWithName": {
+            "type": "object",
+            "properties": {
+                "end_at": {
+                    "type": "string"
+                },
+                "free_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "info": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "non_cn": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "common.DataArray-admin_Channel": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.Channel"
+                    }
+                }
+            }
+        },
+        "common.DataArray-model_ChatMessages": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ChatMessages"
+                    }
+                }
+            }
+        },
+        "common.DataArray-model_ModelsDailyFree": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ModelsDailyFree"
+                    }
+                }
+            }
+        },
+        "common.DataArray-model_Setting": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Setting"
+                    }
+                }
+            }
+        },
+        "common.DataArray-repo_Model": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/repo.Model"
+                    }
+                }
+            }
+        },
+        "common.DataArray-repo_Room": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/repo.Room"
+                    }
+                }
+            }
+        },
+        "common.DataArray-service_ChannelType": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/service.ChannelType"
+                    }
+                }
+            }
+        },
+        "common.DataObj-admin_Channel": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/admin.Channel"
+                }
+            }
+        },
+        "common.DataObj-admin_UserResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/admin.UserResponse"
+                }
+            }
+        },
+        "common.DataObj-model_ModelsDailyFree": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/model.ModelsDailyFree"
+                }
+            }
+        },
+        "common.DataObj-model_Setting": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/model.Setting"
+                }
+            }
+        },
+        "common.DataObj-repo_Model": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/repo.Model"
+                }
+            }
+        },
+        "common.DataObj-repo_Room": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/repo.Room"
+                }
+            }
+        },
+        "common.EmptyResponse": {
+            "type": "object"
+        },
+        "common.IDResponse-int64": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "common.Pagination-admin_UserResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.UserResponse"
+                    }
+                },
+                "last_page": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "common.Pagination-model_PaymentHistory": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.PaymentHistory"
+                    }
+                },
+                "last_page": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ChatMessages": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "pid": {
+                    "type": "integer"
+                },
+                "quota_consumed": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "integer"
+                },
+                "room_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "token_consumed": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ModelsDailyFree": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "end_at": {
+                    "type": "string"
+                },
+                "free_count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "info": {
+                    "type": "string"
+                },
+                "model_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.PaymentHistory": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "environment": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "payment_id": {
+                    "type": "string"
+                },
+                "purchase_at": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "retail_price": {
+                    "type": "integer"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "source_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "valid_until": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Setting": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "repo.ChannelAddReq": {
+            "type": "object",
+            "properties": {
+                "meta": {
+                    "$ref": "#/definitions/repo.ChannelMeta"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "server": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "repo.ChannelMeta": {
+            "type": "object",
+            "properties": {
+                "openai_azure": {
+                    "description": "OpenAIAzure 是否使用 OpenAI 的 Azure 服务",
+                    "type": "boolean"
+                },
+                "openai_azure_api_version": {
+                    "description": "OpenAIAzureAPIVersion OpenAI Azure API 版本",
+                    "type": "string"
+                },
+                "using_proxy": {
+                    "description": "UsingProxy 是否使用系统代理",
+                    "type": "boolean"
+                }
+            }
+        },
+        "repo.ChannelUpdateReq": {
+            "type": "object",
+            "properties": {
+                "meta": {
+                    "$ref": "#/definitions/repo.ChannelMeta"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "server": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "repo.Model": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "deletedAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "meta": {
+                    "$ref": "#/definitions/repo.ModelMeta"
+                },
+                "model_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "providers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/repo.ModelProvider"
+                    }
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "version_max": {
+                    "type": "string"
+                },
+                "version_min": {
+                    "type": "string"
+                }
+            }
+        },
+        "repo.ModelAddReq": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/repo.ModelMeta"
+                },
+                "model_id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "providers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/repo.ModelProvider"
+                    }
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "repo.ModelMeta": {
+            "type": "object",
+            "properties": {
+                "input_price": {
+                    "description": "InputPrice 输入 Token 价格（智慧果/1K Token），为空则与 OutputPrice 相同",
+                    "type": "integer"
+                },
+                "max_context": {
+                    "description": "MaxContext 最大上下文长度",
+                    "type": "integer"
+                },
+                "output_price": {
+                    "description": "OutputPrice 输出 Token 价格（智慧果/1K Token）",
+                    "type": "integer"
+                },
+                "prompt": {
+                    "description": "Prompt 全局的系统提示语",
+                    "type": "string"
+                },
+                "restricted": {
+                    "description": "Restricted 是否是受限制的模型",
+                    "type": "boolean"
+                },
+                "vision": {
+                    "description": "Vision 是否支持视觉能力",
+                    "type": "boolean"
+                }
+            }
+        },
+        "repo.ModelProvider": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "模型供应商 ID 优先从 channels 中查询模型供应商，不设置则根据 name 直接读取配置文件中固定的供应商配置",
+                    "type": "integer"
+                },
+                "model_rewrite": {
+                    "description": "ModelRewrite 模型名称重写，如果为空，则使用模型的名称",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Name 供应商名称",
+                    "type": "string"
+                }
+            }
+        },
+        "repo.ModelUpdateReq": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/repo.ModelMeta"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "providers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/repo.ModelProvider"
+                    }
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "version_max": {
+                    "type": "string"
+                },
+                "version_min": {
+                    "type": "string"
+                }
+            }
+        },
+        "repo.Quota": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expired": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "payment_id": {
+                    "type": "string"
+                },
+                "period_end_at": {
+                    "type": "string"
+                },
+                "period_start_at": {
+                    "type": "string"
+                },
+                "quota": {
+                    "type": "integer"
+                },
+                "rest": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "repo.Room": {
+            "type": "object",
+            "properties": {
+                "avatar_id": {
+                    "type": "integer"
+                },
+                "avatar_url": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "init_message": {
+                    "type": "string"
+                },
+                "last_active_time": {
+                    "type": "string"
+                },
+                "max_context": {
+                    "type": "integer"
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "model": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "room_type": {
+                    "type": "integer"
+                },
+                "system_prompt": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "vendor": {
+                    "type": "string"
+                }
+            }
+        },
+        "service.ChannelType": {
+            "type": "object",
+            "properties": {
+                "display": {
+                    "type": "string"
+                },
+                "dynamic": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

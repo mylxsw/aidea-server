@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/eloquent/query"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
@@ -28,6 +29,15 @@ func (ctl *PaymentController) Register(router web.Router) {
 }
 
 // Histories View all payment history records
+// @Summary View all payment history records
+// @Tags Admin:Payment
+// @Accept json
+// @Produce json
+// @Param page query integer false "Page" default(1)
+// @Param per_page query integer false "Per Page" default(20)
+// @Param keyword query string false "Keyword"
+// @Success 200 {object} common.Pagination[model.PaymentHistory]
+// @Router /v1/admin/payments/histories [get]
 func (ctl *PaymentController) Histories(ctx context.Context, webCtx web.Context) web.Response {
 	page := webCtx.Int64Input("page", 1)
 	if page < 1 || page > 1000 {
@@ -64,11 +74,5 @@ func (ctl *PaymentController) Histories(ctx context.Context, webCtx web.Context)
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(web.M{
-		"data":      items,
-		"page":      meta.Page,
-		"per_page":  meta.PerPage,
-		"total":     meta.Total,
-		"last_page": meta.LastPage,
-	})
+	return webCtx.JSON(common.NewPagination(items, meta))
 }

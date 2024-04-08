@@ -9,6 +9,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/token"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
+	httpSwagger "github.com/swaggo/http-swagger"
 	"net/http"
 	"runtime/debug"
 	"strconv"
@@ -331,6 +332,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		admin.NewUserController(resolver),
 		admin.NewSettingController(resolver),
 		admin.NewPaymentController(resolver),
+		admin.NewMessageController(resolver),
 	)
 
 	// 公开访问信息
@@ -358,6 +360,7 @@ func muxRoutes(resolver infra.Resolver, router *mux.Router) {
 
 			writer.Write([]byte(data))
 		})
+		router.PathPrefix("/swagger/").Handler(httpSwagger.Handler())
 	})
 }
 

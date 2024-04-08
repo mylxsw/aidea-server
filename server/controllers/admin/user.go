@@ -6,6 +6,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/dingding"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/eloquent/query"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
@@ -54,10 +55,16 @@ func NewAdminUser(user model.Users) UserResponse {
 	return ret
 }
 
-// Users 用户列表
-// - page: 页码，默认为 1
-// - per_page: 每页显示数量，默认为 20
-// - account: 账号搜索，支持手机号、姓名、邮箱搜索（前缀模糊匹配）
+// Users return the list of all users
+// @Summary Return the list of all users
+// @Tags Admin:User
+// @Accept json
+// @Produce json
+// @Param page query integer false "Page" default(1)
+// @Param per_page query integer false "Per Page" default(20)
+// @Param keyword query string false "Support searching by phone number, name, and email (prefix fuzzy matching)"
+// @Success 200 {object} common.Pagination[UserResponse]
+// @Router /v1/admin/users [get]
 func (ctl *UserController) Users(ctx context.Context, webCtx web.Context) web.Response {
 	page := webCtx.Int64Input("page", 1)
 	if page < 1 || page > 1000 {
@@ -93,16 +100,17 @@ func (ctl *UserController) Users(ctx context.Context, webCtx web.Context) web.Re
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(web.M{
-		"data":      array.Map(items, func(item model.Users, _ int) UserResponse { return NewAdminUser(item) }),
-		"page":      meta.Page,
-		"per_page":  meta.PerPage,
-		"total":     meta.Total,
-		"last_page": meta.LastPage,
-	})
+	return webCtx.JSON(common.NewPagination(array.Map(items, func(item model.Users, _ int) UserResponse { return NewAdminUser(item) }), meta))
 }
 
-// User 用户详情
+// User details
+// @Summary User details
+// @Tags Admin:User
+// @Accept json
+// @Produce json
+// @Param id path integer true "User ID"
+// @Success 200 {object} common.DataObj[UserResponse]
+// @Router /v1/admin/users/{id} [get]
 func (ctl *UserController) User(ctx context.Context, webCtx web.Context) web.Response {
 	userId, err := strconv.Atoi(webCtx.PathVar("id"))
 	if err != nil {
@@ -117,5 +125,5 @@ func (ctl *UserController) User(ctx context.Context, webCtx web.Context) web.Res
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(web.M{"data": NewAdminUser(*user)})
+	return webCtx.JSON(common.NewDataObj(NewAdminUser(*user)))
 }

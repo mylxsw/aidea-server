@@ -39,7 +39,14 @@ func (ctl *CreativeIslandController) Register(router web.Router) {
 	})
 }
 
-// ForbidCreativeHistory 违规创作岛历史纪录封禁
+// ForbidCreativeHistory Violation of the Creation Island historical records ban
+// @Summary Violation of the Creation Island historical records ban
+// @Tags Admin:CreativeIsland
+// @Accept json
+// @Produce json
+// @Param id path integer true "History ID"
+// @Success 200 {object} common.EmptyResponse
+// @Router /v1/admin/creative-island/histories/{id}/forbid [put]
 func (ctl *CreativeIslandController) ForbidCreativeHistory(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	historyID, err := strconv.Atoi(webCtx.PathVar("id"))
 	if err != nil {
