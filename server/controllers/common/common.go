@@ -35,7 +35,7 @@ func Text(webCtx web.Context, translater youdao.Translater, text string) string 
 }
 
 type DataObj[T any] struct {
-	Data T `json:"data,omitempty"`
+	Data T `json:"data"`
 }
 
 func NewDataObj[T any](data T) DataObj[T] {
@@ -43,7 +43,7 @@ func NewDataObj[T any](data T) DataObj[T] {
 }
 
 type DataArray[T any] struct {
-	Data []T `json:"data,omitempty"`
+	Data []T `json:"data"`
 }
 
 func NewDataArray[T any](data []T) DataArray[T] {
@@ -51,7 +51,7 @@ func NewDataArray[T any](data []T) DataArray[T] {
 }
 
 type IDResponse[T any] struct {
-	ID T `json:"id,omitempty"`
+	ID T `json:"id"`
 }
 
 func NewIDResponse[T any](id T) IDResponse[T] {

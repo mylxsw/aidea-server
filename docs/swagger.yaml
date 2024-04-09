@@ -37,6 +37,41 @@ definitions:
       updatedAt:
         type: string
     type: object
+  admin.ChatGroupMessage:
+    properties:
+      createdAt:
+        type: string
+      error:
+        type: string
+      group_id:
+        type: integer
+      id:
+        type: integer
+      member_id:
+        type: integer
+      message:
+        type: string
+      model:
+        type: string
+      model_name:
+        type: string
+      pid:
+        type: integer
+      quota_consumed:
+        type: integer
+      role:
+        type: integer
+      status:
+        type: integer
+      token_consumed:
+        type: integer
+      type:
+        type: string
+      updatedAt:
+        type: string
+      user_id:
+        type: integer
+    type: object
   admin.UserQuotaResponse:
     properties:
       details:
@@ -101,6 +136,13 @@ definitions:
       data:
         items:
           $ref: '#/definitions/admin.Channel'
+        type: array
+    type: object
+  common.DataArray-admin_ChatGroupMessage:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/admin.ChatGroupMessage'
         type: array
     type: object
   common.DataArray-model_ChatMessages:
@@ -187,6 +229,21 @@ definitions:
       data:
         items:
           $ref: '#/definitions/admin.UserResponse'
+        type: array
+      last_page:
+        type: integer
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  common.Pagination-model_ChatMessages:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.ChatMessages'
         type: array
       last_page:
         type: integer
@@ -796,6 +853,30 @@ paths:
       summary: Get the specified chat room information for the specified user.
       tags:
       - Admin:Messages
+  /v1/admin/messages/{user_id}/rooms/{room_id}/group-messages:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Room ID
+        in: path
+        name: room_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-admin_ChatGroupMessage'
+      summary: Get the latest 200 messages in the specified group chat room for the
+        specified user.
+      tags:
+      - Admin:Messages
   /v1/admin/messages/{user_id}/rooms/{room_id}/messages:
     get:
       parameters:
@@ -985,6 +1066,33 @@ paths:
       summary: User Smart Fruit Details
       tags:
       - Admin:Quotas
+  /v1/admin/recent-messages:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Number of items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Support searching by message content and model name (fuzzy matching)
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Pagination-model_ChatMessages'
+      summary: Get the latest 20 messages.
+      tags:
+      - Admin:Messages
   /v1/admin/settings:
     get:
       produces:

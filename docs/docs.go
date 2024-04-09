@@ -425,6 +425,41 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/admin/messages/{user_id}/rooms/{room_id}/group-messages": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Messages"
+                ],
+                "summary": "Get the latest 200 messages in the specified group chat room for the specified user.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Room ID",
+                        "name": "room_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataArray-admin_ChatGroupMessage"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/admin/messages/{user_id}/rooms/{room_id}/messages": {
             "get": {
                 "produces": [
@@ -715,6 +750,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/admin/recent-messages": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin:Messages"
+                ],
+                "summary": "Get the latest 20 messages.",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Number of items per page",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Support searching by message content and model name (fuzzy matching)",
+                        "name": "keyword",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.Pagination-model_ChatMessages"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/admin/settings": {
             "get": {
                 "produces": [
@@ -942,6 +1018,59 @@ const docTemplate = `{
                 }
             }
         },
+        "admin.ChatGroupMessage": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "group_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "member_id": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "pid": {
+                    "type": "integer"
+                },
+                "quota_consumed": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "integer"
+                },
+                "token_consumed": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "admin.UserQuotaResponse": {
             "type": "object",
             "properties": {
@@ -1038,6 +1167,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/admin.Channel"
+                    }
+                }
+            }
+        },
+        "common.DataArray-admin_ChatGroupMessage": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/admin.ChatGroupMessage"
                     }
                 }
             }
@@ -1174,6 +1314,29 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/admin.UserResponse"
+                    }
+                },
+                "last_page": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "common.Pagination-model_ChatMessages": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ChatMessages"
                     }
                 },
                 "last_page": {

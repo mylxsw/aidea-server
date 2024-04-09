@@ -119,11 +119,17 @@ func (r *MessageRepo) UpdateMessageStatus(ctx context.Context, id int64, req Mes
 
 func (r *MessageRepo) RecentlyMessages(ctx context.Context, userID, roomID int64, offset, limit int64) ([]model.ChatMessages, error) {
 	q := query.Builder().
-		Where(model.FieldChatMessagesUserId, userID).
-		Where(model.FieldChatMessagesRoomId, roomID).
 		OrderBy(model.FieldChatMessagesId, "DESC").
 		Offset(offset).
 		Limit(limit)
+
+	if userID > 0 {
+		q = q.Where(model.FieldChatMessagesUserId, userID)
+	}
+
+	if roomID > 0 {
+		q = q.Where(model.FieldChatMessagesRoomId, roomID)
+	}
 
 	messages, err := model.NewChatMessagesModel(r.db).Get(ctx, q)
 	if err != nil {
@@ -131,4 +137,20 @@ func (r *MessageRepo) RecentlyMessages(ctx context.Context, userID, roomID int64
 	}
 
 	return array.Map(messages, func(m model.ChatMessagesN, _ int) model.ChatMessages { return m.ToChatMessages() }), nil
+}
+
+func (r *MessageRepo) Messages(ctx context.Context, page, perPage int64, options ...QueryOption) ([]model.ChatMessages, query.PaginateMeta, error) {
+	q := query.Builder().OrderBy(model.FieldChatMessagesId, "DESC")
+	for _, opt := range options {
+		q = opt(q)
+	}
+
+	messages, meta, err := model.NewChatMessagesModel(r.db).Paginate(ctx, page, perPage, q)
+	if err != nil {
+		return nil, query.PaginateMeta{}, err
+	}
+
+	return array.Map(messages, func(item model.ChatMessagesN, _ int) model.ChatMessages {
+		return item.ToChatMessages()
+	}), meta, nil
 }

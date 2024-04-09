@@ -105,6 +105,22 @@ func (repo *ChatGroupRepo) UpdateGroup(ctx context.Context, groupID int64, userI
 	})
 }
 
+// GetMembers 查询成员
+func (repo *ChatGroupRepo) GetMembers(ctx context.Context, memberIds []int64) ([]Member, error) {
+	members, err := model2.NewChatGroupMemberModel(repo.db).Get(ctx, query.Builder().WhereIn(model2.FieldChatGroupMemberId, memberIds))
+	if err != nil {
+		return nil, err
+	}
+
+	return array.Map(members, func(m model2.ChatGroupMemberN, _ int) Member {
+		return Member{
+			ID:        int(m.Id.ValueOrZero()),
+			ModelID:   m.ModelId.ValueOrZero(),
+			ModelName: m.ModelName.ValueOrZero(),
+		}
+	}), nil
+}
+
 // UpdateGroupMembers 更新群组成员
 func (repo *ChatGroupRepo) UpdateGroupMembers(ctx context.Context, groupID int64, userID int64, members []Member) error {
 	return eloquent.Transaction(repo.db, func(tx query.Database) error {
