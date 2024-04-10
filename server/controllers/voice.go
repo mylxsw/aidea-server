@@ -6,7 +6,6 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/voice"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
-	oai "github.com/sashabaranov/go-openai"
 	"net/http"
 	"strings"
 	"sync"
@@ -46,13 +45,13 @@ func (ctl *VoiceController) Text2Voice(ctx context.Context, webCtx web.Context, 
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "语音文本不能为空"), http.StatusBadRequest)
 	}
 
-	voiceType := oai.SpeechVoice(webCtx.InputWithDefault("voice", string(oai.VoiceNova)))
+	voiceType := voice.Type(webCtx.InputWithDefault("voice", string(voice.TypeFemale1)))
 
-	segments := misc.TextSplit(text, 4096)
+	segments := misc.TextSplit(text, 500000)
 	// 优先检查缓存中是否存在之前生成的结果，每一段全部符合则返回，不再扣费
 	cachedResults := array.Filter(
 		array.Map(segments, func(segment string, _ int) string {
-			res, _ := ctl.voice.Text2VoiceOnlyCached(ctx, voiceType, segment)
+			res, _ := ctl.voice.Text2VoiceOnlyCached(ctx, segment, voiceType)
 			return res
 		}),
 		func(result string, _ int) bool { return result != "" },
@@ -84,7 +83,7 @@ func (ctl *VoiceController) Text2Voice(ctx context.Context, webCtx web.Context, 
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
 
-			result, err := ctl.voice.Text2VoiceCached(ctx, voiceType, segment)
+			result, err := ctl.voice.Text2VoiceCached(ctx, segment, voiceType)
 			if err != nil {
 				log.Errorf("text to voice failed: %s", err)
 				return

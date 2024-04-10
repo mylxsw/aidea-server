@@ -28,6 +28,8 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("universal-link-config", "", "universal link 配置文件路径，留空则使用默认的 universal link，配置文件格式参考 https://developer.apple.com/documentation/xcode/supporting-associated-domains")
 	ins.AddBoolFlag("should-bind-phone", "是否需要绑定手机号码")
 
+	ins.AddStringFlag("temp-dir", "/tmp", "临时文件存储目录")
+
 	ins.AddStringFlag("redis-host", "127.0.0.1", "redis host")
 	ins.AddIntFlag("redis-port", 6379, "redis port")
 	ins.AddStringFlag("redis-password", "", "redis password")
@@ -239,4 +241,11 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringSliceFlag("default-home-models", []string{"gpt-3.5-turbo", "gpt-4"}, "默认的首页模型，值取自数据表 models.model_id")
 	ins.AddStringSliceFlag("default-home-models-ios", []string{"chat-3.5", "chat-4"}, "默认的首页模型（IOS），值取自数据表 models.model_id")
+
+	ins.AddStringFlag("text-to-voice-engine", "openai", "文本转语音引擎，支持 minimax/openai/azure")
+	ins.AddStringFlag("text-to-voice-azure-region", "eastus", "Azure 语音服务区域")
+	ins.AddStringFlag("text-to-voice-azure-key", "", "Azure 语音服务 Key")
+
+	ins.AddStringFlag("minimax-api-key", "", "Minimax API Key")
+	ins.AddStringFlag("minimax-group-id", "", "Minimax Group ID")
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -174,6 +175,16 @@ func (u *Uploader) uploadRemoteFile(ctx context.Context, url string, uid int, ex
 	}
 
 	return u.UploadStream(ctx, uid, expiredAfterDays, data, ext)
+}
+
+// UploadFile 上传文件
+func (u *Uploader) UploadFile(ctx context.Context, uid int, expiredAfterDays int, filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("read file failed: %w", err)
+	}
+
+	return u.UploadStream(ctx, uid, expiredAfterDays, data, misc.FileExt(filePath))
 }
 
 // UploadStream 上传文件流
