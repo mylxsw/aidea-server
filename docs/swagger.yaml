@@ -269,6 +269,38 @@ definitions:
       total:
         type: integer
     type: object
+  controllers.WechatPayCreateResponse:
+    properties:
+      app_id:
+        description: APPID APP 支付专用，移动应用AppID
+        type: string
+      code_url:
+        description: CodeURL Web、PC 支付专用，二维码地址
+        type: string
+      noncestr:
+        description: Noncestr APP 支付专用，随机字符串，不长于32位。推荐随机数生成算法
+        type: string
+      package:
+        description: Package APP 支付专用，固定值Sign=WXPay
+        type: string
+      partner_id:
+        description: PartnerID APP 支付专用，商户号mchid对应的值
+        type: string
+      payment_id:
+        type: string
+      prepay_id:
+        description: PrepayID APP 支付专用，微信返回的支付交易会话ID，该值有效期为2小时。
+        type: string
+      sandbox:
+        type: boolean
+      sign:
+        description: Sign APP 支付专用，签名，使用字段AppID、timeStamp、nonceStr、prepayid计算得出的签名值
+          注意：取值RSA格式
+        type: string
+      timestamp:
+        description: Timestamp APP 支付专用，时间戳 秒级
+        type: string
+    type: object
   model.ChatMessages:
     properties:
       createdAt:
@@ -1203,6 +1235,44 @@ paths:
       summary: User details
       tags:
       - Admin:User
+  /v1/payment/callback/wechat-pay/notify:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      summary: Wechat Pay result notification
+      tags:
+      - payment
+  /v1/payment/wechatpay:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: product id
+        in: query
+        name: product_id
+        required: true
+        type: string
+      - description: source
+        enum:
+        - app
+        - web
+        - pc
+        in: query
+        name: source
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.WechatPayCreateResponse'
+      summary: create wechat payment
+      tags:
+      - payment
 schemes:
 - http
 securityDefinitions:

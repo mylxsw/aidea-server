@@ -229,7 +229,7 @@ func (repo *PaymentRepo) CompleteStripePayment(ctx context.Context, userId int64
 		}
 
 		if _, err := model.NewStripeHistoryModel(tx).Update(ctx, q, stripeHistory); err != nil {
-			return fmt.Errorf("update apple pay history failed: %w", err)
+			return fmt.Errorf("update stripe history failed: %w", err)
 		}
 
 		if pay.Status == PaymentStatusSuccess {
@@ -303,7 +303,7 @@ func (repo *PaymentRepo) CompleteAliPayment(ctx context.Context, userId int64, p
 			PurchaseAt:     null.TimeFrom(pay.PurchaseAt),
 			Note:           ternary.If(pay.Note != "", null.StringFrom(pay.Note), null.NewString("", false)),
 		}); err != nil {
-			return fmt.Errorf("update apple pay history failed: %w", err)
+			return fmt.Errorf("update alipay history failed: %w", err)
 		}
 
 		if pay.Status == PaymentStatusSuccess {
@@ -511,9 +511,129 @@ func (repo *PaymentRepo) GetPaymentHistories(ctx context.Context, page, perPage 
 			res.Source = "Stripe-Web"
 		case "stripe-app":
 			res.Source = "Stripe-App"
+		case "wechat-pay":
+			res.Source = "微信支付"
+		case "wechat-pay-pc":
+			res.Source = "微信支付-PC"
+		case "wechat-pay-web":
+			res.Source = "微信支付-Web"
+		case "wechat-pay-app":
+			res.Source = "微信支付-App"
 		default:
 
 		}
 		return res
 	}), meta, nil
+}
+
+func (repo *PaymentRepo) CreateWechatPayment(ctx context.Context, userID int64, productID string, source string) (string, error) {
+	product := coins.GetProduct(productID)
+	if product == nil {
+		return "", fmt.Errorf("product %s not found", productID)
+	}
+
+	paymentID := misc.PaymentID(userID)
+	err := eloquent.Transaction(repo.db, func(tx query.Database) error {
+		if _, err := model.NewPaymentHistoryModel(tx).Create(ctx, query.KV{
+			model.FieldPaymentHistoryPaymentId:   paymentID,
+			model.FieldPaymentHistoryUserId:      userID,
+			model.FieldPaymentHistorySource:      "wechat-pay-" + source,
+			model.FieldPaymentHistoryStatus:      PaymentStatusWaiting,
+			model.FieldPaymentHistoryRetailPrice: product.RetailPrice,
+			model.FieldPaymentHistoryQuantity:    product.Quota,
+			model.FieldPaymentHistoryValidUntil:  product.ExpiredAt(),
+		}); err != nil {
+			return fmt.Errorf("create payment history failed: %w", err)
+		}
+
+		if _, err := model.NewWechatPayHistoryModel(tx).Create(ctx, query.KV{
+			model.FieldWechatPayHistoryPaymentId: paymentID,
+			model.FieldWechatPayHistoryProductId: productID,
+			model.FieldWechatPayHistoryUserId:    userID,
+			model.FieldWechatPayHistoryStatus:    PaymentStatusWaiting,
+		}); err != nil {
+			return fmt.Errorf("create wechat-pay history failed: %w", err)
+		}
+
+		return nil
+	})
+
+	return paymentID, err
+}
+
+type WechatPayment struct {
+	Extra       string    `json:"extra,omitempty"`
+	Amount      int64     `json:"amount,omitempty"`
+	Environment string    `json:"environment"`
+	ProductID   string    `json:"product_id"`
+	Status      int64     `json:"status,omitempty"`
+	PurchaseAt  time.Time `json:"purchase_at"`
+	Note        string    `json:"note"`
+}
+
+func (repo *PaymentRepo) CompleteWechatPayment(ctx context.Context, userId int64, paymentID string, pay WechatPayment) (eventID int64, err error) {
+	q := query.Builder().
+		Where(model.FieldPaymentHistoryPaymentId, paymentID).
+		Where(model.FieldPaymentHistoryUserId, userId)
+	err = eloquent.Transaction(repo.db, func(tx query.Database) error {
+		his, err := model.NewPaymentHistoryModel(tx).First(ctx, q)
+		if err != nil {
+			return fmt.Errorf("get payment history failed: %w", err)
+		}
+
+		if his.Status.ValueOrZero() != PaymentStatusWaiting {
+			return ErrPaymentHasBeenProcessed
+		}
+
+		if _, err := model.NewPaymentHistoryModel(tx).Update(ctx, q, model.PaymentHistoryN{
+			Status:      null.IntFrom(pay.Status),
+			Environment: null.StringFrom(pay.Environment),
+			PurchaseAt:  null.TimeFrom(pay.PurchaseAt),
+		}); err != nil {
+			return fmt.Errorf("update payment history failed: %w", err)
+		}
+
+		if _, err := model.NewWechatPayHistoryModel(tx).Update(ctx, q, model.WechatPayHistoryN{
+			Environment: null.StringFrom(pay.Environment),
+			Amount:      null.IntFrom(pay.Amount),
+			Extra:       null.StringFrom(pay.Extra),
+			Status:      null.IntFrom(pay.Status),
+			PurchaseAt:  null.TimeFrom(pay.PurchaseAt),
+			Note:        ternary.If(pay.Note != "", null.StringFrom(pay.Note), null.NewString("", false)),
+		}); err != nil {
+			return fmt.Errorf("update wechat pay history failed: %w", err)
+		}
+
+		if pay.Status == PaymentStatusSuccess {
+			if eventID, err = model.NewEventsModel(tx).Save(ctx, model.EventsN{
+				EventType: null.StringFrom(EventTypePaymentCompleted),
+				Payload: null.StringFrom(string(must.Must(json.Marshal(PaymentCompletedEvent{
+					UserID:    userId,
+					ProductID: pay.ProductID,
+					PaymentID: paymentID,
+				})))),
+				Status: null.StringFrom(EventStatusWaiting),
+			}); err != nil {
+				return fmt.Errorf("create event failed: %w", err)
+			}
+		}
+
+		return nil
+	})
+
+	return eventID, err
+}
+
+func (repo *PaymentRepo) GetWechatHistory(ctx context.Context, paymentID string) (*model.WechatPayHistory, error) {
+	his, err := model.NewWechatPayHistoryModel(repo.db).First(ctx, query.Builder().Where(model.FieldWechatPayHistoryPaymentId, paymentID))
+	if err != nil {
+		if errors.Is(err, query.ErrNoResult) {
+			return nil, ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	ret := his.ToWechatPayHistory()
+	return &ret, nil
 }

@@ -295,6 +295,7 @@ type Config struct {
 	WeChatPayCertSerialNumber   string `json:"wechat_pay_cert_serial_number" yaml:"wechat_pay_cert_serial_number"`
 	WeChatPayCertPrivateKeyPath string `json:"wechat_pay_cert_private_key_path" yaml:"wechat_pay_cert_private_key_path"`
 	WeChatPayAPIv3Key           string `json:"wechat_pay_apiv3_key" yaml:"wechat_pay_apiv3_key"`
+	WeChatPayNotifyURL          string `json:"wechat_pay_notify_url" yaml:"wechat_pay_notify_url"`
 
 	// Stripe 支付
 	Stripe StripeConfig `json:"stripe" yaml:"stripe"`
@@ -602,6 +603,7 @@ func Register(ins *app.App) {
 			WeChatPayCertSerialNumber:   ctx.String("wechatpay-cert-serial-number"),
 			WeChatPayCertPrivateKeyPath: ctx.String("wechatpay-cert-private-key-path"),
 			WeChatPayAPIv3Key:           ctx.String("wechatpay-api-v3-key"),
+			WeChatPayNotifyURL:          ctx.String("wechatpay-notify-url"),
 
 			Stripe: stripe,
 

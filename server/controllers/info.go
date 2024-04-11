@@ -163,6 +163,8 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 		"alipay_enabled": ctl.conf.EnableAlipay,
 		// 是否启用支付宝支付
 		"other_pay_enabled": ctl.conf.EnableAlipay,
+		// 是否启用微信支付
+		"wechat_pay_enabled": ctl.conf.WeChatPayEnabled,
 		// 是否启用讯飞星火模型
 		"xfyunai_enabled": ctl.conf.EnableXFYunAI,
 		// 是否启用百度文心千帆模型

@@ -18,12 +18,12 @@ type Config struct {
 	WeChatPayAPIv3Key           string `json:"wechat_pay_apiv3_key" yaml:"wechat_pay_apiv3_key"`
 }
 
-type WeChatPay struct {
+type WeChatPayImpl struct {
 	conf *Config
 }
 
-func NewWeChatPay(conf *Config) *WeChatPay {
-	return &WeChatPay{conf: conf}
+func NewWeChatPay(conf *Config) *WeChatPayImpl {
+	return &WeChatPayImpl{conf: conf}
 }
 
 type PrepayRequest struct {
@@ -39,7 +39,7 @@ type PrepayResponse struct {
 }
 
 // NativePrepay creates a native prepay order
-func (w *WeChatPay) NativePrepay(ctx context.Context, req PrepayRequest) (*PrepayResponse, error) {
+func (w *WeChatPayImpl) NativePrepay(ctx context.Context, req PrepayRequest) (*PrepayResponse, error) {
 	client, err := w.createClient(ctx)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (w *WeChatPay) NativePrepay(ctx context.Context, req PrepayRequest) (*Prepa
 }
 
 // AppPrepay creates a app prepay order
-func (w *WeChatPay) AppPrepay(ctx context.Context, req PrepayRequest) (*PrepayResponse, error) {
+func (w *WeChatPayImpl) AppPrepay(ctx context.Context, req PrepayRequest) (*PrepayResponse, error) {
 	client, err := w.createClient(ctx)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (w *WeChatPay) AppPrepay(ctx context.Context, req PrepayRequest) (*PrepayRe
 }
 
 // createClient creates a wechat pay client
-func (w *WeChatPay) createClient(ctx context.Context) (*core.Client, error) {
+func (w *WeChatPayImpl) createClient(ctx context.Context) (*core.Client, error) {
 	mchPrivateKey, err := utils.LoadPrivateKeyWithPath(w.conf.WeChatPayCertPrivateKeyPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "load private key failed")
@@ -112,4 +112,21 @@ func (w *WeChatPay) createClient(ctx context.Context) (*core.Client, error) {
 	}
 
 	return client, nil
+}
+
+func (w *WeChatPayImpl) SignAppPay(appID, timestamp, nocestr, prepayID string) (string, error) {
+	mchPrivateKey, err := utils.LoadPrivateKeyWithPath(w.conf.WeChatPayCertPrivateKeyPath)
+	if err != nil {
+		return "", errors.Wrap(err, "load private key failed")
+	}
+
+	sign, err := utils.SignSHA256WithRSA(
+		appID+"\n"+timestamp+"\n"+nocestr+"\n"+prepayID+"\n",
+		mchPrivateKey,
+	)
+	if err != nil {
+		return "", errors.Wrap(err, "sign failed")
+	}
+	
+	return sign, nil
 }

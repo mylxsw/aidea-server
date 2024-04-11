@@ -80,25 +80,26 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 
 	// 需要鉴权的 URLs
 	needAuthPrefix := []string{
-		"/v1/audio",            // OpenAI audio to text
-		"/v1/images",           // OpenAI image generation
-		"/v1/group-chat",       // 群聊
-		"/v1/users",            // 用户管理
-		"/v1/api-keys",         // API Key 管理
-		"/v1/translate",        // 翻译 API
-		"/v1/storage",          // 存储 API
-		"/v1/creative-island",  // 创作岛
-		"/v1/tasks",            // 任务管理
-		"/v1/payment/apple",    // Apple 支付管理
-		"/v1/payment/alipay",   // 支付宝支付管理 @deprecated(since 1.0.8)
-		"/v1/payment/others",   // 支付宝支付管理
-		"/v1/payment/stripe",   // Stripe 支付管理
-		"/v1/auth/bind-phone",  // 绑定手机号码
-		"/v1/auth/bind-wechat", // 绑定微信
-		"/v1/rooms",            // 数字人管理
-		"/v1/room-galleries",   // 数字人 Gallery
-		"/v1/voice",            // 语音合成
-		"/v1/admin",            // 管理员接口
+		"/v1/audio",             // OpenAI audio to text
+		"/v1/images",            // OpenAI image generation
+		"/v1/group-chat",        // 群聊
+		"/v1/users",             // 用户管理
+		"/v1/api-keys",          // API Key 管理
+		"/v1/translate",         // 翻译 API
+		"/v1/storage",           // 存储 API
+		"/v1/creative-island",   // 创作岛
+		"/v1/tasks",             // 任务管理
+		"/v1/payment/apple",     // Apple 支付管理
+		"/v1/payment/alipay",    // 支付宝支付管理 @deprecated(since 1.0.8)
+		"/v1/payment/others",    // 支付宝支付管理
+		"/v1/payment/stripe",    // Stripe 支付管理
+		"/v1/payment/wechatpay", // 微信支付管理
+		"/v1/auth/bind-phone",   // 绑定手机号码
+		"/v1/auth/bind-wechat",  // 绑定微信
+		"/v1/rooms",             // 数字人管理
+		"/v1/room-galleries",    // 数字人 Gallery
+		"/v1/voice",             // 语音合成
+		"/v1/admin",             // 管理员接口
 
 		// v2 版本
 		"/v2/creative-island/histories",   // 创作岛历史记录

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/payment/wechatpay"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
@@ -13,6 +14,11 @@ import (
 	"github.com/stripe/stripe-go/v76/ephemeralkey"
 	"github.com/stripe/stripe-go/v76/paymentintent"
 	"github.com/stripe/stripe-go/v76/webhook"
+	"github.com/wechatpay-apiv3/wechatpay-go/core/auth/verifiers"
+	"github.com/wechatpay-apiv3/wechatpay-go/core/downloader"
+	"github.com/wechatpay-apiv3/wechatpay-go/core/notify"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
+	"github.com/wechatpay-apiv3/wechatpay-go/utils"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -34,12 +40,13 @@ import (
 )
 
 type PaymentController struct {
-	translater youdao.Translater `autowire:"@"`
-	queue      *queue.Queue      `autowire:"@"`
-	payRepo    *repo.PaymentRepo `autowire:"@"`
-	alipay     alipay.Alipay     `autowire:"@"`
-	applepay   applepay.ApplePay `autowire:"@"`
-	conf       *config.Config    `autowire:"@"`
+	translater youdao.Translater   `autowire:"@"`
+	queue      *queue.Queue        `autowire:"@"`
+	payRepo    *repo.PaymentRepo   `autowire:"@"`
+	alipay     alipay.Alipay       `autowire:"@"`
+	applepay   applepay.ApplePay   `autowire:"@"`
+	wechatpay  wechatpay.WeChatPay `autowire:"@"`
+	conf       *config.Config      `autowire:"@"`
 }
 
 func NewPaymentController(resolver infra.Resolver) web.Controller {
@@ -80,6 +87,11 @@ func (ctl *PaymentController) Register(router web.Router) {
 			router.Post("/payment-sheet", ctl.CreateStripePayment)
 		})
 
+		// 微信支付
+		router.Group("/wechatpay", func(router web.Router) {
+			router.Post("/", ctl.CreateWechatPayment)
+		})
+
 		// 支付状态查询
 		router.Group("/status", func(router web.Router) {
 			router.Get("/{id}", ctl.QueryPaymentStatus)
@@ -89,6 +101,7 @@ func (ctl *PaymentController) Register(router web.Router) {
 		router.Group("/callback", func(router web.Router) {
 			router.Post("/alipay-notify", ctl.AlipayNotify)
 			router.Any("/stripe/webhook", ctl.StripeWebhook)
+			router.Any("/wechat-pay/notify", ctl.WechatPayNotify)
 		})
 
 	})
@@ -866,4 +879,231 @@ func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx we
 		"payment_id":      paymentID,
 		"proxy_url":       proxyURL,
 	})
+}
+
+// CreateWechatPayment create wechat payment
+// @summary create wechat payment
+// @tags payment
+// @accept json
+// @produce json
+// @param product_id query string true "product id"
+// @param source query string false "source" Enums(app,web,pc)
+// @success 200 {object} WechatPayCreateResponse
+// @router /v1/payment/wechatpay [post]
+func (ctl *PaymentController) CreateWechatPayment(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	if !ctl.conf.WeChatPayEnabled {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "微信支付功能尚未开启"), http.StatusBadRequest)
+	}
+
+	productId := webCtx.Input("product_id")
+	if productId == "" {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	source := webCtx.Input("source")
+	if source == "" {
+		source = "app"
+	}
+
+	if !array.In(source, []string{"app", "web", "pc"}) {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	product := coins.GetProduct(productId)
+	if product == nil {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	if !array.In("wechat_pay", product.GetSupportMethods()) {
+		log.F(log.M{"user_id": user.ID}).Errorf("product %s not support wechat-pay", productId)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+
+	paymentID, err := ctl.payRepo.CreateWechatPayment(ctx, user.ID, productId, source)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"err":        err.Error(),
+			"product_id": productId,
+			"user_id":    user.ID,
+			"source":     source,
+		}).Error("create payment failed")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	ret := WechatPayCreateResponse{
+		PaymentID: paymentID,
+		Sandbox:   false,
+	}
+
+	req := wechatpay.PrepayRequest{
+		OutTradeNo:  paymentID,
+		Description: product.Name,
+		NotifyURL:   ctl.conf.WeChatPayNotifyURL,
+		Amount:      product.RetailPrice,
+	}
+
+	switch source {
+	case "pc", "web":
+		resp, err := ctl.wechatpay.NativePrepay(ctx, req)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("create wechat payment failed")
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		}
+		ret.CodeURL = resp.CodeURL
+	case "app":
+		resp, err := ctl.wechatpay.AppPrepay(ctx, req)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("create wechat payment failed")
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		}
+
+		ret.PrepayID = resp.PrepayID
+		ret.APPID = ctl.conf.WeChatAppID
+		ret.Package = "Sign=WXPay"
+		ret.PartnerID = ctl.conf.WeChatPayMchID
+		ret.Noncestr = misc.ShortUUID()
+		ret.Timestamp = strconv.FormatInt(time.Now().Unix(), 10)
+		sign, err := ctl.wechatpay.SignAppPay(ret.APPID, ret.Timestamp, ret.Noncestr, ret.PrepayID)
+		if err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("sign wechat app pay failed")
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+		}
+		ret.Sign = sign
+	}
+
+	return webCtx.JSON(ret)
+}
+
+type WechatPayCreateResponse struct {
+	PaymentID string `json:"payment_id"`
+	Sandbox   bool   `json:"sandbox"`
+	// CodeURL Web、PC 支付专用，二维码地址
+	CodeURL string `json:"code_url,omitempty"`
+	// PrepayID APP 支付专用，微信返回的支付交易会话ID，该值有效期为2小时。
+	PrepayID string `json:"prepay_id,omitempty"`
+	// Package APP 支付专用，固定值Sign=WXPay
+	Package string `json:"package,omitempty"`
+	// PartnerID APP 支付专用，商户号mchid对应的值
+	PartnerID string `json:"partner_id,omitempty"`
+	// APPID APP 支付专用，移动应用AppID
+	APPID string `json:"app_id,omitempty"`
+	// Noncestr APP 支付专用，随机字符串，不长于32位。推荐随机数生成算法
+	Noncestr string `json:"noncestr,omitempty"`
+	// Timestamp APP 支付专用，时间戳 秒级
+	Timestamp string `json:"timestamp,omitempty"`
+	// Sign APP 支付专用，签名，使用字段AppID、timeStamp、nonceStr、prepayid计算得出的签名值 注意：取值RSA格式
+	Sign string `json:"sign,omitempty"`
+}
+
+// WechatPayNotify Wechat Pay result notification
+// @summary Wechat Pay result notification
+// @tags payment
+// @accept json
+// @produce json
+// @router /v1/payment/callback/wechat-pay/notify [post]
+func (ctl *PaymentController) WechatPayNotify(ctx context.Context, webCtx web.Context) web.Response {
+	log.WithFields(log.Fields{
+		"body": string(webCtx.Body()),
+	}).Info("wechat pay callback")
+
+	if !ctl.conf.WeChatPayEnabled {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "微信支付功能尚未开启"), http.StatusBadRequest)
+	}
+
+	mchPrivateKey, err := utils.LoadPrivateKeyWithPath(ctl.conf.WeChatPayCertPrivateKeyPath)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("load wechat pay cert private key failed")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	if err := downloader.MgrInstance().RegisterDownloaderWithPrivateKey(
+		ctx,
+		mchPrivateKey,
+		ctl.conf.WeChatPayCertSerialNumber,
+		ctl.conf.WeChatPayMchID,
+		ctl.conf.WeChatPayAPIv3Key,
+	); err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("register wechat pay downloader failed")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	certVisitor := downloader.MgrInstance().GetCertificateVisitor(ctl.conf.WeChatPayMchID)
+	handler, err := notify.NewRSANotifyHandler(ctl.conf.WeChatPayAPIv3Key, verifiers.NewSHA256WithRSAVerifier(certVisitor))
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("create wechat pay notify handler failed")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	transaction := new(payments.Transaction)
+	notifyReq, err := handler.ParseNotifyRequest(ctx, webCtx.Request().Raw(), transaction)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("parse wechat pay notify request failed")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	log.F(log.M{
+		"transaction":   transaction,
+		"decoded":       notifyReq.Resource.Plaintext,
+		"event_type":    notifyReq.EventType,
+		"resource_type": notifyReq.ResourceType,
+		"summary":       notifyReq.Summary,
+	}).Debugf("wechat pay notify request: %v", notifyReq)
+
+	if notifyReq.EventType != "TRANSACTION.SUCCESS" {
+		return webCtx.JSON(web.M{})
+	}
+
+	his, err := ctl.payRepo.GetPaymentHistory(ctx, *transaction.OutTradeNo)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("get payment history failed")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	wechatPayHis, err := ctl.payRepo.GetWechatHistory(ctx, his.PaymentId)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("get wechat pay history failed")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	purchaseAt, _ := time.Parse(time.RFC3339, *transaction.SuccessTime)
+	eventID, err := ctl.payRepo.CompleteWechatPayment(ctx, his.UserId, his.PaymentId, repo.WechatPayment{
+		ProductID:   wechatPayHis.ProductId,
+		Extra:       notifyReq.Resource.Plaintext,
+		Amount:      *transaction.Amount.Total,
+		Environment: "Production",
+		PurchaseAt:  purchaseAt,
+		Status:      repo.PaymentStatusSuccess,
+		Note:        notifyReq.Summary,
+	})
+	if err != nil {
+		// 如果已经处理过了，直接返回成功
+		if errors.Is(err, repo.ErrPaymentHasBeenProcessed) {
+			return webCtx.JSON(web.M{})
+		}
+
+		log.WithFields(log.Fields{
+			"err":         err.Error(),
+			"transaction": transaction,
+		}).Error("complete payment failed")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	if eventID > 0 {
+		payload := queue.PaymentPayload{
+			UserID:    his.UserId,
+			ProductID: wechatPayHis.ProductId,
+			PaymentID: his.PaymentId,
+			Note:      coins.GetProduct(wechatPayHis.ProductId).Name,
+			Source:    "wechat-purchase",
+			Env:       "Production",
+			CreatedAt: time.Now(),
+			EventID:   eventID,
+		}
+
+		if _, err := ctl.queue.Enqueue(&payload, queue.NewPaymentTask); err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("enqueue payment task failed")
+		}
+	}
+
+	return webCtx.JSON(web.M{})
 }

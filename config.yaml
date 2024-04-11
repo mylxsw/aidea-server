@@ -478,6 +478,8 @@ wechatpay-cert-serial-number: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 wechatpay-api-v3-key: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 # 微信支付商户证书私钥路径
 wechatpay-cert-private-key-path: "path/to/apiclient_cert.pem"
+# 微信支付回调地址，格式 https://YOUR_SERVER_HOST/v1/payment/callback/wechat-pay/notify
+wechatpay-notify-url: "https://YOUR_SERVER_HOST/v1/payment/callback/wechat-pay/notify"
 
 ######## Stripe ########
 # 是否启用 Stripe 支付

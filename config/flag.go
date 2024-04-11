@@ -233,6 +233,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("wechatpay-cert-serial-number", "", "微信支付 API 证书序列号")
 	ins.AddStringFlag("wechatpay-cert-private-key-path", "", "微信支付 API 证书私钥路径")
 	ins.AddStringFlag("wechatpay-api-v3-key", "", "微信支付 APIv3 密钥")
+	ins.AddStringFlag("wechatpay-notify-url", "", "微信支付回调地址，格式 https://YOUR_SERVER_HOST/v1/payment/callback/wechat-pay/notify")
 
 	ins.AddBoolFlag("enable-stripe", "是否启用 stripe 支付")
 	ins.AddStringFlag("stripe-publishable-key", "", "stripe publishable key")

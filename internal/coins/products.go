@@ -34,7 +34,7 @@ type Product struct {
 
 func (ap Product) GetSupportMethods() []string {
 	if len(ap.Methods) == 0 {
-		return []string{"alipay", "apple_pay", "stripe"}
+		return []string{"alipay", "apple_pay", "stripe", "wechat_pay"}
 	}
 
 	return ap.Methods

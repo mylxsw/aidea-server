@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/payment/wechatpay"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
@@ -152,6 +153,7 @@ func main() {
 		alipay.Provider{},
 		applepay.Provider{},
 		wechat.Provider{},
+		wechatpay.Provider{},
 	)
 
 	// AI 服务
