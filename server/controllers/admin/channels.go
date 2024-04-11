@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
+	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
 	"github.com/mylxsw/go-utils/array"
@@ -39,11 +40,15 @@ func (ctl *ChannelController) Register(router web.Router) {
 	})
 }
 
-// ChannelTypes 返回所有的渠道类型列表
+// ChannelTypes Return the list of all channel types.
+// @Summary Return the list of all channel types.
+// @Tags Admin:Channel
+// @Accept json
+// @Produce json
+// @Success 200 {object} common.DataArray[service.ChannelType]
+// @Router /v1/admin/channel-types [get]
 func (ctl *ChannelController) ChannelTypes(ctx context.Context, webCtx web.Context) web.Response {
-	return webCtx.JSON(web.M{
-		"data": ctl.svc.Chat.ChannelTypes(),
-	})
+	return webCtx.JSON(common.NewDataArray(ctl.svc.Chat.ChannelTypes()))
 }
 
 type Channel struct {
@@ -51,7 +56,13 @@ type Channel struct {
 	DisplayName string `json:"display_name,omitempty"`
 }
 
-// Channels 返回所有的渠道列表
+// Channels Return the list of all channels.
+// @Summary Return the list of all channels.
+// @Tags Admin:Channel
+// @Accept json
+// @Produce json
+// @Success 200 {object} common.DataArray[Channel]
+// @Router /v1/admin/channels [get]
 func (ctl *ChannelController) Channels(ctx context.Context, webCtx web.Context) web.Response {
 	channels, err := ctl.repo.Model.GetChannels(ctx)
 	if err != nil {
@@ -72,12 +83,17 @@ func (ctl *ChannelController) Channels(ctx context.Context, webCtx web.Context) 
 		return ret
 	})
 
-	return webCtx.JSON(web.M{
-		"data": data,
-	})
+	return webCtx.JSON(common.NewDataArray(data))
 }
 
-// Channel 返回指定渠道的详细信息
+// Channel Return detailed information for the specified channel.
+// @Summary Return detailed information for the specified channel.
+// @Tags Admin:Channel
+// @Accept json
+// @Produce json
+// @Param channel_id path integer true "Channel ID"
+// @Success 200 {object} common.DataObj[Channel]
+// @Router /v1/admin/channels/{channel_id} [get]
 func (ctl *ChannelController) Channel(ctx context.Context, webCtx web.Context) web.Response {
 	channelID, err := strconv.Atoi(webCtx.PathVar("channel_id"))
 	if err != nil {
@@ -97,10 +113,17 @@ func (ctl *ChannelController) Channel(ctx context.Context, webCtx web.Context) w
 		data.DisplayName = types[channel.Name].Display
 	}
 
-	return webCtx.JSON(web.M{"data": channel})
+	return webCtx.JSON(common.NewDataObj(channel))
 }
 
-// Add 添加渠道
+// Add channel
+// @Summary Add channel
+// @Tags Admin:Channel
+// @Accept json
+// @Produce json
+// @Param req body repo.ChannelAddReq true "Channel Add Request"
+// @Success 200 {object} common.IDResponse[int64]
+// @Router /v1/admin/channels [post]
 func (ctl *ChannelController) Add(ctx context.Context, webCtx web.Context) web.Response {
 	var req repo.ChannelAddReq
 	if err := webCtx.Unmarshal(&req); err != nil {
@@ -129,10 +152,18 @@ func (ctl *ChannelController) Add(ctx context.Context, webCtx web.Context) web.R
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(web.M{"channel_id": channelID})
+	return webCtx.JSON(common.NewIDResponse(channelID))
 }
 
-// Update 更新渠道信息
+// Update channel information
+// @Summary Update channel information
+// @Tags Admin:Channel
+// @Accept json
+// @Produce json
+// @Param channel_id path integer true "Channel ID"
+// @Param req body repo.ChannelUpdateReq true "Channel Update Request"
+// @Success 200 {object} common.EmptyResponse
+// @Router /v1/admin/channels/{channel_id} [put]
 func (ctl *ChannelController) Update(ctx context.Context, webCtx web.Context) web.Response {
 	channelID, err := strconv.Atoi(webCtx.PathVar("channel_id"))
 	if err != nil {
@@ -156,10 +187,16 @@ func (ctl *ChannelController) Update(ctx context.Context, webCtx web.Context) we
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(web.M{})
+	return webCtx.JSON(common.EmptyResponse{})
 }
 
-// Delete 删除渠道
+// Delete channel
+// @Summary Delete channel
+// @Tags Admin:Channel
+// @Produce json
+// @Param channel_id path integer true "Channel ID"
+// @Success 200 {object} common.EmptyResponse
+// @Router /v1/admin/channels/{channel_id} [delete]
 func (ctl *ChannelController) Delete(ctx context.Context, webCtx web.Context) web.Response {
 	channelID, err := strconv.Atoi(webCtx.PathVar("channel_id"))
 	if err != nil {
@@ -170,9 +207,9 @@ func (ctl *ChannelController) Delete(ctx context.Context, webCtx web.Context) we
 		if errors.Is(err, repo.ErrViolationOfBusinessConstraint) {
 			return webCtx.JSONError(err.Error(), http.StatusPreconditionFailed)
 		}
-		
+
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(web.M{})
+	return webCtx.JSON(common.EmptyResponse{})
 }

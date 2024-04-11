@@ -10,6 +10,9 @@ listen: 0.0.0.0:8080
 # 日志文件存储目录，留空则写入到标准输出
 #log-path: /data/logs/ai-server
 
+# 临时文件存储目录
+temp-dir: "/tmp"
+
 # 是否启用跨域支持
 enable-cors: true
 
@@ -465,6 +468,19 @@ free-chat-model: gpt-3.5-turbo
 wechat-appid: ""
 wechat-secret: ""
 
+# 是否启用微信支付
+wechatpay-enabled: false
+# 微信支付商户号
+wechatpay-mchid: "1600000000"
+# 微信支付 API 证书序列号
+wechatpay-cert-serial-number: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# 微信支付 APIv3 密钥
+wechatpay-api-v3-key: "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# 微信支付商户证书私钥路径
+wechatpay-cert-private-key-path: "path/to/apiclient_cert.pem"
+# 微信支付回调地址，格式 https://YOUR_SERVER_HOST/v1/payment/callback/wechat-pay/notify
+wechatpay-notify-url: "https://YOUR_SERVER_HOST/v1/payment/callback/wechat-pay/notify"
+
 ######## Stripe ########
 # 是否启用 Stripe 支付
 # https://stripe.com/docs/development/quickstart#api-keys
@@ -478,3 +494,17 @@ stripe-webhook-secret: ""
 default-home-models: ["gpt-3.5-turbo", "gpt-4"]
 # IOS 系统默认首页模型，取值为表 models.model_id 的值，如果为空，则使用 default-home-models
 default-home-models-ios: ["chat-3.5", "chat-4"]
+
+######## 文本转语音 ########
+# 文本转语音引擎，支持 minimax/openai/azure
+text-to-voice-engine: openai
+# Azure 语音服务区域
+text-to-voice-azure-region: eastus
+# Azure 语音服务 Key
+text-to-voice-azure-key: ""
+
+######## Minimax 配置 ########
+# 当前只用于文本转语音
+# API 申请：https://www.minimaxi.com
+minimax-api-key: ""
+minimax-group-id: ""

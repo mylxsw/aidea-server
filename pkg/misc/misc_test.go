@@ -135,8 +135,18 @@ func TestUUID(t *testing.T) {
 	fmt.Println(misc.UUID())
 	fmt.Println(misc.UUID())
 	fmt.Println(misc.UUID())
+
+	fmt.Println(misc.ShortUUID())
+	fmt.Println(misc.ShortUUID())
+	fmt.Println(misc.ShortUUID())
+	fmt.Println(misc.ShortUUID())
 }
 
 func TestFileExt(t *testing.T) {
 	fmt.Println(misc.FileExt("abc.jpg"))
+}
+
+func TestPaymentID(t *testing.T) {
+	fmt.Println(misc.PaymentID(14))
+	fmt.Println(misc.PaymentID(140000000))
 }

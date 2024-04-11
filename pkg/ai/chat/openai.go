@@ -72,23 +72,7 @@ func (chat *OpenAIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 		}
 	}
 
-	// 限制每次请求的最大字数
-	//if (req.MaxTokens > 4096 || req.MaxTokens <= 0) && strings.HasPrefix(req.ArtisticType, "gpt-4") {
-	//	req.MaxTokens = 1024
-	//}
-
-	msgs, tokenCount, err := openai2.ReduceChatCompletionMessages(
-		contextMessages,
-		req.Model,
-		openai2.ModelMaxContextSize(req.Model),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	messages := append(systemMessages, msgs...)
-	req.Model = openai2.SelectBestModel(req.Model, tokenCount)
-
+	messages := append(systemMessages, contextMessages...)
 	return &openai.ChatCompletionRequest{
 		Model:     req.Model,
 		Messages:  messages,

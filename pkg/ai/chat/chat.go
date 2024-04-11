@@ -59,9 +59,9 @@ type ImageURL struct {
 
 type Messages []Message
 
-func (m Messages) ToLogEntry() Messages {
-	ret := make(Messages, len(m))
-	for i, msg := range m {
+func (ms Messages) ToLogEntry() Messages {
+	ret := make(Messages, len(ms))
+	for i, msg := range ms {
 		mm := Message{
 			Role:    msg.Role,
 			Content: misc.SubString(msg.Content, 20),
@@ -102,6 +102,10 @@ func (ms Messages) HasImage() bool {
 	return false
 }
 
+// Fix 模型上下文预处理：
+// 1. 强制上下文为 user/assistant 轮流出现
+// 2. 第一个普通消息必须是用户消息
+// 3. 最后一条消息必须是用户消息
 func (ms Messages) Fix() Messages {
 	msgs := ms
 	// 如果最后一条消息不是用户消息，则补充一条用户消息
@@ -368,29 +372,11 @@ func (ai *Imp) selectProvider(name string) Chat {
 }
 
 func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
-	mod := ai.queryModel(req.Model)
-	pro := mod.SelectProvider(ctx)
-
-	if mod.Meta.Prompt != "" {
-		systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
-		chatMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" })
-
-		if len(systemPrompts) > 0 {
-			systemPrompts[0].Content = mod.Meta.Prompt + "\n" + systemPrompts[0].Content
-			systemPrompts = Messages{systemPrompts[0]}
-		}
-
-		req.Messages = append(systemPrompts, chatMessages...)
-	}
-
-	if pro.ModelRewrite != "" {
-		req.Model = pro.ModelRewrite
-	}
-
+	req, pro := ai.fixRequest(ctx, req)
 	return ai.selectImp(pro).Chat(ctx, req)
 }
 
-func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
+func (ai *Imp) fixRequest(ctx context.Context, req Request) (Request, repo.ModelProvider) {
 	// TODO 这里是临时解决方案
 	// 使用微软的 Azure OpenAI 接口时，聊天内容只有“继续”两个字时，会触发风控，导致无法继续对话
 	req.Messages = array.Map(req.Messages, func(item Message, _ int) Message {
@@ -405,26 +391,30 @@ func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, er
 	mod := ai.queryModel(req.Model)
 	pro := mod.SelectProvider(ctx)
 
-	if mod.Meta.Prompt != "" {
-		systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
-		chatMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" })
+	if pro.ModelRewrite != "" {
+		req.Model = pro.ModelRewrite
+	}
 
+	systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
+	chatMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" })
+
+	if mod.Meta.Prompt != "" {
 		if len(systemPrompts) > 0 {
 			systemPrompts[0].Content = mod.Meta.Prompt + "\n" + systemPrompts[0].Content
 			systemPrompts = Messages{systemPrompts[0]}
 		} else {
 			systemPrompts = Messages{{Role: "system", Content: mod.Meta.Prompt}}
 		}
-
-		req.Messages = append(systemPrompts, chatMessages...)
 	}
 
-	if pro.ModelRewrite != "" {
-		req.Model = pro.ModelRewrite
-	}
+	req.Messages = Messages(append(systemPrompts, chatMessages...)).Fix()
 
+	return req, pro
+}
+
+func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
+	req, pro := ai.fixRequest(ctx, req)
 	log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Debug("chat stream request")
-
 	return ai.selectImp(pro).ChatStream(ctx, req)
 }
 

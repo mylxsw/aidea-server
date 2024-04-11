@@ -3,7 +3,6 @@ package chat
 import (
 	"context"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
-	oai "github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"strings"
@@ -73,23 +72,7 @@ func (chat *OneAPIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 		}
 	}
 
-	// 限制每次请求的最大字数
-	//if (req.MaxTokens > 4096 || req.MaxTokens <= 0) && strings.HasPrefix(req.ArtisticType, "gpt-4") {
-	//	req.MaxTokens = 1024
-	//}
-
-	msgs, tokenCount, err := oai.ReduceChatCompletionMessages(
-		contextMessages,
-		req.Model,
-		oai.ModelMaxContextSize(req.Model),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	messages := append(systemMessages, msgs...)
-	req.Model = oai.SelectBestModel(req.Model, tokenCount)
-
+	messages := append(systemMessages, contextMessages...)
 	return &openai.ChatCompletionRequest{
 		Model:     req.Model,
 		Messages:  messages,

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/payment/wechatpay"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
@@ -59,6 +60,7 @@ import (
 	"github.com/mylxsw/asteria/writer"
 
 	"github.com/mylxsw/aidea-server/config"
+	_ "github.com/mylxsw/aidea-server/docs"
 	"github.com/mylxsw/aidea-server/server"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/starter/app"
@@ -67,6 +69,18 @@ import (
 var GitCommit string
 var Version string
 
+// @title AIdea API
+// @version 1.0
+// @description AIdea API
+// @host localhost:8080
+// @schemes http
+// @contact.email mylxsw@aicode.cc
+// @contact.name mylxsw
+// @contact.url https://ai.aicode.cc
+//
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
 func main() {
 	// 初始化随机数种子
 	rand.Seed(time.Now().UnixNano())
@@ -139,6 +153,7 @@ func main() {
 		alipay.Provider{},
 		applepay.Provider{},
 		wechat.Provider{},
+		wechatpay.Provider{},
 	)
 
 	// AI 服务

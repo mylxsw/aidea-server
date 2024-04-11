@@ -67,7 +67,7 @@ func LoadPriceInfo(tableFile string) error {
 			}
 
 			if len(item.Methods) == 0 {
-				item.Methods = []string{"alipay", "apple_pay", "stripe"}
+				item.Methods = []string{"alipay", "apple_pay", "stripe", "wechat_pay"}
 			}
 
 			return item

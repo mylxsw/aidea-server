@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/Vernacular-ai/godub/converter"
+	"github.com/lithammer/shortuuid/v4"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -341,6 +342,16 @@ func GenerateAPIToken(name string, uid int64) string {
 func UUID() string {
 	ret, _ := uuid.GenerateUUID()
 	return ret
+}
+
+// ShortUUID 生成一个短 UUID
+func ShortUUID() string {
+	return shortuuid.New()
+}
+
+// PaymentID 生成支付 ID
+func PaymentID(userID int64) string {
+	return fmt.Sprintf("%s-%s", HashID(userID), shortuuid.New())
 }
 
 // FileExt 获取文件扩展名

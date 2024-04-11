@@ -31,6 +31,9 @@ type Config struct {
 	// 是否是生产环境
 	IsProduction bool `json:"is_production" yaml:"is_production"`
 
+	// 临时文件存储路径
+	TempDir string `json:"temp_dir" yaml:"temp_dir"`
+
 	// 是否提示用户绑定手机
 	ShouldBindPhone bool `json:"should_bind_phone" yaml:"should_bind_phone"`
 
@@ -286,6 +289,13 @@ type Config struct {
 	// 微信开放平台配置
 	WeChatAppID  string `json:"wechat_appid" yaml:"wechat_appid"`
 	WeChatSecret string `json:"wechat_secret" yaml:"wechat_secret"`
+	// 微信支付配置
+	WeChatPayEnabled            bool   `json:"wechat_pay_enabled" yaml:"wechat_pay_enabled"`
+	WeChatPayMchID              string `json:"wechat_pay_mchid" yaml:"wechat_pay_mchid"`
+	WeChatPayCertSerialNumber   string `json:"wechat_pay_cert_serial_number" yaml:"wechat_pay_cert_serial_number"`
+	WeChatPayCertPrivateKeyPath string `json:"wechat_pay_cert_private_key_path" yaml:"wechat_pay_cert_private_key_path"`
+	WeChatPayAPIv3Key           string `json:"wechat_pay_apiv3_key" yaml:"wechat_pay_apiv3_key"`
+	WeChatPayNotifyURL          string `json:"wechat_pay_notify_url" yaml:"wechat_pay_notify_url"`
 
 	// Stripe 支付
 	Stripe StripeConfig `json:"stripe" yaml:"stripe"`
@@ -293,6 +303,18 @@ type Config struct {
 	// 首页默认常用模型
 	DefaultHomeModels    []string `json:"default_home_models" yaml:"default_home_models"`
 	DefaultHomeModelsIOS []string `json:"default_home_models_ios" yaml:"default_home_models_ios"`
+
+	// 文本转语言
+	// TextToVoiceEngine 文本转语音引擎：minimax/openai/azure
+	TextToVoiceEngine string `json:"text_to_voice_engine" yaml:"text_to_voice_engine"`
+	// TextToVoiceAzureRegion Azure 语音服务区域
+	TextToVoiceAzureRegion string `json:"text_to_voice_azure_region" yaml:"text_to_voice_azure_region"`
+	// TextToVoiceAzureKey Azure 语音服务密钥
+	TextToVoiceAzureKey string `json:"text_to_voice_azure_key" yaml:"text_to_voice_azure_key"`
+
+	// MiniMax 配置
+	MiniMaxAPIKey  string `json:"minimax_api_key" yaml:"minimax_api_key"`
+	MiniMaxGroupID string `json:"minimax_group_id" yaml:"minimax_group_id"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -372,6 +394,7 @@ func Register(ins *app.App) {
 
 			BaseURL:      strings.TrimSuffix(ctx.String("base-url"), "/"),
 			IsProduction: ctx.Bool("production"),
+			TempDir:      ctx.String("temp-dir"),
 
 			EnableModelRateLimit:   ctx.Bool("enable-model-rate-limit"),
 			EnableCustomHomeModels: ctx.Bool("enable-custom-home-models"),
@@ -573,13 +596,26 @@ func Register(ins *app.App) {
 			FreeChatDailyGlobalLimit: ctx.Int("free-chat-daily-global-limit"),
 			FreeChatModel:            ctx.String("free-chat-model"),
 
-			WeChatAppID:  ctx.String("wechat-appid"),
-			WeChatSecret: ctx.String("wechat-secret"),
+			WeChatAppID:                 ctx.String("wechat-appid"),
+			WeChatSecret:                ctx.String("wechat-secret"),
+			WeChatPayEnabled:            ctx.Bool("wechatpay-enabled"),
+			WeChatPayMchID:              ctx.String("wechatpay-mchid"),
+			WeChatPayCertSerialNumber:   ctx.String("wechatpay-cert-serial-number"),
+			WeChatPayCertPrivateKeyPath: ctx.String("wechatpay-cert-private-key-path"),
+			WeChatPayAPIv3Key:           ctx.String("wechatpay-api-v3-key"),
+			WeChatPayNotifyURL:          ctx.String("wechatpay-notify-url"),
 
 			Stripe: stripe,
 
 			DefaultHomeModels:    ctx.StringSlice("default-home-models"),
 			DefaultHomeModelsIOS: ctx.StringSlice("default-home-models-ios"),
+
+			TextToVoiceEngine:      ctx.String("text-to-voice-engine"),
+			TextToVoiceAzureRegion: ctx.String("text-to-voice-azure-region"),
+			TextToVoiceAzureKey:    ctx.String("text-to-voice-azure-key"),
+
+			MiniMaxAPIKey:  ctx.String("minimax-api-key"),
+			MiniMaxGroupID: ctx.String("minimax-group-id"),
 		}
 	})
 }
