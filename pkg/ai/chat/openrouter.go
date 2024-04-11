@@ -2,7 +2,6 @@ package chat
 
 import (
 	"context"
-	oai "github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
@@ -37,18 +36,7 @@ func (chat *OpenRouterChat) initRequest(req Request) (*openai.ChatCompletionRequ
 		}
 	}
 
-	msgs, tokenCount, err := oai.ReduceChatCompletionMessages(
-		contextMessages,
-		req.Model,
-		oai.ModelMaxContextSize(req.Model),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	messages := append(systemMessages, msgs...)
-	req.Model = oai.SelectBestModel(req.Model, tokenCount)
-
+	messages := append(systemMessages, contextMessages...)
 	return &openai.ChatCompletionRequest{
 		Model:     req.Model,
 		Messages:  messages,

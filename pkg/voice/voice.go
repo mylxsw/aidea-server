@@ -4,10 +4,8 @@ import (
 	"context"
 	"crypto/md5"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
-	oai "github.com/sashabaranov/go-openai"
-	"io"
+	"strings"
 	"time"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -17,16 +15,16 @@ import (
 type Voice struct {
 	conf   *config.Config
 	rdb    *redis.Client
-	client openai.Client
+	engine Engine
 	up     *uploader.Uploader
 }
 
-func NewVoice(conf *config.Config, rdb *redis.Client, client openai.Client, up *uploader.Uploader) *Voice {
-	return &Voice{conf: conf, rdb: rdb, client: client, up: up}
+func NewVoice(conf *config.Config, rdb *redis.Client, eng Engine, up *uploader.Uploader) *Voice {
+	return &Voice{conf: conf, rdb: rdb, engine: eng, up: up}
 }
 
-func (v *Voice) Text2VoiceOnlyCached(ctx context.Context, voice oai.SpeechVoice, content string) (string, error) {
-	cacheKey := fmt.Sprintf("voice2text:%s:%x", voice, md5.Sum([]byte(content)))
+func (v *Voice) Text2VoiceOnlyCached(ctx context.Context, text string, voiceType Type) (string, error) {
+	cacheKey := fmt.Sprintf("voice2text:%s:%x", voiceType, md5.Sum([]byte(text)))
 	if rs, err := v.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		return rs, nil
 	}
@@ -34,13 +32,13 @@ func (v *Voice) Text2VoiceOnlyCached(ctx context.Context, voice oai.SpeechVoice,
 	return "", nil
 }
 
-func (v *Voice) Text2VoiceCached(ctx context.Context, voice oai.SpeechVoice, content string) (string, error) {
-	cacheKey := fmt.Sprintf("voice2text:%s:%x", voice, md5.Sum([]byte(content)))
+func (v *Voice) Text2VoiceCached(ctx context.Context, text string, voiceType Type) (string, error) {
+	cacheKey := fmt.Sprintf("voice2text:%s:%x", voiceType, md5.Sum([]byte(text)))
 	if rs, err := v.rdb.Get(ctx, cacheKey).Result(); err == nil {
 		return rs, nil
 	}
 
-	res, err := v.Text2Voice(ctx, voice, content)
+	res, err := v.Text2Voice(ctx, text, voiceType)
 	if err != nil {
 		return "", err
 	}
@@ -52,21 +50,15 @@ func (v *Voice) Text2VoiceCached(ctx context.Context, voice oai.SpeechVoice, con
 	return res, nil
 }
 
-func (v *Voice) Text2Voice(ctx context.Context, voice oai.SpeechVoice, content string) (string, error) {
-	speech, err := v.client.CreateSpeech(ctx, oai.CreateSpeechRequest{
-		Model:          "tts-1",
-		Input:          content,
-		Voice:          voice,
-		ResponseFormat: oai.SpeechResponseFormatMp3,
-	})
+func (v *Voice) Text2Voice(ctx context.Context, text string, voiceType Type) (string, error) {
+	voiceFile, err := v.engine.Text2Voice(ctx, text, voiceType)
 	if err != nil {
 		return "", fmt.Errorf("语音合成失败: %w", err)
 	}
 
-	data, err := io.ReadAll(speech)
-	if err != nil {
-		return "", fmt.Errorf("读取语音流失败: %w", err)
+	if strings.HasPrefix(voiceFile, "http://") || strings.HasPrefix(voiceFile, "https://") {
+		return voiceFile, nil
 	}
 
-	return v.up.UploadStream(ctx, 0, 14, data, "mp3")
+	return v.up.UploadFile(ctx, 0, 14, strings.TrimPrefix(voiceFile, "file://"))
 }

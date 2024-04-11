@@ -124,12 +124,25 @@ func (svc *ChatService) Models(ctx context.Context, returnAll bool) []repo.Model
 }
 
 func PureModelID(modelID string) string {
-	segs := strings.SplitN(modelID, ":", 2)
-	if len(segs) > 1 {
-		return segs[1]
+	pureModelID := func() string {
+		segs := strings.SplitN(modelID, ":", 2)
+		if len(segs) > 1 {
+			return segs[1]
+		}
+
+		return modelID
 	}
 
-	return modelID
+	res := pureModelID()
+	// 临时处理，南贤北丑模型名称已经变更，这里做一个兼容处理
+	switch res {
+	case "nanxian":
+		return "chat-3.5"
+	case "beichou":
+		return "chat-4"
+	}
+
+	return res
 }
 
 // TODO 缓存
@@ -359,7 +372,7 @@ func (svc *ChatService) UpdateFreeChatCount(ctx context.Context, userID int64, m
 		if errors.Is(err, repo.ErrNotFound) {
 			return nil
 		}
-		
+
 		return err
 	}
 

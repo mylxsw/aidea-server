@@ -2,6 +2,7 @@ package common
 
 import (
 	"github.com/mylxsw/aidea-server/pkg/youdao"
+	"github.com/mylxsw/eloquent/query"
 	"github.com/mylxsw/glacier/web"
 )
 
@@ -31,4 +32,48 @@ func Text(webCtx web.Context, translater youdao.Translater, text string) string 
 	}
 
 	return text
+}
+
+type DataObj[T any] struct {
+	Data T `json:"data"`
+}
+
+func NewDataObj[T any](data T) DataObj[T] {
+	return DataObj[T]{Data: data}
+}
+
+type DataArray[T any] struct {
+	Data []T `json:"data"`
+}
+
+func NewDataArray[T any](data []T) DataArray[T] {
+	return DataArray[T]{Data: data}
+}
+
+type IDResponse[T any] struct {
+	ID T `json:"id"`
+}
+
+func NewIDResponse[T any](id T) IDResponse[T] {
+	return IDResponse[T]{ID: id}
+}
+
+type EmptyResponse struct{}
+
+type Pagination[T any] struct {
+	Data     []T   `json:"data"`
+	Page     int64 `json:"page"`
+	PerPage  int64 `json:"per_page"`
+	Total    int64 `json:"total"`
+	LastPage int64 `json:"last_page"`
+}
+
+func NewPagination[T any](data []T, meta query.PaginateMeta) Pagination[T] {
+	return Pagination[T]{
+		Data:     data,
+		Page:     meta.Page,
+		PerPage:  meta.PerPage,
+		Total:    meta.Total,
+		LastPage: meta.LastPage,
+	}
 }

@@ -28,6 +28,8 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("universal-link-config", "", "universal link 配置文件路径，留空则使用默认的 universal link，配置文件格式参考 https://developer.apple.com/documentation/xcode/supporting-associated-domains")
 	ins.AddBoolFlag("should-bind-phone", "是否需要绑定手机号码")
 
+	ins.AddStringFlag("temp-dir", "/tmp", "临时文件存储目录")
+
 	ins.AddStringFlag("redis-host", "127.0.0.1", "redis host")
 	ins.AddIntFlag("redis-port", 6379, "redis port")
 	ins.AddStringFlag("redis-password", "", "redis password")
@@ -226,6 +228,12 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("wechat-appid", "", "微信开放平台 APP ID")
 	ins.AddStringFlag("wechat-secret", "", "微信开放平台 APP Secret")
+	ins.AddBoolFlag("wechatpay-enabled", "是否启用微信支付")
+	ins.AddStringFlag("wechatpay-mchid", "", "微信支付商户号")
+	ins.AddStringFlag("wechatpay-cert-serial-number", "", "微信支付 API 证书序列号")
+	ins.AddStringFlag("wechatpay-cert-private-key-path", "", "微信支付 API 证书私钥路径")
+	ins.AddStringFlag("wechatpay-api-v3-key", "", "微信支付 APIv3 密钥")
+	ins.AddStringFlag("wechatpay-notify-url", "", "微信支付回调地址，格式 https://YOUR_SERVER_HOST/v1/payment/callback/wechat-pay/notify")
 
 	ins.AddBoolFlag("enable-stripe", "是否启用 stripe 支付")
 	ins.AddStringFlag("stripe-publishable-key", "", "stripe publishable key")
@@ -234,4 +242,11 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringSliceFlag("default-home-models", []string{"gpt-3.5-turbo", "gpt-4"}, "默认的首页模型，值取自数据表 models.model_id")
 	ins.AddStringSliceFlag("default-home-models-ios", []string{"chat-3.5", "chat-4"}, "默认的首页模型（IOS），值取自数据表 models.model_id")
+
+	ins.AddStringFlag("text-to-voice-engine", "openai", "文本转语音引擎，支持 minimax/openai/azure")
+	ins.AddStringFlag("text-to-voice-azure-region", "eastus", "Azure 语音服务区域")
+	ins.AddStringFlag("text-to-voice-azure-key", "", "Azure 语音服务 Key")
+
+	ins.AddStringFlag("minimax-api-key", "", "Minimax API Key")
+	ins.AddStringFlag("minimax-group-id", "", "Minimax Group ID")
 }

@@ -1,0 +1,1283 @@
+definitions:
+  admin.AssignQuotaReq:
+    properties:
+      note:
+        description: Note 备注
+        type: string
+      quota:
+        description: Quota 分配智慧果数量
+        type: integer
+      user_id:
+        description: UserID 用户 ID
+        type: integer
+      valid_period:
+        description: ValidPeriod 有效期，单位小时
+        type: integer
+    type: object
+  admin.Channel:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      display_name:
+        type: string
+      id:
+        type: integer
+      meta:
+        $ref: '#/definitions/repo.ChannelMeta'
+      name:
+        type: string
+      secret:
+        type: string
+      server:
+        type: string
+      type:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  admin.ChatGroupMessage:
+    properties:
+      createdAt:
+        type: string
+      error:
+        type: string
+      group_id:
+        type: integer
+      id:
+        type: integer
+      member_id:
+        type: integer
+      message:
+        type: string
+      model:
+        type: string
+      model_name:
+        type: string
+      pid:
+        type: integer
+      quota_consumed:
+        type: integer
+      role:
+        type: integer
+      status:
+        type: integer
+      token_consumed:
+        type: integer
+      type:
+        type: string
+      updatedAt:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  admin.UserQuotaResponse:
+    properties:
+      details:
+        description: Details Smart Fruit User Details
+        items:
+          $ref: '#/definitions/repo.Quota'
+        type: array
+      total:
+        description: Total remaining Smart Fruit
+        type: integer
+    type: object
+  admin.UserResponse:
+    properties:
+      apple_uid:
+        type: string
+      avatar:
+        type: string
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: integer
+      invite_by:
+        type: integer
+      invite_code:
+        type: string
+      phone:
+        type: string
+      prefer_signin_method:
+        type: string
+      realname:
+        type: string
+      status:
+        type: string
+      union_id:
+        type: string
+      updatedAt:
+        type: string
+      user_type:
+        type: string
+    type: object
+  coins.ModelWithName:
+    properties:
+      end_at:
+        type: string
+      free_count:
+        type: integer
+      id:
+        type: integer
+      info:
+        type: string
+      model:
+        type: string
+      name:
+        type: string
+      non_cn:
+        type: boolean
+    type: object
+  common.DataArray-admin_Channel:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/admin.Channel'
+        type: array
+    type: object
+  common.DataArray-admin_ChatGroupMessage:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/admin.ChatGroupMessage'
+        type: array
+    type: object
+  common.DataArray-model_ChatMessages:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.ChatMessages'
+        type: array
+    type: object
+  common.DataArray-model_ModelsDailyFree:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.ModelsDailyFree'
+        type: array
+    type: object
+  common.DataArray-model_Setting:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Setting'
+        type: array
+    type: object
+  common.DataArray-repo_Model:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/repo.Model'
+        type: array
+    type: object
+  common.DataArray-repo_Room:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/repo.Room'
+        type: array
+    type: object
+  common.DataArray-service_ChannelType:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/service.ChannelType'
+        type: array
+    type: object
+  common.DataObj-admin_Channel:
+    properties:
+      data:
+        $ref: '#/definitions/admin.Channel'
+    type: object
+  common.DataObj-admin_UserResponse:
+    properties:
+      data:
+        $ref: '#/definitions/admin.UserResponse'
+    type: object
+  common.DataObj-model_ModelsDailyFree:
+    properties:
+      data:
+        $ref: '#/definitions/model.ModelsDailyFree'
+    type: object
+  common.DataObj-model_Setting:
+    properties:
+      data:
+        $ref: '#/definitions/model.Setting'
+    type: object
+  common.DataObj-repo_Model:
+    properties:
+      data:
+        $ref: '#/definitions/repo.Model'
+    type: object
+  common.DataObj-repo_Room:
+    properties:
+      data:
+        $ref: '#/definitions/repo.Room'
+    type: object
+  common.EmptyResponse:
+    type: object
+  common.IDResponse-int64:
+    properties:
+      id:
+        type: integer
+    type: object
+  common.Pagination-admin_UserResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/admin.UserResponse'
+        type: array
+      last_page:
+        type: integer
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  common.Pagination-model_ChatMessages:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.ChatMessages'
+        type: array
+      last_page:
+        type: integer
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  common.Pagination-model_PaymentHistory:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.PaymentHistory'
+        type: array
+      last_page:
+        type: integer
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  controllers.WechatPayCreateResponse:
+    properties:
+      app_id:
+        description: APPID APP 支付专用，移动应用AppID
+        type: string
+      code_url:
+        description: CodeURL Web、PC 支付专用，二维码地址
+        type: string
+      noncestr:
+        description: Noncestr APP 支付专用，随机字符串，不长于32位。推荐随机数生成算法
+        type: string
+      package:
+        description: Package APP 支付专用，固定值Sign=WXPay
+        type: string
+      partner_id:
+        description: PartnerID APP 支付专用，商户号mchid对应的值
+        type: string
+      payment_id:
+        type: string
+      prepay_id:
+        description: PrepayID APP 支付专用，微信返回的支付交易会话ID，该值有效期为2小时。
+        type: string
+      sandbox:
+        type: boolean
+      sign:
+        description: Sign APP 支付专用，签名，使用字段AppID、timeStamp、nonceStr、prepayid计算得出的签名值
+          注意：取值RSA格式
+        type: string
+      timestamp:
+        description: Timestamp APP 支付专用，时间戳 秒级
+        type: string
+    type: object
+  model.ChatMessages:
+    properties:
+      createdAt:
+        type: string
+      error:
+        type: string
+      id:
+        type: integer
+      message:
+        type: string
+      model:
+        type: string
+      pid:
+        type: integer
+      quota_consumed:
+        type: integer
+      role:
+        type: integer
+      room_id:
+        type: integer
+      status:
+        type: integer
+      token_consumed:
+        type: integer
+      updatedAt:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  model.ModelsDailyFree:
+    properties:
+      createdAt:
+        type: string
+      end_at:
+        type: string
+      free_count:
+        type: integer
+      id:
+        type: integer
+      info:
+        type: string
+      model_id:
+        type: string
+      name:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  model.PaymentHistory:
+    properties:
+      createdAt:
+        type: string
+      environment:
+        type: string
+      id:
+        type: integer
+      payment_id:
+        type: string
+      purchase_at:
+        type: string
+      quantity:
+        type: integer
+      retail_price:
+        type: integer
+      source:
+        type: string
+      source_id:
+        type: string
+      status:
+        type: integer
+      updatedAt:
+        type: string
+      user_id:
+        type: integer
+      valid_until:
+        type: string
+    type: object
+  model.Setting:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      key:
+        type: string
+      updatedAt:
+        type: string
+      value:
+        type: string
+    type: object
+  repo.ChannelAddReq:
+    properties:
+      meta:
+        $ref: '#/definitions/repo.ChannelMeta'
+      name:
+        type: string
+      secret:
+        type: string
+      server:
+        type: string
+      type:
+        type: string
+    type: object
+  repo.ChannelMeta:
+    properties:
+      openai_azure:
+        description: OpenAIAzure 是否使用 OpenAI 的 Azure 服务
+        type: boolean
+      openai_azure_api_version:
+        description: OpenAIAzureAPIVersion OpenAI Azure API 版本
+        type: string
+      using_proxy:
+        description: UsingProxy 是否使用系统代理
+        type: boolean
+    type: object
+  repo.ChannelUpdateReq:
+    properties:
+      meta:
+        $ref: '#/definitions/repo.ChannelMeta'
+      name:
+        type: string
+      secret:
+        type: string
+      server:
+        type: string
+      type:
+        type: string
+    type: object
+  repo.Model:
+    properties:
+      avatar_url:
+        type: string
+      createdAt:
+        type: string
+      deletedAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      meta:
+        $ref: '#/definitions/repo.ModelMeta'
+      model_id:
+        type: string
+      name:
+        type: string
+      providers:
+        items:
+          $ref: '#/definitions/repo.ModelProvider'
+        type: array
+      short_name:
+        type: string
+      status:
+        type: integer
+      updatedAt:
+        type: string
+      version_max:
+        type: string
+      version_min:
+        type: string
+    type: object
+  repo.ModelAddReq:
+    properties:
+      avatar_url:
+        type: string
+      description:
+        type: string
+      meta:
+        $ref: '#/definitions/repo.ModelMeta'
+      model_id:
+        type: string
+      name:
+        type: string
+      providers:
+        items:
+          $ref: '#/definitions/repo.ModelProvider'
+        type: array
+      short_name:
+        type: string
+      status:
+        type: integer
+    type: object
+  repo.ModelMeta:
+    properties:
+      input_price:
+        description: InputPrice 输入 Token 价格（智慧果/1K Token），为空则与 OutputPrice 相同
+        type: integer
+      max_context:
+        description: MaxContext 最大上下文长度
+        type: integer
+      output_price:
+        description: OutputPrice 输出 Token 价格（智慧果/1K Token）
+        type: integer
+      prompt:
+        description: Prompt 全局的系统提示语
+        type: string
+      restricted:
+        description: Restricted 是否是受限制的模型
+        type: boolean
+      vision:
+        description: Vision 是否支持视觉能力
+        type: boolean
+    type: object
+  repo.ModelProvider:
+    properties:
+      id:
+        description: 模型供应商 ID 优先从 channels 中查询模型供应商，不设置则根据 name 直接读取配置文件中固定的供应商配置
+        type: integer
+      model_rewrite:
+        description: ModelRewrite 模型名称重写，如果为空，则使用模型的名称
+        type: string
+      name:
+        description: Name 供应商名称
+        type: string
+    type: object
+  repo.ModelUpdateReq:
+    properties:
+      avatar_url:
+        type: string
+      description:
+        type: string
+      meta:
+        $ref: '#/definitions/repo.ModelMeta'
+      name:
+        type: string
+      providers:
+        items:
+          $ref: '#/definitions/repo.ModelProvider'
+        type: array
+      short_name:
+        type: string
+      status:
+        type: integer
+      version_max:
+        type: string
+      version_min:
+        type: string
+    type: object
+  repo.Quota:
+    properties:
+      created_at:
+        type: string
+      expired:
+        type: boolean
+      id:
+        type: integer
+      note:
+        type: string
+      payment_id:
+        type: string
+      period_end_at:
+        type: string
+      period_start_at:
+        type: string
+      quota:
+        type: integer
+      rest:
+        type: integer
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  repo.Room:
+    properties:
+      avatar_id:
+        type: integer
+      avatar_url:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      init_message:
+        type: string
+      last_active_time:
+        type: string
+      max_context:
+        type: integer
+      members:
+        items:
+          type: string
+        type: array
+      model:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      room_type:
+        type: integer
+      system_prompt:
+        type: string
+      updatedAt:
+        type: string
+      user_id:
+        type: integer
+      vendor:
+        type: string
+    type: object
+  service.ChannelType:
+    properties:
+      display:
+        type: string
+      dynamic:
+        type: boolean
+      name:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: mylxsw@aicode.cc
+    name: mylxsw
+    url: https://ai.aicode.cc
+  description: AIdea API
+  title: AIdea API
+  version: "1.0"
+paths:
+  /v1/admin/channel-types:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-service_ChannelType'
+      summary: Return the list of all channel types.
+      tags:
+      - Admin:Channel
+  /v1/admin/channels:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-admin_Channel'
+      summary: Return the list of all channels.
+      tags:
+      - Admin:Channel
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel Add Request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/repo.ChannelAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.IDResponse-int64'
+      summary: Add channel
+      tags:
+      - Admin:Channel
+  /v1/admin/channels/{channel_id}:
+    delete:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: channel_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: Delete channel
+      tags:
+      - Admin:Channel
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel ID
+        in: path
+        name: channel_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataObj-admin_Channel'
+      summary: Return detailed information for the specified channel.
+      tags:
+      - Admin:Channel
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel ID
+        in: path
+        name: channel_id
+        required: true
+        type: integer
+      - description: Channel Update Request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/repo.ChannelUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: Update channel information
+      tags:
+      - Admin:Channel
+  /v1/admin/creative-island/histories/{id}/forbid:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: History ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: Violation of the Creation Island historical records ban
+      tags:
+      - Admin:CreativeIsland
+  /v1/admin/free-models/daily:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-model_ModelsDailyFree'
+      summary: Return all the free model listings.
+      tags:
+      - Admin:FreeModels
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Model information
+        in: body
+        name: model
+        required: true
+        schema:
+          $ref: '#/definitions/coins.ModelWithName'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: add free model
+      tags:
+      - Admin:FreeModels
+  /v1/admin/free-models/daily/{model_id}:
+    delete:
+      parameters:
+      - description: Model ID
+        in: path
+        name: model_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: Delete free model
+      tags:
+      - Admin:FreeModels
+    get:
+      parameters:
+      - description: Model ID
+        in: path
+        name: model_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataObj-model_ModelsDailyFree'
+      summary: Return the specified free model information.
+      tags:
+      - Admin:FreeModels
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Model ID
+        in: path
+        name: model_id
+        required: true
+        type: string
+      - description: Model information
+        in: body
+        name: model
+        required: true
+        schema:
+          $ref: '#/definitions/coins.ModelWithName'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: Update free models
+      tags:
+      - Admin:FreeModels
+  /v1/admin/messages/{user_id}/rooms:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-repo_Room'
+      summary: Get a list of all chat rooms for the specified user.
+      tags:
+      - Admin:Messages
+  /v1/admin/messages/{user_id}/rooms/{room_id}:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Room ID
+        in: path
+        name: room_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataObj-repo_Room'
+      summary: Get the specified chat room information for the specified user.
+      tags:
+      - Admin:Messages
+  /v1/admin/messages/{user_id}/rooms/{room_id}/group-messages:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Room ID
+        in: path
+        name: room_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-admin_ChatGroupMessage'
+      summary: Get the latest 200 messages in the specified group chat room for the
+        specified user.
+      tags:
+      - Admin:Messages
+  /v1/admin/messages/{user_id}/rooms/{room_id}/messages:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      - description: Room ID
+        in: path
+        name: room_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-model_ChatMessages'
+      summary: Get the latest 200 messages in the specified chat room for the specified
+        user.
+      tags:
+      - Admin:Messages
+  /v1/admin/models:
+    get:
+      parameters:
+      - description: Sort fields, support id:desc
+        in: query
+        name: sort
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-repo_Model'
+      summary: Return the list of all models.
+      tags:
+      - Admin:Models
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Model information
+        in: body
+        name: model
+        required: true
+        schema:
+          $ref: '#/definitions/repo.ModelAddReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.IDResponse-int64'
+      summary: Add model
+      tags:
+      - Admin:Models
+  /v1/admin/models/{model_id}:
+    delete:
+      parameters:
+      - description: Model ID
+        in: path
+        name: model_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: delete model
+      tags:
+      - Admin:Models
+    get:
+      parameters:
+      - description: Model ID
+        in: path
+        name: model_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataObj-repo_Model'
+      summary: Retrieve detailed information for the specified model.
+      tags:
+      - Admin:Models
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Model ID
+        in: path
+        name: model_id
+        required: true
+        type: string
+      - description: Model information
+        in: body
+        name: model
+        required: true
+        schema:
+          $ref: '#/definitions/repo.ModelUpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: update model
+      tags:
+      - Admin:Models
+  /v1/admin/payments/histories:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 1
+        description: Page
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Per Page
+        in: query
+        name: per_page
+        type: integer
+      - description: Keyword
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Pagination-model_PaymentHistory'
+      summary: View all payment history records
+      tags:
+      - Admin:Payment
+  /v1/admin/quotas/assign:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: AssignQuotaReq
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/admin.AssignQuotaReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: Assign smart fruits to users
+      tags:
+      - Admin:Quotas
+  /v1/admin/quotas/users/{id}:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/admin.UserQuotaResponse'
+      summary: User Smart Fruit Details
+      tags:
+      - Admin:Quotas
+  /v1/admin/recent-messages:
+    get:
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Number of items per page
+        in: query
+        name: per_page
+        type: integer
+      - description: Support searching by message content and model name (fuzzy matching)
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Pagination-model_ChatMessages'
+      summary: Get the latest 20 messages.
+      tags:
+      - Admin:Messages
+  /v1/admin/settings:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-model_Setting'
+      summary: Get all configuration items.
+      tags:
+      - Admin:Settings
+  /v1/admin/settings/key/{key}:
+    get:
+      parameters:
+      - description: Configuration item key
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataObj-model_Setting'
+      summary: Get the specified configuration item.
+      tags:
+      - Admin:Settings
+  /v1/admin/settings/key/{key}/reload:
+    post:
+      parameters:
+      - description: Configuration item key
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: Reload the specified configuration item.
+      tags:
+      - Admin:Settings
+  /v1/admin/settings/reload:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.EmptyResponse'
+      summary: Reload all configuration items.
+      tags:
+      - Admin:Settings
+  /v1/admin/users:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 1
+        description: Page
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Per Page
+        in: query
+        name: per_page
+        type: integer
+      - description: Support searching by phone number, name, and email (prefix fuzzy
+          matching)
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.Pagination-admin_UserResponse'
+      summary: Return the list of all users
+      tags:
+      - Admin:User
+  /v1/admin/users/{id}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataObj-admin_UserResponse'
+      summary: User details
+      tags:
+      - Admin:User
+  /v1/payment/callback/wechat-pay/notify:
+    post:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses: {}
+      summary: Wechat Pay result notification
+      tags:
+      - payment
+  /v1/payment/wechatpay:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: product id
+        in: query
+        name: product_id
+        required: true
+        type: string
+      - description: source
+        enum:
+        - app
+        - web
+        - pc
+        in: query
+        name: source
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.WechatPayCreateResponse'
+      summary: create wechat payment
+      tags:
+      - payment
+schemes:
+- http
+securityDefinitions:
+  Bearer:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
