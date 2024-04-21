@@ -77,7 +77,7 @@ func TestTextToImage(t *testing.T) {
 	}
 
 	st := stabilityai.NewStabilityAIWithClient(&conf, &http.Client{Timeout: 60 * time.Second})
-	resp, err := st.TextToImage("stable-diffusion-v1-5", stabilityai.TextToImageRequest{
+	resp, err := st.TextToImage("sd-core", stabilityai.TextToImageRequest{
 		TextPrompts: []stabilityai.TextPrompts{
 			{Text: "a small cat"},
 		},

@@ -155,6 +155,10 @@ func VersionOlder(current, compareWith string) bool {
 }
 
 func ResolveAspectRatio(width, height int) string {
+	if width == 0 || height == 0 {
+		return "1:1"
+	}
+
 	gcd := func(a, b int) int {
 		if a < b {
 			a, b = b, a

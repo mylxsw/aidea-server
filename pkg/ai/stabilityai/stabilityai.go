@@ -10,6 +10,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
+	"github.com/mylxsw/go-utils/array"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -96,6 +97,15 @@ type ErrorResponse struct {
 // ImageToImage 图片转图片 https://platform.stability.ai/docs/features/image-to-image?tab=python
 // 注意：输入图片的宽度和高度值必须为 64 的整数倍
 func (ai *StabilityAI) ImageToImage(ctx context.Context, model string, param ImageToImageRequest) (*TextToImageResponse, error) {
+	if array.In(model, []string{"sd3", "sd3-turbo"}) {
+		res, err := ai.StableDiffusionV3ImageToImage(model, param)
+		if err != nil {
+			return nil, err
+		}
+
+		return res.ToImageResponse(), nil
+	}
+
 	data := &bytes.Buffer{}
 	writer := multipart.NewWriter(data)
 
@@ -257,6 +267,24 @@ func (ai *StabilityAI) Upscale(ctx context.Context, model string, imagePath stri
 
 // TextToImage 文本转图片 https://platform.stability.ai/rest-api#tag/v1generation/operation/textToImage
 func (ai *StabilityAI) TextToImage(model string, param TextToImageRequest) (*TextToImageResponse, error) {
+	if array.In(model, []string{"sd3", "sd3-turbo"}) {
+		res, err := ai.StableDiffusionV3TextToImage(model, param)
+		if err != nil {
+			return nil, err
+		}
+
+		return res.ToImageResponse(), nil
+	}
+
+	if model == "sd-core" {
+		res, err := ai.ImageCoreGenerate(param)
+		if err != nil {
+			return nil, err
+		}
+
+		return res.ToImageResponse(), nil
+	}
+
 	reqData, err := json.Marshal(param)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request data: %v", err)
@@ -360,6 +388,9 @@ type TextPrompts struct {
 type ImageToImageRequest struct {
 	// TextPrompts An array of text prompts to use for generation
 	TextPrompt string `json:"text_prompt,omitempty"`
+
+	// NegativePrompt only used for sd3
+	NegativePrompt string `json:"negative_prompt,omitempty"`
 
 	// InitImage Image used to initialize the diffusion process, in lieu of random noise.
 	InitImage string `json:"init_image,omitempty"`
