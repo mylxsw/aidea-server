@@ -116,6 +116,16 @@ type ModelMeta struct {
 
 	// Prompt 全局的系统提示语
 	Prompt string `json:"prompt,omitempty"`
+
+	// Tag 模型标签
+	Tag          string `json:"tag,omitempty"`
+	TagTextColor string `json:"tag_text_color,omitempty"`
+	TagBgColor   string `json:"tag_bg_color,omitempty"`
+
+	// IsNew 是否是上新模型
+	IsNew bool `json:"is_new,omitempty"`
+	// Category 模型分类
+	Category string `json:"category,omitempty"`
 }
 
 type ModelProvider struct {

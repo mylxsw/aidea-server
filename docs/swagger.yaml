@@ -485,9 +485,15 @@ definitions:
     type: object
   repo.ModelMeta:
     properties:
+      category:
+        description: Category 模型分类
+        type: string
       input_price:
         description: InputPrice 输入 Token 价格（智慧果/1K Token），为空则与 OutputPrice 相同
         type: integer
+      is_new:
+        description: IsNew 是否是上新模型
+        type: boolean
       max_context:
         description: MaxContext 最大上下文长度
         type: integer
@@ -500,6 +506,13 @@ definitions:
       restricted:
         description: Restricted 是否是受限制的模型
         type: boolean
+      tag:
+        description: Tag 模型标签
+        type: string
+      tag_bg_color:
+        type: string
+      tag_text_color:
+        type: string
       vision:
         description: Vision 是否支持视觉能力
         type: boolean

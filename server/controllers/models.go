@@ -2,13 +2,12 @@ package controllers
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
-	"github.com/mylxsw/glacier/infra"
-
-	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/server/auth"
+	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
 	"github.com/mylxsw/go-utils/array"
 )
@@ -34,17 +33,20 @@ func (ctl *ModelController) Register(router web.Router) {
 }
 
 type Model struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	ShortName   string `json:"short_name"`
-	Description string `json:"description"`
-	AvatarURL   string `json:"avatar_url,omitempty"`
-	Category    string `json:"category"`
-	IsImage     bool   `json:"is_image"`
-	Disabled    bool   `json:"disabled"`
-	VersionMin  string `json:"version_min,omitempty"`
-	VersionMax  string `json:"version_max,omitempty"`
-	Tag         string `json:"tag,omitempty"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	ShortName    string `json:"short_name"`
+	Description  string `json:"description"`
+	AvatarURL    string `json:"avatar_url,omitempty"`
+	Category     string `json:"category"`
+	IsImage      bool   `json:"is_image"`
+	Disabled     bool   `json:"disabled"`
+	VersionMin   string `json:"version_min,omitempty"`
+	VersionMax   string `json:"version_max,omitempty"`
+	Tag          string `json:"tag,omitempty"`
+	TagTextColor string `json:"tag_text_color,omitempty"`
+	TagBgColor   string `json:"tag_bg_color,omitempty"`
+	IsNew        bool   `json:"is_new"`
 
 	IsChat        bool `json:"is_chat"`
 	SupportVision bool `json:"support_vision,omitempty"`
@@ -59,13 +61,17 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 			ShortName:     item.ShortName,
 			Description:   item.Description,
 			AvatarURL:     item.AvatarUrl,
-			Category:      "",
+			Category:      item.Meta.Category,
 			IsImage:       false,
 			Disabled:      item.Status == repo.ModelStatusDisabled,
 			VersionMin:    item.VersionMin,
 			VersionMax:    item.VersionMax,
 			IsChat:        true,
 			SupportVision: item.Meta.Vision,
+			IsNew:         item.Meta.IsNew,
+			Tag:           item.Meta.Tag,
+			TagTextColor:  item.Meta.TagTextColor,
+			TagBgColor:    item.Meta.TagBgColor,
 		}
 
 		if ret.Disabled {
@@ -88,6 +94,36 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 		}
 
 		return ret
+	})
+
+	sortPriority := []string{"OpenAI", "Anthropic", "Google"}
+	models = array.Sort(models, func(i, j Model) bool {
+		if i.Category == "" && j.Category != "" {
+			return false
+		} else if i.Category != "" && j.Category == "" {
+			return true
+		}
+
+		if i.Category == j.Category {
+			return i.Name < j.Name
+		}
+
+		ii := misc.IndexOf(sortPriority, i.Category)
+		ji := misc.IndexOf(sortPriority, j.Category)
+
+		if ii != -1 && ji == -1 {
+			return true
+		}
+
+		if ii == -1 && ji != -1 {
+			return false
+		}
+
+		if ii != -1 && ji != -1 {
+			return ii < ji
+		}
+
+		return i.Category < j.Category
 	})
 
 	return webCtx.JSON(models)
