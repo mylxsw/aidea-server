@@ -79,17 +79,20 @@ func (ctl *ModelController) GetAllHomeModels(ctx context.Context, webCtx web.Con
 	// 类型：model
 	homeModels = append(
 		homeModels,
-		array.Map(models, func(item repo.Model, _ int) service.HomeModel {
-			return service.HomeModel{
-				Type:          service.HomeModelTypeModel,
-				ID:            item.ModelId,
-				Name:          item.Name,
-				ModelID:       item.ModelId,
-				ModelName:     item.Name,
-				AvatarURL:     item.AvatarUrl,
-				SupportVision: item.Meta.Vision,
-			}
-		})...,
+		array.Map(
+			array.Filter(models, func(item repo.Model, _ int) bool { return item.Status == repo.ModelStatusEnabled }),
+			func(item repo.Model, _ int) service.HomeModel {
+				return service.HomeModel{
+					Type:          service.HomeModelTypeModel,
+					ID:            item.ModelId,
+					Name:          item.Name,
+					ModelID:       item.ModelId,
+					ModelName:     item.Name,
+					AvatarURL:     item.AvatarUrl,
+					SupportVision: item.Meta.Vision,
+				}
+			},
+		)...,
 	)
 
 	// 类型：room_gallery
@@ -128,7 +131,7 @@ func (ctl *ModelController) GetAllHomeModels(ctx context.Context, webCtx web.Con
 				if avatarUrl == "" {
 					avatarUrl = model.AvatarUrl
 				}
-				
+
 				return service.HomeModel{
 					Type:          service.HomeModelTypeRooms,
 					ID:            strconv.Itoa(int(item.Id)),
