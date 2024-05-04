@@ -1,5 +1,7 @@
 # AIdea 服务端 - AI 聊天、协作、图像生成
 
+<a href="https://trendshift.io/repositories/855" target="_blank"><img src="https://trendshift.io/api/badge/repositories/855" alt="mylxsw%2Faidea-server | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+
 一款集成了主流大语言模型以及绘图模型的 APP 服务端，使用 Golang 开发，代码完全开源，支持以下功能：
 
 - 支持 OpenAI 的 GPT-3.5，GPT-4 大语言模型
