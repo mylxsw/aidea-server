@@ -424,7 +424,12 @@ func (ai *Imp) MaxContextLength(model string) int {
 		return mod.Meta.MaxContext
 	}
 
-	return ai.selectImp(mod.SelectProvider(context.Background())).MaxContextLength(model)
+	ret := ai.selectImp(mod.SelectProvider(context.Background())).MaxContextLength(model)
+	if ret > 0 {
+		return ret
+	}
+
+	return 4000
 }
 
 // createOpenAIClient 创建一个 OpenAI Client
