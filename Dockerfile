@@ -20,6 +20,10 @@ RUN apt-get -y update && DEBIAN_FRONTEND="nointeractive" apt install -y tzdata c
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /data
+
+RUN mkdir -p /data/resources
+COPY resources /data/resources
+
 COPY --from=builder /data/bin/aidea-server /usr/local/bin/
 EXPOSE 8080
 
