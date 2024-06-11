@@ -1,5 +1,7 @@
 # AIdea 服务端 - AI 聊天、协作、图像生成
 
+<a href="https://trendshift.io/repositories/855" target="_blank"><img src="https://trendshift.io/api/badge/repositories/855" alt="mylxsw%2Faidea-server | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
+
 一款集成了主流大语言模型以及绘图模型的 APP 服务端，使用 Golang 开发，代码完全开源，支持以下功能：
 
 - 支持 OpenAI 的 GPT-3.5，GPT-4 大语言模型
@@ -29,9 +31,11 @@ https://aidea.aicode.cc
 
 ### 技术交流
 
-- 微信技术交流群：3 个群都已满员，添加微信号 `x-prometheus` 为好友，拉你进群
+- 微信技术交流群：
 
-    <img src="https://github.com/mylxsw/aidea/assets/2330911/655601c1-9371-4460-9657-c58521260336" width="200"/>
+    <img src="https://github.com/mylxsw/aidea/assets/2330911/0a697937-b357-4d88-bb16-c07c5517d13c" width="400"/>
+
+    如果无法加入，请添加微信号 `x-prometheus` 为好友，拉你进群。
 
 - 微信公众号
 
