@@ -203,6 +203,7 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("log-path", "", "日志文件存储目录，留空则写入到标准输出")
 	ins.AddBoolFlag("log-colorful", "是否启用彩色日志")
 
+	ins.AddBoolFlag("dingding-slack-mode", "启用后，钉钉通知将发送至 Slack，而不是钉钉群")
 	ins.AddStringFlag("dingding-token", "", "钉钉群通知 Token，留空则不通知")
 	ins.AddStringFlag("dingding-secret", "", "钉钉群通知 Secret")
 

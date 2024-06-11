@@ -256,8 +256,9 @@ type Config struct {
 	SMSChannels []string `json:"sms_channels" yaml:"sms_channels"`
 
 	// 钉钉通知设置
-	DingDingToken  string `json:"-" yaml:"dingding_token"`
-	DingDingSecret string `json:"-" yaml:"dingding_secret"`
+	DingDingSlackMode bool   `json:"dingding_slack_mode" yaml:"dingding_slack_mode"`
+	DingDingToken     string `json:"-" yaml:"dingding_token"`
+	DingDingSecret    string `json:"-" yaml:"dingding_secret"`
 
 	// 国产化模式
 	CNLocalMode    bool   `json:"cn_local_mode" yaml:"cn_local_mode"`
@@ -575,8 +576,9 @@ func Register(ins *app.App) {
 
 			SMSChannels: ctx.StringSlice("sms-channels"),
 
-			DingDingToken:  ctx.String("dingding-token"),
-			DingDingSecret: ctx.String("dingding-secret"),
+			DingDingSlackMode: ctx.Bool("dingding-slack-mode"),
+			DingDingToken:     ctx.String("dingding-token"),
+			DingDingSecret:    ctx.String("dingding-secret"),
 
 			CNLocalMode:    ctx.Bool("cnlocal-mode"),
 			CNLocalOnlyIOS: ctx.Bool("cnlocal-onlyios"),
