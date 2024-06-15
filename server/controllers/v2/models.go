@@ -159,13 +159,17 @@ func (ctl *ModelController) GetHomeModelsItem(ctx context.Context, webCtx web.Co
 
 	key := webCtx.PathVar("key")
 
-	models := array.ToMap(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) string {
+	modelArr := ctl.svc.Chat.Models(ctx, true)
+	models := array.ToMap(modelArr, func(item repo.Model, _ int) string {
 		return item.ModelId
 	})
 	homeModel, err := ctl.userSrv.QueryHomeModel(ctx, models, userID, key)
 	if err != nil {
-		log.WithFields(log.Fields{"key": key, "models": models}).Errorf("query home model failed: %v", err)
-		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
+		key = "model|" + modelArr[0].ModelId
+		homeModel, err = ctl.userSrv.QueryHomeModel(ctx, models, userID, key)
+		if err != nil {
+			return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
+		}
 	}
 
 	return webCtx.JSON(web.M{
