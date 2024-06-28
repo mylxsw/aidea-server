@@ -325,6 +325,16 @@ func (ctl *RoomController) DeleteRoom(ctx context.Context, webCtx web.Context, u
 		return webCtx.JSONError("invalid room id", http.StatusBadRequest)
 	}
 
+	_, err = ctl.roomRepo.Room(ctx, user.ID, int64(roomID))
+	if err != nil {
+		if errors.Is(err, repo.ErrNotFound) {
+			log.F(log.M{"user_id": user.ID, "room_id": roomID}).Errorf("无权删除此用户房间: %v", err)
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidCredential), http.StatusForbidden)
+		}
+		log.F(log.M{"user_id": user.ID, "room_id": roomID}).Errorf("删除用户房间失败: %v", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
 	if err := ctl.roomRepo.Remove(ctx, user.ID, int64(roomID)); err != nil {
 		log.F(log.M{"user_id": user.ID, "room_id": roomID}).Errorf("删除用户房间失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
