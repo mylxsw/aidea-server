@@ -269,17 +269,19 @@ definitions:
       total:
         type: integer
     type: object
-  controllers.MessageShareRequest:
-    properties:
-      ids:
-        items:
-          type: integer
-        type: array
-    type: object
   controllers.MessageShareResponse:
     properties:
       code:
         type: string
+    type: object
+  controllers.SharedMessagesResponse:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/model.ChatMessages'
+        type: array
+      meta:
+        $ref: '#/definitions/repo.ShareData'
     type: object
   controllers.WechatPayCreateResponse:
     properties:
@@ -626,6 +628,15 @@ definitions:
       user_id:
         type: integer
       vendor:
+        type: string
+    type: object
+  repo.ShareData:
+    properties:
+      ids:
+        items:
+          type: integer
+        type: array
+      style:
         type: string
     type: object
   service.ChannelType:
@@ -1270,7 +1281,7 @@ paths:
         name: req
         required: true
         schema:
-          $ref: '#/definitions/controllers.MessageShareRequest'
+          $ref: '#/definitions/repo.ShareData'
       produces:
       - application/json
       responses:
@@ -1335,7 +1346,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/common.DataArray-model_ChatMessages'
+            $ref: '#/definitions/controllers.SharedMessagesResponse'
       summary: Get shared messages by code
       tags:
       - Message

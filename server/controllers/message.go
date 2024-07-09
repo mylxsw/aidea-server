@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/aidea-server/server/auth"
-	"github.com/mylxsw/aidea-server/server/controllers/common"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/web"
 	"github.com/mylxsw/go-utils/array"
@@ -32,10 +32,6 @@ func (ctl *MessageController) Register(router web.Router) {
 	})
 }
 
-type MessageShareRequest struct {
-	IDs []int64 `json:"ids"`
-}
-
 type MessageShareResponse struct {
 	Code string `json:"code"`
 }
@@ -45,11 +41,11 @@ type MessageShareResponse struct {
 // @Tags Message
 // @Accept json
 // @Produce json
-// @Param req body MessageShareRequest true "Message Share Request"
+// @Param req body repo.ShareData true "Message Share Request"
 // @Success 200 {object} MessageShareResponse
 // @Router /v1/messages/share [post]
 func (ctl *MessageController) ShareMessages(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
-	var req MessageShareRequest
+	var req repo.ShareData
 	if err := webCtx.Unmarshal(&req); err != nil {
 		return webCtx.JSONError(err.Error(), http.StatusBadRequest)
 	}
@@ -59,12 +55,17 @@ func (ctl *MessageController) ShareMessages(ctx context.Context, webCtx web.Cont
 		return webCtx.JSONError("invalid message ids", http.StatusBadRequest)
 	}
 
-	code, err := ctl.repo.Message.Share(ctx, user.ID, req.IDs)
+	code, err := ctl.repo.Message.Share(ctx, user.ID, req)
 	if err != nil {
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
 	return webCtx.JSON(MessageShareResponse{Code: code})
+}
+
+type SharedMessagesResponse struct {
+	Messages []model.ChatMessages `json:"messages"`
+	Meta     *repo.ShareData      `json:"meta"`
 }
 
 // GetSharedMessages Get shared messages by code
@@ -73,7 +74,7 @@ func (ctl *MessageController) ShareMessages(ctx context.Context, webCtx web.Cont
 // @Accept json
 // @Produce json
 // @Param code path string true "Share Code"
-// @Success 200 {object} common.DataArray[model.ChatMessages]
+// @Success 200 {object} SharedMessagesResponse
 // @Router /v1/shared-messages/{code} [get]
 func (ctl *MessageController) GetSharedMessages(ctx context.Context, webCtx web.Context) web.Response {
 	code := webCtx.PathVar("code")
@@ -81,7 +82,7 @@ func (ctl *MessageController) GetSharedMessages(ctx context.Context, webCtx web.
 		return webCtx.JSONError("invalid code", http.StatusBadRequest)
 	}
 
-	messages, err := ctl.repo.Message.SharedMessages(ctx, code)
+	messages, data, err := ctl.repo.Message.SharedMessages(ctx, code)
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
 			return webCtx.JSONError(err.Error(), http.StatusNotFound)
@@ -90,5 +91,5 @@ func (ctl *MessageController) GetSharedMessages(ctx context.Context, webCtx web.
 		return webCtx.JSONError(err.Error(), http.StatusInternalServerError)
 	}
 
-	return webCtx.JSON(common.NewDataArray(messages))
+	return webCtx.JSON(SharedMessagesResponse{Messages: messages, Meta: data})
 }

@@ -160,17 +160,27 @@ func (r *MessageRepo) Messages(ctx context.Context, page, perPage int64, options
 	}), meta, nil
 }
 
+type ShareData struct {
+	IDs   []int64 `json:"ids"`
+	Style string  `json:"style,omitempty"`
+}
+
+func (data ShareData) String() string {
+	ids := array.Sort(data.IDs, func(a, b int64) bool { return a < b })
+	return fmt.Sprintf(
+		"%s:%s",
+		strings.Join(array.Map(ids, func(id int64, _ int) string { return fmt.Sprintf("%d", id) }), ","),
+		data.Style,
+	)
+}
+
 // Share chat history, generate a sharing code
-func (r *MessageRepo) Share(ctx context.Context, userID int64, messageIds []int64) (string, error) {
-	if len(messageIds) == 0 {
+func (r *MessageRepo) Share(ctx context.Context, userID int64, data ShareData) (string, error) {
+	if len(data.IDs) == 0 {
 		return "", errors.New("no message ids")
 	}
 
-	shareCode := misc.Sha1([]byte(fmt.Sprintf(
-		"%d,%s",
-		userID,
-		strings.Join(array.Map(messageIds, func(id int64, _ int) string { return fmt.Sprintf("%d", id) }), ","),
-	)))
+	shareCode := misc.Sha1([]byte(fmt.Sprintf("%d:%s", userID, data.String())))
 
 	shareInfo, err := model.NewChatMessagesShareModel(r.db).First(ctx, query.Builder().Where(model.FieldChatMessagesShareCode, shareCode))
 	if err == nil && shareInfo != nil {
@@ -180,7 +190,7 @@ func (r *MessageRepo) Share(ctx context.Context, userID int64, messageIds []int6
 	if _, err := model.NewChatMessagesShareModel(r.db).Create(ctx, query.KV{
 		model.FieldChatMessagesShareCode:   shareCode,
 		model.FieldChatMessagesShareUserId: userID,
-		model.FieldChatMessagesShareData:   string(must.Must(json.Marshal(messageIds))),
+		model.FieldChatMessagesShareData:   string(must.Must(json.Marshal(data))),
 	}); err != nil {
 		return "", err
 	}
@@ -189,32 +199,33 @@ func (r *MessageRepo) Share(ctx context.Context, userID int64, messageIds []int6
 }
 
 // SharedMessages get shared messages by sharing code
-func (r *MessageRepo) SharedMessages(ctx context.Context, code string) ([]model.ChatMessages, error) {
+func (r *MessageRepo) SharedMessages(ctx context.Context, code string) ([]model.ChatMessages, *ShareData, error) {
 	shareInfo, err := model.NewChatMessagesShareModel(r.db).First(ctx, query.Builder().Where(model.FieldChatMessagesShareCode, code))
 	if err != nil {
 		if errors.Is(err, query.ErrNoResult) {
-			return nil, ErrNotFound
+			return nil, nil, ErrNotFound
 		}
 
-		return nil, err
+		return nil, nil, err
 	}
 
-	var messageIds []int64
-	if err := json.Unmarshal([]byte(shareInfo.Data.ValueOrZero()), &messageIds); err != nil {
-		return nil, err
+	var data ShareData
+	if err := json.Unmarshal([]byte(shareInfo.Data.ValueOrZero()), &data); err != nil {
+		return nil, nil, err
 	}
 
 	q := query.Builder().
-		WhereIn(model.FieldChatMessagesId, messageIds).
+		WhereIn(model.FieldChatMessagesId, data.IDs).
 		Where(model.FieldChatMessagesUserId, shareInfo.UserId.ValueOrZero())
 	messages, err := model.NewChatMessagesModel(r.db).Get(ctx, q)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(messages) == 0 {
-		return nil, ErrNotFound
+		return nil, nil, ErrNotFound
 	}
 
-	return array.Map(messages, func(m model.ChatMessagesN, _ int) model.ChatMessages { return m.ToChatMessages() }), nil
+	msgs := array.Map(messages, func(m model.ChatMessagesN, _ int) model.ChatMessages { return m.ToChatMessages() })
+	return msgs, &data, nil
 }

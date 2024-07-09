@@ -979,7 +979,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/controllers.MessageShareRequest"
+                            "$ref": "#/definitions/repo.ShareData"
                         }
                     }
                 ],
@@ -1075,7 +1075,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/common.DataArray-model_ChatMessages"
+                            "$ref": "#/definitions/controllers.SharedMessagesResponse"
                         }
                     }
                 }
@@ -1497,22 +1497,25 @@ const docTemplate = `{
                 }
             }
         },
-        "controllers.MessageShareRequest": {
-            "type": "object",
-            "properties": {
-                "ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
         "controllers.MessageShareResponse": {
             "type": "object",
             "properties": {
                 "code": {
                     "type": "string"
+                }
+            }
+        },
+        "controllers.SharedMessagesResponse": {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ChatMessages"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/repo.ShareData"
                 }
             }
         },
@@ -2027,6 +2030,20 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "vendor": {
+                    "type": "string"
+                }
+            }
+        },
+        "repo.ShareData": {
+            "type": "object",
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "style": {
                     "type": "string"
                 }
             }
