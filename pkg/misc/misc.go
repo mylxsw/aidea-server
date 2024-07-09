@@ -403,6 +403,6 @@ func IndexOf[T comparable](slice []T, item T) int {
 			return i
 		}
 	}
-	
+
 	return -1
 }

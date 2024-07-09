@@ -269,6 +269,18 @@ definitions:
       total:
         type: integer
     type: object
+  controllers.MessageShareRequest:
+    properties:
+      ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  controllers.MessageShareResponse:
+    properties:
+      code:
+        type: string
+    type: object
   controllers.WechatPayCreateResponse:
     properties:
       app_id:
@@ -1248,6 +1260,27 @@ paths:
       summary: User details
       tags:
       - Admin:User
+  /v1/messages/share:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Message Share Request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.MessageShareRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.MessageShareResponse'
+      summary: Share messages to other users
+      tags:
+      - Message
   /v1/payment/callback/wechat-pay/notify:
     post:
       consumes:
@@ -1257,7 +1290,7 @@ paths:
       responses: {}
       summary: Wechat Pay result notification
       tags:
-      - payment
+      - Payment
   /v1/payment/wechatpay:
     post:
       consumes:
@@ -1285,7 +1318,27 @@ paths:
             $ref: '#/definitions/controllers.WechatPayCreateResponse'
       summary: create wechat payment
       tags:
-      - payment
+      - Payment
+  /v1/shared-messages/{code}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Share Code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/common.DataArray-model_ChatMessages'
+      summary: Get shared messages by code
+      tags:
+      - Message
 schemes:
 - http
 securityDefinitions:

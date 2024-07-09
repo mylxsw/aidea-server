@@ -1,0 +1,18 @@
+package: model
+
+models:
+  - name: chat_messages_share
+    definition:
+      fields:
+        - name: id
+          type: int64
+          tag: json:"id"
+        - name: user_id
+          type: int64
+          tag: json:"user_id,omitempty"
+        - name: data
+          type: string
+          tag: json:"data,omitempty"
+        - name: code
+          type: string
+          tag: json:"code"

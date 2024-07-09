@@ -3,9 +3,14 @@ package repo
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/go-utils/array"
+	"github.com/mylxsw/go-utils/must"
+	"strings"
 	"time"
 
 	"github.com/mylxsw/eloquent"
@@ -153,4 +158,63 @@ func (r *MessageRepo) Messages(ctx context.Context, page, perPage int64, options
 	return array.Map(messages, func(item model.ChatMessagesN, _ int) model.ChatMessages {
 		return item.ToChatMessages()
 	}), meta, nil
+}
+
+// Share chat history, generate a sharing code
+func (r *MessageRepo) Share(ctx context.Context, userID int64, messageIds []int64) (string, error) {
+	if len(messageIds) == 0 {
+		return "", errors.New("no message ids")
+	}
+
+	shareCode := misc.Sha1([]byte(fmt.Sprintf(
+		"%d,%s",
+		userID,
+		strings.Join(array.Map(messageIds, func(id int64, _ int) string { return fmt.Sprintf("%d", id) }), ","),
+	)))
+
+	shareInfo, err := model.NewChatMessagesShareModel(r.db).First(ctx, query.Builder().Where(model.FieldChatMessagesShareCode, shareCode))
+	if err == nil && shareInfo != nil {
+		return shareCode, nil
+	}
+
+	if _, err := model.NewChatMessagesShareModel(r.db).Create(ctx, query.KV{
+		model.FieldChatMessagesShareCode:   shareCode,
+		model.FieldChatMessagesShareUserId: userID,
+		model.FieldChatMessagesShareData:   string(must.Must(json.Marshal(messageIds))),
+	}); err != nil {
+		return "", err
+	}
+
+	return shareCode, nil
+}
+
+// SharedMessages get shared messages by sharing code
+func (r *MessageRepo) SharedMessages(ctx context.Context, code string) ([]model.ChatMessages, error) {
+	shareInfo, err := model.NewChatMessagesShareModel(r.db).First(ctx, query.Builder().Where(model.FieldChatMessagesShareCode, code))
+	if err != nil {
+		if errors.Is(err, query.ErrNoResult) {
+			return nil, ErrNotFound
+		}
+
+		return nil, err
+	}
+
+	var messageIds []int64
+	if err := json.Unmarshal([]byte(shareInfo.Data.ValueOrZero()), &messageIds); err != nil {
+		return nil, err
+	}
+
+	q := query.Builder().
+		WhereIn(model.FieldChatMessagesId, messageIds).
+		Where(model.FieldChatMessagesUserId, shareInfo.UserId.ValueOrZero())
+	messages, err := model.NewChatMessagesModel(r.db).Get(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(messages) == 0 {
+		return nil, ErrNotFound
+	}
+
+	return array.Map(messages, func(m model.ChatMessagesN, _ int) model.ChatMessages { return m.ToChatMessages() }), nil
 }

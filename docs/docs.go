@@ -960,6 +960,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/messages/share": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Message"
+                ],
+                "summary": "Share messages to other users",
+                "parameters": [
+                    {
+                        "description": "Message Share Request",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.MessageShareRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.MessageShareResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/payment/callback/wechat-pay/notify": {
             "post": {
                 "consumes": [
@@ -969,7 +1002,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payment"
+                    "Payment"
                 ],
                 "summary": "Wechat Pay result notification",
                 "responses": {}
@@ -984,7 +1017,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payment"
+                    "Payment"
                 ],
                 "summary": "create wechat payment",
                 "parameters": [
@@ -1012,6 +1045,37 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/controllers.WechatPayCreateResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/shared-messages/{code}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Message"
+                ],
+                "summary": "Get shared messages by code",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Share Code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/common.DataArray-model_ChatMessages"
                         }
                     }
                 }
@@ -1430,6 +1494,25 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "controllers.MessageShareRequest": {
+            "type": "object",
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "controllers.MessageShareResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
                 }
             }
         },

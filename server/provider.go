@@ -98,6 +98,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		"/v1/auth/bind-wechat",  // 绑定微信
 		"/v1/rooms",             // 数字人管理
 		"/v1/room-galleries",    // 数字人 Gallery
+		"/v1/messages",          // 聊天记录
 		"/v1/voice",             // 语音合成
 		"/v1/admin",             // 管理员接口
 
@@ -304,6 +305,7 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 		controllers.NewAppleAuthController(resolver, conf),
 		controllers.NewPaymentController(resolver),
 		controllers.NewRoomController(resolver),
+		controllers.NewMessageController(resolver),
 		controllers.NewVoiceController(resolver),
 		controllers.NewNotificationController(resolver),
 		controllers.NewArticleController(resolver),
