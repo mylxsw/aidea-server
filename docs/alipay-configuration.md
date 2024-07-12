@@ -36,11 +36,11 @@
    ![](https://ssl.aicode.cc/mweb/16957849751549.jpg)
    ![](https://ssl.aicode.cc/mweb/16957854300644.jpg)
 
-4. 开发设置，设置密钥加签方式
+4. 开发设置，设置**证书**加签方式
 
    ![](https://ssl.aicode.cc/mweb/16957850449046.jpg)
 
-6. 下载密钥到本地
+6. 下载证书到本地
 
    ![](https://ssl.aicode.cc/mweb/16957850632285.jpg)
 
