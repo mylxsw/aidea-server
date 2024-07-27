@@ -491,7 +491,7 @@ stripe-webhook-secret: ""
 
 ######## 默认首页模型 ########
 # 首页默认展示的模型，取值为表 models.model_id 的值
-default-home-models: ["gpt-3.5-turbo", "gpt-4"]
+default-home-models: ["gpt-4o-mini", "gpt-4o"]
 # IOS 系统默认首页模型，取值为表 models.model_id 的值，如果为空，则使用 default-home-models
 default-home-models-ios: ["chat-3.5", "chat-4"]
 

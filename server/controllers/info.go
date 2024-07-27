@@ -229,15 +229,15 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		return false, []HomeModel{
 			{
-				Name:     "Chat 3.5",
-				ModelID:  "nanxian",
+				Name:     "Chat Mini",
+				ModelID:  "chat-3.5",
 				Desc:     "速度快，成本低",
 				Color:    "FF67AC5C",
 				Powerful: false,
 			},
 			{
-				Name:     "Chat 4.0",
-				ModelID:  "beichou",
+				Name:     "Chat Pro",
+				ModelID:  "chat-4",
 				Desc:     "能力强，更精准",
 				Color:    "FF714BD7",
 				Powerful: true,
@@ -247,15 +247,15 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 
 	return conf.EnableOpenAI, []HomeModel{
 		{
-			Name:     "GPT-3.5",
-			ModelID:  "gpt-3.5-turbo",
+			Name:     "GPT-4o Mini",
+			ModelID:  "gpt-4o-mini",
 			Desc:     "速度快，成本低",
 			Color:    "FF67AC5C",
 			Powerful: false,
 		},
 		{
-			Name:     "GPT-4 Turbo",
-			ModelID:  "gpt-4-turbo-preview",
+			Name:     "GPT-4o",
+			ModelID:  "gpt-4o",
 			Desc:     "能力强，更精准",
 			Color:    "FF714BD7",
 			Powerful: true,
