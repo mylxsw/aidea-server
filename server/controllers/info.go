@@ -398,7 +398,7 @@ func (ctl *InfoController) loadHomeModelsV2(ctx context.Context, conf *config.Co
 }
 
 func (ctl *InfoController) loadDefaultHomeModelsV2(ctx context.Context, conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
-	models := array.ToMap(ctl.svc.Chat.Models(ctx, false), func(item repo.Model, _ int) string {
+	models := array.ToMap(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) string {
 		return item.ModelId
 	})
 
@@ -448,9 +448,10 @@ func (ctl *InfoController) loadDefaultHomeModelsV2(ctx context.Context, conf *co
 		}
 
 		homeModels[i] = service.HomeModel{
-			Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
-			ID:   matched.ModelId,
-			Type: service.HomeModelTypeModel,
+			Name:          ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+			ID:            matched.ModelId,
+			Type:          service.HomeModelTypeModel,
+			SupportVision: matched.Meta.Vision,
 		}
 	}
 
