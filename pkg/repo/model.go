@@ -420,7 +420,11 @@ func (repo *ModelRepo) DeleteChannel(ctx context.Context, channelID int64) error
 
 // DailyFreeModels 返回每日免费模型
 func (repo *ModelRepo) DailyFreeModels(ctx context.Context) ([]model.ModelsDailyFree, error) {
-	models, err := model.NewModelsDailyFreeModel(repo.db).Get(ctx, query.Builder())
+	q := query.Builder().
+		Where(model.FieldModelsDailyFreeFreeCount, ">", 0).
+		OrderBy(model.FieldModelsDailyFreeName, "ASC")
+
+	models, err := model.NewModelsDailyFreeModel(repo.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}

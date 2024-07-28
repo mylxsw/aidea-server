@@ -229,18 +229,20 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		return false, []HomeModel{
 			{
-				Name:     "Chat Mini",
-				ModelID:  "chat-3.5",
-				Desc:     "速度快，成本低",
-				Color:    "FF67AC5C",
-				Powerful: false,
+				Name:          "Chat Mini",
+				ModelID:       "chat-3.5",
+				Desc:          "速度快，成本低",
+				Color:         "FF67AC5C",
+				Powerful:      false,
+				SupportVision: true,
 			},
 			{
-				Name:     "Chat Pro",
-				ModelID:  "chat-4",
-				Desc:     "能力强，更精准",
-				Color:    "FF714BD7",
-				Powerful: true,
+				Name:          "Chat Pro",
+				ModelID:       "chat-4",
+				Desc:          "能力强，更精准",
+				Color:         "FF714BD7",
+				Powerful:      true,
+				SupportVision: true,
 			},
 		}
 	}
@@ -413,9 +415,10 @@ func (ctl *InfoController) loadDefaultHomeModelsV2(ctx context.Context, conf *co
 			}
 
 			homeModels[i] = service.HomeModel{
-				Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
-				ID:   matched.ModelId,
-				Type: service.HomeModelTypeModel,
+				Name:          ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+				ID:            matched.ModelId,
+				Type:          service.HomeModelTypeModel,
+				SupportVision: matched.Meta.Vision,
 			}
 		}
 
