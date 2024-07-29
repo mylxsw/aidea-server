@@ -244,7 +244,7 @@ type ImageToImageRequest struct {
 	// Maximum length is 2048.
 	NegativePrompt string `json:"negative_prompt,omitempty"`
 
-	// Image Base64 encoded image that will be used as the a starting
+	// Image Image encoded image that will be used as the a starting
 	// point for the generation.
 	// Maximum size in each dimension is 1024px.
 	Image string `json:"image,omitempty"`
@@ -340,7 +340,7 @@ type ControlNetRequest struct {
 	// Minimum value is 256, maximum value is 1024. Default value is 512.
 	Height int64 `json:"height,omitempty"`
 
-	// Image Base64 encoded image that will be used as the a starting
+	// Image Image encoded image that will be used as the a starting
 	// point for the generation.
 	// Maximum size in each dimension is 1024px.
 	Image string `json:"image,omitempty"`
@@ -412,7 +412,7 @@ type InstructRequest struct {
 	// Maximum length is 2048.
 	NegativePrompt string `json:"negative_prompt,omitempty"`
 
-	// Image Base64 encoded image that will be used as the a starting
+	// Image Image encoded image that will be used as the a starting
 	// point for the generation.
 	// Maximum size in each dimension is 1024px.
 	Image string `json:"image,omitempty"`
@@ -480,7 +480,7 @@ type UpscaleRequest struct {
 	// Model ID supported by this pipeline and family. Use /v1/models?pipeline=enhancement&family=upscale to list all available models.
 	// Default value is real-esrgan-4x.
 	Model string `json:"model,omitempty"`
-	// Image Base64 encoded image that will be upscaled.
+	// Image Image encoded image that will be upscaled.
 	// Maximum size in each dimension is 1024px.
 	Image string `json:"image,omitempty"`
 	// Scale Scaling factor to apply. Image will be enlarged in all dimensions by the provided scale factor.
@@ -524,7 +524,7 @@ type FixFaceRequest struct {
 	// Use /v1/models?pipeline=enhancement&family=face-fix to list all available models
 	// Default value is gfpgan-v1-3.
 	Model string `json:"model,omitempty"`
-	// Image Base64 encoded image that will be upscaled.
+	// Image Image encoded image that will be upscaled.
 	// Maximum size in each dimension is 1024px.
 	Image string `json:"image,omitempty"`
 	// OutputFormat File format of the output image

@@ -155,6 +155,10 @@ func VersionOlder(current, compareWith string) bool {
 }
 
 func ResolveAspectRatio(width, height int) string {
+	if width == 0 || height == 0 {
+		return "1:1"
+	}
+
 	gcd := func(a, b int) int {
 		if a < b {
 			a, b = b, a
@@ -390,4 +394,15 @@ func FileSize(tempPath string) int64 {
 	}
 
 	return fileInfo.Size()
+}
+
+// IndexOf Helper function to get the index of T in a slice
+func IndexOf[T comparable](slice []T, item T) int {
+	for i, v := range slice {
+		if v == item {
+			return i
+		}
+	}
+
+	return -1
 }

@@ -9,6 +9,6 @@ type Provider struct{}
 
 func (Provider) Register(binder infra.Binder) {
 	binder.MustSingleton(func(conf *config.Config) *Dingding {
-		return NewDingding(conf.DingDingToken, conf.DingDingSecret)
+		return NewDingding(conf.DingDingSlackMode, conf.DingDingToken, conf.DingDingSecret)
 	})
 }

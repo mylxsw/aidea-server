@@ -229,33 +229,35 @@ func (ctl *InfoController) loadDefaultHomeModels(conf *config.Config, client *au
 	if client.IsCNLocalMode(conf) && (user.User == nil || !user.User.ExtraPermissionUser()) {
 		return false, []HomeModel{
 			{
-				Name:     "Chat 3.5",
-				ModelID:  "nanxian",
-				Desc:     "速度快，成本低",
-				Color:    "FF67AC5C",
-				Powerful: false,
+				Name:          "Chat Mini",
+				ModelID:       "chat-3.5",
+				Desc:          "速度快，成本低",
+				Color:         "FF67AC5C",
+				Powerful:      false,
+				SupportVision: true,
 			},
 			{
-				Name:     "Chat 4.0",
-				ModelID:  "beichou",
-				Desc:     "能力强，更精准",
-				Color:    "FF714BD7",
-				Powerful: true,
+				Name:          "Chat Pro",
+				ModelID:       "chat-4",
+				Desc:          "能力强，更精准",
+				Color:         "FF714BD7",
+				Powerful:      true,
+				SupportVision: true,
 			},
 		}
 	}
 
 	return conf.EnableOpenAI, []HomeModel{
 		{
-			Name:     "GPT-3.5",
-			ModelID:  "gpt-3.5-turbo",
+			Name:     "GPT-4o Mini",
+			ModelID:  "gpt-4o-mini",
 			Desc:     "速度快，成本低",
 			Color:    "FF67AC5C",
 			Powerful: false,
 		},
 		{
-			Name:     "GPT-4 Turbo",
-			ModelID:  "gpt-4-turbo-preview",
+			Name:     "GPT-4o",
+			ModelID:  "gpt-4o",
 			Desc:     "能力强，更精准",
 			Color:    "FF714BD7",
 			Powerful: true,
@@ -396,7 +398,7 @@ func (ctl *InfoController) loadHomeModelsV2(ctx context.Context, conf *config.Co
 }
 
 func (ctl *InfoController) loadDefaultHomeModelsV2(ctx context.Context, conf *config.Config, client *auth.ClientInfo, user *auth.UserOptional) (enableOpenAI bool, homeModels []service.HomeModel) {
-	models := array.ToMap(ctl.svc.Chat.Models(ctx, false), func(item repo.Model, _ int) string {
+	models := array.ToMap(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) string {
 		return item.ModelId
 	})
 
@@ -413,9 +415,10 @@ func (ctl *InfoController) loadDefaultHomeModelsV2(ctx context.Context, conf *co
 			}
 
 			homeModels[i] = service.HomeModel{
-				Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
-				ID:   matched.ModelId,
-				Type: service.HomeModelTypeModel,
+				Name:          ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+				ID:            matched.ModelId,
+				Type:          service.HomeModelTypeModel,
+				SupportVision: matched.Meta.Vision,
 			}
 		}
 
@@ -445,9 +448,10 @@ func (ctl *InfoController) loadDefaultHomeModelsV2(ctx context.Context, conf *co
 		}
 
 		homeModels[i] = service.HomeModel{
-			Name: ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
-			ID:   matched.ModelId,
-			Type: service.HomeModelTypeModel,
+			Name:          ternary.If(matched.ShortName == "", matched.Name, matched.ShortName),
+			ID:            matched.ModelId,
+			Type:          service.HomeModelTypeModel,
+			SupportVision: matched.Meta.Vision,
 		}
 	}
 

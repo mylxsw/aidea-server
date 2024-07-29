@@ -116,6 +116,16 @@ type ModelMeta struct {
 
 	// Prompt 全局的系统提示语
 	Prompt string `json:"prompt,omitempty"`
+
+	// Tag 模型标签
+	Tag          string `json:"tag,omitempty"`
+	TagTextColor string `json:"tag_text_color,omitempty"`
+	TagBgColor   string `json:"tag_bg_color,omitempty"`
+
+	// IsNew 是否是上新模型
+	IsNew bool `json:"is_new,omitempty"`
+	// Category 模型分类
+	Category string `json:"category,omitempty"`
 }
 
 type ModelProvider struct {
@@ -410,7 +420,11 @@ func (repo *ModelRepo) DeleteChannel(ctx context.Context, channelID int64) error
 
 // DailyFreeModels 返回每日免费模型
 func (repo *ModelRepo) DailyFreeModels(ctx context.Context) ([]model.ModelsDailyFree, error) {
-	models, err := model.NewModelsDailyFreeModel(repo.db).Get(ctx, query.Builder())
+	q := query.Builder().
+		Where(model.FieldModelsDailyFreeFreeCount, ">", 0).
+		OrderBy(model.FieldModelsDailyFreeName, "ASC")
+
+	models, err := model.NewModelsDailyFreeModel(repo.db).Get(ctx, q)
 	if err != nil {
 		return nil, err
 	}

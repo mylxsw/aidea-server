@@ -883,7 +883,7 @@ func (ctl *PaymentController) CreateStripePayment(ctx context.Context, webCtx we
 
 // CreateWechatPayment create wechat payment
 // @summary create wechat payment
-// @tags payment
+// @tags Payment
 // @accept json
 // @produce json
 // @param product_id query string true "product id"
@@ -997,7 +997,7 @@ type WechatPayCreateResponse struct {
 
 // WechatPayNotify Wechat Pay result notification
 // @summary Wechat Pay result notification
-// @tags payment
+// @tags Payment
 // @accept json
 // @produce json
 // @router /v1/payment/callback/wechat-pay/notify [post]

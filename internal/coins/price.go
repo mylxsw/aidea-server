@@ -166,7 +166,7 @@ func PriceToCoins(price float64, serviceFeeRate float64) int64 {
 func GetOpenAITextCoins(model string, wordCount int64) int64 {
 	unit, ok := coinTables["openai"][model]
 	if !ok {
-		return 50
+		return 0
 	}
 
 	return int64(math.Ceil(float64(unit) * float64(wordCount) / 1000.0))

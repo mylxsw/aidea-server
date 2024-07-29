@@ -269,6 +269,20 @@ definitions:
       total:
         type: integer
     type: object
+  controllers.MessageShareResponse:
+    properties:
+      code:
+        type: string
+    type: object
+  controllers.SharedMessagesResponse:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/model.ChatMessages'
+        type: array
+      meta:
+        $ref: '#/definitions/repo.ShareData'
+    type: object
   controllers.WechatPayCreateResponse:
     properties:
       app_id:
@@ -485,9 +499,15 @@ definitions:
     type: object
   repo.ModelMeta:
     properties:
+      category:
+        description: Category 模型分类
+        type: string
       input_price:
         description: InputPrice 输入 Token 价格（智慧果/1K Token），为空则与 OutputPrice 相同
         type: integer
+      is_new:
+        description: IsNew 是否是上新模型
+        type: boolean
       max_context:
         description: MaxContext 最大上下文长度
         type: integer
@@ -500,6 +520,13 @@ definitions:
       restricted:
         description: Restricted 是否是受限制的模型
         type: boolean
+      tag:
+        description: Tag 模型标签
+        type: string
+      tag_bg_color:
+        type: string
+      tag_text_color:
+        type: string
       vision:
         description: Vision 是否支持视觉能力
         type: boolean
@@ -601,6 +628,15 @@ definitions:
       user_id:
         type: integer
       vendor:
+        type: string
+    type: object
+  repo.ShareData:
+    properties:
+      ids:
+        items:
+          type: integer
+        type: array
+      style:
         type: string
     type: object
   service.ChannelType:
@@ -1235,6 +1271,27 @@ paths:
       summary: User details
       tags:
       - Admin:User
+  /v1/messages/share:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Message Share Request
+        in: body
+        name: req
+        required: true
+        schema:
+          $ref: '#/definitions/repo.ShareData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.MessageShareResponse'
+      summary: Share messages to other users
+      tags:
+      - Message
   /v1/payment/callback/wechat-pay/notify:
     post:
       consumes:
@@ -1244,7 +1301,7 @@ paths:
       responses: {}
       summary: Wechat Pay result notification
       tags:
-      - payment
+      - Payment
   /v1/payment/wechatpay:
     post:
       consumes:
@@ -1272,7 +1329,27 @@ paths:
             $ref: '#/definitions/controllers.WechatPayCreateResponse'
       summary: create wechat payment
       tags:
-      - payment
+      - Payment
+  /v1/shared-messages/{code}:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Share Code
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.SharedMessagesResponse'
+      summary: Get shared messages by code
+      tags:
+      - Message
 schemes:
 - http
 securityDefinitions:

@@ -960,6 +960,39 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/messages/share": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Message"
+                ],
+                "summary": "Share messages to other users",
+                "parameters": [
+                    {
+                        "description": "Message Share Request",
+                        "name": "req",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/repo.ShareData"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.MessageShareResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/payment/callback/wechat-pay/notify": {
             "post": {
                 "consumes": [
@@ -969,7 +1002,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payment"
+                    "Payment"
                 ],
                 "summary": "Wechat Pay result notification",
                 "responses": {}
@@ -984,7 +1017,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "payment"
+                    "Payment"
                 ],
                 "summary": "create wechat payment",
                 "parameters": [
@@ -1012,6 +1045,37 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/controllers.WechatPayCreateResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/shared-messages/{code}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Message"
+                ],
+                "summary": "Get shared messages by code",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Share Code",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SharedMessagesResponse"
                         }
                     }
                 }
@@ -1433,6 +1497,28 @@ const docTemplate = `{
                 }
             }
         },
+        "controllers.MessageShareResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.SharedMessagesResponse": {
+            "type": "object",
+            "properties": {
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.ChatMessages"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/repo.ShareData"
+                }
+            }
+        },
         "controllers.WechatPayCreateResponse": {
             "type": "object",
             "properties": {
@@ -1755,9 +1841,17 @@ const docTemplate = `{
         "repo.ModelMeta": {
             "type": "object",
             "properties": {
+                "category": {
+                    "description": "Category 模型分类",
+                    "type": "string"
+                },
                 "input_price": {
                     "description": "InputPrice 输入 Token 价格（智慧果/1K Token），为空则与 OutputPrice 相同",
                     "type": "integer"
+                },
+                "is_new": {
+                    "description": "IsNew 是否是上新模型",
+                    "type": "boolean"
                 },
                 "max_context": {
                     "description": "MaxContext 最大上下文长度",
@@ -1774,6 +1868,16 @@ const docTemplate = `{
                 "restricted": {
                     "description": "Restricted 是否是受限制的模型",
                     "type": "boolean"
+                },
+                "tag": {
+                    "description": "Tag 模型标签",
+                    "type": "string"
+                },
+                "tag_bg_color": {
+                    "type": "string"
+                },
+                "tag_text_color": {
+                    "type": "string"
                 },
                 "vision": {
                     "description": "Vision 是否支持视觉能力",
@@ -1926,6 +2030,20 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "vendor": {
+                    "type": "string"
+                }
+            }
+        },
+        "repo.ShareData": {
+            "type": "object",
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "style": {
                     "type": "string"
                 }
             }

@@ -7,6 +7,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/go-utils/must"
+	"github.com/mylxsw/go-utils/ternary"
 	"io"
 	"net/http"
 	"net/url"
@@ -42,6 +44,10 @@ type MarkdownMessage struct {
 // Encode markdown message to json bytes
 func (m MarkdownMessage) Encode() ([]byte, error) {
 	return json.Marshal(m)
+}
+
+func (m MarkdownMessage) EncodeSlack() ([]byte, error) {
+	return []byte(slackRequestBody("event", "AIdea", "sparkles", m.Markdown.Text)), nil
 }
 
 // NewMarkdownMessage create a new MarkdownMessage
@@ -94,17 +100,19 @@ type MessageAtSomebody struct {
 }
 
 type Dingding struct {
-	Endpoint string
-	Token    string
-	Secret   string
+	Endpoint  string
+	Token     string
+	Secret    string
+	SlackMode bool
 }
 
-func NewDingding(token string, secret string) *Dingding {
-	return &Dingding{Endpoint: "https://oapi.dingtalk.com/robot/send", Token: token, Secret: secret}
+func NewDingding(slackMode bool, token string, secret string) *Dingding {
+	return &Dingding{SlackMode: slackMode, Endpoint: "https://oapi.dingtalk.com/robot/send", Token: token, Secret: secret}
 }
 
 type Message interface {
 	Encode() ([]byte, error)
+	EncodeSlack() ([]byte, error)
 }
 
 // dingResponse 钉钉响应
@@ -119,6 +127,47 @@ func (ding *Dingding) Send(msg Message) error {
 		return nil
 	}
 
+	if ding.SlackMode {
+		return ding.sendSlackNotify(msg)
+	}
+
+	return ding.sendDingDingNotify(msg)
+}
+
+func (ding *Dingding) sendSlackNotify(msg Message) error {
+	msgEncoded, err := msg.EncodeSlack()
+	if err != nil {
+		return fmt.Errorf("slack message encode failed: %s", err.Error())
+	}
+
+	endpointURL := "https://hooks.slack.com/services/" + ding.Token
+
+	reader := bytes.NewReader(msgEncoded)
+	request, err := http.NewRequest("POST", endpointURL, reader)
+	if err != nil {
+		return fmt.Errorf("slack create request failed: %w", err)
+	}
+
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	client := http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		return fmt.Errorf("slack send msg failed: %w", err)
+	}
+
+	if resp.StatusCode > 299 {
+		respBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("slack read response failed: %w", err)
+		}
+
+		return fmt.Errorf("slack send finished, response： %s", string(respBytes))
+	}
+
+	return nil
+}
+
+func (ding *Dingding) sendDingDingNotify(msg Message) error {
 	v := url.Values{}
 	v.Add("access_token", ding.Token)
 
@@ -166,4 +215,20 @@ func (ding *Dingding) Send(msg Message) error {
 	}
 
 	return nil
+}
+
+// slackRequestBody Build Slack request body
+func slackRequestBody(channelName string, username string, emoji string, text string) string {
+	payload := map[string]interface{}{
+		"channel":    ternary.If(strings.HasPrefix(channelName, "#"), channelName, "#"+channelName),
+		"username":   ternary.If(username == "", "AIdea", username),
+		"icon_emoji": ternary.If(emoji == "", ":sparkles:", ":"+emoji+":"),
+		"text":       text,
+	}
+
+	payloadStr := string(must.Must(json.Marshal(payload)))
+
+	params := url.Values{}
+	params.Add("payload", payloadStr)
+	return params.Encode()
 }
