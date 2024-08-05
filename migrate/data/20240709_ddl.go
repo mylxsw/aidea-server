@@ -3,7 +3,7 @@ package data
 import "github.com/mylxsw/eloquent/migrate"
 
 func Migrate20240709DDL(m *migrate.Manager) {
-	m.Schema("20240709-ddl").Create("chat_messages_share.yaml", func(builder *migrate.Builder) {
+	m.Schema("20240709-ddl").Create("chat_messages_share", func(builder *migrate.Builder) {
 		builder.Increments("id")
 		builder.Timestamps(0)
 		builder.Integer("user_id", false, true).Comment("User ID")

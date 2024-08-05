@@ -37,3 +37,6 @@ models:
     - name: error
       type: string
       tag: json:"error,omitempty"
+    - name: meta
+      type: string
+      tag: json:"meta,omitempty"

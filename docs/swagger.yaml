@@ -325,6 +325,8 @@ definitions:
         type: integer
       message:
         type: string
+      meta:
+        type: string
       model:
         type: string
       pid:

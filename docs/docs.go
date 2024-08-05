@@ -1577,6 +1577,9 @@ const docTemplate = `{
                 "message": {
                     "type": "string"
                 },
+                "meta": {
+                    "type": "string"
+                },
                 "model": {
                     "type": "string"
                 },

@@ -44,12 +44,21 @@ type MessageAddReq struct {
 	Model         string
 	Status        int64
 	Error         string
+	Meta          MessageMeta
+}
+
+type MessageMeta struct {
+	FileURL  string   `json:"file,omitempty"`
+	FileName string   `json:"file_name,omitempty"`
+	Images   []string `json:"images,omitempty"`
 }
 
 func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error) {
 	if req.Status == 0 {
 		req.Status = MessageStatusSucceed
 	}
+
+	meta, _ := json.Marshal(req.Meta)
 
 	var id int64
 	kvs := query.KV{
@@ -60,6 +69,7 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error)
 		model.FieldChatMessagesQuotaConsumed: req.QuotaConsumed,
 		model.FieldChatMessagesTokenConsumed: req.TokenConsumed,
 		model.FieldChatMessagesStatus:        req.Status,
+		model.FieldChatMessagesMeta:          string(meta),
 	}
 
 	if req.PID > 0 {

@@ -494,7 +494,9 @@ func (ctl *OpenAIController) handleChat(
 		chatCtx = control.NewContext(chatCtx, &control.Control{PreferBackup: true})
 	}
 
-	stream, err := ctl.chat.ChatStream(chatCtx, *req)
+	newReq := req.Clone()
+
+	stream, err := ctl.chat.ChatStream(chatCtx, newReq.Purification())
 	if err != nil {
 		// 更新问题为失败状态
 		ctl.makeChatQuestionFailed(ctx, questionID, err)
@@ -793,13 +795,25 @@ func (ctl *OpenAIController) makeChatQuestionFailed(ctx context.Context, questio
 // saveChatQuestion 保存用户聊天问题
 func (ctl *OpenAIController) saveChatQuestion(ctx context.Context, user *auth.User, req *chat.Request) int64 {
 	if ctl.conf.EnableRecordChat && !ctl.apiMode {
+		lastMessage := req.Messages[len(req.Messages)-1]
+		meta := repo.MessageMeta{}
+
+		files := array.Filter(lastMessage.MultipartContents, func(item *chat.MultipartContent, _ int) bool {
+			return item.Type == "file" && item.FileURL != nil && item.FileURL.URL != ""
+		})
+		if len(files) > 0 {
+			meta.FileURL = files[0].FileURL.URL
+			meta.FileName = files[0].FileURL.Name
+		}
+
 		qid, err := ctl.messageRepo.Add(ctx, repo.MessageAddReq{
 			UserID:  user.ID,
-			Message: req.Messages[len(req.Messages)-1].Content,
+			Message: lastMessage.Content,
 			Role:    repo.MessageRoleUser,
 			RoomID:  req.RoomID,
 			Model:   req.Model,
 			Status:  repo.MessageStatusSucceed,
+			Meta:    meta,
 		})
 		if err != nil {
 			log.F(log.M{"req": req, "user_id": user.ID}).Errorf("保存用户聊天请求失败（问题部分）: %s", err)

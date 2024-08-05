@@ -33,11 +33,31 @@ type Message struct {
 	MultipartContents []*MultipartContent `json:"multipart_content,omitempty"`
 }
 
+func (m Message) UploadedFile() *FileURL {
+	mc := array.Filter(m.MultipartContents, func(part *MultipartContent, _ int) bool {
+		return part.Type == "file" && part.FileURL != nil && part.FileURL.URL != ""
+	})
+
+	if len(mc) == 0 {
+		return nil
+	}
+
+	return mc[0].FileURL
+}
+
 type MultipartContent struct {
 	// Type 对于 OpenAI 来说， type 可选值为 image_url/text
 	Type     string    `json:"type"`
 	ImageURL *ImageURL `json:"image_url,omitempty"`
 	Text     string    `json:"text,omitempty"`
+	FileURL  *FileURL  `json:"file_url,omitempty"`
+}
+
+type FileURL struct {
+	// URL is the URL of the file
+	URL string `json:"url,omitempty"`
+	// Name is the name of the file
+	Name string `json:"name,omitempty"`
 }
 
 type ImageURL struct {
@@ -58,6 +78,26 @@ type ImageURL struct {
 }
 
 type Messages []Message
+
+// Purification Filter out unsupported message types (file document upload), currently only support text and image_url.
+func (ms Messages) Purification() Messages {
+	return array.Map(ms, func(item Message, _ int) Message {
+		if len(item.MultipartContents) <= 0 {
+			return item
+		}
+
+		mul := make([]*MultipartContent, 0)
+		for _, content := range item.MultipartContents {
+			if array.In(content.Type, []string{"image_url", "text"}) {
+				mul = append(mul, content)
+				continue
+			}
+		}
+
+		item.MultipartContents = mul
+		return item
+	})
+}
 
 func (ms Messages) ToLogEntry() Messages {
 	ret := make(Messages, len(ms))
@@ -157,6 +197,24 @@ type Request struct {
 
 	// TempModel 用户可以指定临时模型来进行当前对话，实现临时切换模型的功能
 	TempModel string `json:"temp_model,omitempty"`
+}
+
+func (req Request) Clone() Request {
+	return Request{
+		Stream:    req.Stream,
+		Model:     req.Model,
+		Messages:  array.Map(req.Messages, func(item Message, _ int) Message { return item }),
+		MaxTokens: req.MaxTokens,
+		N:         req.N,
+		RoomID:    req.RoomID,
+		WebSocket: req.WebSocket,
+		TempModel: req.TempModel,
+	}
+}
+
+func (req Request) Purification() Request {
+	req.Messages = req.Messages.Purification()
+	return req
 }
 
 func (req Request) assembleMessage() string {

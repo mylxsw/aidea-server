@@ -57,8 +57,9 @@ type UploadInit struct {
 }
 
 const (
-	UploadUsageAvatar = "avatar"
-	UploadUsageChat   = "chat"
+	UploadUsageAvatar    = "avatar"
+	UploadUsageImageChat = "chat"
+	UploadUsageDocument  = "document"
 )
 
 type UploadCallback struct {

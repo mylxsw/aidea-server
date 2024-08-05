@@ -31,6 +31,7 @@ type ChatMessagesN struct {
 	Model         null.String `json:"model,omitempty"`
 	Status        null.Int    `json:"status,omitempty"`
 	Error         null.String `json:"error,omitempty"`
+	Meta          null.String `json:"meta,omitempty"`
 	CreatedAt     null.Time
 	UpdatedAt     null.Time
 }
@@ -59,6 +60,7 @@ type chatMessagesOriginal struct {
 	Model         null.String
 	Status        null.Int
 	Error         null.String
+	Meta          null.String
 	CreatedAt     null.Time
 	UpdatedAt     null.Time
 }
@@ -102,6 +104,9 @@ func (inst *ChatMessagesN) Staled(onlyFields ...string) bool {
 			return true
 		}
 		if inst.Error != inst.original.Error {
+			return true
+		}
+		if inst.Meta != inst.original.Meta {
 			return true
 		}
 		if inst.CreatedAt != inst.original.CreatedAt {
@@ -156,6 +161,10 @@ func (inst *ChatMessagesN) Staled(onlyFields ...string) bool {
 				}
 			case "error":
 				if inst.Error != inst.original.Error {
+					return true
+				}
+			case "meta":
+				if inst.Meta != inst.original.Meta {
 					return true
 				}
 			case "created_at":
@@ -217,6 +226,9 @@ func (inst *ChatMessagesN) StaledKV(onlyFields ...string) query.KV {
 		if inst.Error != inst.original.Error {
 			kv["error"] = inst.Error
 		}
+		if inst.Meta != inst.original.Meta {
+			kv["meta"] = inst.Meta
+		}
 		if inst.CreatedAt != inst.original.CreatedAt {
 			kv["created_at"] = inst.CreatedAt
 		}
@@ -270,6 +282,10 @@ func (inst *ChatMessagesN) StaledKV(onlyFields ...string) query.KV {
 			case "error":
 				if inst.Error != inst.original.Error {
 					kv["error"] = inst.Error
+				}
+			case "meta":
+				if inst.Meta != inst.original.Meta {
+					kv["meta"] = inst.Meta
 				}
 			case "created_at":
 				if inst.CreatedAt != inst.original.CreatedAt {
@@ -389,6 +405,7 @@ type ChatMessages struct {
 	Model         string `json:"model,omitempty"`
 	Status        int64  `json:"status,omitempty"`
 	Error         string `json:"error,omitempty"`
+	Meta          string `json:"meta,omitempty"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -408,6 +425,7 @@ func (w ChatMessages) ToChatMessagesN(allows ...string) ChatMessagesN {
 			Model:         null.StringFrom(w.Model),
 			Status:        null.IntFrom(int64(w.Status)),
 			Error:         null.StringFrom(w.Error),
+			Meta:          null.StringFrom(w.Meta),
 			CreatedAt:     null.TimeFrom(w.CreatedAt),
 			UpdatedAt:     null.TimeFrom(w.UpdatedAt),
 		}
@@ -439,6 +457,8 @@ func (w ChatMessages) ToChatMessagesN(allows ...string) ChatMessagesN {
 			res.Status = null.IntFrom(int64(w.Status))
 		case "error":
 			res.Error = null.StringFrom(w.Error)
+		case "meta":
+			res.Meta = null.StringFrom(w.Meta)
 		case "created_at":
 			res.CreatedAt = null.TimeFrom(w.CreatedAt)
 		case "updated_at":
@@ -470,6 +490,7 @@ func (w *ChatMessagesN) ToChatMessages() ChatMessages {
 		Model:         w.Model.String,
 		Status:        w.Status.Int64,
 		Error:         w.Error.String,
+		Meta:          w.Meta.String,
 		CreatedAt:     w.CreatedAt.Time,
 		UpdatedAt:     w.UpdatedAt.Time,
 	}
@@ -505,6 +526,7 @@ const (
 	FieldChatMessagesModel         = "model"
 	FieldChatMessagesStatus        = "status"
 	FieldChatMessagesError         = "error"
+	FieldChatMessagesMeta          = "meta"
 	FieldChatMessagesCreatedAt     = "created_at"
 	FieldChatMessagesUpdatedAt     = "updated_at"
 )
@@ -523,6 +545,7 @@ func ChatMessagesFields() []string {
 		"model",
 		"status",
 		"error",
+		"meta",
 		"created_at",
 		"updated_at",
 	}
@@ -666,6 +689,7 @@ func (m *ChatMessagesModel) Get(ctx context.Context, builders ...query.SQLBuilde
 			"model",
 			"status",
 			"error",
+			"meta",
 			"created_at",
 			"updated_at",
 		)
@@ -698,6 +722,8 @@ func (m *ChatMessagesModel) Get(ctx context.Context, builders ...query.SQLBuilde
 		case "status":
 			selectFields = append(selectFields, f)
 		case "error":
+			selectFields = append(selectFields, f)
+		case "meta":
 			selectFields = append(selectFields, f)
 		case "created_at":
 			selectFields = append(selectFields, f)
@@ -735,6 +761,8 @@ func (m *ChatMessagesModel) Get(ctx context.Context, builders ...query.SQLBuilde
 				scanFields = append(scanFields, &chatMessagesVar.Status)
 			case "error":
 				scanFields = append(scanFields, &chatMessagesVar.Error)
+			case "meta":
+				scanFields = append(scanFields, &chatMessagesVar.Meta)
 			case "created_at":
 				scanFields = append(scanFields, &chatMessagesVar.CreatedAt)
 			case "updated_at":
