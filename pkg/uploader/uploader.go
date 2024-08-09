@@ -210,6 +210,7 @@ func (u *Uploader) uploadStream(ctx context.Context, uid int, expireAfterDays in
 	}
 
 	if u.conf.StorageCallback != "" {
+		putPolicy.CallbackHost = u.conf.StorageCallbackHost
 		putPolicy.CallbackURL = u.conf.StorageCallback
 		putPolicy.CallbackBodyType = "application/json"
 		putPolicy.CallbackBody = fmt.Sprintf(`{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)","name":"$(x:name)","uid":%d,"usage":"%s","channel":"server"}`, uid, "")

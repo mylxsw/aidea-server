@@ -385,7 +385,7 @@ func Register(ins *app.App) {
 
 		// 七牛云配置
 		storageCallbacks := ctx.StringSlice("storage-callbacks")
-		if ctx.String("storage-callback") != "" {
+		if len(storageCallbacks) == 0 && ctx.String("storage-callback") != "" {
 			storageCallbacks = append(storageCallbacks, ctx.String("storage-callback"))
 		}
 		storageCallbacks = array.Uniq(array.Filter(
