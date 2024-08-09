@@ -54,6 +54,8 @@ type UploadInit struct {
 	Bucket   string `json:"bucket"`
 	Key      string `json:"key"`
 	URL      string `json:"url"`
+	// Uploaded To inform the client whether the file has been uploaded before.
+	Uploaded bool `json:"uploaded,omitempty"`
 }
 
 const (
@@ -86,6 +88,7 @@ func (u *Uploader) Init(filename string, uid int, usage string, maxSizeInMB int6
 	}
 
 	if enableCallback {
+		putPolicy.CallbackHost = u.conf.StorageCallbackHost
 		putPolicy.CallbackURL = u.conf.StorageCallback
 		putPolicy.CallbackBodyType = "application/json"
 		putPolicy.CallbackBody = fmt.Sprintf(

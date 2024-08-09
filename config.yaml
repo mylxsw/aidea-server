@@ -320,9 +320,20 @@ translate-appkey: ""
 storage-appkey: ""
 storage-secret: ""
 storage-bucket: "aicode"
-storage-callback: "https://ai-api.example.com/v1/callback/storage/qiniu"
 # 七牛云存储资源访问域名（也可以用 CDN 域名），例如 https://cdn.example.com
 storage-domain: https://cdn.example.com
+
+# 七牛云存储回调地址，用于上传后的回调通知(可选)
+# 以下是七牛云官方解释：
+#     上传成功后，七牛云向业务服务器发送 POST 请求的 URL。必须是公网上可以正常进行 POST 请求并能响应 HTTP/1.1 200 OK 的有效 URL。
+#     出于高可用的考虑，本字段允许设置多个 callbackUrl（用英文符号 ; 分隔），在前一个 callbackUrl 请求失败的时候会依次
+#     重试下一个 callbackUrl。一个典型例子是：http://<ip1>/callback;http://<ip2>/callback，并同时指定下面的 callbackHost 字段。
+#     在 callbackUrl 中使用 ip 的好处是减少对 dns 解析的依赖，可改善回调的性能和稳定性。
+storage-callback: "https://ai-api.example.com/v1/callback/storage/qiniu"
+# 如果有多个回调地址，可以使用数组
+#storage-callbacks: [ "https://ai-api.example.com/v1/callback/storage/qiniu" ]
+# storage-callback-host: ""
+
 
 # 七牛云存储区域，可选值：
 # 华东 - z0

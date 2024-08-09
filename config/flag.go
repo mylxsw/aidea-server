@@ -157,6 +157,8 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("storage-secret", "", "七牛云 APP SECRET")
 	ins.AddStringFlag("storage-bucket", "aicode", "七牛云存储 Bucket 名称")
 	ins.AddStringFlag("storage-callback", "https://YOUR_SERVER_HOST/v1/callback/storage/qiniu", "七牛云存储上传回调接口")
+	ins.AddStringSliceFlag("storage-callbacks", []string{}, "七牛云存储上传回调接口，支持多个回调地址")
+	ins.AddStringFlag("storage-callback-host", "", "七牛云存储上传回调 Host")
 	ins.AddStringFlag("storage-domain", "", "七牛云存储资源访问域名（也可以用 CDN 域名），例如 https://cdn.example.com")
 	ins.AddStringFlag("storage-region", "z0", "七牛云存储区域，可选值：z0, z1, z2, na0, as0, cn-east-2, ap-northeast-1")
 
