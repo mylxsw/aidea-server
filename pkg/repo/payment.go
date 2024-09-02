@@ -408,6 +408,10 @@ type ApplePayment struct {
 }
 
 func (repo *PaymentRepo) CompleteApplePayment(ctx context.Context, userId int64, paymentID string, applePayment *ApplePayment) (eventID int64, err error) {
+	if applePayment.PurchaseAt.Before(time.Now().AddDate(1, 0, 0)) {
+		return 0, fmt.Errorf("invalid purchase time: %v", applePayment)
+	}
+
 	q := query.Builder().
 		Where(model.FieldPaymentHistoryPaymentId, paymentID).
 		Where(model.FieldPaymentHistoryUserId, userId)

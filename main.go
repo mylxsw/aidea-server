@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
+	"path/filepath"
+	"time"
+
 	"github.com/mylxsw/aidea-server/internal/payment/wechatpay"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
@@ -11,9 +15,6 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"github.com/mylxsw/aidea-server/pkg/file"
 	"github.com/mylxsw/aidea-server/pkg/wechat"
-	"math/rand"
-	"path/filepath"
-	"time"
 
 	"github.com/mylxsw/aidea-server/api"
 	"github.com/mylxsw/aidea-server/migrate"

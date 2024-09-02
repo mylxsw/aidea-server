@@ -6,6 +6,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"strconv"
+	"time"
 
 	"github.com/awa/go-iap/appstore"
 	"github.com/mylxsw/asteria/log"
@@ -51,10 +52,11 @@ func (pay *ApplePayImpl) VerifyPayment(ctx context.Context, purchaseId string, s
 
 	purchaseAt, err := misc.ParseAppleDateTime(inApp.PurchaseDate.PurchaseDate)
 	if err != nil {
+		purchaseAt = time.Now()
 		log.WithFields(log.Fields{
 			"err":           err.Error(),
 			"purchase_date": inApp.PurchaseDate.PurchaseDate,
-		}).Error("parse apple purchase date failed")
+		}).Warning("parse apple purchase date failed")
 	}
 
 	applePayment := repo.ApplePayment{
