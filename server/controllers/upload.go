@@ -52,10 +52,54 @@ func (ctl *UploadController) Register(router web.Router) {
 	})
 }
 
+type UploadRestriction struct {
+	// MaxFilesizeInM Maximum file size, in megabytes
+	MaxFilesizeInM int
+	// ExpireDays File expiration time, in days
+	ExpireDays int
+	// Extensions Allowed file extensions
+	Extensions []string
+}
+
+func (res UploadRestriction) SupportFilename(name string) bool {
+	nameSeg := strings.Split(name, ".")
+	if len(nameSeg) < 2 {
+		return false
+	}
+
+	if !array.In(strings.ToLower(nameSeg[len(nameSeg)-1]), res.Extensions) {
+		return false
+	}
+
+	return true
+}
+
+func (res UploadRestriction) SupportFilesize(sizeInBytes int) bool {
+	return sizeInBytes > 0 && sizeInBytes <= res.MaxFilesizeInM*1024*1024
+}
+
+var imageExtensions = []string{"jpg", "jpeg", "png", "gif"}
+
+var uploadUsageRestrictions = map[string]UploadRestriction{
+	uploader.UploadUsageAvatar:    {MaxFilesizeInM: 5, ExpireDays: 0, Extensions: imageExtensions},
+	uploader.UploadUsageImageChat: {MaxFilesizeInM: 5, ExpireDays: 7, Extensions: imageExtensions},
+	uploader.UploadUsageDocument:  {MaxFilesizeInM: 10, ExpireDays: 7, Extensions: []string{"pdf", "txt", "docx", "md"}},
+}
+
 // UploadInit 文件上传初始化
 func (ctl *UploadController) UploadInit(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
+	usage := webCtx.Input("usage")
+	if usage == "" {
+		usage = uploader.UploadUsageImageChat
+	}
+
+	rest, ok := uploadUsageRestrictions[usage]
+	if !ok {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "不支持该类型的文件上传"), http.StatusBadRequest)
+	}
+
 	filesize := webCtx.IntInput("filesize", 0)
-	if filesize <= 0 || filesize > 1024*1024*5 {
+	if !rest.SupportFilesize(filesize) {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "文件大小不能超过 5M"), http.StatusBadRequest)
 	}
 
@@ -64,18 +108,8 @@ func (ctl *UploadController) UploadInit(ctx context.Context, webCtx web.Context,
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "文件名不能为空"), http.StatusBadRequest)
 	}
 
-	nameSeg := strings.Split(name, ".")
-	if len(nameSeg) < 2 {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "文件名格式不正确，必须包含扩展名"), http.StatusBadRequest)
-	}
-
-	if !array.In(strings.ToLower(nameSeg[len(nameSeg)-1]), []string{"jpg", "jpeg", "png", "gif"}) {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "文件格式不正确，仅支持 jpg/jpeg/png/gif"), http.StatusBadRequest)
-	}
-
-	usage := webCtx.Input("usage")
-	if usage != "" && !array.In(usage, []string{uploader.UploadUsageAvatar, uploader.UploadUsageChat}) {
-		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "文件用途不正确"), http.StatusBadRequest)
+	if !rest.SupportFilename(name) {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "文件格式不正确，仅支持 "+strings.Join(rest.Extensions, ", ")), http.StatusBadRequest)
 	}
 
 	if !user.InternalUser() {
@@ -90,17 +124,7 @@ func (ctl *UploadController) UploadInit(ctx context.Context, webCtx web.Context,
 		}
 	}
 
-	expireAfterDays := uploader.DefaultUploadExpireAfterDays
-	switch usage {
-	case uploader.UploadUsageChat:
-		// 聊天图片默认7天过期
-		expireAfterDays = 7
-	case uploader.UploadUsageAvatar:
-		// 头像上传永不过期
-		expireAfterDays = 0
-	}
-
-	return webCtx.JSON(ctl.uploader.Init(name, int(user.ID), usage, 5, expireAfterDays, true, "client"))
+	return webCtx.JSON(ctl.uploader.Init(name, int(user.ID), usage, int64(rest.MaxFilesizeInM), rest.ExpireDays, true, "client"))
 }
 
 type ImageAuditCallback struct {

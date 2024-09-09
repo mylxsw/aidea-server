@@ -54,11 +54,14 @@ type UploadInit struct {
 	Bucket   string `json:"bucket"`
 	Key      string `json:"key"`
 	URL      string `json:"url"`
+	// Uploaded To inform the client whether the file has been uploaded before.
+	Uploaded bool `json:"uploaded,omitempty"`
 }
 
 const (
-	UploadUsageAvatar = "avatar"
-	UploadUsageChat   = "chat"
+	UploadUsageAvatar    = "avatar"
+	UploadUsageImageChat = "chat"
+	UploadUsageDocument  = "document"
 )
 
 type UploadCallback struct {
@@ -85,6 +88,7 @@ func (u *Uploader) Init(filename string, uid int, usage string, maxSizeInMB int6
 	}
 
 	if enableCallback {
+		putPolicy.CallbackHost = u.conf.StorageCallbackHost
 		putPolicy.CallbackURL = u.conf.StorageCallback
 		putPolicy.CallbackBodyType = "application/json"
 		putPolicy.CallbackBody = fmt.Sprintf(
@@ -206,6 +210,7 @@ func (u *Uploader) uploadStream(ctx context.Context, uid int, expireAfterDays in
 	}
 
 	if u.conf.StorageCallback != "" {
+		putPolicy.CallbackHost = u.conf.StorageCallbackHost
 		putPolicy.CallbackURL = u.conf.StorageCallback
 		putPolicy.CallbackBodyType = "application/json"
 		putPolicy.CallbackBody = fmt.Sprintf(`{"key":"$(key)","hash":"$(etag)","fsize":$(fsize),"bucket":"$(bucket)","name":"$(x:name)","uid":%d,"usage":"%s","channel":"server"}`, uid, "")

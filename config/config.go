@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/asteria/log"
+	"github.com/mylxsw/go-utils/array"
 	"os"
 	"strings"
 
@@ -208,12 +209,13 @@ type Config struct {
 	TranslateAPPKey string `json:"-" yaml:"translate_app_key"`
 
 	// 七牛云存储
-	StorageAppKey    string `json:"storage_appkey" yaml:"storage_appkey"`
-	StorageAppSecret string `json:"-" yaml:"storage_secret"`
-	StorageBucket    string `json:"storage_bucket" yaml:"storage_bucket"`
-	StorageCallback  string `json:"storage_callback" yaml:"storage_callback"`
-	StorageDomain    string `json:"storage_domain" yaml:"storage_domain"`
-	StorageRegion    string `json:"storage_region" yaml:"storage_region"`
+	StorageAppKey       string `json:"storage_appkey" yaml:"storage_appkey"`
+	StorageAppSecret    string `json:"-" yaml:"storage_secret"`
+	StorageBucket       string `json:"storage_bucket" yaml:"storage_bucket"`
+	StorageCallback     string `json:"storage_callback" yaml:"storage_callback"`
+	StorageCallbackHost string `json:"storage_callback_host" yaml:"storage_callback_host"`
+	StorageDomain       string `json:"storage_domain" yaml:"storage_domain"`
+	StorageRegion       string `json:"storage_region" yaml:"storage_region"`
 
 	// Apple Sign In
 	AppleSignIn AppleSignIn `json:"apple_sign_in" yaml:"apple_sign_in"`
@@ -381,6 +383,18 @@ func Register(ins *app.App) {
 		}
 		stripe.Init()
 
+		// 七牛云配置
+		storageCallbacks := ctx.StringSlice("storage-callbacks")
+		if len(storageCallbacks) == 0 && ctx.String("storage-callback") != "" {
+			storageCallbacks = append(storageCallbacks, ctx.String("storage-callback"))
+		}
+		storageCallbacks = array.Uniq(array.Filter(
+			array.Map(storageCallbacks, func(callback string, _ int) string {
+				return strings.TrimSuffix(strings.TrimSpace(callback), "/")
+			}),
+			func(callback string, _ int) bool { return callback != "" },
+		))
+
 		return &Config{
 			Listen:              ctx.String("listen"),
 			DBURI:               ctx.String("db-uri"),
@@ -525,12 +539,13 @@ func Register(ins *app.App) {
 			TranslateAPPID:  ctx.String("translate-appid"),
 			TranslateAPPKey: ctx.String("translate-appkey"),
 
-			StorageAppKey:    ctx.String("storage-appkey"),
-			StorageAppSecret: ctx.String("storage-secret"),
-			StorageBucket:    ctx.String("storage-bucket"),
-			StorageCallback:  ctx.String("storage-callback"),
-			StorageDomain:    ctx.String("storage-domain"),
-			StorageRegion:    ctx.String("storage-region"),
+			StorageAppKey:       ctx.String("storage-appkey"),
+			StorageAppSecret:    ctx.String("storage-secret"),
+			StorageBucket:       ctx.String("storage-bucket"),
+			StorageCallback:     strings.Join(storageCallbacks, ";"),
+			StorageCallbackHost: ctx.String("storage-callback-host"),
+			StorageDomain:       ctx.String("storage-domain"),
+			StorageRegion:       ctx.String("storage-region"),
 
 			AppleSignIn: AppleSignIn{
 				TeamID: ctx.String("apple-teamid"),

@@ -104,15 +104,15 @@ func NewModel(m model.Models) Model {
 
 type ModelMeta struct {
 	// Vision 是否支持视觉能力
-	Vision bool `json:"vision,omitempty"`
+	Vision bool `json:"vision"`
 	// Restricted 是否是受限制的模型
-	Restricted bool `json:"restricted,omitempty"`
+	Restricted bool `json:"restricted"`
 	// MaxContext 最大上下文长度
-	MaxContext int `json:"max_context,omitempty"`
+	MaxContext int `json:"max_context"`
 	// InputPrice 输入 Token 价格（智慧果/1K Token），为空则与 OutputPrice 相同
-	InputPrice int `json:"input_price,omitempty"`
+	InputPrice int `json:"input_price"`
 	// OutputPrice 输出 Token 价格（智慧果/1K Token）
-	OutputPrice int `json:"output_price,omitempty"`
+	OutputPrice int `json:"output_price"`
 
 	// Prompt 全局的系统提示语
 	Prompt string `json:"prompt,omitempty"`
