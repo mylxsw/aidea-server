@@ -77,10 +77,9 @@ type Quota struct {
 
 // GetUserQuotaDetails 获取用户配额详情
 func (repo *QuotaRepo) GetUserQuotaDetails(ctx context.Context, userID int64) ([]Quota, error) {
-	// 查询当前用户，未过期以及过期时间在一个月内的所有配额
+	// 查询当前用户的所有配额
 	q := query.Builder().
 		Where(model2.FieldQuotaUserId, userID).
-		Where(model2.FieldQuotaPeriodEndAt, ">", time.Now().AddDate(0, -1, 0)).
 		Limit(100).
 		OrderBy(model2.FieldQuotaId, "DESC")
 
