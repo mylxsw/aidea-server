@@ -135,6 +135,12 @@ func (chat *XFYunChat) MaxContextLength(model string) int {
 		return 8000
 	case xfyun.ModelGeneralV1_5:
 		return 4000
+	case xfyun.ModelGeneralMax32K:
+		return 32000
+	case xfyun.ModelGeneralPro128K:
+		return 128000
+	case xfyun.ModelGeneralV4:
+		return 8000
 	}
 
 	return 4000

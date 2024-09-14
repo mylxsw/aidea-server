@@ -15,7 +15,7 @@ func TestXFYunChat_Chat(t *testing.T) {
 	client := createXFClient()
 
 	response, err := client.Chat(context.TODO(), chat2.Request{
-		Model: "讯飞星火:" + string(xfyun.ModelGeneralV2),
+		Model: "讯飞星火:" + string(xfyun.ModelGeneralLite),
 		Messages: []chat2.Message{
 			{
 				Role:    "system",

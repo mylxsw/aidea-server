@@ -19,10 +19,14 @@ import (
 type Model string
 
 const (
-	ModelGeneralV1_5 Model = "general"
-	ModelGeneralV2   Model = "generalv2"
-	ModelGeneralV3   Model = "generalv3"
-	ModelGeneralV35  Model = "generalv3.5"
+	ModelGeneralV1_5    Model = "general"
+	ModelGeneralLite    Model = "general"
+	ModelGeneralV2      Model = "generalv2"
+	ModelGeneralV3      Model = "generalv3"
+	ModelGeneralV35     Model = "generalv3.5"
+	ModelGeneralV4      Model = "4.0Ultra"
+	ModelGeneralPro128K Model = "pro-128k"
+	ModelGeneralMax32K  Model = "max-32k"
 	// ModelGeneralImageRecognize 图像识别模型，真实模型其实是 general
 	ModelGeneralImageRecognize Model = "general_image_recognize"
 )
@@ -266,6 +270,18 @@ func (ai *XFYunAI) resolveHostForModel(model Model) string {
 
 	if model == ModelGeneralImageRecognize {
 		return "wss://spark-api.cn-huabei-1.xf-yun.com/v2.1/image"
+	}
+
+	if model == ModelGeneralV4 {
+		return "wss://spark-api.xf-yun.com/v4.0/chat"
+	}
+
+	if model == ModelGeneralPro128K {
+		return "wss://spark-api.xf-yun.com/chat/pro-128k"
+	}
+
+	if model == ModelGeneralMax32K {
+		return "wss://spark-api.xf-yun.com/chat/max-32k"
 	}
 
 	return "wss://spark-api.xf-yun.com/v2.1/chat"
