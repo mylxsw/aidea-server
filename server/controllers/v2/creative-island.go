@@ -132,7 +132,7 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 			TitleColor:   "FFFFFFFF",
 			PreviewImage: "https://ssl.aicode.cc/ai-server/assets/background/image-text-to-image.jpeg-thumb1000",
 			RouteURI:     "/creative-draw/create?mode=text-to-image&id=text-to-image",
-			Note:         fmt.Sprintf("根据你的想法生成图片。生成每张图片将消耗 %d （限时活动）智慧果%s。", imageCost, imageModelsCostNote),
+			Note:         fmt.Sprintf("根据你的想法生成图片。生成每张图片将消耗 %d 智慧果%s。", imageCost, imageModelsCostNote),
 			Size:         SizeLarge,
 		},
 	}
