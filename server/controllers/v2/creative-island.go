@@ -115,9 +115,14 @@ func (ctl *CreativeIslandController) Items(ctx context.Context, webCtx web.Conte
 	imageModelsCost := coins.GetImageGenCoinsExcept(imageCost)
 	imageModelsCostNote := ""
 	if len(imageModelsCost) > 0 {
-		ns := make([]string, 0)
+		mcs := make(map[int64][]string)
 		for mod, cost := range imageModelsCost {
-			ns = append(ns, fmt.Sprintf("%s %d/张", strings.ToUpper(mod), cost))
+			mcs[cost] = append(mcs[cost], strings.ToUpper(mod))
+		}
+
+		ns := make([]string, 0)
+		for cost, mods := range mcs {
+			ns = append(ns, fmt.Sprintf("%s %d/张", strings.Join(mods, "、"), cost))
 		}
 
 		if len(ns) > 0 {
