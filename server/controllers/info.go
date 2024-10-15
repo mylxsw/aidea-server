@@ -192,6 +192,9 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 		// 是否禁用创作岛
 		"disable_creation_island": false,
 
+		// 是否启用聊天记录总结功能
+		"enable_summarizer": ctl.conf.EnableSummarizer,
+
 		// 是否显示首页模型描述
 		"show_home_model_description": strings.Contains(client.Language, "zh"),
 		// 是否支持 WebSocket

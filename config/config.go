@@ -318,6 +318,10 @@ type Config struct {
 	// MiniMax 配置
 	MiniMaxAPIKey  string `json:"minimax_api_key" yaml:"minimax_api_key"`
 	MiniMaxGroupID string `json:"minimax_group_id" yaml:"minimax_group_id"`
+
+	// 总结能力
+	EnableSummarizer bool   `json:"enable_summarizer" yaml:"enable_summarizer"`
+	SummarizerModel  string `json:"summarizer_model" yaml:"summarizer_model"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -406,6 +410,9 @@ func Register(ins *app.App) {
 			DebugWithSQL:        ctx.Bool("debug-with-sql"),
 			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
 			ShouldBindPhone:     ctx.Bool("should-bind-phone"),
+
+			EnableSummarizer: ctx.Bool("enable-summarizer"),
+			SummarizerModel:  ctx.String("summarizer-model"),
 
 			BaseURL:      strings.TrimSuffix(ctx.String("base-url"), "/"),
 			IsProduction: ctx.Bool("production"),
