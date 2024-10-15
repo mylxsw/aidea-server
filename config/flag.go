@@ -252,4 +252,7 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("minimax-api-key", "", "Minimax API Key")
 	ins.AddStringFlag("minimax-group-id", "", "Minimax Group ID")
+
+	ins.AddBoolFlag("enable-summarizer", "是否启用聊天记录总结功能")
+	ins.AddStringFlag("summarizer-model", "gpt-4o-mini", "总结模型名称")
 }
