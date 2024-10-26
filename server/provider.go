@@ -379,7 +379,7 @@ func (h PrometheusHandler) ServeHTTP(writer http.ResponseWriter, request *http.R
 	}
 
 	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-	if h.token != "" && tokenStr != h.token {
+	if h.token == "" || (h.token != "" && tokenStr != h.token) {
 		writer.WriteHeader(http.StatusUnauthorized)
 		return
 	}
