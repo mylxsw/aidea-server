@@ -187,7 +187,7 @@ func imageToVideoJobProcesser(client *stabilityai.StabilityAI, up *uploader.Uplo
 
 		taskRes, err := client.ImageToVideoResult(context.TODO(), payload.TaskID)
 		if err != nil {
-			log.With(payload).Errorf("query fromston job result failed: %v", err)
+			log.With(payload).Errorf("query image-to-video job result failed: %v", err)
 			return &repo.PendingTaskUpdate{
 				NextExecuteAt: time.Now().Add(5 * time.Second),
 				Status:        repo.PendingTaskStatusProcessing,
