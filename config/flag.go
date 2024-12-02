@@ -255,4 +255,7 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddBoolFlag("enable-summarizer", "是否启用聊天记录总结功能")
 	ins.AddStringFlag("summarizer-model", "gpt-4o-mini", "总结模型名称")
+
+	ins.AddStringFlag("flux-api-server", "https://api.bfl.ml", "flux api server")
+	ins.AddStringFlag("flux-api-key", "", "flux api key")
 }
