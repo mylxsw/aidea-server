@@ -136,6 +136,7 @@ func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.Clie
 			Tag:           item.Meta.Tag,
 			TagTextColor:  item.Meta.TagTextColor,
 			TagBgColor:    item.Meta.TagBgColor,
+			IsDefault:     item.ModelId == "gpt-4o-mini",
 		}
 
 		if ret.Disabled {

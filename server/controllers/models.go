@@ -50,6 +50,7 @@ type Model struct {
 
 	IsChat        bool `json:"is_chat"`
 	SupportVision bool `json:"support_vision,omitempty"`
+	IsDefault     bool `json:"is_default,omitempty"`
 }
 
 // Models 获取模型列表
