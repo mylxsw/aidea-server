@@ -58,6 +58,7 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context) web.
 	}
 
 	opt := func(q query.SQLBuilder) query.SQLBuilder {
+		q = q.OrderBy("status", "asc")
 		if sort == "id:desc" {
 			q = q.OrderBy("id", "desc")
 		}

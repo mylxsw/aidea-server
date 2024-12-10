@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"errors"
+	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	repo "github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
@@ -398,8 +399,17 @@ func (ctl *RoomController) parseRoomRequest(webCtx web.Context, isUpdate bool) (
 
 	req.Vendor = webCtx.Input("vendor")
 	systemPrompt := webCtx.Input("system_prompt")
-	if utf8.RuneCountInString(systemPrompt) > 1000 {
-		return nil, errors.New("系统提示不能超过 1000 个字符")
+	if utf8.RuneCountInString(systemPrompt) > 10000 {
+		return nil, errors.New("系统提示不能超过 10000 个字符")
+	}
+
+	tokenCount, err := chat.TextTokenCount(systemPrompt, req.Model)
+	if err != nil {
+		log.Warningf("Failed to calculate the token quantity in the system prompt: %v", err)
+	} else {
+		if tokenCount > 2048 {
+			return nil, errors.New("系统提示不能超过 2048 个 Token")
+		}
 	}
 
 	req.SystemPrompt = systemPrompt

@@ -632,9 +632,9 @@ func (*OpenAIController) buildFinalSystemMessage(
 		Error:      chatErrorMessage,
 	}
 
-	if len(req.Messages) >= int(maxContextLen*2)-1 {
+	if len(req.Messages) >= int(maxContextLen*3)-1 || realTokenConsumed > 2000 {
 		if req.RoomID <= 1 {
-			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请在“聊一聊”页面创建新对话。", realTokenConsumed)
+			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请创建新对话。", realTokenConsumed)
 		} else {
 			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请使用“[新对话](aidea-command://reset-context)”来重置对话上下文。", realTokenConsumed)
 		}
@@ -894,19 +894,17 @@ func (ctl *OpenAIController) Images(ctx context.Context, webCtx web.Context, use
 	}
 
 	model := req.Model
-	if model == "" {
-		switch model {
-		case "dall-e-3":
-			if req.Quality == "hd" {
-				model = "dall-e-3:hd"
-			} else {
-				model = "dall-e-3"
-			}
-		default:
-			model = "dall-e-2"
+	switch model {
+	case "dall-e-3":
+		if req.Quality == "hd" {
+			model = "dall-e-3:hd"
+		} else {
+			model = "dall-e-3"
 		}
+	default:
+		model = "dall-e-2"
 	}
-
+	
 	if ctl.conf.EnableModelRateLimit {
 		if err := ctl.limiter.Allow(ctx, fmt.Sprintf("chat-limit:u:%d:m:%s:minute", user.ID, model), redis_rate.PerMinute(5)); err != nil {
 			if errors.Is(err, rate.ErrRateLimitExceeded) {

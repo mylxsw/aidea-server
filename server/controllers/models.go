@@ -37,6 +37,7 @@ type Model struct {
 	Name         string `json:"name"`
 	ShortName    string `json:"short_name"`
 	Description  string `json:"description"`
+	PriceInfo    string `json:"price_info,omitempty"`
 	AvatarURL    string `json:"avatar_url,omitempty"`
 	Category     string `json:"category"`
 	IsImage      bool   `json:"is_image"`

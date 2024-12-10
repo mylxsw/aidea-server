@@ -2,6 +2,7 @@ package v2
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
@@ -11,6 +12,7 @@ import (
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/array"
+	"github.com/mylxsw/go-utils/ternary"
 	"net/http"
 	"strconv"
 	"strings"
@@ -50,7 +52,8 @@ func (ctl *ModelController) Register(router web.Router) {
 func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, client *auth.ClientInfo, user *auth.UserOptional) web.Response {
 	models := ctl.loadRawModels(ctx, client, user)
 
-	if user.User != nil {
+	withCustom := webCtx.Input("with-custom")
+	if withCustom == "true" && user.User != nil {
 		roomTypes := []int{repo.RoomTypePreset, repo.RoomTypeCustom, repo.RoomTypePresetCustom}
 		rooms, err := ctl.repo.Room.Rooms(ctx, user.User.ID, roomTypes, 500)
 		if err != nil {
@@ -97,15 +100,17 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 						Name:          item.Name,
 						AvatarURL:     avatarUrl,
 						Description:   description,
-						Category:      "Custom",
+						Category:      "数字人",
 						IsImage:       model.IsImage,
 						SupportVision: model.SupportVision,
 						VersionMin:    model.VersionMin,
 						VersionMax:    model.VersionMax,
 						Tag:           model.Tag,
 						TagTextColor:  model.TagTextColor,
+						TagBgColor:    model.TagBgColor,
 						IsNew:         model.IsNew,
 						IsChat:        model.IsChat,
+						PriceInfo:     model.PriceInfo,
 					}
 				},
 			),
@@ -119,11 +124,13 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 // loadRawModels Load all large language models
 func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.ClientInfo, user *auth.UserOptional) []controllers.Model {
 	models := array.Map(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) controllers.Model {
+		priceInfo := ctl.generatePriceInfo(item)
 		ret := controllers.Model{
 			ID:            item.ModelId,
 			Name:          item.Name,
 			ShortName:     item.ShortName,
 			Description:   item.Description,
+			PriceInfo:     priceInfo,
 			AvatarURL:     item.AvatarUrl,
 			Category:      item.Meta.Category,
 			IsImage:       false,
@@ -137,6 +144,14 @@ func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.Clie
 			TagTextColor:  item.Meta.TagTextColor,
 			TagBgColor:    item.Meta.TagBgColor,
 			IsDefault:     item.ModelId == "gpt-4o-mini",
+		}
+
+		if misc.VersionOlder(client.Version, "2.0.0") {
+			if item.Meta.InputPrice == 0 && item.Meta.OutputPrice == 0 && ret.Tag != "限免" {
+				ret.Tag = "限免"
+				ret.TagTextColor = "#ffffff"
+				ret.TagBgColor = "#5694ED"
+			}
 		}
 
 		if ret.Disabled {
@@ -161,7 +176,7 @@ func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.Clie
 		return ret
 	})
 
-	sortPriority := []string{"OpenAI", "Anthropic", "Google"}
+	sortPriority := []string{"OpenAI", "Anthropic", "Google", "xAI", "Amazon", "Meta", "百度", "阿里", "科大讯飞"}
 	models = array.Sort(models, func(i, j controllers.Model) bool {
 		if i.Category == "" && j.Category != "" {
 			return false
@@ -329,4 +344,24 @@ func (ctl *ModelController) GetHomeModelsItem(ctx context.Context, webCtx web.Co
 	return webCtx.JSON(web.M{
 		"data": homeModel,
 	})
+}
+
+type ModelPriceInfo struct {
+	Input  int    `json:"input,omitempty"`
+	Output int    `json:"output,omitempty"`
+	Note   string `json:"note,omitempty"`
+}
+
+func (ctl *ModelController) generatePriceInfo(item repo.Model) string {
+	data, _ := json.Marshal(ModelPriceInfo{
+		Input:  item.Meta.InputPrice,
+		Output: item.Meta.OutputPrice,
+		Note: ternary.If(
+			item.Meta.OutputPrice > 0 || item.Meta.InputPrice > 0,
+			"每消耗 1000 Token 将扣除对应数量的智慧果，单次问答若不足 1 智慧果，按 1 智慧果计费。",
+			"",
+		),
+	})
+
+	return string(data)
 }
