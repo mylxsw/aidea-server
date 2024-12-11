@@ -176,9 +176,10 @@ type ModelInfo struct {
 	ModelId     string
 	InputPrice  int
 	OutputPrice int
+	PerReqPrice int
 }
 
-func GetTextModelCoinsDetail(model ModelInfo, inputToken, outputToken int64) (inputPrice float64, outputPrice float64, totalPrice int64) {
+func GetTextModelCoinsDetail(model ModelInfo, inputToken, outputToken int64) (inputPrice float64, outputPrice float64, perReqPrice int64, totalPrice int64) {
 	if model.OutputPrice > 0 || model.InputPrice > 0 {
 		if model.InputPrice <= 0 {
 			model.InputPrice = model.OutputPrice
@@ -186,18 +187,18 @@ func GetTextModelCoinsDetail(model ModelInfo, inputToken, outputToken int64) (in
 
 		inputPrice = float64(model.InputPrice) * float64(inputToken) / 1000.0
 		outputPrice = float64(model.OutputPrice) * float64(outputToken) / 1000.0
-		totalPrice = int64(math.Ceil(inputPrice + outputPrice))
+		totalPrice = int64(math.Ceil(inputPrice+outputPrice)) + int64(model.PerReqPrice)
 
-		return inputPrice, outputPrice, totalPrice
+		return inputPrice, outputPrice, int64(model.PerReqPrice), totalPrice
 	}
 
-	totalPrice = GetOpenAITextCoins(model.ModelId, inputToken+outputToken)
-	return 0, float64(totalPrice), totalPrice
+	totalPrice = GetOpenAITextCoins(model.ModelId, inputToken+outputToken) + int64(model.PerReqPrice)
+	return 0, float64(totalPrice), int64(model.PerReqPrice), totalPrice
 }
 
 // GetTextModelCoins 获取文本模型计费，该接口对于 Input 和 Output 分开计费
 func GetTextModelCoins(model ModelInfo, inputToken, outputToken int64) int64 {
-	_, _, totalPrice := GetTextModelCoinsDetail(model, inputToken, outputToken)
+	_, _, _, totalPrice := GetTextModelCoinsDetail(model, inputToken, outputToken)
 	return totalPrice
 }
 

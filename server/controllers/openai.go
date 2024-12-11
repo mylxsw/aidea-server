@@ -469,6 +469,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			meta.OutputToken = quotaConsume.OutputTokens
 			meta.InputPrice = quotaConsume.InputPrice
 			meta.OutputPrice = quotaConsume.OutputPrice
+			meta.ReqPrice = quotaConsume.PerReqPrice
 
 			if err := quotaRepo.QuotaConsume(ctx, user.User.ID, quotaConsume.TotalPrice, meta); err != nil {
 				log.Errorf("used quota add failed: %s", err)
@@ -747,6 +748,7 @@ type QuotaConsume struct {
 	OutputTokens int
 	InputPrice   float64
 	OutputPrice  float64
+	PerReqPrice  int64
 	TotalPrice   int64
 }
 
@@ -767,7 +769,7 @@ func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText st
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
 	}
-	ret.InputPrice, ret.OutputPrice, ret.TotalPrice = coins.GetTextModelCoinsDetail(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
+	ret.InputPrice, ret.OutputPrice, ret.PerReqPrice, ret.TotalPrice = coins.GetTextModelCoinsDetail(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
 
 	// 免费请求，不扣除智慧果
 	if isFreeRequest || replyText == "" {
@@ -904,7 +906,7 @@ func (ctl *OpenAIController) Images(ctx context.Context, webCtx web.Context, use
 	default:
 		model = "dall-e-2"
 	}
-	
+
 	if ctl.conf.EnableModelRateLimit {
 		if err := ctl.limiter.Allow(ctx, fmt.Sprintf("chat-limit:u:%d:m:%s:minute", user.ID, model), redis_rate.PerMinute(5)); err != nil {
 			if errors.Is(err, rate.ErrRateLimitExceeded) {

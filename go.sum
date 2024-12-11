@@ -232,6 +232,8 @@ github.com/mylxsw/glacier v1.1.4-0.20240408065317-a8ddb067c803 h1:vYfopskgp0IpFr
 github.com/mylxsw/glacier v1.1.4-0.20240408065317-a8ddb067c803/go.mod h1:memrPz3F1+z+uczIOsv4pux//xezU+GQk4R8dtNmB7Q=
 github.com/mylxsw/glacier v1.1.5 h1:2o7f27LP5khd0wQd4hG3IdlxXRXjCduusRWt8OtG/co=
 github.com/mylxsw/glacier v1.1.5/go.mod h1:memrPz3F1+z+uczIOsv4pux//xezU+GQk4R8dtNmB7Q=
+github.com/mylxsw/glacier v1.1.6-0.20241122033456-95ca85273d28 h1:iUdpxAxtsoWU0OIH2jYd40JLWjeBUAvBVngFgA+EMQM=
+github.com/mylxsw/glacier v1.1.6-0.20241122033456-95ca85273d28/go.mod h1:memrPz3F1+z+uczIOsv4pux//xezU+GQk4R8dtNmB7Q=
 github.com/mylxsw/go-ioc v1.1.0 h1:oBHGkeIl511UTw22wM4wNJlsvQjheyLsfo8K5p4hp+U=
 github.com/mylxsw/go-ioc v1.1.0/go.mod h1:HUGesamRKCt0Rd7DEPYKfj+ZJuY7rtjiYuZLNGasekk=
 github.com/mylxsw/go-utils v1.0.3 h1:kL1n25xVzEDCjhtNx32dXXixFvuslCE5RGKMEUxeeJI=

@@ -23,7 +23,7 @@ require (
 	github.com/lithammer/shortuuid/v4 v4.0.0
 	github.com/mylxsw/asteria v1.0.1
 	github.com/mylxsw/eloquent v0.0.2-0.20231129035241-c08e054b0632
-	github.com/mylxsw/glacier v1.1.5
+	github.com/mylxsw/glacier v1.1.6-0.20241122033456-95ca85273d28
 	github.com/pkg/errors v0.9.1
 	github.com/redis/go-redis/v9 v9.0.3
 	github.com/robfig/cron/v3 v3.0.1

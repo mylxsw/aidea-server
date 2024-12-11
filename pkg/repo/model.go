@@ -38,6 +38,7 @@ func (m Model) ToCoinModel() coins.ModelInfo {
 		ModelId:     m.ModelId,
 		InputPrice:  m.Meta.InputPrice,
 		OutputPrice: m.Meta.OutputPrice,
+		PerReqPrice: m.Meta.PerReqPrice,
 	}
 }
 
@@ -113,6 +114,8 @@ type ModelMeta struct {
 	InputPrice int `json:"input_price"`
 	// OutputPrice 输出 Token 价格（智慧果/1K Token）
 	OutputPrice int `json:"output_price"`
+	// PerReqPrice 每次请求价格（智慧果/次）
+	PerReqPrice int `json:"per_req_price,omitempty"`
 
 	// Prompt 全局的系统提示语
 	Prompt string `json:"prompt,omitempty"`

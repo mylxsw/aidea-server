@@ -150,6 +150,7 @@ type QuotaUsedMeta struct {
 	OutputToken int      `json:"output_token,omitempty"`
 	InputPrice  float64  `json:"input_price,omitempty"`
 	OutputPrice float64  `json:"output_price,omitempty"`
+	ReqPrice    int64    `json:"req_price,omitempty"`
 }
 
 func NewQuotaUsedMeta(tag string, models ...string) QuotaUsedMeta {

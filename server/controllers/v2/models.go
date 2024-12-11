@@ -347,20 +347,29 @@ func (ctl *ModelController) GetHomeModelsItem(ctx context.Context, webCtx web.Co
 }
 
 type ModelPriceInfo struct {
-	Input  int    `json:"input,omitempty"`
-	Output int    `json:"output,omitempty"`
-	Note   string `json:"note,omitempty"`
+	Input   int    `json:"input,omitempty"`
+	Output  int    `json:"output,omitempty"`
+	Request int    `json:"request,omitempty"`
+	Note    string `json:"note,omitempty"`
 }
 
 func (ctl *ModelController) generatePriceInfo(item repo.Model) string {
+	noteItems := make([]string, 0)
+	if item.Meta.InputPrice > 0 {
+		noteItems = append(noteItems, fmt.Sprintf("每 1000 个输入 Token 将扣除 %d 个智慧果", item.Meta.InputPrice))
+	}
+	if item.Meta.OutputPrice > 0 {
+		noteItems = append(noteItems, fmt.Sprintf("每 1000 个输出 Token 将扣除 %d 个智慧果", item.Meta.OutputPrice))
+	}
+	if item.Meta.PerReqPrice > 0 {
+		noteItems = append(noteItems, fmt.Sprintf("每次请求%s扣除 %d 个智慧果", ternary.If(len(noteItems) > 0, "额外", ""), item.Meta.PerReqPrice))
+	}
+
 	data, _ := json.Marshal(ModelPriceInfo{
-		Input:  item.Meta.InputPrice,
-		Output: item.Meta.OutputPrice,
-		Note: ternary.If(
-			item.Meta.OutputPrice > 0 || item.Meta.InputPrice > 0,
-			"每消耗 1000 Token 将扣除对应数量的智慧果，单次问答若不足 1 智慧果，按 1 智慧果计费。",
-			"",
-		),
+		Input:   item.Meta.InputPrice,
+		Output:  item.Meta.OutputPrice,
+		Request: item.Meta.PerReqPrice,
+		Note:    ternary.If(len(noteItems) > 0, strings.Join(noteItems, "，")+"。", ""),
 	})
 
 	return string(data)
