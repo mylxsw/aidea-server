@@ -258,7 +258,18 @@ func (svc *ChatService) DailyFreeModels(ctx context.Context) ([]coins.ModelWithN
 		return ok
 	})
 
-	return array.UniqBy(array.Map(freeModels, func(item model.ModelsDailyFree, _ int) coins.ModelWithName {
+	extraFreeModels := make([]model.ModelsDailyFree, 0)
+	for _, mod := range models {
+		if mod.Meta.InputPrice == 0 && mod.Meta.OutputPrice == 0 && mod.Meta.PerReqPrice == 0 {
+			extraFreeModels = append(extraFreeModels, model.ModelsDailyFree{
+				ModelId:   mod.ModelId,
+				Name:      mod.Name,
+				FreeCount: 999,
+			})
+		}
+	}
+
+	return array.UniqBy(array.Map(append(freeModels, extraFreeModels...), func(item model.ModelsDailyFree, _ int) coins.ModelWithName {
 		res := coins.ModelWithName{
 			ID:        item.Id,
 			Model:     item.ModelId,
@@ -271,6 +282,7 @@ func (svc *ChatService) DailyFreeModels(ctx context.Context) ([]coins.ModelWithN
 		mod := models[item.ModelId]
 		if mod.Meta.InputPrice == 0 && mod.Meta.OutputPrice == 0 && mod.Meta.PerReqPrice == 0 {
 			res.FreeCount = 999
+			res.Info = "该模型当前限免，不限制使用次数。"
 		}
 
 		return res
@@ -325,7 +337,6 @@ func (svc *ChatService) FreeChatStatistics(ctx context.Context, userID int64) []
 
 	return array.Map(freeModels, func(item coins.ModelWithName, _ int) FreeChatState {
 		if item.FreeCount == 999 {
-			item.Info = "该模型当前限免，不限制使用次数。"
 			return FreeChatState{
 				ModelWithName: item,
 				LeftCount:     999,
