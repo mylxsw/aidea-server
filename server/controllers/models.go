@@ -61,7 +61,7 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 			ID:            item.ModelId,
 			Name:          item.Name,
 			ShortName:     item.ShortName,
-			Description:   item.Description,
+			Description:   "",
 			AvatarURL:     item.AvatarUrl,
 			Category:      item.Meta.Category,
 			IsImage:       false,
@@ -74,6 +74,12 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 			Tag:           item.Meta.Tag,
 			TagTextColor:  item.Meta.TagTextColor,
 			TagBgColor:    item.Meta.TagBgColor,
+		}
+
+		if item.Meta.InputPrice == 0 && item.Meta.OutputPrice == 0 && item.Meta.PerReqPrice == 0 {
+			ret.Tag = "限免"
+			ret.TagTextColor = "FFFFFFFF"
+			ret.TagBgColor = "FF2196F3"
 		}
 
 		if ret.Disabled {

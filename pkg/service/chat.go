@@ -258,8 +258,8 @@ func (svc *ChatService) DailyFreeModels(ctx context.Context) ([]coins.ModelWithN
 		return ok
 	})
 
-	return array.UniqBy(append(coins.FreeModels(), array.Map(freeModels, func(item model.ModelsDailyFree, _ int) coins.ModelWithName {
-		return coins.ModelWithName{
+	return array.UniqBy(array.Map(freeModels, func(item model.ModelsDailyFree, _ int) coins.ModelWithName {
+		res := coins.ModelWithName{
 			ID:        item.Id,
 			Model:     item.ModelId,
 			Name:      item.Name,
@@ -267,7 +267,14 @@ func (svc *ChatService) DailyFreeModels(ctx context.Context) ([]coins.ModelWithN
 			FreeCount: int(item.FreeCount),
 			EndAt:     item.EndAt,
 		}
-	})...), func(item coins.ModelWithName) string {
+
+		mod := models[item.ModelId]
+		if mod.Meta.InputPrice == 0 && mod.Meta.OutputPrice == 0 && mod.Meta.PerReqPrice == 0 {
+			res.FreeCount = 999
+		}
+
+		return res
+	}), func(item coins.ModelWithName) string {
 		return item.Model
 	}), nil
 }
@@ -317,6 +324,15 @@ func (svc *ChatService) FreeChatStatistics(ctx context.Context, userID int64) []
 	}
 
 	return array.Map(freeModels, func(item coins.ModelWithName, _ int) FreeChatState {
+		if item.FreeCount == 999 {
+			item.Info = "该模型当前限免，不限制使用次数。"
+			return FreeChatState{
+				ModelWithName: item,
+				LeftCount:     999,
+				MaxCount:      999,
+			}
+		}
+
 		leftCount, maxCount := svc.freeChatRequestCounts(ctx, userID, &item)
 		return FreeChatState{
 			ModelWithName: item,
