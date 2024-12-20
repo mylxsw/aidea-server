@@ -101,8 +101,8 @@ func (ap Product) ExpiredAt() time.Time {
 // 可选价格 1, 3, 6, 8, 12, 18, 28, 38, 48, 58, 68, 78, 88, 98, 128, 168, 198, 228, 268, 298, 348, 398, 498, 598, 698
 
 func buildDescription(quota int64) string {
-	multiple := float64(quota) / 100.0
-	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4o 约 %.0f 次）", 30*multiple, 8*multiple)
+	multiple := float64(quota) / 5.0
+	return fmt.Sprintf("预计可与您对话 %.0f 次（GPT-4o）", multiple)
 }
 
 func GetProduct(productId string) *Product {

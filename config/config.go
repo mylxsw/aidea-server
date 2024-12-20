@@ -322,6 +322,10 @@ type Config struct {
 	// 总结能力
 	EnableSummarizer bool   `json:"enable_summarizer" yaml:"enable_summarizer"`
 	SummarizerModel  string `json:"summarizer_model" yaml:"summarizer_model"`
+
+	// Flux model
+	FluxAPIServer string `json:"flux_api_server" yaml:"flux_api_server"`
+	FluxAPIKey    string `json:"flux_api_key" yaml:"flux_api_key"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -640,6 +644,9 @@ func Register(ins *app.App) {
 
 			MiniMaxAPIKey:  ctx.String("minimax-api-key"),
 			MiniMaxGroupID: ctx.String("minimax-group-id"),
+
+			FluxAPIServer: ctx.String("flux-api-server"),
+			FluxAPIKey:    ctx.String("flux-api-key"),
 		}
 	})
 }

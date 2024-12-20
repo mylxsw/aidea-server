@@ -42,6 +42,14 @@ func ReduceMessageContext(messages Messages, model string, maxTokens int) (reduc
 	return ReduceMessageContext(messages[1:], model, maxTokens)
 }
 
+// TextTokenCount 计算文本的 token 数量
+func TextTokenCount(text string, model string) (numTokens int, err error) {
+	messages := make(Messages, 0)
+	messages = append(messages, Message{Content: text, Role: "system"})
+
+	return MessageTokenCount(messages, model)
+}
+
 // MessageTokenCount 计算对话上下文的 token 数量
 // TODO 不通厂商模型的 Token 计算方式可能不同，需要根据厂商模型进行区分
 func MessageTokenCount(messages Messages, model string) (numTokens int, err error) {

@@ -568,9 +568,9 @@ func (ctl *UserController) UserFreeChatCounts(ctx context.Context, webCtx web.Co
 // UserFreeChatCountsForModel 用户模型免费聊天次数统计
 func (ctl *UserController) UserFreeChatCountsForModel(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
 	modelID := webCtx.PathVar("model")
+
 	segs := strings.Split(modelID, ":")
 	modelID = segs[len(segs)-1]
-
 	res, err := ctl.svc.Chat.FreeChatStatisticsForModel(ctx, user.ID, modelID)
 	if err != nil {
 		if errors.Is(err, service.ErrorModelNotFree) {
@@ -587,6 +587,8 @@ func (ctl *UserController) UserFreeChatCountsForModel(ctx context.Context, webCt
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
+	// This API has been deprecated, so we're setting the remaining quantity in the return results of all models to 0
+	res.LeftCount = 0
 	return webCtx.JSON(res)
 }
 

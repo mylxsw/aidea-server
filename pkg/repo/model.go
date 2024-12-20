@@ -13,6 +13,7 @@ import (
 	"github.com/mylxsw/eloquent"
 	"github.com/mylxsw/eloquent/query"
 	"github.com/mylxsw/go-utils/array"
+	"github.com/mylxsw/go-utils/ternary"
 	"gopkg.in/guregu/null.v3"
 	"math/rand"
 	"strings"
@@ -38,6 +39,7 @@ func (m Model) ToCoinModel() coins.ModelInfo {
 		ModelId:     m.ModelId,
 		InputPrice:  m.Meta.InputPrice,
 		OutputPrice: m.Meta.OutputPrice,
+		PerReqPrice: m.Meta.PerReqPrice,
 	}
 }
 
@@ -81,16 +83,6 @@ func NewModel(m model.Models) Model {
 		if err := json.Unmarshal([]byte(ret.MetaJson), &ret.Meta); err != nil {
 			log.F(log.M{"model": ret}).Errorf("unmarshal model meta failed: %s", err)
 		}
-
-		// 没有设置输出价格，但是设置了输入价格，则输出价格与输入价格相同
-		if ret.Meta.OutputPrice == 0 {
-			ret.Meta.OutputPrice = ret.Meta.InputPrice
-		}
-
-		// 没有设置输入价格，但是设置了输出价格，则输入价格与输出价格相同
-		if ret.Meta.InputPrice == 0 {
-			ret.Meta.InputPrice = ret.Meta.OutputPrice
-		}
 	}
 
 	if ret.ProvidersJson != "" {
@@ -113,6 +105,8 @@ type ModelMeta struct {
 	InputPrice int `json:"input_price"`
 	// OutputPrice 输出 Token 价格（智慧果/1K Token）
 	OutputPrice int `json:"output_price"`
+	// PerReqPrice 每次请求价格（智慧果/次）
+	PerReqPrice int `json:"per_req_price,omitempty"`
 
 	// Prompt 全局的系统提示语
 	Prompt string `json:"prompt,omitempty"`
@@ -126,6 +120,8 @@ type ModelMeta struct {
 	IsNew bool `json:"is_new,omitempty"`
 	// Category 模型分类
 	Category string `json:"category,omitempty"`
+	// IsRecommend 是否是推荐模型
+	IsRecommend bool `json:"is_recommend,omitempty"`
 }
 
 type ModelProvider struct {
@@ -267,7 +263,7 @@ func (repo *ModelRepo) UpdateModel(ctx context.Context, modelID string, req Mode
 	}
 
 	mod.Name = null.StringFrom(req.Name)
-	mod.ShortName = null.StringFrom(req.ShortName)
+	mod.ShortName = null.StringFrom(ternary.If(req.ShortName == req.Name, "", req.ShortName))
 	mod.Description = null.StringFrom(req.Description)
 	mod.AvatarUrl = null.StringFrom(req.AvatarUrl)
 	mod.Status = null.IntFrom(req.Status)

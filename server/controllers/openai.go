@@ -469,6 +469,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			meta.OutputToken = quotaConsume.OutputTokens
 			meta.InputPrice = quotaConsume.InputPrice
 			meta.OutputPrice = quotaConsume.OutputPrice
+			meta.ReqPrice = quotaConsume.PerReqPrice
 
 			if err := quotaRepo.QuotaConsume(ctx, user.User.ID, quotaConsume.TotalPrice, meta); err != nil {
 				log.Errorf("used quota add failed: %s", err)
@@ -632,9 +633,9 @@ func (*OpenAIController) buildFinalSystemMessage(
 		Error:      chatErrorMessage,
 	}
 
-	if len(req.Messages) >= int(maxContextLen*2)-1 {
+	if len(req.Messages) >= int(maxContextLen*3)-1 || realTokenConsumed > 2000 {
 		if req.RoomID <= 1 {
-			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请在“聊一聊”页面创建新对话。", realTokenConsumed)
+			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请创建新对话。", realTokenConsumed)
 		} else {
 			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请使用“[新对话](aidea-command://reset-context)”来重置对话上下文。", realTokenConsumed)
 		}
@@ -747,6 +748,7 @@ type QuotaConsume struct {
 	OutputTokens int
 	InputPrice   float64
 	OutputPrice  float64
+	PerReqPrice  int64
 	TotalPrice   int64
 }
 
@@ -767,7 +769,7 @@ func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText st
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
 	}
-	ret.InputPrice, ret.OutputPrice, ret.TotalPrice = coins.GetTextModelCoinsDetail(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
+	ret.InputPrice, ret.OutputPrice, ret.PerReqPrice, ret.TotalPrice = coins.GetTextModelCoinsDetail(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
 
 	// 免费请求，不扣除智慧果
 	if isFreeRequest || replyText == "" {
@@ -894,17 +896,15 @@ func (ctl *OpenAIController) Images(ctx context.Context, webCtx web.Context, use
 	}
 
 	model := req.Model
-	if model == "" {
-		switch model {
-		case "dall-e-3":
-			if req.Quality == "hd" {
-				model = "dall-e-3:hd"
-			} else {
-				model = "dall-e-3"
-			}
-		default:
-			model = "dall-e-2"
+	switch model {
+	case "dall-e-3":
+		if req.Quality == "hd" {
+			model = "dall-e-3:hd"
+		} else {
+			model = "dall-e-3"
 		}
+	default:
+		model = "dall-e-2"
 	}
 
 	if ctl.conf.EnableModelRateLimit {

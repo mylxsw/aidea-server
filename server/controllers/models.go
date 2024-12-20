@@ -37,6 +37,7 @@ type Model struct {
 	Name         string `json:"name"`
 	ShortName    string `json:"short_name"`
 	Description  string `json:"description"`
+	PriceInfo    string `json:"price_info,omitempty"`
 	AvatarURL    string `json:"avatar_url,omitempty"`
 	Category     string `json:"category"`
 	IsImage      bool   `json:"is_image"`
@@ -50,6 +51,8 @@ type Model struct {
 
 	IsChat        bool `json:"is_chat"`
 	SupportVision bool `json:"support_vision,omitempty"`
+	IsDefault     bool `json:"is_default,omitempty"`
+	Recommend     bool `json:"recommend,omitempty"`
 }
 
 // Models 获取模型列表
@@ -59,7 +62,7 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 			ID:            item.ModelId,
 			Name:          item.Name,
 			ShortName:     item.ShortName,
-			Description:   item.Description,
+			Description:   "",
 			AvatarURL:     item.AvatarUrl,
 			Category:      item.Meta.Category,
 			IsImage:       false,
@@ -72,6 +75,12 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 			Tag:           item.Meta.Tag,
 			TagTextColor:  item.Meta.TagTextColor,
 			TagBgColor:    item.Meta.TagBgColor,
+		}
+
+		if item.Meta.InputPrice == 0 && item.Meta.OutputPrice == 0 && item.Meta.PerReqPrice == 0 {
+			ret.Tag = "限免"
+			ret.TagTextColor = "FFFFFFFF"
+			ret.TagBgColor = "FF2196F3"
 		}
 
 		if ret.Disabled {

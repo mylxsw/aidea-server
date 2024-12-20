@@ -510,11 +510,17 @@ definitions:
       is_new:
         description: IsNew 是否是上新模型
         type: boolean
+      is_recommend:
+        description: IsRecommend 是否是推荐模型
+        type: boolean
       max_context:
         description: MaxContext 最大上下文长度
         type: integer
       output_price:
         description: OutputPrice 输出 Token 价格（智慧果/1K Token）
+        type: integer
+      per_req_price:
+        description: PerReqPrice 每次请求价格（智慧果/次）
         type: integer
       prompt:
         description: Prompt 全局的系统提示语

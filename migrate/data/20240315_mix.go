@@ -28,7 +28,7 @@ func Migrate20240315Mix(m *migrate.Manager) {
 		builder.String("type", 100).Nullable(false).Comment("渠道类型")
 		builder.String("name", 100).Nullable(false).Comment("渠道名称")
 		builder.String("server", 255).Nullable(true).Comment("渠道 API 服务地址")
-		builder.String("secret", 255).Comment("渠道密钥，多值的使用格式 APIKey|SecretKey")
+		builder.Text("secret").Comment("渠道密钥，多值的使用格式 APIKey|SecretKey")
 		builder.Json("meta_json").Comment("其它配置信息，如是否使用代理等")
 	})
 

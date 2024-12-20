@@ -243,13 +243,34 @@ func (svc *ChatService) Channel(ctx context.Context, id int64) (*repo.Channel, e
 
 // DailyFreeModels 返回每日免费模型列表
 func (svc *ChatService) DailyFreeModels(ctx context.Context) ([]coins.ModelWithName, error) {
-	models, err := svc.rep.Model.DailyFreeModels(ctx)
+	freeModels, err := svc.rep.Model.DailyFreeModels(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return array.UniqBy(append(coins.FreeModels(), array.Map(models, func(item model.ModelsDailyFree, _ int) coins.ModelWithName {
-		return coins.ModelWithName{
+	models := array.ToMap(
+		svc.Models(ctx, false),
+		func(item repo.Model, _ int) string { return item.ModelId },
+	)
+
+	freeModels = array.Filter(freeModels, func(item model.ModelsDailyFree, _ int) bool {
+		_, ok := models[item.ModelId]
+		return ok
+	})
+
+	extraFreeModels := make([]model.ModelsDailyFree, 0)
+	for _, mod := range models {
+		if mod.Meta.InputPrice == 0 && mod.Meta.OutputPrice == 0 && mod.Meta.PerReqPrice == 0 {
+			extraFreeModels = append(extraFreeModels, model.ModelsDailyFree{
+				ModelId:   mod.ModelId,
+				Name:      mod.Name,
+				FreeCount: 999,
+			})
+		}
+	}
+
+	return array.UniqBy(array.Map(append(freeModels, extraFreeModels...), func(item model.ModelsDailyFree, _ int) coins.ModelWithName {
+		res := coins.ModelWithName{
 			ID:        item.Id,
 			Model:     item.ModelId,
 			Name:      item.Name,
@@ -257,21 +278,37 @@ func (svc *ChatService) DailyFreeModels(ctx context.Context) ([]coins.ModelWithN
 			FreeCount: int(item.FreeCount),
 			EndAt:     item.EndAt,
 		}
-	})...), func(item coins.ModelWithName) string {
+
+		mod := models[item.ModelId]
+		if mod.Meta.InputPrice == 0 && mod.Meta.OutputPrice == 0 && mod.Meta.PerReqPrice == 0 {
+			res.FreeCount = 999
+			res.Info = "该模型当前限免，不限制使用次数。"
+		}
+
+		return res
+	}), func(item coins.ModelWithName) string {
 		return item.Model
 	}), nil
 }
 
 // GetDailyFreeModel 获取每日免费模型信息
 func (svc *ChatService) GetDailyFreeModel(ctx context.Context, modelId string) (*coins.ModelWithName, error) {
-	res := coins.GetFreeModel(modelId)
-	if res != nil {
-		return res, nil
-	}
-
 	item, err := svc.rep.Model.GetDailyFreeModel(ctx, modelId)
 	if err != nil {
 		return nil, err
+	}
+
+	// Check if the model is enabled
+	mod, err := svc.rep.Model.GetModel(ctx, item.ModelId)
+	if err != nil || mod.Status != repo.ModelStatusEnabled {
+		return &coins.ModelWithName{
+			ID:        item.Id,
+			Model:     item.ModelId,
+			Name:      item.Name,
+			Info:      item.Info,
+			FreeCount: 0,
+			EndAt:     item.EndAt,
+		}, nil
 	}
 
 	return &coins.ModelWithName{
@@ -299,6 +336,14 @@ func (svc *ChatService) FreeChatStatistics(ctx context.Context, userID int64) []
 	}
 
 	return array.Map(freeModels, func(item coins.ModelWithName, _ int) FreeChatState {
+		if item.FreeCount == 999 {
+			return FreeChatState{
+				ModelWithName: item,
+				LeftCount:     999,
+				MaxCount:      999,
+			}
+		}
+
 		leftCount, maxCount := svc.freeChatRequestCounts(ctx, userID, &item)
 		return FreeChatState{
 			ModelWithName: item,
