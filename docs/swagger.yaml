@@ -510,6 +510,9 @@ definitions:
       is_new:
         description: IsNew 是否是上新模型
         type: boolean
+      is_recommend:
+        description: IsRecommend 是否是推荐模型
+        type: boolean
       max_context:
         description: MaxContext 最大上下文长度
         type: integer

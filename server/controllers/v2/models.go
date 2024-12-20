@@ -51,6 +51,20 @@ func (ctl *ModelController) Register(router web.Router) {
 // Models Loading all the models, including custom digital humans in the v2-release
 func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, client *auth.ClientInfo, user *auth.UserOptional) web.Response {
 	models := ctl.loadRawModels(ctx, client, user)
+	customModels := make([]controllers.Model, 0)
+	recommendModels := make([]controllers.Model, 0)
+
+	if misc.VersionNewer(client.Version, "2.0.0") || client.Version == "2.0.0" {
+		recommendModels = array.Map(
+			array.Filter(models, func(item controllers.Model, _ int) bool {
+				return item.Recommend
+			}),
+			func(item controllers.Model, _ int) controllers.Model {
+				item.Category = "最佳推荐"
+				return item
+			},
+		)
+	}
 
 	withCustom := webCtx.Input("with-custom")
 	if withCustom == "true" && user.User != nil {
@@ -64,7 +78,7 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 			return item.ID
 		})
 
-		models = append(
+		customModels = append(
 			array.Map(
 				array.UniqBy(
 					array.Filter(
@@ -100,7 +114,7 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 						Name:          item.Name,
 						AvatarURL:     avatarUrl,
 						Description:   description,
-						Category:      "自定义数字人",
+						Category:      "自定义角色",
 						IsImage:       model.IsImage,
 						SupportVision: model.SupportVision,
 						VersionMin:    model.VersionMin,
@@ -110,11 +124,11 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 					}
 				},
 			),
-			models...,
+			customModels...,
 		)
 	}
 
-	return webCtx.JSON(models)
+	return webCtx.JSON(append(recommendModels, append(customModels, models...)...))
 }
 
 // loadRawModels Load all large language models
@@ -140,6 +154,7 @@ func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.Clie
 			TagTextColor:  item.Meta.TagTextColor,
 			TagBgColor:    item.Meta.TagBgColor,
 			IsDefault:     item.ModelId == "gpt-4o-mini",
+			Recommend:     item.Meta.IsRecommend,
 		}
 
 		if misc.VersionOlder(client.Version, "2.0.0") {
