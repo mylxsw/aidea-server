@@ -280,6 +280,14 @@ func (req Request) Fix(chat Chat, maxContextLength int64, maxTokenCount int) (*R
 		return nil, 0, errors.New("超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度")
 	}
 
+	if len(messages) > 0 {
+		lastMessageContent := messages[len(messages)-1].Content
+		lastMessageTokens, _ := TextTokenCount(lastMessageContent, req.Model)
+		if lastMessageTokens >= 4000 || misc.WordCount(lastMessageContent) >= 20000 {
+			return nil, 0, errors.New("单条消息长度超过最大限制，请缩短输入内容长度")
+		}
+	}
+
 	req.Messages = array.Map(append(systemMessages, messages...), func(item Message, _ int) Message {
 		if len(item.MultipartContents) > 0 {
 			item.MultipartContents = array.Map(item.MultipartContents, func(part *MultipartContent, _ int) *MultipartContent {
