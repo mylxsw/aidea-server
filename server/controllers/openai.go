@@ -333,7 +333,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	// 查询模型信息
 	mod := ctl.chatSrv.Model(subCtx, req.Model)
 	if mod == nil || mod.Status == repo.ModelStatusDisabled {
-		misc.NoError(sw.WriteErrorStream(errors.New("当前模型暂不可用"), http.StatusNotFound))
+		misc.NoError(sw.WriteErrorStream(errors.New("当前模型暂不可用，请选择其它模型"), http.StatusNotFound))
 		return
 	}
 
