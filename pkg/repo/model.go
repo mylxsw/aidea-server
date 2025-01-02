@@ -15,7 +15,6 @@ import (
 	"github.com/mylxsw/go-utils/array"
 	"github.com/mylxsw/go-utils/ternary"
 	"gopkg.in/guregu/null.v3"
-	"math/rand"
 	"strings"
 	"time"
 )
@@ -52,15 +51,10 @@ func (m Model) SelectProvider(ctx context.Context) ModelProvider {
 		return m.Providers[0]
 	}
 
-	// TODO 更好的选择策略
-	// 临时方案：1主多备，优先使用第一个供应商，如果第一个供应商不可用，则随机选择一个备用供应商
+	// One primary with multiple backups, trying alternative models in turn
 	ctl := control.FromContext(ctx)
 	if ctl.PreferBackup {
-		idx := rand.Intn(len(m.Providers))
-		if idx == 0 {
-			idx++
-		}
-
+		idx := ctl.RetryTimes % len(m.Providers)
 		return m.Providers[idx]
 	}
 

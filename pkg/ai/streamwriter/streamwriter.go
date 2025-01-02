@@ -112,7 +112,7 @@ func New[T InitRequest[T]](enableWs bool, enableCors bool, r *http.Request, w ht
 			}
 
 			if err := json.Unmarshal(msg, &req); err != nil {
-				misc.NoError(sw.WriteStream(NewErrorWithCodeResposne(fmt.Errorf("invalid request: %v", err), http.StatusBadRequest)))
+				misc.NoError(sw.WriteStream(NewErrorWithCodeResponse(fmt.Errorf("invalid request: %v", err), http.StatusBadRequest)))
 				misc.NoError(wsConn.Close())
 				return nil, nil, err
 			}
@@ -133,7 +133,7 @@ func New[T InitRequest[T]](enableWs bool, enableCors bool, r *http.Request, w ht
 		}
 	} else {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			sw.writeJSON(NewErrorWithCodeResposne(fmt.Errorf("invalid request: %v", err), http.StatusBadRequest), http.StatusBadRequest)
+			sw.writeJSON(NewErrorWithCodeResponse(fmt.Errorf("invalid request: %v", err), http.StatusBadRequest), http.StatusBadRequest)
 			return nil, nil, err
 		}
 	}
@@ -163,7 +163,7 @@ func (sw *StreamWriter) initSSE() {
 }
 
 func (sw *StreamWriter) WriteErrorStream(err error, statusCode int) error {
-	return sw.WriteStream(NewErrorWithCodeResposne(err, statusCode))
+	return sw.WriteStream(NewErrorWithCodeResponse(err, statusCode))
 }
 
 func (sw *StreamWriter) WriteStream(payload any) error {
@@ -233,7 +233,7 @@ func NewErrorResponse(err error) ErrorResponse {
 	return ErrorResponse{Error: err.Error(), Code: http.StatusInternalServerError}
 }
 
-func NewErrorWithCodeResposne(err error, code int) ErrorResponse {
+func NewErrorWithCodeResponse(err error, code int) ErrorResponse {
 	return ErrorResponse{Error: err.Error(), Code: code}
 }
 

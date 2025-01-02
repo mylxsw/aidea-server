@@ -4,6 +4,7 @@ import "context"
 
 type Control struct {
 	PreferBackup bool `json:"prefer_backup"`
+	RetryTimes   int  `json:"retry_times"`
 }
 
 const controlContextKey = "chat-control"
@@ -17,6 +18,7 @@ func FromContext(ctx context.Context) *Control {
 	if !ok {
 		return &Control{
 			PreferBackup: false,
+			RetryTimes:   0,
 		}
 	}
 

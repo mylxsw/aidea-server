@@ -71,7 +71,11 @@ func (ctl *UserController) UpdateCustomHomeModels(ctx context.Context, webCtx we
 		case service.HomeModelTypeRoomGallery:
 			room, err := ctl.repo.Room.GalleryItem(ctx, int64(must.Must(strconv.Atoi(res.ID))))
 			if err != nil {
-				panic(fmt.Errorf("get room gallery item failed: %v", err))
+				log.WithFields(log.Fields{
+					"item":    item,
+					"user_id": user.ID,
+				}).Errorf("get room gallery item failed: %v", err)
+				return res
 			}
 
 			res.Name = room.Name
@@ -109,7 +113,7 @@ func (ctl *UserController) UpdateCustomHomeModels(ctx context.Context, webCtx we
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	cus.HomeModelsV2 = homeModels
+	cus.HomeModelsV2 = array.Filter(homeModels, func(item repo.HomeModelV2, _ int) bool { return item.Name != "" })
 	if err := ctl.repo.User.UpdateCustomConfig(ctx, user.ID, *cus); err != nil {
 		log.WithFields(log.Fields{"user_id": user.ID}).Errorf("update user custom config failed: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)

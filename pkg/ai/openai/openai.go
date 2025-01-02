@@ -158,11 +158,6 @@ type ChatStreamResponse struct {
 }
 
 func (client *realClientImpl) ChatStream(ctx context.Context, request openai.ChatCompletionRequest) (<-chan ChatStreamResponse, error) {
-	// TODO: 临时解决方案，后续需要优化
-	if request.Model == "gpt-4-vision-preview" && request.MaxTokens == 0 {
-		request.MaxTokens = 4096
-	}
-
 	stream, err := client.CreateChatCompletionStream(ctx, request)
 	if err != nil {
 		return nil, err
@@ -185,7 +180,7 @@ func (client *realClientImpl) ChatStream(ctx context.Context, request openai.Cha
 			if err != nil {
 				select {
 				case <-ctx.Done():
-				case res <- ChatStreamResponse{Code: "READ_STREAM_FAILED", ErrorMessage: fmt.Errorf("read stream failed: %v", err).Error()}:
+				case res <- ChatStreamResponse{Code: "READ_STREAM_FAILED", ErrorMessage: err.Error()}:
 				}
 				return
 			}

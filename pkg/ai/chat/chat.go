@@ -16,6 +16,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
+	"net/http"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -280,6 +281,14 @@ func (req Request) Fix(chat Chat, maxContextLength int64, maxTokenCount int) (*R
 		return nil, 0, errors.New("超过模型最大允许的上下文长度限制，请尝试“新对话”或缩短输入内容长度")
 	}
 
+	if len(messages) > 0 {
+		lastMessageContent := messages[len(messages)-1].Content
+		lastMessageTokens, _ := TextTokenCount(lastMessageContent, req.Model)
+		if lastMessageTokens >= 4000 || misc.WordCount(lastMessageContent) >= 20000 {
+			return nil, 0, errors.New("单条消息长度超过最大限制，请缩短输入内容长度")
+		}
+	}
+
 	req.Messages = array.Map(append(systemMessages, messages...), func(item Message, _ int) Message {
 		if len(item.MultipartContents) > 0 {
 			item.MultipartContents = array.Map(item.MultipartContents, func(part *MultipartContent, _ int) *MultipartContent {
@@ -316,6 +325,11 @@ type Chat interface {
 	ChatStream(ctx context.Context, req Request) (<-chan Response, error)
 	// MaxContextLength 获取模型的最大上下文长度
 	MaxContextLength(model string) int
+}
+
+type ChannelQuery interface {
+	// Channels Get all channels for the specified model
+	Channels(modelName string) []repo.ModelProvider
 }
 
 type Imp struct {
@@ -434,6 +448,11 @@ func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
 	return ai.selectImp(pro).Chat(ctx, req)
 }
 
+// Channels Get all channels for the specified model
+func (ai *Imp) Channels(modelName string) []repo.ModelProvider {
+	return ai.queryModel(modelName).Providers
+}
+
 func (ai *Imp) fixRequest(ctx context.Context, req Request) (Request, repo.ModelProvider) {
 	// TODO 这里是临时解决方案
 	// 使用微软的 Azure OpenAI 接口时，聊天内容只有“继续”两个字时，会触发风控，导致无法继续对话
@@ -535,6 +554,10 @@ func (ai *Imp) createOpenRouterClient(ch *repo.Channel) Chat {
 		OpenAIServers: []string{ch.Server},
 		OpenAIKeys:    []string{ch.Secret},
 		AutoProxy:     ch.Meta.UsingProxy,
+		Header: http.Header{
+			"HTTP-Referer": []string{"https://web.aicode.cc"},
+			"X-Title":      []string{"AIdea"},
+		},
 	}
 
 	return NewOpenRouterChat(openrouter.NewOpenRouter(openai.NewOpenAIClient(&conf, ai.proxy)))

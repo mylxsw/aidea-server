@@ -302,7 +302,7 @@ func (r *RoomRepo) Galleries(ctx context.Context) ([]GalleryRoom, error) {
 func (r *RoomRepo) GalleryItem(ctx context.Context, id int64) (*GalleryRoom, error) {
 	item, err := model.NewRoomGalleryModel(r.db).First(ctx, query.Builder().Where(model.FieldRoomGalleryId, id))
 	if err != nil {
-		if err == query.ErrNoResult {
+		if errors.Is(err, query.ErrNoResult) {
 			return nil, ErrNotFound
 		}
 
