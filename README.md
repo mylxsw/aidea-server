@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/9e1e88bd-e803-413f-a4c1-adfb7f375039)# AIdea 服务端 - AI 聊天、协作、图像生成
+# AIdea 服务端 - AI 聊天、协作、图像生成
 
 <a href="https://trendshift.io/repositories/855" target="_blank"><img src="https://trendshift.io/api/badge/repositories/855" alt="mylxsw%2Faidea-server | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
 
