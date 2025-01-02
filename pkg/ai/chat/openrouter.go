@@ -53,7 +53,7 @@ func (chat *OpenRouterChat) Chat(ctx context.Context, req Request) (*Response, e
 	res, err := chat.oai.Chat(ctx, *openaiReq)
 	if err != nil {
 		if strings.Contains(err.Error(), "content management policy") {
-			log.With(err).Errorf("违反 Azure OpenAI 内容管理策略")
+			log.With(err).Errorf("Violation of OpenAI content management policy")
 			return nil, ErrContentFilter
 		}
 
@@ -89,7 +89,7 @@ func (chat *OpenRouterChat) ChatStream(ctx context.Context, req Request) (<-chan
 				"message": req.assembleMessage(),
 				"model":   req.Model,
 				"room_id": req.RoomID,
-			}).Errorf("违反 Azure OpenAI 内容管理策略")
+			}).Errorf("Violation of OpenAI content management policy")
 			return nil, ErrContentFilter
 		}
 

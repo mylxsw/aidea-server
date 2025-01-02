@@ -395,31 +395,20 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	// 写入用户消息
 	questionID := ctl.saveChatQuestion(subCtx, user.User, req)
 
-	// 发起聊天请求并返回 SSE/WS 流
-	replyText, err := ctl.handleChat(subCtx, req, user.User, sw, webCtx, questionID, 0)
-	if errors.Is(err, ErrChatResponseHasSent) {
-		return
+	maxRetryTimes := 1
+	if cq, ok := ctl.chat.(chat.ChannelQuery); ok {
+		maxRetryTimes = len(cq.Channels(req.Model))
 	}
 
-	// 以下两种情况再次尝试
-	// 1. 聊天响应为空
-	// 2. 两次响应之间等待时间过长，强制中断，同时响应为空
-	if errors.Is(err, ErrChatResponseEmpty) || (errors.Is(err, ErrChatResponseGapTimeout) && replyText == "") {
-		// 如果用户等待时间超过 60s，则不再重试，避免用户等待时间过长
-		if startTime.Add(60 * time.Second).After(time.Now()) {
-			log.F(log.M{"req": req, "user_id": user.User.ID}).Warningf("聊天响应为空，尝试再次请求，模型：%s", req.Model)
-
-			replyText, err = ctl.handleChat(subCtx, req, user.User, sw, webCtx, questionID, 1)
-			if errors.Is(err, ErrChatResponseHasSent) {
-				return
-			}
-		}
+	replyText, err, done := ctl.chatWithRetry(subCtx, req, user, sw, webCtx, questionID, startTime, 0, maxRetryTimes)
+	if done {
+		return
 	}
 
 	chatErrorMessage := ternary.IfLazy(err == nil, func() string { return "" }, func() string { return err.Error() })
 	if chatErrorMessage != "" {
 		log.F(log.M{"req": req, "user_id": user.User.ID, "reply": replyText, "elapse": time.Since(startTime).Seconds()}).
-			Errorf("聊天失败，模型：%s，错误：%s", req.Model, chatErrorMessage)
+			Errorf("chat failed, model: %s, error: %s", req.Model, chatErrorMessage)
 	}
 
 	// 返回自定义控制信息，告诉客户端当前消耗情况
@@ -478,6 +467,42 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}
 }
 
+func (ctl *OpenAIController) chatWithRetry(
+	ctx context.Context,
+	req *chat.Request,
+	user *auth.UserOptional,
+	sw *streamwriter.StreamWriter,
+	webCtx web.Context,
+	questionID int64,
+	startTime time.Time,
+	retryTimes int,
+	maxRetryTimes int,
+) (string, error, bool) {
+	// 发起聊天请求并返回 SSE/WS 流
+	replyText, err := ctl.handleChat(ctx, req, user.User, sw, webCtx, questionID, retryTimes)
+	if errors.Is(err, ErrChatResponseHasSent) {
+		return "", nil, true
+	}
+
+	// 以下两种情况再次尝试
+	// 1. 聊天响应为空
+	// 2. 两次响应之间等待时间过长，强制中断，同时响应为空
+	if errors.Is(err, ErrChatResponseEmpty) || (errors.Is(err, ErrChatResponseGapTimeout) && replyText == "") {
+		// 如果用户等待时间超过 60s，则不再重试，避免用户等待时间过长
+		if startTime.Add(60 * time.Second).After(time.Now()) {
+			// 重试次数超过最大重试次数
+			if retryTimes >= maxRetryTimes {
+				log.F(log.M{"req": req, "user_id": user.User.ID}).Errorf("response is empty, model: %s, retry times exceed the limit", req.Model)
+				return "", err, true
+			}
+
+			log.F(log.M{"req": req, "user_id": user.User.ID}).Warningf("response is empty, try requesting again(%d), model: %s", retryTimes+1, req.Model)
+			return ctl.chatWithRetry(ctx, req, user, sw, webCtx, questionID, startTime, retryTimes+1, maxRetryTimes)
+		}
+	}
+	return replyText, err, false
+}
+
 func (ctl *OpenAIController) handleChat(
 	ctx context.Context,
 	req *chat.Request,
@@ -492,7 +517,7 @@ func (ctl *OpenAIController) handleChat(
 
 	// 如果是重试请求，则优先使用备用模型
 	if retryTimes > 0 {
-		chatCtx = control.NewContext(chatCtx, &control.Control{PreferBackup: true})
+		chatCtx = control.NewContext(chatCtx, &control.Control{PreferBackup: true, RetryTimes: retryTimes})
 	}
 
 	newReq := req.Clone()
@@ -508,7 +533,7 @@ func (ctl *OpenAIController) handleChat(
 			return "", ErrChatResponseHasSent
 		}
 
-		log.WithFields(log.Fields{"user_id": user.ID, "retry_times": retryTimes}).Errorf("聊天请求失败，模型 %s: %v", req.Model, err)
+		log.WithFields(log.Fields{"user_id": user.ID, "retry_times": retryTimes}).Errorf("chat request failed, model %s: %v", req.Model, err)
 
 		misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrInternalError)), http.StatusInternalServerError))
 		return "", ErrChatResponseHasSent
@@ -529,9 +554,9 @@ func (ctl *OpenAIController) handleChat(
 }
 
 var (
-	ErrChatResponseEmpty      = errors.New("聊天响应为空")
-	ErrChatResponseHasSent    = errors.New("聊天响应已经发送")
-	ErrChatResponseGapTimeout = errors.New("两次响应之间等待时间过长，强制中断")
+	ErrChatResponseEmpty      = errors.New("response is empty")
+	ErrChatResponseHasSent    = errors.New("response has sent")
+	ErrChatResponseGapTimeout = errors.New("force close after too long of inactivity between responses")
 )
 
 func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Request, stream <-chan chat.Response, user *auth.User, sw *streamwriter.StreamWriter) (string, error) {
@@ -560,10 +585,15 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 			id++
 
 			if res.ErrorCode != "" {
-				log.WithFields(log.Fields{"req": req, "user_id": user.ID}).Errorf("聊天响应失败: %v", res)
+				if id <= 1 {
+					log.WithFields(log.Fields{"req": req, "user_id": user.ID}).Warningf("chat response failed, we need a retry: %v", res)
+					return replyText, ErrChatResponseEmpty
+				}
+
+				log.WithFields(log.Fields{"req": req, "user_id": user.ID}).Errorf("chat response failed: %v", res)
 
 				if res.Error != "" {
-					res.Text = fmt.Sprintf("\n\n---\n抱歉，我们遇到了一些错误，以下是错误详情：\n%s\n", res.Error)
+					res.Text = fmt.Sprintf("\n\n---\nSorry, we encountered some errors. Here are the error details: \n```\n%s\n```\n", res.Error)
 				} else {
 					return replyText, nil
 				}

@@ -4,7 +4,6 @@ import (
 	"context"
 	openai2 "github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/sashabaranov/go-openai"
-	"strings"
 )
 
 type OpenRouter struct {
@@ -20,6 +19,5 @@ func (oa *OpenRouter) ChatStream(ctx context.Context, request openai.ChatComplet
 }
 
 func (oa *OpenRouter) Chat(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error) {
-	request.Model = strings.ReplaceAll(request.Model, ".", "/")
 	return oa.client.CreateChatCompletion(ctx, request)
 }

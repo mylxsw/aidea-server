@@ -1,6 +1,9 @@
 package openai
 
-import "github.com/mylxsw/aidea-server/config"
+import (
+	"github.com/mylxsw/aidea-server/config"
+	"net/http"
+)
 
 type Config struct {
 	Enable             bool
@@ -10,6 +13,7 @@ type Config struct {
 	OpenAIServers      []string
 	OpenAIKeys         []string
 	AutoProxy          bool
+	Header             http.Header
 }
 
 func parseMainConfig(conf *config.Config) *Config {
@@ -58,4 +62,21 @@ func parseDalleConfig(conf *config.Config) *Config {
 		OpenAIKeys:         conf.OpenAIDalleKeys,
 		AutoProxy:          conf.OpenAIDalleAutoProxy,
 	}
+}
+
+type CustomRequestTransport struct {
+	Origin http.RoundTripper
+	Header http.Header
+}
+
+func (t *CustomRequestTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	for k, v := range t.Header {
+		req.Header.Set(k, v[0])
+	}
+
+	return t.Origin.RoundTrip(req)
+}
+
+func NewCustomRequestTransport(origin http.RoundTripper, header http.Header) *CustomRequestTransport {
+	return &CustomRequestTransport{Origin: origin, Header: header}
 }

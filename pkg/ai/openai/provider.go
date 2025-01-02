@@ -62,6 +62,7 @@ func NewOpenAIClient(conf *Config, pp *proxy.Proxy) Client {
 				"",
 				conf.OpenAIKeys[i],
 				ternary.If(conf.AutoProxy, pp, nil),
+				conf.Header,
 			))
 		}
 	} else {
@@ -74,6 +75,7 @@ func NewOpenAIClient(conf *Config, pp *proxy.Proxy) Client {
 					conf.OpenAIOrganization,
 					key,
 					ternary.If(conf.AutoProxy, pp, nil),
+					conf.Header,
 				))
 			}
 		}
@@ -82,19 +84,22 @@ func NewOpenAIClient(conf *Config, pp *proxy.Proxy) Client {
 	return New(conf, clients)
 }
 
-func createOpenAIClient(isAzure bool, apiVersion string, server, organization, key string, pp *proxy.Proxy) *openai.Client {
+func createOpenAIClient(isAzure bool, apiVersion string, server, organization, key string, pp *proxy.Proxy, header http.Header) *openai.Client {
 	openaiConf := openai.DefaultConfig(key)
 	openaiConf.BaseURL = server
 	openaiConf.OrgID = organization
 	openaiConf.HTTPClient.Timeout = 180 * time.Second
 	if pp != nil {
-		openaiConf.HTTPClient.Transport = pp.BuildTransport()
+		openaiConf.HTTPClient.Transport = NewCustomRequestTransport(pp.BuildTransport(), header)
 	} else {
-		openaiConf.HTTPClient.Transport = &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout: 120 * time.Second,
-			}).DialContext,
-		}
+		openaiConf.HTTPClient.Transport = NewCustomRequestTransport(
+			&http.Transport{
+				DialContext: (&net.Dialer{
+					Timeout: 120 * time.Second,
+				}).DialContext,
+			},
+			header,
+		)
 	}
 
 	if isAzure {

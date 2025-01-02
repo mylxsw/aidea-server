@@ -16,6 +16,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
+	"net/http"
 	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -326,6 +327,11 @@ type Chat interface {
 	MaxContextLength(model string) int
 }
 
+type ChannelQuery interface {
+	// Channels Get all channels for the specified model
+	Channels(modelName string) []repo.ModelProvider
+}
+
 type Imp struct {
 	ai       *AI
 	svc      *service.Service
@@ -442,6 +448,11 @@ func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
 	return ai.selectImp(pro).Chat(ctx, req)
 }
 
+// Channels Get all channels for the specified model
+func (ai *Imp) Channels(modelName string) []repo.ModelProvider {
+	return ai.queryModel(modelName).Providers
+}
+
 func (ai *Imp) fixRequest(ctx context.Context, req Request) (Request, repo.ModelProvider) {
 	// TODO 这里是临时解决方案
 	// 使用微软的 Azure OpenAI 接口时，聊天内容只有“继续”两个字时，会触发风控，导致无法继续对话
@@ -543,6 +554,10 @@ func (ai *Imp) createOpenRouterClient(ch *repo.Channel) Chat {
 		OpenAIServers: []string{ch.Server},
 		OpenAIKeys:    []string{ch.Secret},
 		AutoProxy:     ch.Meta.UsingProxy,
+		Header: http.Header{
+			"HTTP-Referer": []string{"https://web.aicode.cc"},
+			"X-Title":      []string{"AIdea"},
+		},
 	}
 
 	return NewOpenRouterChat(openrouter.NewOpenRouter(openai.NewOpenAIClient(&conf, ai.proxy)))

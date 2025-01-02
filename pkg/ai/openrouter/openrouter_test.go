@@ -2,11 +2,14 @@ package openrouter_test
 
 import (
 	"context"
+	"encoding/json"
 	openai2 "github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/assert"
+	"github.com/mylxsw/go-utils/must"
 	"github.com/sashabaranov/go-openai"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -19,7 +22,7 @@ func TestOpenRouter_ChatStream(t *testing.T) {
 	defer cancel()
 
 	response, err := client.ChatStream(ctx, openai.ChatCompletionRequest{
-		Model: "01-ai/yi-34b-chat",
+		Model: "google/gemini-2.0-flash-thinking-exp:free",
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    "system",
@@ -37,6 +40,7 @@ func TestOpenRouter_ChatStream(t *testing.T) {
 
 	var finalText string
 	for res := range response {
+		print(string(must.Must(json.Marshal(res))))
 		if res.Code != "" {
 			log.With(res).Errorf("-> %s", res.ErrorMessage)
 			continue
@@ -54,6 +58,10 @@ func createClient() *openrouter.OpenRouter {
 		Enable:        true,
 		OpenAIServers: []string{"https://openrouter.ai/api/v1"},
 		OpenAIKeys:    []string{os.Getenv("OPEN_ROUTER_API_KEY")},
+		Header: http.Header{
+			"HTTP-Referer": []string{"https://web.aicode.cc"},
+			"X-Title":      []string{"AIdea"},
+		},
 	}
 	return openrouter.NewOpenRouter(openai2.NewOpenAIClient(conf, nil))
 }
