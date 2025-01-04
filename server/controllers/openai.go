@@ -280,29 +280,18 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 		inputTokenCount = int64(icnt)
 	} else {
-		// 支持 V2 版本的 homeModel 请求
-		// model 格式为 v2@{type}|{id}
-		if strings.HasPrefix(req.Model, "v2@") {
-			models := array.ToMap(ctl.chatSrv.Models(subCtx, true), func(item repo.Model, _ int) string {
-				return item.ModelId
-			})
-			homeModel, err := ctl.userSrv.QueryHomeModel(subCtx, models, user.User.ID, strings.TrimPrefix(req.Model, "v2@"))
+		// 每次对话用户可以手动选择要使用的模型
+		selectedModel, chatMessages, err := ctl.resolveModelMessages(subCtx, req.Messages, user, req.TempModel)
+		if err != nil {
+			selectedModel, chatMessages, err = ctl.resolveModelMessages(subCtx, req.Messages, user, req.Model)
 			if err != nil {
 				misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
 				return
 			}
-
-			req.Model = homeModel.ModelID
-			if strings.TrimSpace(homeModel.Prompt) != "" {
-				contextMessages := array.Filter(req.Messages, func(item chat.Message, _ int) bool { return item.Role != "system" })
-				req.Messages = append(chat.Messages{{Role: "system", Content: homeModel.Prompt}}, contextMessages...)
-			}
 		}
 
-		// 每次对话用户可以手动选择要使用的模型
-		if req.TempModel != "" {
-			req.Model = req.TempModel
-		}
+		req.Model = selectedModel
+		req.Messages = chatMessages
 
 		// 模型最大上下文长度限制
 		maxContextLen = ctl.loadRoomContextLen(subCtx, req.RoomID, user.User.ID)
@@ -465,6 +454,34 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			}
 		}()
 	}
+}
+
+func (ctl *OpenAIController) resolveModelMessages(ctx context.Context, messages chat.Messages, user *auth.UserOptional, model string) (string, chat.Messages, error) {
+	if model == "" {
+		return "", nil, errors.New("model is required")
+	}
+
+	// 支持 V2 版本的 homeModel 请求
+	// model 格式为 v2@{type}|{id}
+	if strings.HasPrefix(model, "v2@") {
+		models := array.ToMap(ctl.chatSrv.Models(ctx, true), func(item repo.Model, _ int) string {
+			return item.ModelId
+		})
+
+		homeModel, err := ctl.userSrv.QueryHomeModel(ctx, models, user.User.ID, strings.TrimPrefix(model, "v2@"))
+		if err != nil {
+			return "", nil, err
+		}
+
+		if strings.TrimSpace(homeModel.Prompt) != "" {
+			contextMessages := array.Filter(messages, func(item chat.Message, _ int) bool { return item.Role != "system" })
+			messages = append(chat.Messages{{Role: "system", Content: homeModel.Prompt}}, contextMessages...)
+		}
+
+		return homeModel.ModelID, messages, nil
+	}
+
+	return model, messages, nil
 }
 
 func (ctl *OpenAIController) chatWithRetry(
