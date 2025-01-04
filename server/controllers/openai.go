@@ -495,19 +495,20 @@ func (ctl *OpenAIController) chatWithRetry(
 	retryTimes int,
 	maxRetryTimes int,
 ) (string, error, bool) {
-	// 发起聊天请求并返回 SSE/WS 流
-	replyText, err := ctl.handleChat(ctx, req, user.User, sw, webCtx, questionID, retryTimes)
+	// Initiate chat request and return SSE/WS stream.
+	replyText, err := ctl.handleChat(ctx, req, user.User, sw, webCtx, questionID, retryTimes, maxRetryTimes, startTime)
 	if errors.Is(err, ErrChatResponseHasSent) {
 		return "", nil, true
 	}
 
-	// 以下两种情况再次尝试
-	// 1. 聊天响应为空
-	// 2. 两次响应之间等待时间过长，强制中断，同时响应为空
-	if errors.Is(err, ErrChatResponseEmpty) || (errors.Is(err, ErrChatResponseGapTimeout) && replyText == "") {
-		// 如果用户等待时间超过 60s，则不再重试，避免用户等待时间过长
+	// Retry in the following three situations:
+	// 1. Chat response is empty
+	// 2. There are still retry attempts left
+	// 3. If there's too much time between two responses, cut it off and mark as empty
+	if errors.Is(err, ErrChatResponseEmpty) || errors.Is(err, ErrChatShouldRetry) || (errors.Is(err, ErrChatResponseGapTimeout) && replyText == "") {
+		// If the user waits for more than 60s, no retry will be made to prevent the user from waiting too long
 		if startTime.Add(60 * time.Second).After(time.Now()) {
-			// 重试次数超过最大重试次数
+			// Retry attempts exceed the maximum retry limit
 			if retryTimes >= maxRetryTimes {
 				log.F(log.M{"req": req, "user_id": user.User.ID}).Errorf("response is empty, model: %s, retry times exceed the limit", req.Model)
 				return "", err, true
@@ -517,6 +518,7 @@ func (ctl *OpenAIController) chatWithRetry(
 			return ctl.chatWithRetry(ctx, req, user, sw, webCtx, questionID, startTime, retryTimes+1, maxRetryTimes)
 		}
 	}
+
 	return replyText, err, false
 }
 
@@ -528,6 +530,8 @@ func (ctl *OpenAIController) handleChat(
 	webCtx web.Context,
 	questionID int64,
 	retryTimes int,
+	maxRetryTimes int,
+	startTime time.Time,
 ) (string, error) {
 	chatCtx, cancel := context.WithTimeout(ctx, 180*time.Second)
 	defer cancel()
@@ -541,19 +545,25 @@ func (ctl *OpenAIController) handleChat(
 
 	stream, err := ctl.chat.ChatStream(chatCtx, newReq.Purification())
 	if err != nil {
-		// 更新问题为失败状态
-		ctl.makeChatQuestionFailed(ctx, questionID, err)
+		shouldReturnError := retryTimes >= maxRetryTimes || startTime.Add(60*time.Second).After(time.Now())
 
-		// 内容违反内容安全策略
-		if errors.Is(err, chat.ErrContentFilter) {
-			ctl.sendViolateContentPolicyResp(sw, "")
+		log.WithFields(log.Fields{"user_id": user.ID, "retry_times": retryTimes}).Errorf("chat request failed(retry=%v), model %s: %v", shouldReturnError, req.Model, err)
+
+		if shouldReturnError {
+			// 更新问题为失败状态
+			ctl.makeChatQuestionFailed(ctx, questionID, err)
+
+			// 内容违反内容安全策略
+			if errors.Is(err, chat.ErrContentFilter) {
+				ctl.sendViolateContentPolicyResp(sw, "")
+				return "", ErrChatResponseHasSent
+			}
+
+			misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrInternalError)), http.StatusInternalServerError))
 			return "", ErrChatResponseHasSent
 		}
 
-		log.WithFields(log.Fields{"user_id": user.ID, "retry_times": retryTimes}).Errorf("chat request failed, model %s: %v", req.Model, err)
-
-		misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrInternalError)), http.StatusInternalServerError))
-		return "", ErrChatResponseHasSent
+		return "", ErrChatShouldRetry
 	}
 
 	replyText, err := ctl.writeChatResponse(chatCtx, req, stream, user, sw)
@@ -572,6 +582,7 @@ func (ctl *OpenAIController) handleChat(
 
 var (
 	ErrChatResponseEmpty      = errors.New("response is empty")
+	ErrChatShouldRetry        = errors.New("should retry")
 	ErrChatResponseHasSent    = errors.New("response has sent")
 	ErrChatResponseGapTimeout = errors.New("force close after too long of inactivity between responses")
 )
@@ -602,7 +613,7 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 			id++
 
 			if res.ErrorCode != "" {
-				if id <= 1 {
+				if id <= 1 || strings.TrimSpace(replyText) == "" {
 					log.WithFields(log.Fields{"req": req, "user_id": user.ID}).Warningf("chat response failed, we need a retry: %v", res)
 					return replyText, ErrChatResponseEmpty
 				}
