@@ -545,9 +545,10 @@ func (ctl *OpenAIController) handleChat(
 
 	stream, err := ctl.chat.ChatStream(chatCtx, newReq.Purification())
 	if err != nil {
-		shouldReturnError := retryTimes >= maxRetryTimes || startTime.Add(60*time.Second).After(time.Now())
+		shouldReturnError := retryTimes >= maxRetryTimes || startTime.Add(60*time.Second).Before(time.Now())
 
-		log.WithFields(log.Fields{"user_id": user.ID, "retry_times": retryTimes}).Errorf("chat request failed(retry=%v), model %s: %v", shouldReturnError, req.Model, err)
+		log.WithFields(log.Fields{"user_id": user.ID, "retry_times": retryTimes, "max_retry": maxRetryTimes}).
+			Errorf("chat request failed(retry=%v), model %s: %v", !shouldReturnError, req.Model, err)
 
 		if shouldReturnError {
 			// 更新问题为失败状态
