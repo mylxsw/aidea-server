@@ -60,7 +60,7 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 				return item.Recommend
 			}),
 			func(item controllers.Model, _ int) controllers.Model {
-				item.Category = "最佳推荐"
+				item.Category = "最佳"
 				return item
 			},
 		)

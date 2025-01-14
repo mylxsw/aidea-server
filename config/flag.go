@@ -245,6 +245,7 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringSliceFlag("default-home-models", []string{"gpt-3.5-turbo", "gpt-4"}, "默认的首页模型，值取自数据表 models.model_id")
 	ins.AddStringSliceFlag("default-home-models-ios", []string{"chat-3.5", "chat-4"}, "默认的首页模型（IOS），值取自数据表 models.model_id")
+	ins.AddStringFlag("default-role-model", "gpt-4o", "默认的角色模型，值取自数据表 models.model_id")
 
 	ins.AddStringFlag("text-to-voice-engine", "openai", "文本转语音引擎，支持 minimax/openai/azure")
 	ins.AddStringFlag("text-to-voice-azure-region", "eastus", "Azure 语音服务区域")

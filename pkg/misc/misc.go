@@ -140,6 +140,24 @@ func VersionNewer(current, compareWith string) bool {
 	return curVersion.GreaterThan(compareVersion)
 }
 
+// VersionNewerOrEqual Compare version numbers, whether the current version is newer than or equal to the compareWith version
+func VersionNewerOrEqual(current, compareWith string) bool {
+	if current == compareWith {
+		return true
+	}
+
+	return VersionNewer(current, compareWith)
+}
+
+// VersionOlderOrEqual Compare version numbers, whether the current version is older than or equal to the compareWith version
+func VersionOlderOrEqual(current, compareWith string) bool {
+	if current == compareWith {
+		return true
+	}
+
+	return VersionOlder(current, compareWith)
+}
+
 // VersionOlder 比较版本号，当前版本是否比 compareWith 版本旧
 func VersionOlder(current, compareWith string) bool {
 	curVersion, err := version.NewVersion(current)

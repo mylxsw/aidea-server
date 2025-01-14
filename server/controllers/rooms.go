@@ -9,6 +9,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
+	"github.com/mylxsw/go-utils/ternary"
 	"net/http"
 	"strconv"
 	"strings"
@@ -391,11 +392,11 @@ func (ctl *RoomController) parseRoomRequest(webCtx web.Context, isUpdate bool) (
 	req.Description = description
 
 	modelId := webCtx.Input("model")
-	if modelId == "" || utf8.RuneCountInString(modelId) > 30 {
-		return nil, errors.New("不支持该模型")
+	if utf8.RuneCountInString(modelId) > 50 {
+		return nil, errors.New("模型格式错误")
 	}
 
-	req.Model = modelId
+	req.Model = ternary.If(modelId != "", modelId, ctl.conf.DefaultRoleModel)
 
 	req.Vendor = webCtx.Input("vendor")
 	systemPrompt := webCtx.Input("system_prompt")

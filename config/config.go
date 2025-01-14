@@ -306,6 +306,7 @@ type Config struct {
 	// 首页默认常用模型
 	DefaultHomeModels    []string `json:"default_home_models" yaml:"default_home_models"`
 	DefaultHomeModelsIOS []string `json:"default_home_models_ios" yaml:"default_home_models_ios"`
+	DefaultRoleModel     string   `json:"default_role_model" yaml:"default_role_model"`
 
 	// 文本转语言
 	// TextToVoiceEngine 文本转语音引擎：minimax/openai/azure
@@ -637,6 +638,7 @@ func Register(ins *app.App) {
 
 			DefaultHomeModels:    ctx.StringSlice("default-home-models"),
 			DefaultHomeModelsIOS: ctx.StringSlice("default-home-models-ios"),
+			DefaultRoleModel:     ctx.String("default-role-model"),
 
 			TextToVoiceEngine:      ctx.String("text-to-voice-engine"),
 			TextToVoiceAzureRegion: ctx.String("text-to-voice-azure-region"),

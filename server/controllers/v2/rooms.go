@@ -42,7 +42,7 @@ const RoomsQueryLimit = 100
 // Rooms 获取房间列表
 func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	roomTypes := []int{repo.RoomTypePreset, repo.RoomTypePresetCustom, repo.RoomTypeCustom}
-	if misc.VersionNewer(client.Version, "1.0.6") {
+	if misc.VersionNewer(client.Version, "1.0.6") && misc.VersionOlder(client.Version, "2.0.0") {
 		roomTypes = append(roomTypes, repo.RoomTypeGroupChat)
 	}
 
@@ -58,7 +58,7 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 	)
 
 	var suggests []repo.GalleryRoom
-	if len(rooms) == 0 {
+	if len(rooms) == 0 || misc.VersionNewerOrEqual(client.Version, "2.0.0") {
 		suggests, err = ctl.roomRepo.GallerySuggests(ctx, 11)
 		if err != nil {
 			log.Errorf("查询推荐房间列表失败: %v", err)
