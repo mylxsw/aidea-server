@@ -20,6 +20,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -389,7 +390,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		maxRetryTimes = len(cq.Channels(req.Model))
 	}
 
-	replyText, err, done := ctl.chatWithRetry(subCtx, req, user, sw, webCtx, questionID, startTime, 0, maxRetryTimes)
+	replyText, err, done := ctl.chatWithRetry(subCtx, req, user, client, sw, webCtx, questionID, startTime, 0, maxRetryTimes)
 	if done {
 		return
 	}
@@ -488,6 +489,7 @@ func (ctl *OpenAIController) chatWithRetry(
 	ctx context.Context,
 	req *chat.Request,
 	user *auth.UserOptional,
+	client *auth.ClientInfo,
 	sw *streamwriter.StreamWriter,
 	webCtx web.Context,
 	questionID int64,
@@ -496,7 +498,7 @@ func (ctl *OpenAIController) chatWithRetry(
 	maxRetryTimes int,
 ) (string, error, bool) {
 	// Initiate chat request and return SSE/WS stream.
-	replyText, err := ctl.handleChat(ctx, req, user.User, sw, webCtx, questionID, retryTimes, maxRetryTimes, startTime)
+	replyText, err := ctl.handleChat(ctx, req, user.User, client, sw, webCtx, questionID, retryTimes, maxRetryTimes, startTime)
 	if errors.Is(err, ErrChatResponseHasSent) {
 		return "", nil, true
 	}
@@ -515,7 +517,7 @@ func (ctl *OpenAIController) chatWithRetry(
 			}
 
 			log.F(log.M{"req": req, "user_id": user.User.ID}).Warningf("response is empty, try requesting again(%d), model: %s", retryTimes+1, req.Model)
-			return ctl.chatWithRetry(ctx, req, user, sw, webCtx, questionID, startTime, retryTimes+1, maxRetryTimes)
+			return ctl.chatWithRetry(ctx, req, user, client, sw, webCtx, questionID, startTime, retryTimes+1, maxRetryTimes)
 		}
 	}
 
@@ -526,6 +528,7 @@ func (ctl *OpenAIController) handleChat(
 	ctx context.Context,
 	req *chat.Request,
 	user *auth.User,
+	client *auth.ClientInfo,
 	sw *streamwriter.StreamWriter,
 	webCtx web.Context,
 	questionID int64,
@@ -567,7 +570,7 @@ func (ctl *OpenAIController) handleChat(
 		return "", ErrChatShouldRetry
 	}
 
-	replyText, err := ctl.writeChatResponse(chatCtx, req, stream, user, sw)
+	replyText, err := ctl.writeChatResponse(chatCtx, req, stream, user, client, sw)
 	if err != nil {
 		return replyText, err
 	}
@@ -588,17 +591,28 @@ var (
 	ErrChatResponseGapTimeout = errors.New("force close after too long of inactivity between responses")
 )
 
-func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Request, stream <-chan chat.Response, user *auth.User, sw *streamwriter.StreamWriter) (string, error) {
+func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Request, stream <-chan chat.Response, user *auth.User, client *auth.ClientInfo, sw *streamwriter.StreamWriter) (string, error) {
 	var replyText string
 
+	// 发送 thinking 消息
+	ctl.writeControlMessage(sw, client, req.Model, FinalMessage{Type: "thinking"})
+	thinkingDone := sync.OnceFunc(func() {
+		// 发送 thinking-done 消息
+		ctl.writeControlMessage(sw, client, req.Model, FinalMessage{Type: "thinking-done"})
+	})
+
 	// 生成 SSE 流
-	timer := time.NewTimer(60 * time.Second)
+	timer := time.NewTimer(180 * time.Second)
 	defer timer.Stop()
 
 	id := 0
 	for {
 		if id > 0 {
 			timer.Reset(30 * time.Second)
+		}
+
+		if replyText != "" {
+			thinkingDone()
 		}
 
 		select {
@@ -671,6 +685,31 @@ type ChatCompletionStreamChoiceDelta struct {
 	Content      string               `json:"content"`
 	Role         string               `json:"role,omitempty"`
 	FunctionCall *openai.FunctionCall `json:"function_call,omitempty"`
+}
+
+func (*OpenAIController) writeControlMessage(sw *streamwriter.StreamWriter, client *auth.ClientInfo, model string, controlMsg FinalMessage) {
+	if misc.VersionOlder(client.Version, "2.0.0") {
+		return
+	}
+
+	resp := ChatCompletionStreamResponse{
+		ID:      "control-" + misc.ShortUUID(),
+		Object:  "chat.completion",
+		Created: time.Now().Unix(),
+		Choices: []ChatCompletionStreamChoice{
+			{
+				Index: 0,
+				Delta: ChatCompletionStreamChoiceDelta{
+					Content: controlMsg.ToJSON(),
+					Role:    "system",
+				},
+			},
+		},
+		Model: model,
+	}
+	if err := sw.WriteStream(resp); err != nil {
+		log.Errorf("write control message failed: %s", err)
+	}
 }
 
 // buildFinalSystemMessage 构建最后一条消息，该消息为系统消息，用于告诉 AIdea 客户端当前的资源消耗情况以及服务端信息
