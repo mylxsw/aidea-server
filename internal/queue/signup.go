@@ -7,7 +7,6 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/dingding"
 	"github.com/mylxsw/aidea-server/pkg/mail"
 	"github.com/mylxsw/aidea-server/pkg/repo"
-	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -192,35 +191,6 @@ type InitRoom struct {
 	Vendor     string `json:"vendor"`
 	Prompt     string `json:"prompt"`
 	MaxContext int64  `json:"max_context"`
-}
-
-// 为用户创建默认的数字人
-func createInitialRooms(ctx context.Context, roomRepo *repo.RoomRepo, userID int64) {
-	items, err := roomRepo.Galleries(ctx)
-	if err != nil {
-		log.WithFields(log.Fields{"user_id": userID}).Errorf("获取数字人列表失败: %s", err)
-		return
-	}
-
-	for _, item := range items {
-		if _, err := roomRepo.Create(ctx, userID, &model.Rooms{
-			Name:           item.Name,
-			Model:          item.Model,
-			Vendor:         item.Vendor,
-			SystemPrompt:   item.Prompt,
-			MaxContext:     item.MaxContext,
-			RoomType:       repo.RoomTypePreset,
-			InitMessage:    item.InitMessage,
-			AvatarId:       item.AvatarId,
-			AvatarUrl:      item.AvatarUrl,
-			LastActiveTime: time.Now(),
-		}, false); err != nil {
-			log.WithFields(log.Fields{
-				"room":    item,
-				"user_id": userID,
-			}).Errorf("用户注册后创建默认数字人失败: %s", err)
-		}
-	}
 }
 
 func inviteGiftHandler(ctx context.Context, quotaRepo *repo.QuotaRepo, userId, invitedByUserId int64) {

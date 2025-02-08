@@ -12,6 +12,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
+	"github.com/mylxsw/aidea-server/pkg/repo/model"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/tencent"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
@@ -295,7 +296,12 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		req.Messages = chatMessages
 
 		// 模型最大上下文长度限制
-		maxContextLen = ctl.loadRoomContextLen(subCtx, req.RoomID, user.User.ID)
+		maxContextLen, room := ctl.loadRoomContextLen(subCtx, req.RoomID, user.User.ID)
+		// 修正 SystemPrompt
+		if room != nil && room.SystemPrompt != "" {
+			req = req.ReplaceSystemPrompt(room.SystemPrompt)
+		}
+
 		req, inputTokenCount, err = req.Fix(ctl.chat, maxContextLen, ternary.If(user.User.ID > 0, 1000*200, 1000))
 		if err != nil {
 			misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
@@ -383,7 +389,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	}()
 
 	// 写入用户消息
-	questionID := ctl.saveChatQuestion(subCtx, user.User, req)
+	questionID := ctl.saveChatQuestion(subCtx, user.User, req, client)
 
 	maxRetryTimes := 1
 	if cq, ok := ctl.chat.(chat.ChannelQuery); ok {
@@ -732,11 +738,7 @@ func (*OpenAIController) buildFinalSystemMessage(
 	}
 
 	if len(req.Messages) >= int(maxContextLen*3)-1 || realTokenConsumed > 2000 {
-		if req.RoomID <= 1 {
-			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请创建新对话。", realTokenConsumed)
-		} else {
-			finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请使用“[新对话](aidea-command://reset-context)”来重置对话上下文。", realTokenConsumed)
-		}
+		finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请创建新对话。", realTokenConsumed)
 	}
 
 	if user.InternalUser() {
@@ -831,7 +833,8 @@ func (ctl *OpenAIController) saveChatAnswer(ctx context.Context, user *auth.User
 			PID:           questionID,
 			Status:        int64(ternary.If(chatErrorMessage != "", repo.MessageStatusFailed, repo.MessageStatusSucceed)),
 			Error:         chatErrorMessage,
-		})
+			Meta:          repo.MessageMeta{HistoryID: req.HistoryID},
+		}, false)
 		if err != nil {
 			log.With(req).Errorf("add message failed: %s", err)
 		}
@@ -893,10 +896,12 @@ func (ctl *OpenAIController) makeChatQuestionFailed(ctx context.Context, questio
 }
 
 // saveChatQuestion 保存用户聊天问题
-func (ctl *OpenAIController) saveChatQuestion(ctx context.Context, user *auth.User, req *chat.Request) int64 {
+func (ctl *OpenAIController) saveChatQuestion(ctx context.Context, user *auth.User, req *chat.Request, client *auth.ClientInfo) int64 {
 	if ctl.conf.EnableRecordChat && !ctl.apiMode {
 		lastMessage := req.Messages[len(req.Messages)-1]
-		meta := repo.MessageMeta{}
+		meta := repo.MessageMeta{
+			HistoryID: req.HistoryID,
+		}
 
 		files := array.Filter(lastMessage.MultipartContents, func(item *chat.MultipartContent, _ int) bool {
 			return item.Type == "file" && item.FileURL != nil && item.FileURL.URL != ""
@@ -914,7 +919,7 @@ func (ctl *OpenAIController) saveChatQuestion(ctx context.Context, user *auth.Us
 			Model:   req.Model,
 			Status:  repo.MessageStatusSucceed,
 			Meta:    meta,
-		})
+		}, misc.VersionOlder(client.Version, "2.0.0"))
 		if err != nil {
 			log.F(log.M{"req": req, "user_id": user.ID}).Errorf("保存用户聊天请求失败（问题部分）: %s", err)
 		}
@@ -925,7 +930,7 @@ func (ctl *OpenAIController) saveChatQuestion(ctx context.Context, user *auth.Us
 	return 0
 }
 
-func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int64, userID int64) int64 {
+func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int64, userID int64) (int64, *model.Rooms) {
 	var maxContextLength int64 = 3
 	if roomID > 0 && userID > 0 {
 		ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
@@ -939,9 +944,11 @@ func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int6
 		if room != nil && room.MaxContext > 0 {
 			maxContextLength = room.MaxContext
 		}
+
+		return maxContextLength, room
 	}
 
-	return maxContextLength
+	return maxContextLength, nil
 }
 
 // 内容安全检测

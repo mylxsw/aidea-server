@@ -48,12 +48,13 @@ type MessageAddReq struct {
 }
 
 type MessageMeta struct {
-	FileURL  string   `json:"file,omitempty"`
-	FileName string   `json:"file_name,omitempty"`
-	Images   []string `json:"images,omitempty"`
+	FileURL   string   `json:"file,omitempty"`
+	FileName  string   `json:"file_name,omitempty"`
+	Images    []string `json:"images,omitempty"`
+	HistoryID int      `json:"history_id,omitempty"`
 }
 
-func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error) {
+func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq, updateRoom bool) (int64, error) {
 	if req.Status == 0 {
 		req.Status = MessageStatusSucceed
 	}
@@ -92,7 +93,7 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq) (int64, error)
 		}
 
 		// 更新房间最后一次操作时间
-		if req.RoomID > 1 && req.Role == MessageRoleUser {
+		if updateRoom && req.RoomID > 1 && req.Role == MessageRoleUser {
 			q := query.Builder().
 				Where(model.FieldRoomsUserId, req.UserID).
 				Where(model.FieldRoomsId, req.RoomID)

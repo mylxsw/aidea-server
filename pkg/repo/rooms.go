@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	ErrRoomNameExists = errors.New("room name exists")
+	ErrRoomExists = errors.New("room exists")
 )
 
 const (
@@ -129,14 +129,16 @@ func (r *RoomRepo) Create(ctx context.Context, userID int64, room *model.Rooms, 
 	if !enableDup {
 		q := query.Builder().
 			Where(model.FieldRoomsName, room.Name).
-			Where(model.FieldRoomsUserId, userID)
-		exist, err := model.NewRoomsModel(r.db).Exists(ctx, q)
-		if err != nil {
+			Where(model.FieldRoomsUserId, userID).
+			Where(model.FieldRoomsSystemPrompt, room.SystemPrompt).
+			Where(model.FieldRoomsModel, room.Model)
+		existRoom, err := model.NewRoomsModel(r.db).First(ctx, q)
+		if err != nil && !errors.Is(err, query.ErrNoResult) {
 			return 0, err
 		}
 
-		if exist {
-			return 0, ErrRoomNameExists
+		if existRoom != nil {
+			return existRoom.Id.ValueOrZero(), ErrRoomExists
 		}
 	}
 
@@ -280,6 +282,17 @@ func (r *RoomRepo) GallerySuggests(ctx context.Context, limit int64) ([]GalleryR
 	}
 
 	return array.Map(systemModels, func(item model.RoomGalleryN, _ int) GalleryRoom {
+		return createGalleryRoomFromModel(item.ToRoomGallery())
+	}), nil
+}
+
+func (r *RoomRepo) GalleryItems(ctx context.Context, ids []int64) ([]GalleryRoom, error) {
+	items, err := model.NewRoomGalleryModel(r.db).Get(ctx, query.Builder().WhereIn(model.FieldRoomGalleryId, ids))
+	if err != nil {
+		return nil, err
+	}
+
+	return array.Map(items, func(item model.RoomGalleryN, _ int) GalleryRoom {
 		return createGalleryRoomFromModel(item.ToRoomGallery())
 	}), nil
 }

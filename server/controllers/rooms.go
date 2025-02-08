@@ -147,7 +147,7 @@ func (ctl *RoomController) GalleryItem(ctx context.Context, webCtx web.Context) 
 
 // CopyGalleryItem 用户选择数字人，本地复制一份
 func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
-	idsStr := strings.Split(webCtx.Input(`ids`), ",")
+	idsStr := strings.Split(webCtx.Input("ids"), ",")
 	ids := array.Filter(
 		array.Map(
 			idsStr,
@@ -164,57 +164,53 @@ func (ctl *RoomController) CopyGalleryItem(ctx context.Context, webCtx web.Conte
 		return webCtx.JSONError("invalid ids", http.StatusBadRequest)
 	}
 
-	// TODO 实时查询，而不是每次全部查询出来再判断是否满足条件，前期内置数字人数量少没关系
-	rooms, err := ctl.roomRepo.Galleries(ctx)
+	rooms, err := ctl.roomRepo.GalleryItems(ctx, ids)
 	if err != nil {
 		log.Errorf("query rooms galleries failed: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
-	// 启用国产化模式时，如果内置的模型为 GPT 系列，替换为国产模型
-	var replaceVendor, replaceModel string
-	if client.IsCNLocalMode(ctl.conf) && !user.ExtraPermissionUser() {
-		replaceVendor, replaceModel = ctl.conf.CNLocalVendor, ctl.conf.CNLocalModel
-	}
-
+	var copiedIDs []int64
 	for _, item := range rooms {
-		if !array.In(item.Id, ids) {
-			continue
-		}
-
 		vendor := item.Vendor
 		mod := item.Model
 
-		// 如果替换模型和服务商不为空，则替换当前 Room 的模型为国产化模型
-		if array.In(strings.ToLower(vendor), []string{"openai", "anthropic"}) && replaceVendor != "" && replaceModel != "" {
-			vendor, mod = replaceVendor, replaceModel
+		newID, err := ctl.roomRepo.Create(
+			ctx,
+			user.ID, &model.Rooms{
+				Name:           item.Name,
+				Model:          mod,
+				Vendor:         vendor,
+				SystemPrompt:   item.Prompt,
+				MaxContext:     item.MaxContext,
+				RoomType:       repo.RoomTypePreset,
+				InitMessage:    item.InitMessage,
+				AvatarId:       item.AvatarId,
+				AvatarUrl:      item.AvatarUrl,
+				LastActiveTime: time.Now(),
+			},
+			false,
+		)
+		if newID > 0 {
+			copiedIDs = append(copiedIDs, newID)
 		}
 
-		if _, err := ctl.roomRepo.Create(ctx, user.ID, &model.Rooms{
-			Name:           item.Name,
-			Model:          mod,
-			Vendor:         vendor,
-			SystemPrompt:   item.Prompt,
-			MaxContext:     item.MaxContext,
-			RoomType:       repo.RoomTypePreset,
-			InitMessage:    item.InitMessage,
-			AvatarId:       item.AvatarId,
-			AvatarUrl:      item.AvatarUrl,
-			LastActiveTime: time.Now(),
-		}, true); err != nil {
-			if errors.Is(err, repo.ErrRoomNameExists) {
+		if err != nil {
+			if errors.Is(err, repo.ErrRoomExists) {
 				continue
 			}
 
 			log.WithFields(log.Fields{
 				"room":    item,
 				"user_id": user.ID,
-			}).Errorf("用户复制数字人失败: %s", err)
+			}).Errorf("用户复制角色失败: %s", err)
 			return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 		}
 	}
 
-	return webCtx.JSON(web.M{})
+	return webCtx.JSON(web.M{
+		"ids": copiedIDs,
+	})
 }
 
 // CreateRoom 创建数字人
@@ -258,11 +254,11 @@ func (ctl *RoomController) CreateRoom(ctx context.Context, webCtx web.Context, u
 
 	id, err := ctl.roomRepo.Create(ctx, user.ID, &room, true)
 	if err != nil {
-		if errors.Is(err, repo.ErrRoomNameExists) {
-			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人名称已存在"), http.StatusBadRequest)
+		if errors.Is(err, repo.ErrRoomExists) {
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "角色名称已存在"), http.StatusBadRequest)
 		}
 
-		log.F(log.M{"user_id": user.ID}).Errorf("创建用户房间失败: %v", err)
+		log.F(log.M{"user_id": user.ID}).Errorf("创建用户自定义角色失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
@@ -280,7 +276,7 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 
 	rooms, err := ctl.roomRepo.Rooms(ctx, user.ID, roomTypes, RoomsQueryLimit)
 	if err != nil {
-		log.F(log.M{"user_id": user.ID}).Errorf("查询用户房间列表失败: %v", err)
+		log.F(log.M{"user_id": user.ID}).Errorf("查询用户自定义角色列表失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
@@ -301,10 +297,10 @@ func (ctl *RoomController) Room(ctx context.Context, webCtx web.Context, user *a
 	room, err := ctl.roomRepo.Room(ctx, user.ID, int64(roomID))
 	if err != nil {
 		if errors.Is(err, repo.ErrNotFound) {
-			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "数字人不存在"), http.StatusNotFound)
+			return webCtx.JSONError(common.Text(webCtx, ctl.translater, "自定义角色不存在"), http.StatusNotFound)
 		}
 
-		log.F(log.M{"user_id": user.ID, "room_id": roomID}).Errorf("查询用户房间失败: %v", err)
+		log.F(log.M{"user_id": user.ID, "room_id": roomID}).Errorf("查询用户自定义角色失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 
@@ -328,7 +324,7 @@ func (ctl *RoomController) DeleteRoom(ctx context.Context, webCtx web.Context, u
 	}
 
 	if err := ctl.roomRepo.Remove(ctx, user.ID, int64(roomID)); err != nil {
-		log.F(log.M{"user_id": user.ID, "room_id": roomID}).Errorf("删除用户房间失败: %v", err)
+		log.F(log.M{"user_id": user.ID, "room_id": roomID}).Errorf("删除用户自定义角色失败: %v", err)
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
 	}
 

@@ -191,6 +191,7 @@ type Request struct {
 	Messages  Messages `json:"messages"`
 	MaxTokens int      `json:"max_tokens,omitempty"`
 	N         int      `json:"n,omitempty"` // 复用作为 room_id
+	HistoryID int      `json:"history_id,omitempty"`
 
 	// 业务定制字段
 	RoomID    int64 `json:"-"`
@@ -255,6 +256,17 @@ func (req Request) Init() Request {
 	}
 
 	return req
+}
+
+// ReplaceSystemPrompt 替换系统提示消息
+func (req Request) ReplaceSystemPrompt(prompt string) *Request {
+	if len(req.Messages) > 0 && req.Messages[0].Role == "system" {
+		req.Messages[0].Content = prompt
+	} else {
+		req.Messages = append(Messages{{Role: "system", Content: prompt}}, req.Messages...)
+	}
+
+	return &req
 }
 
 // Fix 修复请求内容，注意：上下文长度修复后，最终的上下文数量不包含 system 消息和用户最后一条消息
