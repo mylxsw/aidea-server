@@ -737,7 +737,7 @@ func (*OpenAIController) buildFinalSystemMessage(
 		Error:      chatErrorMessage,
 	}
 
-	if len(req.Messages) >= int(maxContextLen*3)-1 || realTokenConsumed > 2000 {
+	if realTokenConsumed > 10000 {
 		finalMsg.Info = fmt.Sprintf("本次请求消耗了 %d 个 Token。\n\nAI 记住的对话信息越多，消耗的 Token 和智慧果也越多。\n\n如果新问题和之前的对话无关，请创建新对话。", realTokenConsumed)
 	}
 
