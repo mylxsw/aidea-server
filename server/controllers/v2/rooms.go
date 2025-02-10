@@ -34,6 +34,7 @@ func NewRoomController(resolver infra.Resolver) web.Controller {
 func (ctl *RoomController) Register(router web.Router) {
 	router.Group("/rooms", func(router web.Router) {
 		router.Get("/", ctl.Rooms)
+		router.Get("/recent", ctl.RecentRooms)
 	})
 }
 
@@ -120,5 +121,18 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 			return item
 		}),
 		"suggests": suggests,
+	})
+}
+
+// RecentRooms 获取最近使用的房间列表
+func (ctl *RoomController) RecentRooms(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	rooms, err := ctl.roomRepo.RecentRooms(ctx, user.ID, 3)
+	if err != nil {
+		log.F(log.M{"user_id": user.ID}).Errorf("Failed to query user's recently used room list: %v", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(web.M{
+		"data": rooms,
 	})
 }

@@ -206,13 +206,14 @@ func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web
 }
 
 type FinalMessage struct {
-	Type          string `json:"type,omitempty"`
-	QuotaConsumed int64  `json:"quota_consumed,omitempty"`
-	Token         int64  `json:"token,omitempty"`
-	QuestionID    int64  `json:"question_id,omitempty"`
-	AnswerID      int64  `json:"answer_id,omitempty"`
-	Info          string `json:"info,omitempty"`
-	Error         string `json:"error,omitempty"`
+	Type          string  `json:"type,omitempty"`
+	QuotaConsumed int64   `json:"quota_consumed,omitempty"`
+	Token         int64   `json:"token,omitempty"`
+	QuestionID    int64   `json:"question_id,omitempty"`
+	AnswerID      int64   `json:"answer_id,omitempty"`
+	Info          string  `json:"info,omitempty"`
+	Error         string  `json:"error,omitempty"`
+	TimeConsumed  float64 `json:"time_consumed,omitempty"`
 }
 
 func (m FinalMessage) ToJSON() string {
@@ -396,26 +397,26 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		maxRetryTimes = len(cq.Channels(req.Model))
 	}
 
-	replyText, err, done := ctl.chatWithRetry(subCtx, req, user, client, sw, webCtx, questionID, startTime, 0, maxRetryTimes)
+	replyText, thinkingProcess, err, done := ctl.chatWithRetry(subCtx, req, user, client, sw, webCtx, questionID, startTime, 0, maxRetryTimes)
 	if done {
 		return
 	}
 
 	chatErrorMessage := ternary.IfLazy(err == nil, func() string { return "" }, func() string { return err.Error() })
 	if chatErrorMessage != "" {
-		log.F(log.M{"req": req, "user_id": user.User.ID, "reply": replyText, "elapse": time.Since(startTime).Seconds()}).
+		log.F(log.M{"req": req, "user_id": user.User.ID, "reply": replyText, "thinking": thinkingProcess, "elapse": time.Since(startTime).Seconds()}).
 			Errorf("chat failed, model: %s, error: %s", req.Model, chatErrorMessage)
 	}
 
 	// 返回自定义控制信息，告诉客户端当前消耗情况
-	quotaConsume = ctl.resolveConsumeQuota(req, replyText, leftCount > 0, mod)
+	quotaConsume = ctl.resolveConsumeQuota(req, replyText+thinkingProcess.Content, leftCount > 0, mod)
 
 	func() {
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
 		// 写入用户消息
-		answerID := ctl.saveChatAnswer(ctx, user.User, replyText, quotaConsume.TotalPrice, quotaConsume.TotalTokens(), req, questionID, chatErrorMessage)
+		answerID := ctl.saveChatAnswer(ctx, user.User, replyText, thinkingProcess, quotaConsume.TotalPrice, quotaConsume.TotalTokens(), req, questionID, chatErrorMessage)
 
 		if errors.Is(ErrChatResponseEmpty, err) {
 			misc.NoError(sw.WriteErrorStream(err, http.StatusInternalServerError))
@@ -502,11 +503,11 @@ func (ctl *OpenAIController) chatWithRetry(
 	startTime time.Time,
 	retryTimes int,
 	maxRetryTimes int,
-) (string, error, bool) {
+) (string, ThinkingProcess, error, bool) {
 	// Initiate chat request and return SSE/WS stream.
-	replyText, err := ctl.handleChat(ctx, req, user.User, client, sw, webCtx, questionID, retryTimes, maxRetryTimes, startTime)
+	replyText, thinkingProcess, err := ctl.handleChat(ctx, req, user.User, client, sw, webCtx, questionID, retryTimes, maxRetryTimes, startTime)
 	if errors.Is(err, ErrChatResponseHasSent) {
-		return "", nil, true
+		return "", ThinkingProcess{}, nil, true
 	}
 
 	// Retry in the following three situations:
@@ -519,7 +520,7 @@ func (ctl *OpenAIController) chatWithRetry(
 			// Retry attempts exceed the maximum retry limit
 			if retryTimes >= maxRetryTimes {
 				log.F(log.M{"req": req, "user_id": user.User.ID}).Errorf("response is empty, model: %s, retry times exceed the limit", req.Model)
-				return "", err, true
+				return "", ThinkingProcess{}, err, true
 			}
 
 			log.F(log.M{"req": req, "user_id": user.User.ID}).Warningf("response is empty, try requesting again(%d), model: %s", retryTimes+1, req.Model)
@@ -527,7 +528,7 @@ func (ctl *OpenAIController) chatWithRetry(
 		}
 	}
 
-	return replyText, err, false
+	return replyText, thinkingProcess, err, false
 }
 
 func (ctl *OpenAIController) handleChat(
@@ -541,7 +542,7 @@ func (ctl *OpenAIController) handleChat(
 	retryTimes int,
 	maxRetryTimes int,
 	startTime time.Time,
-) (string, error) {
+) (string, ThinkingProcess, error) {
 	chatCtx, cancel := context.WithTimeout(ctx, 180*time.Second)
 	defer cancel()
 
@@ -566,28 +567,28 @@ func (ctl *OpenAIController) handleChat(
 			// 内容违反内容安全策略
 			if errors.Is(err, chat.ErrContentFilter) {
 				ctl.sendViolateContentPolicyResp(sw, "")
-				return "", ErrChatResponseHasSent
+				return "", ThinkingProcess{}, ErrChatResponseHasSent
 			}
 
 			misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrInternalError)), http.StatusInternalServerError))
-			return "", ErrChatResponseHasSent
+			return "", ThinkingProcess{}, ErrChatResponseHasSent
 		}
 
-		return "", ErrChatShouldRetry
+		return "", ThinkingProcess{}, ErrChatShouldRetry
 	}
 
-	replyText, err := ctl.writeChatResponse(chatCtx, req, stream, user, client, sw)
+	replyText, thinkingProcess, err := ctl.writeChatResponse(chatCtx, req, stream, user, client, sw)
 	if err != nil {
-		return replyText, err
+		return replyText, thinkingProcess, err
 	}
 
 	replyText = strings.TrimSpace(replyText)
 
 	if replyText == "" {
-		return replyText, ErrChatResponseEmpty
+		return replyText, thinkingProcess, ErrChatResponseEmpty
 	}
 
-	return replyText, nil
+	return replyText, thinkingProcess, nil
 }
 
 var (
@@ -597,15 +598,31 @@ var (
 	ErrChatResponseGapTimeout = errors.New("force close after too long of inactivity between responses")
 )
 
-func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Request, stream <-chan chat.Response, user *auth.User, client *auth.ClientInfo, sw *streamwriter.StreamWriter) (string, error) {
+type ThinkingProcess struct {
+	TimeConsumed float64 `json:"time_consumed,omitempty"`
+	Content      string  `json:"content,omitempty"`
+}
+
+func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Request, stream <-chan chat.Response, user *auth.User, client *auth.ClientInfo, sw *streamwriter.StreamWriter) (string, ThinkingProcess, error) {
 	var replyText string
+	var thinkingProcess ThinkingProcess
+
+	startTime := time.Now()
 
 	// 发送 thinking 消息
 	ctl.writeControlMessage(sw, client, req.Model, FinalMessage{Type: "thinking"})
 	thinkingDone := sync.OnceFunc(func() {
+		thinkingProcess.TimeConsumed = time.Since(startTime).Seconds()
 		// 发送 thinking-done 消息
-		ctl.writeControlMessage(sw, client, req.Model, FinalMessage{Type: "thinking-done"})
+		ctl.writeControlMessage(
+			sw,
+			client,
+			req.Model,
+			FinalMessage{Type: "thinking-done", TimeConsumed: thinkingProcess.TimeConsumed},
+		)
 	})
+
+	defer thinkingDone()
 
 	// 生成 SSE 流
 	timer := time.NewTimer(180 * time.Second)
@@ -614,21 +631,17 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 	id := 0
 	for {
 		if id > 0 {
-			timer.Reset(30 * time.Second)
-		}
-
-		if replyText != "" {
-			thinkingDone()
+			timer.Reset(60 * time.Second)
 		}
 
 		select {
 		case <-timer.C:
-			return replyText, ErrChatResponseGapTimeout
+			return replyText, thinkingProcess, ErrChatResponseGapTimeout
 		case <-ctx.Done():
-			return replyText, nil
+			return replyText, thinkingProcess, nil
 		case res, ok := <-stream:
 			if !ok {
-				return replyText, nil
+				return replyText, thinkingProcess, nil
 			}
 
 			id++
@@ -636,7 +649,7 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 			if res.ErrorCode != "" {
 				if id <= 1 || strings.TrimSpace(replyText) == "" {
 					log.WithFields(log.Fields{"req": req, "user_id": user.ID}).Warningf("chat response failed, we need a retry: %v", res)
-					return replyText, ErrChatResponseEmpty
+					return replyText, thinkingProcess, ErrChatResponseEmpty
 				}
 
 				log.WithFields(log.Fields{"req": req, "user_id": user.ID}).Errorf("chat response failed: %v", res)
@@ -644,10 +657,15 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 				if res.Error != "" {
 					res.Text = fmt.Sprintf("\n\n---\nSorry, we encountered some errors. Here are the error details: \n```\n%s\n```\n", res.Error)
 				} else {
-					return replyText, nil
+					return replyText, thinkingProcess, nil
 				}
 			} else {
 				replyText += res.Text
+				thinkingProcess.Content += res.ReasoningContent
+			}
+
+			if replyText != "" {
+				thinkingDone()
 			}
 
 			resp := ChatCompletionStreamResponse{
@@ -659,7 +677,7 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 					{
 						Delta: ChatCompletionStreamChoiceDelta{
 							Role:    "assistant",
-							Content: res.Text,
+							Content: ternary.If(res.Text != "", res.Text, res.ReasoningContent),
 						},
 					},
 				},
@@ -667,7 +685,7 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 
 			if err := sw.WriteStream(resp); err != nil {
 				log.F(log.M{"req": req, "user_id": user.ID}).Warningf("write response failed: %v", err)
-				return replyText, nil
+				return replyText, thinkingProcess, nil
 			}
 		}
 	}
@@ -820,7 +838,7 @@ func (ctl *OpenAIController) rateLimitPass(ctx context.Context, client *auth.Cli
 	return nil
 }
 
-func (ctl *OpenAIController) saveChatAnswer(ctx context.Context, user *auth.User, replyText string, quotaConsumed int64, realWordCount int, req *chat.Request, questionID int64, chatErrorMessage string) int64 {
+func (ctl *OpenAIController) saveChatAnswer(ctx context.Context, user *auth.User, replyText string, thinkingProcess ThinkingProcess, quotaConsumed int64, realWordCount int, req *chat.Request, questionID int64, chatErrorMessage string) int64 {
 	if ctl.conf.EnableRecordChat && !ctl.apiMode {
 		answerID, err := ctl.messageRepo.Add(ctx, repo.MessageAddReq{
 			UserID:        user.ID,
@@ -833,7 +851,11 @@ func (ctl *OpenAIController) saveChatAnswer(ctx context.Context, user *auth.User
 			PID:           questionID,
 			Status:        int64(ternary.If(chatErrorMessage != "", repo.MessageStatusFailed, repo.MessageStatusSucceed)),
 			Error:         chatErrorMessage,
-			Meta:          repo.MessageMeta{HistoryID: req.HistoryID},
+			Meta: repo.MessageMeta{
+				HistoryID:             req.HistoryID,
+				ReasoningContent:      thinkingProcess.Content,
+				ReasoningTimeConsumed: thinkingProcess.TimeConsumed,
+			},
 		}, false)
 		if err != nil {
 			log.With(req).Errorf("add message failed: %s", err)

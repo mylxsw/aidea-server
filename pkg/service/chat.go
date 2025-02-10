@@ -71,6 +71,7 @@ const (
 	ProviderMoonshot   = "moonshot"
 	ProviderGoogle     = "google"
 	ProviderAnthropic  = "Anthropic"
+	ProviderDeepSeek   = "deepseek"
 )
 
 type ChannelType struct {
@@ -85,6 +86,7 @@ func (svc *ChatService) ChannelTypes() []ChannelType {
 		{Name: ProviderOpenAI, Dynamic: true, Display: "OpenAI"},
 		{Name: ProviderOneAPI, Dynamic: true, Display: "OneAPI"},
 		{Name: ProviderOpenRouter, Dynamic: true, Display: "OpenRouter"},
+		{Name: ProviderDeepSeek, Dynamic: true, Display: "DeepSeek"},
 
 		{Name: ProviderXunFei, Dynamic: false, Display: "讯飞星火"},
 		{Name: ProviderWenXin, Dynamic: false, Display: "文心千帆"},

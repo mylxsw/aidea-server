@@ -4,13 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/ai/openai"
-	"github.com/mylxsw/go-utils/must"
 	"io"
+	"net/http"
 	"os"
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"github.com/mylxsw/go-utils/must"
 
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/assert"
@@ -81,9 +83,12 @@ type Properties map[string]Parameter
 
 func TestPromptFunctionRequest(t *testing.T) {
 	openaiConf := openailib.DefaultConfig(os.Getenv("OPENAI_API_KEY"))
-	openaiConf.HTTPClient.Timeout = 300 * time.Second
 	openaiConf.APIType = openailib.APITypeOpenAI
 
+	httpClient := &http.Client{}
+	httpClient.Timeout = 300 * time.Second
+
+	openaiConf.HTTPClient = httpClient
 	client := openailib.NewClientWithConfig(openaiConf)
 
 	resp, err := client.CreateChatCompletion(context.TODO(), openailib.ChatCompletionRequest{
@@ -133,8 +138,12 @@ type PromptArg struct {
 
 func TestOpenAI_CreateSpeech(t *testing.T) {
 	openaiConf := openailib.DefaultConfig(os.Getenv("OPENAI_API_KEY"))
-	openaiConf.HTTPClient.Timeout = 300 * time.Second
 	openaiConf.APIType = openailib.APITypeOpenAI
+
+	httpClient := &http.Client{}
+	httpClient.Timeout = 300 * time.Second
+
+	openaiConf.HTTPClient = httpClient
 
 	client := openailib.NewClientWithConfig(openaiConf)
 

@@ -325,3 +325,20 @@ func (r *RoomRepo) GalleryItem(ctx context.Context, id int64) (*GalleryRoom, err
 	res := createGalleryRoomFromModel(item.ToRoomGallery())
 	return &res, nil
 }
+
+// RecentRooms 获取最近使用的房间列表
+func (r *RoomRepo) RecentRooms(ctx context.Context, userID, limit int64) ([]Room, error) {
+	q := query.Builder().
+		Where(model.FieldRoomsUserId, userID).
+		OrderBy(model.FieldRoomsLastActiveTime, "DESC").
+		Limit(limit)
+
+	rooms, err := model.NewRoomsModel(r.db).Get(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	return array.Map(rooms, func(room model.RoomsN, _ int) Room {
+		return Room{Rooms: room.ToRooms()}
+	}), nil
+}

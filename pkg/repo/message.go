@@ -48,10 +48,12 @@ type MessageAddReq struct {
 }
 
 type MessageMeta struct {
-	FileURL   string   `json:"file,omitempty"`
-	FileName  string   `json:"file_name,omitempty"`
-	Images    []string `json:"images,omitempty"`
-	HistoryID int      `json:"history_id,omitempty"`
+	FileURL               string   `json:"file,omitempty"`
+	FileName              string   `json:"file_name,omitempty"`
+	Images                []string `json:"images,omitempty"`
+	HistoryID             int      `json:"history_id,omitempty"`
+	ReasoningContent      string   `json:"reasoning_content,omitempty"`
+	ReasoningTimeConsumed float64  `json:"reasoning_time_consumed,omitempty"`
 }
 
 func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq, updateRoom bool) (int64, error) {
@@ -93,15 +95,17 @@ func (r *MessageRepo) Add(ctx context.Context, req MessageAddReq, updateRoom boo
 		}
 
 		// 更新房间最后一次操作时间
-		if updateRoom && req.RoomID > 1 && req.Role == MessageRoleUser {
+		if req.RoomID > 1 && req.Role == MessageRoleUser {
 			q := query.Builder().
 				Where(model.FieldRoomsUserId, req.UserID).
 				Where(model.FieldRoomsId, req.RoomID)
 
-			_, err = model.NewRoomsModel(r.db).Update(ctx, q, model.RoomsN{
-				LastActiveTime: null.TimeFrom(time.Now()),
-				Description:    null.StringFrom(misc.SubString(req.Message, 70)),
-			})
+			updatedRoom := model.RoomsN{LastActiveTime: null.TimeFrom(time.Now())}
+			if updateRoom {
+				updatedRoom.Description = null.StringFrom(misc.SubString(req.Message, 70))
+			}
+
+			_, err = model.NewRoomsModel(r.db).Update(ctx, q, updatedRoom)
 		}
 
 		return err

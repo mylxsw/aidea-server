@@ -2,10 +2,11 @@ package chat
 
 import (
 	"context"
+	"strings"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
-	"strings"
 
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
@@ -37,7 +38,7 @@ func (chat *OneAPIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 			m.MultiContent = array.Map(msg.MultipartContents, func(item *MultipartContent, _ int) openai.ChatMessagePart {
 				ret := openai.ChatMessagePart{
 					Text: item.Text,
-					Type: item.Type,
+					Type: openai.ChatMessagePartType(item.Type),
 				}
 				if item.Type == "image_url" && item.ImageURL != nil {
 					url := item.ImageURL.URL
@@ -57,7 +58,7 @@ func (chat *OneAPIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 
 					ret.ImageURL = &openai.ChatMessageImageURL{
 						URL:    url,
-						Detail: item.ImageURL.Detail,
+						Detail: openai.ImageURLDetail(item.ImageURL.Detail),
 					}
 				}
 
