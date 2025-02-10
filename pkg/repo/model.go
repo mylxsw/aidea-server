@@ -116,6 +116,11 @@ type ModelMeta struct {
 	Category string `json:"category,omitempty"`
 	// IsRecommend 是否是推荐模型
 	IsRecommend bool `json:"is_recommend,omitempty"`
+
+	// Reasoning 是否支持推理能力
+	Reasoning bool `json:"reasoning,omitempty"`
+	// Search 是否支持搜索能力
+	Search bool `json:"search,omitempty"`
 }
 
 type ModelProvider struct {
