@@ -56,6 +56,8 @@ type Model struct {
 
 	SupportSearch    bool `json:"support_search,omitempty"`
 	SupportReasoning bool `json:"support_reasoning,omitempty"`
+
+	UserNoPermission bool `json:"user_no_permission,omitempty"`
 }
 
 // Models 获取模型列表

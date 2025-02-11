@@ -227,7 +227,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	if user.User == nil && ctl.conf.FreeChatEnabled && client.IsIOS() {
+	if user.User == nil && ctl.conf.FreeChatEnabled {
 		// 匿名用户访问
 		user.User = &auth.User{
 			ID:   0,
@@ -264,9 +264,13 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	subCtx, subCancel := context.WithCancel(ctx)
 	sw.SetOnClosed(subCancel)
 
-	// 匿名用户，使用免费模型代替
-	if user.User.ID == 0 && ctl.conf.FreeChatModel != "" {
-		req.Model = ctl.conf.FreeChatModel
+	if user.User.ID == 0 {
+		// 匿名用户，检查模型是否为免费模型
+		currentModel := ternary.If(req.TempModel != "", req.TempModel, req.Model)
+		if !ctl.chatSrv.IsFreeModel(ctx, currentModel) {
+			misc.NoError(sw.WriteErrorStream(errors.New("当前模型不支持匿名用户访问，请登录后再试"), http.StatusUnprocessableEntity))
+			return
+		}
 	}
 
 	// 请求参数预处理

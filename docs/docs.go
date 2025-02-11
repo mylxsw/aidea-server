@@ -1876,8 +1876,16 @@ const docTemplate = `{
                     "description": "Prompt 全局的系统提示语",
                     "type": "string"
                 },
+                "reasoning": {
+                    "description": "Reasoning 是否支持推理能力",
+                    "type": "boolean"
+                },
                 "restricted": {
                     "description": "Restricted 是否是受限制的模型",
+                    "type": "boolean"
+                },
+                "search": {
+                    "description": "Search 是否支持搜索能力",
                     "type": "boolean"
                 },
                 "tag": {

@@ -159,6 +159,7 @@ func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.Clie
 			Recommend:        item.Meta.IsRecommend,
 			SupportReasoning: item.Meta.Reasoning,
 			SupportSearch:    item.Meta.Search,
+			UserNoPermission: false,
 		}
 
 		if misc.VersionOlder(client.Version, "2.0.0") {
@@ -186,6 +187,13 @@ func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.Clie
 		if client.IsCNLocalMode(ctl.conf) && item.Meta.Restricted && (user.User == nil || !user.User.ExtraPermissionUser()) {
 			ret.Disabled = true
 			return ret
+		}
+
+		// 如果用户没有登录，则只能查看免费模型
+		if user == nil || user.User == nil || user.User.ID == 0 {
+			if item.Meta.InputPrice > 0 || item.Meta.OutputPrice > 0 || item.Meta.PerReqPrice > 0 {
+				ret.UserNoPermission = true
+			}
 		}
 
 		return ret

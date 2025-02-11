@@ -472,8 +472,6 @@ free-chat-enabled: false
 free-chat-daily-limit: 5
 # 每日全局免费次数，总的限制次数，不管是哪个 IP
 free-chat-daily-global-limit: 1000
-# 免费模型，所有的请求都会被替换为该模型
-free-chat-model: gpt-3.5-turbo
 
 ######## 微信开放平台 ########
 wechat-appid: ""
