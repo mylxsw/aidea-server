@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	ErrRoomNameExists = errors.New("room name exists")
+	ErrRoomExists = errors.New("room exists")
 )
 
 const (
@@ -129,14 +129,16 @@ func (r *RoomRepo) Create(ctx context.Context, userID int64, room *model.Rooms, 
 	if !enableDup {
 		q := query.Builder().
 			Where(model.FieldRoomsName, room.Name).
-			Where(model.FieldRoomsUserId, userID)
-		exist, err := model.NewRoomsModel(r.db).Exists(ctx, q)
-		if err != nil {
+			Where(model.FieldRoomsUserId, userID).
+			Where(model.FieldRoomsSystemPrompt, room.SystemPrompt).
+			Where(model.FieldRoomsModel, room.Model)
+		existRoom, err := model.NewRoomsModel(r.db).First(ctx, q)
+		if err != nil && !errors.Is(err, query.ErrNoResult) {
 			return 0, err
 		}
 
-		if exist {
-			return 0, ErrRoomNameExists
+		if existRoom != nil {
+			return existRoom.Id.ValueOrZero(), ErrRoomExists
 		}
 	}
 
@@ -284,6 +286,17 @@ func (r *RoomRepo) GallerySuggests(ctx context.Context, limit int64) ([]GalleryR
 	}), nil
 }
 
+func (r *RoomRepo) GalleryItems(ctx context.Context, ids []int64) ([]GalleryRoom, error) {
+	items, err := model.NewRoomGalleryModel(r.db).Get(ctx, query.Builder().WhereIn(model.FieldRoomGalleryId, ids))
+	if err != nil {
+		return nil, err
+	}
+
+	return array.Map(items, func(item model.RoomGalleryN, _ int) GalleryRoom {
+		return createGalleryRoomFromModel(item.ToRoomGallery())
+	}), nil
+}
+
 func (r *RoomRepo) Galleries(ctx context.Context) ([]GalleryRoom, error) {
 	items, err := model.NewRoomGalleryModel(r.db).Get(
 		ctx,
@@ -311,4 +324,21 @@ func (r *RoomRepo) GalleryItem(ctx context.Context, id int64) (*GalleryRoom, err
 
 	res := createGalleryRoomFromModel(item.ToRoomGallery())
 	return &res, nil
+}
+
+// RecentRooms 获取最近使用的房间列表
+func (r *RoomRepo) RecentRooms(ctx context.Context, userID, limit int64) ([]Room, error) {
+	q := query.Builder().
+		Where(model.FieldRoomsUserId, userID).
+		OrderBy(model.FieldRoomsLastActiveTime, "DESC").
+		Limit(limit)
+
+	rooms, err := model.NewRoomsModel(r.db).Get(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	return array.Map(rooms, func(room model.RoomsN, _ int) Room {
+		return Room{Rooms: room.ToRooms()}
+	}), nil
 }

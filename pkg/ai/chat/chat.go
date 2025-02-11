@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/deepseek"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
@@ -191,6 +192,7 @@ type Request struct {
 	Messages  Messages `json:"messages"`
 	MaxTokens int      `json:"max_tokens,omitempty"`
 	N         int      `json:"n,omitempty"` // 复用作为 room_id
+	HistoryID int      `json:"history_id,omitempty"`
 
 	// 业务定制字段
 	RoomID    int64 `json:"-"`
@@ -257,6 +259,17 @@ func (req Request) Init() Request {
 	return req
 }
 
+// ReplaceSystemPrompt 替换系统提示消息
+func (req Request) ReplaceSystemPrompt(prompt string) *Request {
+	if len(req.Messages) > 0 && req.Messages[0].Role == "system" {
+		req.Messages[0].Content = prompt
+	} else {
+		req.Messages = append(Messages{{Role: "system", Content: prompt}}, req.Messages...)
+	}
+
+	return &req
+}
+
 // Fix 修复请求内容，注意：上下文长度修复后，最终的上下文数量不包含 system 消息和用户最后一条消息
 func (req Request) Fix(chat Chat, maxContextLength int64, maxTokenCount int) (*Request, int64, error) {
 	// 自动缩减上下文长度至满足模型要求的最大长度，尽可能避免出现超过模型上下文长度的问题
@@ -310,12 +323,13 @@ func (req Request) ResolveCalFeeModel(conf *config.Config) string {
 }
 
 type Response struct {
-	Error        string `json:"error,omitempty"`
-	ErrorCode    string `json:"error_code,omitempty"`
-	Text         string `json:"text,omitempty"`
-	FinishReason string `json:"finish_reason,omitempty"`
-	InputTokens  int    `json:"input_tokens,omitempty"`
-	OutputTokens int    `json:"output_tokens,omitempty"`
+	Error            string `json:"error,omitempty"`
+	ErrorCode        string `json:"error_code,omitempty"`
+	Text             string `json:"text,omitempty"`
+	FinishReason     string `json:"finish_reason,omitempty"`
+	InputTokens      int    `json:"input_tokens,omitempty"`
+	OutputTokens     int    `json:"output_tokens,omitempty"`
+	ReasoningContent string `json:"reasoning_content,omitempty"`
 }
 
 type Chat interface {
@@ -388,6 +402,8 @@ func (ai *Imp) selectImp(provider repo.ModelProvider) Chat {
 				return ai.createOneAPIClient(ch)
 			case service.ProviderOpenRouter:
 				return ai.createOpenRouterClient(ch)
+			case service.ProviderDeepSeek:
+				return ai.createDeepSeekClient(ch)
 			default:
 				if ret := ai.selectProvider(ch.Type); ret != nil {
 					return ret
@@ -561,4 +577,24 @@ func (ai *Imp) createOpenRouterClient(ch *repo.Channel) Chat {
 	}
 
 	return NewOpenRouterChat(openrouter.NewOpenRouter(openai.NewOpenAIClient(&conf, ai.proxy)))
+}
+
+// createDeepSeekClient 创建一个 DeepSeek Client
+func (ai *Imp) createDeepSeekClient(ch *repo.Channel) Chat {
+	if ch.Server == "" {
+		ch.Server = "https://api.deepseek.com"
+	}
+
+	conf := openai.Config{
+		Enable:        true,
+		OpenAIServers: []string{ch.Server},
+		OpenAIKeys:    []string{ch.Secret},
+		AutoProxy:     ch.Meta.UsingProxy,
+		Header: http.Header{
+			"HTTP-Referer": []string{"https://web.aicode.cc"},
+			"X-Title":      []string{"AIdea"},
+		},
+	}
+
+	return NewDeepSeekChat(deepseek.NewDeepSeek(openai.NewOpenAIClient(&conf, ai.proxy)))
 }

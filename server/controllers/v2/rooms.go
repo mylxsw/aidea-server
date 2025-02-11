@@ -34,6 +34,7 @@ func NewRoomController(resolver infra.Resolver) web.Controller {
 func (ctl *RoomController) Register(router web.Router) {
 	router.Group("/rooms", func(router web.Router) {
 		router.Get("/", ctl.Rooms)
+		router.Get("/recent", ctl.RecentRooms)
 	})
 }
 
@@ -42,7 +43,7 @@ const RoomsQueryLimit = 100
 // Rooms 获取房间列表
 func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *auth.User, client *auth.ClientInfo) web.Response {
 	roomTypes := []int{repo.RoomTypePreset, repo.RoomTypePresetCustom, repo.RoomTypeCustom}
-	if misc.VersionNewer(client.Version, "1.0.6") {
+	if misc.VersionNewer(client.Version, "1.0.6") && misc.VersionOlder(client.Version, "2.0.0") {
 		roomTypes = append(roomTypes, repo.RoomTypeGroupChat)
 	}
 
@@ -58,7 +59,7 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 	)
 
 	var suggests []repo.GalleryRoom
-	if len(rooms) == 0 {
+	if len(rooms) == 0 || misc.VersionNewerOrEqual(client.Version, "2.0.0") {
 		suggests, err = ctl.roomRepo.GallerySuggests(ctx, 11)
 		if err != nil {
 			log.Errorf("查询推荐房间列表失败: %v", err)
@@ -120,5 +121,18 @@ func (ctl *RoomController) Rooms(ctx context.Context, webCtx web.Context, user *
 			return item
 		}),
 		"suggests": suggests,
+	})
+}
+
+// RecentRooms 获取最近使用的房间列表
+func (ctl *RoomController) RecentRooms(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	rooms, err := ctl.roomRepo.RecentRooms(ctx, user.ID, 3)
+	if err != nil {
+		log.F(log.M{"user_id": user.ID}).Errorf("Failed to query user's recently used room list: %v", err)
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+
+	return webCtx.JSON(web.M{
+		"data": rooms,
 	})
 }

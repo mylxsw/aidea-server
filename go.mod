@@ -31,6 +31,7 @@ require (
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/speps/go-hashids/v2 v2.0.1
 	github.com/stripe/stripe-go/v76 v76.19.0
+	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.3
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/aiart v1.0.727
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/hunyuan v1.0.857
@@ -45,8 +46,6 @@ require (
 
 require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
-	github.com/PuerkitoBio/purell v1.1.1 // indirect
-	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.4 // indirect
 	github.com/alibabacloud-go/debug v0.0.0-20190504072949-9472017b5c68 // indirect
 	github.com/alibabacloud-go/endpoint-util v1.1.0 // indirect
@@ -83,10 +82,8 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
 	github.com/swaggo/files v1.0.1 // indirect
-	github.com/swaggo/http-swagger v1.3.4 // indirect
 	github.com/tideland/golib v4.24.2+incompatible // indirect
 	github.com/tink-ab/tempfile v0.0.0-20180226111222-33beb0518f1a // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
@@ -99,7 +96,6 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/ini.v1 v1.56.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
@@ -127,4 +123,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-replace github.com/sashabaranov/go-openai => github.com/rkintzi/go-openai v0.0.0-20231115154728-152021253721
+replace github.com/sashabaranov/go-openai => github.com/mylxsw/go-openai v0.0.0-20250210035817-163153d4dab1

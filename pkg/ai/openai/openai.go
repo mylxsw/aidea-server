@@ -134,20 +134,10 @@ func (client *realClientImpl) client(model string) *openai.Client {
 }
 
 func (client *realClientImpl) CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error) {
-	// TODO: 临时解决方案，后续需要优化
-	if request.Model == "gpt-4-vision-preview" && request.MaxTokens == 0 {
-		request.MaxTokens = 4096
-	}
-
 	return client.client(request.Model).CreateChatCompletion(ctx, request)
 }
 
 func (client *realClientImpl) CreateChatCompletionStream(ctx context.Context, request openai.ChatCompletionRequest) (stream *openai.ChatCompletionStream, err error) {
-	// TODO: 临时解决方案，后续需要优化
-	if request.Model == "gpt-4-vision-preview" && request.MaxTokens == 0 {
-		request.MaxTokens = 4096
-	}
-
 	return client.client(request.Model).CreateChatCompletionStream(ctx, request)
 }
 

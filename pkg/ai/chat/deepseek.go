@@ -2,27 +2,23 @@ package chat
 
 import (
 	"context"
-	"strings"
-
-	openai2 "github.com/mylxsw/aidea-server/pkg/ai/openai"
-	"github.com/mylxsw/aidea-server/pkg/misc"
-	"github.com/mylxsw/aidea-server/pkg/uploader"
-
+	"github.com/mylxsw/aidea-server/pkg/ai/deepseek"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
 	"github.com/sashabaranov/go-openai"
+	"strings"
 )
 
-type OpenAIChat struct {
-	oai openai2.Client
+type DeepSeekChat struct {
+	oai *deepseek.DeepSeek
 }
 
-func NewOpenAIChat(oai openai2.Client) *OpenAIChat {
-	return &OpenAIChat{oai: oai}
+func NewDeepSeekChat(oai *deepseek.DeepSeek) *DeepSeekChat {
+	return &DeepSeekChat{oai: oai}
 }
 
-func (chat *OpenAIChat) initRequest(req Request) (*openai.ChatCompletionRequest, error) {
-	req.Model = strings.TrimPrefix(req.Model, "openai:")
+func (chat *DeepSeekChat) initRequest(req Request) (*openai.ChatCompletionRequest, error) {
+	req.Model = strings.TrimPrefix(req.Model, "deepseek:")
 
 	var systemMessages []openai.ChatCompletionMessage
 	var contextMessages []openai.ChatCompletionMessage
@@ -31,39 +27,6 @@ func (chat *OpenAIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 		m := openai.ChatCompletionMessage{
 			Role:    msg.Role,
 			Content: msg.Content,
-		}
-
-		if len(msg.MultipartContents) > 0 {
-			m.Content = ""
-			m.MultiContent = array.Map(msg.MultipartContents, func(item *MultipartContent, _ int) openai.ChatMessagePart {
-				ret := openai.ChatMessagePart{
-					Text: item.Text,
-					Type: openai.ChatMessagePartType(item.Type),
-				}
-				if item.Type == "image_url" && item.ImageURL != nil {
-					url := item.ImageURL.URL
-					if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
-						encoded, err := uploader.DownloadRemoteFileAsBase64(context.TODO(), item.ImageURL.URL)
-						if err == nil {
-							url = encoded
-						} else {
-							log.With(err).Errorf("download remote image failed: %s", item.ImageURL.URL)
-						}
-					} else {
-						imageMimeType, err := misc.Base64ImageMediaType(url)
-						if err == nil {
-							url = misc.AddImageBase64Prefix(misc.RemoveImageBase64Prefix(url), imageMimeType)
-						}
-					}
-
-					ret.ImageURL = &openai.ChatMessageImageURL{
-						URL:    url,
-						Detail: openai.ImageURLDetail(item.ImageURL.Detail),
-					}
-				}
-
-				return ret
-			})
 		}
 
 		if msg.Role == "system" {
@@ -81,16 +44,16 @@ func (chat *OpenAIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 	}, nil
 }
 
-func (chat *OpenAIChat) Chat(ctx context.Context, req Request) (*Response, error) {
+func (chat *DeepSeekChat) Chat(ctx context.Context, req Request) (*Response, error) {
 	openaiReq, err := chat.initRequest(req)
 	if err != nil {
 		return nil, err
 	}
 
-	res, err := chat.oai.CreateChatCompletion(ctx, *openaiReq)
+	res, err := chat.oai.Chat(ctx, *openaiReq)
 	if err != nil {
 		if strings.Contains(err.Error(), "content management policy") {
-			log.With(err).Errorf("违反 Azure OpenAI 内容管理策略")
+			log.With(err).Errorf("Violation of OpenAI content management policy")
 			return nil, ErrContentFilter
 		}
 
@@ -110,7 +73,7 @@ func (chat *OpenAIChat) Chat(ctx context.Context, req Request) (*Response, error
 	}, nil
 }
 
-func (chat *OpenAIChat) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
+func (chat *DeepSeekChat) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	openaiReq, err := chat.initRequest(req)
 	if err != nil {
 		return nil, err
@@ -126,7 +89,7 @@ func (chat *OpenAIChat) ChatStream(ctx context.Context, req Request) (<-chan Res
 				"message": req.assembleMessage(),
 				"model":   req.Model,
 				"room_id": req.RoomID,
-			}).Errorf("违反 Azure OpenAI 内容管理策略")
+			}).Errorf("Violation of OpenAI content management policy")
 			return nil, ErrContentFilter
 		}
 
@@ -162,6 +125,14 @@ func (chat *OpenAIChat) ChatStream(ctx context.Context, req Request) (<-chan Res
 						},
 						"",
 					),
+					// DeepSeek 深度推理过程
+					ReasoningContent: array.Reduce(
+						data.ChatResponse.Choices,
+						func(carry string, item openai.ChatCompletionStreamChoice) string {
+							return carry + item.Delta.ReasoningContent
+						},
+						"",
+					),
 				}
 			}
 		}
@@ -171,6 +142,6 @@ func (chat *OpenAIChat) ChatStream(ctx context.Context, req Request) (<-chan Res
 	return res, nil
 }
 
-func (chat *OpenAIChat) MaxContextLength(model string) int {
-	return openai2.ModelMaxContextSize(model)
+func (chat *DeepSeekChat) MaxContextLength(model string) int {
+	return 4000
 }

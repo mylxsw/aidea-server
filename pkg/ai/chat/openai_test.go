@@ -2,11 +2,13 @@ package chat_test
 
 import (
 	"context"
-	chat2 "github.com/mylxsw/aidea-server/pkg/ai/chat"
-	"github.com/mylxsw/aidea-server/pkg/ai/openai"
+	"net/http"
 	"os"
 	"testing"
 	"time"
+
+	chat2 "github.com/mylxsw/aidea-server/pkg/ai/chat"
+	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/assert"
@@ -15,7 +17,10 @@ import (
 
 func createOpenAIChatClient() chat2.Chat {
 	openaiConf := openailib.DefaultConfig(os.Getenv("OPENAI_API_KEY"))
-	openaiConf.HTTPClient.Timeout = 300 * time.Second
+	httpClient := &http.Client{}
+	httpClient.Timeout = 300 * time.Second
+
+	openaiConf.HTTPClient = httpClient
 	openaiConf.APIType = openailib.APITypeOpenAI
 
 	client := openailib.NewClientWithConfig(openaiConf)

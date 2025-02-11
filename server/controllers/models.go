@@ -53,28 +53,33 @@ type Model struct {
 	SupportVision bool `json:"support_vision,omitempty"`
 	IsDefault     bool `json:"is_default,omitempty"`
 	Recommend     bool `json:"recommend,omitempty"`
+
+	SupportSearch    bool `json:"support_search,omitempty"`
+	SupportReasoning bool `json:"support_reasoning,omitempty"`
 }
 
 // Models 获取模型列表
 func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, client *auth.ClientInfo, user *auth.UserOptional) web.Response {
 	models := array.Map(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) Model {
 		ret := Model{
-			ID:            item.ModelId,
-			Name:          item.Name,
-			ShortName:     item.ShortName,
-			Description:   "",
-			AvatarURL:     item.AvatarUrl,
-			Category:      item.Meta.Category,
-			IsImage:       false,
-			Disabled:      item.Status == repo.ModelStatusDisabled,
-			VersionMin:    item.VersionMin,
-			VersionMax:    item.VersionMax,
-			IsChat:        true,
-			SupportVision: item.Meta.Vision,
-			IsNew:         item.Meta.IsNew,
-			Tag:           item.Meta.Tag,
-			TagTextColor:  item.Meta.TagTextColor,
-			TagBgColor:    item.Meta.TagBgColor,
+			ID:               item.ModelId,
+			Name:             item.Name,
+			ShortName:        item.ShortName,
+			Description:      "",
+			AvatarURL:        item.AvatarUrl,
+			Category:         item.Meta.Category,
+			IsImage:          false,
+			Disabled:         item.Status == repo.ModelStatusDisabled,
+			VersionMin:       item.VersionMin,
+			VersionMax:       item.VersionMax,
+			IsChat:           true,
+			SupportVision:    item.Meta.Vision,
+			IsNew:            item.Meta.IsNew,
+			Tag:              item.Meta.Tag,
+			TagTextColor:     item.Meta.TagTextColor,
+			TagBgColor:       item.Meta.TagBgColor,
+			SupportReasoning: item.Meta.Reasoning,
+			SupportSearch:    item.Meta.Search,
 		}
 
 		if item.Meta.InputPrice == 0 && item.Meta.OutputPrice == 0 && item.Meta.PerReqPrice == 0 {

@@ -60,7 +60,7 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 				return item.Recommend
 			}),
 			func(item controllers.Model, _ int) controllers.Model {
-				item.Category = "最佳推荐"
+				item.Category = "最佳"
 				return item
 			},
 		)
@@ -110,17 +110,19 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 					}
 
 					return controllers.Model{
-						ID:            fmt.Sprintf("v2@%s|%d", service.HomeModelTypeRooms, item.Id),
-						Name:          item.Name,
-						AvatarURL:     avatarUrl,
-						Description:   description,
-						Category:      "自定义角色",
-						IsImage:       model.IsImage,
-						SupportVision: model.SupportVision,
-						VersionMin:    model.VersionMin,
-						VersionMax:    model.VersionMax,
-						IsChat:        model.IsChat,
-						PriceInfo:     model.PriceInfo,
+						ID:               fmt.Sprintf("v2@%s|%d", service.HomeModelTypeRooms, item.Id),
+						Name:             item.Name,
+						AvatarURL:        avatarUrl,
+						Description:      description,
+						Category:         "自定义角色",
+						IsImage:          model.IsImage,
+						SupportVision:    model.SupportVision,
+						VersionMin:       model.VersionMin,
+						VersionMax:       model.VersionMax,
+						IsChat:           model.IsChat,
+						PriceInfo:        model.PriceInfo,
+						SupportReasoning: model.SupportReasoning,
+						SupportSearch:    model.SupportSearch,
 					}
 				},
 			),
@@ -136,25 +138,27 @@ func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.Clie
 	models := array.Map(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) controllers.Model {
 		priceInfo := ctl.generatePriceInfo(item)
 		ret := controllers.Model{
-			ID:            item.ModelId,
-			Name:          item.Name,
-			ShortName:     item.ShortName,
-			Description:   item.Description,
-			PriceInfo:     priceInfo,
-			AvatarURL:     item.AvatarUrl,
-			Category:      item.Meta.Category,
-			IsImage:       false,
-			Disabled:      item.Status == repo.ModelStatusDisabled,
-			VersionMin:    item.VersionMin,
-			VersionMax:    item.VersionMax,
-			IsChat:        true,
-			SupportVision: item.Meta.Vision,
-			IsNew:         item.Meta.IsNew,
-			Tag:           item.Meta.Tag,
-			TagTextColor:  item.Meta.TagTextColor,
-			TagBgColor:    item.Meta.TagBgColor,
-			IsDefault:     item.ModelId == "gpt-4o-mini",
-			Recommend:     item.Meta.IsRecommend,
+			ID:               item.ModelId,
+			Name:             item.Name,
+			ShortName:        item.ShortName,
+			Description:      item.Description,
+			PriceInfo:        priceInfo,
+			AvatarURL:        item.AvatarUrl,
+			Category:         item.Meta.Category,
+			IsImage:          false,
+			Disabled:         item.Status == repo.ModelStatusDisabled,
+			VersionMin:       item.VersionMin,
+			VersionMax:       item.VersionMax,
+			IsChat:           true,
+			SupportVision:    item.Meta.Vision,
+			IsNew:            item.Meta.IsNew,
+			Tag:              item.Meta.Tag,
+			TagTextColor:     item.Meta.TagTextColor,
+			TagBgColor:       item.Meta.TagBgColor,
+			IsDefault:        item.ModelId == "gpt-4o-mini",
+			Recommend:        item.Meta.IsRecommend,
+			SupportReasoning: item.Meta.Reasoning,
+			SupportSearch:    item.Meta.Search,
 		}
 
 		if misc.VersionOlder(client.Version, "2.0.0") {
