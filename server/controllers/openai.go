@@ -607,10 +607,28 @@ type ThinkingProcess struct {
 	Content      string  `json:"content,omitempty"`
 }
 
-func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Request, stream <-chan chat.Response, user *auth.User, client *auth.ClientInfo, sw *streamwriter.StreamWriter) (string, ThinkingProcess, error) {
-	var replyText string
-	var thinkingProcess ThinkingProcess
+func sepThinkingContent(replyText string) (thinkingContent string, content string) {
+	if strings.HasPrefix(strings.TrimSpace(replyText), "<think>") {
+		start := strings.Index(replyText, "<think>")
+		end := strings.Index(replyText, "</think>")
+		if start != -1 && end != -1 && end > start {
+			thinkingContent = replyText[start+len("<think>") : end]
+			content = replyText[:start] + replyText[end+len("</think>"):]
+			return
+		}
+	}
 
+	return "", replyText
+}
+
+func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Request, stream <-chan chat.Response, user *auth.User, client *auth.ClientInfo, sw *streamwriter.StreamWriter) (replyText string, thinkingProcess ThinkingProcess, err error) {
+	defer func() {
+		if thinkingProcess.Content == "" {
+			thinkingProcess.Content, replyText = sepThinkingContent(replyText)
+		}
+	}()
+
+	hasSentReply := false
 	startTime := time.Now()
 
 	// 发送 thinking 消息
@@ -665,31 +683,82 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 				}
 			} else {
 				replyText += res.Text
-				thinkingProcess.Content += res.ReasoningContent
+				if req.EnableReasoning() {
+					thinkingProcess.Content += res.ReasoningContent
+				}
 			}
 
-			if replyText != "" {
-				thinkingDone()
-			}
+			noSpaceReplyText := strings.TrimSpace(replyText)
+			if req.EnableReasoning() && thinkingProcess.Content != "" {
+				// DeepSeek Style 的深度推理
+				if replyText != "" {
+					thinkingDone()
+				}
 
-			resp := ChatCompletionStreamResponse{
-				ID:      strconv.Itoa(id),
-				Created: time.Now().Unix(),
-				Model:   req.Model,
-				Object:  "chat.completion",
-				Choices: []ChatCompletionStreamChoice{
-					{
-						Delta: ChatCompletionStreamChoiceDelta{
-							Role:    "assistant",
-							Content: ternary.If(res.Text != "", res.Text, res.ReasoningContent),
+				resp := ChatCompletionStreamResponse{
+					ID:      strconv.Itoa(id),
+					Created: time.Now().Unix(),
+					Model:   req.Model,
+					Object:  "chat.completion",
+					Choices: []ChatCompletionStreamChoice{
+						{
+							Delta: ChatCompletionStreamChoiceDelta{
+								Role:    "assistant",
+								Content: ternary.If(res.Text != "", res.Text, res.ReasoningContent),
+							},
 						},
 					},
-				},
-			}
+				}
 
-			if err := sw.WriteStream(resp); err != nil {
-				log.F(log.M{"req": req, "user_id": user.ID}).Warningf("write response failed: %v", err)
-				return replyText, thinkingProcess, nil
+				if err := sw.WriteStream(resp); err != nil {
+					log.F(log.M{"req": req, "user_id": user.ID}).Warningf("write response failed: %v", err)
+					return replyText, thinkingProcess, nil
+				}
+			} else {
+				// 使用 <think></think> 标签包裹的深度思考风格
+				shouldSent := len(noSpaceReplyText) > len("<think>")
+				if !req.EnableReasoning() && strings.HasPrefix(noSpaceReplyText, "<think>") {
+					if strings.Contains(noSpaceReplyText, "</think>") {
+						shouldSent = true
+						thinkingProcess.Content, replyText = sepThinkingContent(replyText)
+						noSpaceReplyText = strings.TrimSpace(replyText)
+					} else {
+						shouldSent = false
+					}
+				}
+
+				if shouldSent {
+					if !strings.HasPrefix(noSpaceReplyText, "<think>") {
+						thinkingDone()
+					}
+
+					resp := ChatCompletionStreamResponse{
+						ID:      strconv.Itoa(id),
+						Created: time.Now().Unix(),
+						Model:   req.Model,
+						Object:  "chat.completion",
+						Choices: []ChatCompletionStreamChoice{
+							{
+								Delta: ChatCompletionStreamChoiceDelta{
+									Role:    "assistant",
+									Content: ternary.If(hasSentReply, res.Text, replyText),
+								},
+							},
+						},
+					}
+
+					hasSentReply = true
+					if err := sw.WriteStream(resp); err != nil {
+						log.F(log.M{"req": req, "user_id": user.ID}).Warningf("write response failed: %v", err)
+						return replyText, thinkingProcess, nil
+					}
+
+					if strings.HasPrefix(noSpaceReplyText, "<think>") {
+						if strings.Contains(noSpaceReplyText, "</think>") {
+							thinkingDone()
+						}
+					}
+				}
 			}
 		}
 	}

@@ -125,6 +125,13 @@ func (chat *OpenRouterChat) ChatStream(ctx context.Context, req Request) (<-chan
 						},
 						"",
 					),
+					ReasoningContent: array.Reduce(
+						data.ChatResponse.Choices,
+						func(carry string, item openai.ChatCompletionStreamChoice) string {
+							return carry + item.Delta.Reasoning
+						},
+						"",
+					),
 				}
 			}
 		}

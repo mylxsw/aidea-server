@@ -109,6 +109,8 @@ func (chat *DeepSeekChat) ChatStream(ctx context.Context, req Request) (<-chan R
 					return
 				}
 
+				//log.With(data).Debugf("receive message from deepseek")
+
 				if data.Code != "" {
 					res <- Response{
 						Error:     data.ErrorMessage,

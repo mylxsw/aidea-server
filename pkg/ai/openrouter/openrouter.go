@@ -15,9 +15,11 @@ func NewOpenRouter(client openai2.Client) *OpenRouter {
 }
 
 func (oa *OpenRouter) ChatStream(ctx context.Context, request openai.ChatCompletionRequest) (<-chan openai2.ChatStreamResponse, error) {
+	request.IncludeReasoning = true
 	return oa.client.ChatStream(ctx, request)
 }
 
 func (oa *OpenRouter) Chat(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error) {
+	request.IncludeReasoning = true
 	return oa.client.CreateChatCompletion(ctx, request)
 }
