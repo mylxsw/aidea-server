@@ -308,7 +308,7 @@ func (req Request) Fix(chat Chat, maxContextLength int64, maxTokenCount int) (*R
 	if len(messages) > 0 {
 		lastMessageContent := messages[len(messages)-1].Content
 		lastMessageTokens, _ := TextTokenCount(lastMessageContent, req.Model)
-		if lastMessageTokens >= 4000 || misc.WordCount(lastMessageContent) >= 20000 {
+		if lastMessageTokens >= 7000 {
 			return nil, 0, errors.New("单条消息长度超过最大限制，请缩短输入内容长度")
 		}
 	}
