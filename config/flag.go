@@ -250,6 +250,9 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("text-to-voice-azure-region", "eastus", "Azure 语音服务区域")
 	ins.AddStringFlag("text-to-voice-azure-key", "", "Azure 语音服务 Key")
 
+	ins.AddBoolFlag("enable-voice-to-text", "是否启用语音转文本功能")
+	ins.AddBoolFlag("enable-text-to-voice", "是否启用文本转语音功能")
+
 	ins.AddStringFlag("minimax-api-key", "", "Minimax API Key")
 	ins.AddStringFlag("minimax-group-id", "", "Minimax Group ID")
 

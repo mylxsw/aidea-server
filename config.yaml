@@ -69,7 +69,7 @@ sms-channels: [ "aliyun", "tencent" ]
 
 # 是否提示用户绑定手机号
 should-bind-phone: false
-  
+
 # Web 服务的基础 URL，例如 https://web.aicode.cc
 base-url: ""
 
@@ -500,9 +500,9 @@ stripe-webhook-secret: ""
 
 ######## 默认首页模型 ########
 # 首页默认展示的模型，取值为表 models.model_id 的值
-default-home-models: ["gpt-4o-mini", "gpt-4o"]
+default-home-models: [ "gpt-4o-mini", "gpt-4o" ]
 # IOS 系统默认首页模型，取值为表 models.model_id 的值，如果为空，则使用 default-home-models
-default-home-models-ios: ["chat-3.5", "chat-4"]
+default-home-models-ios: [ "chat-3.5", "chat-4" ]
 
 ######## 文本转语音 ########
 # 文本转语音引擎，支持 minimax/openai/azure
@@ -511,6 +511,11 @@ text-to-voice-engine: openai
 text-to-voice-azure-region: eastus
 # Azure 语音服务 Key
 text-to-voice-azure-key: ""
+
+# 是否允许语音转文本
+enable-voice-to-text: true
+# 是否允许文本转语音
+enable-text-to-voice: true
 
 ######## Minimax 配置 ########
 # 当前只用于文本转语音

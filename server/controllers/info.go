@@ -191,6 +191,10 @@ func (ctl *InfoController) Capabilities(ctx context.Context, webCtx web.Context,
 		"disable_gallery": false,
 		// 是否禁用创作岛
 		"disable_creation_island": false,
+		// 是否允许文本转语音
+		"enable_voice_to_text": ctl.conf.EnableVoiceToText,
+		// 是否允许语音转文本
+		"enable_text_to_voice": ctl.conf.EnableTextToVoice,
 
 		// 是否启用聊天记录总结功能
 		"enable_summarizer": ctl.conf.EnableSummarizer,
