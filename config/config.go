@@ -286,8 +286,6 @@ type Config struct {
 	FreeChatDailyLimit int `json:"free_chat_daily_limit" yaml:"free_chat_daily_limit"`
 	// 免费 Chat 每日全局限制（不区分 IP）
 	FreeChatDailyGlobalLimit int `json:"free_chat_daily_global_limit" yaml:"free_chat_daily_global_limit"`
-	// 免费 Chat 模型
-	FreeChatModel string `json:"free_chat_model" yaml:"free_chat_model"`
 
 	// 微信开放平台配置
 	WeChatAppID  string `json:"wechat_appid" yaml:"wechat_appid"`
@@ -623,7 +621,6 @@ func Register(ins *app.App) {
 			FreeChatEnabled:          ctx.Bool("free-chat-enabled"),
 			FreeChatDailyLimit:       ctx.Int("free-chat-daily-limit"),
 			FreeChatDailyGlobalLimit: ctx.Int("free-chat-daily-global-limit"),
-			FreeChatModel:            ctx.String("free-chat-model"),
 
 			WeChatAppID:                 ctx.String("wechat-appid"),
 			WeChatSecret:                ctx.String("wechat-secret"),

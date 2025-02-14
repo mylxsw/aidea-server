@@ -103,6 +103,20 @@ func (svc *ChatService) ChannelTypes() []ChannelType {
 	}
 }
 
+// IsFreeModel 判断模型是否免费
+func (svc *ChatService) IsFreeModel(ctx context.Context, modelID string) bool {
+	mod := svc.Model(ctx, modelID)
+	return mod.Meta.InputPrice == 0 && mod.Meta.OutputPrice == 0 && mod.Meta.PerReqPrice == 0
+}
+
+// FreeModels 返回免费模型列表
+func (svc *ChatService) FreeModels(ctx context.Context) []repo.Model {
+	models := svc.Models(ctx, false)
+	return array.Filter(models, func(item repo.Model, _ int) bool {
+		return item.Meta.InputPrice == 0 && item.Meta.OutputPrice == 0 && item.Meta.PerReqPrice == 0
+	})
+}
+
 // TODO 缓存
 func (svc *ChatService) Models(ctx context.Context, returnAll bool) []repo.Model {
 	models, err := svc.rep.Model.GetModels(ctx)

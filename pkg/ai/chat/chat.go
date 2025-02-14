@@ -200,6 +200,16 @@ type Request struct {
 
 	// TempModel 用户可以指定临时模型来进行当前对话，实现临时切换模型的功能
 	TempModel string `json:"temp_model,omitempty"`
+	// Flags 用于传递一些特殊的标记，进行更高级的控制
+	Flags []string `json:"flags,omitempty"`
+}
+
+func (req Request) EnableReasoning() bool {
+	return array.In("reasoning", req.Flags)
+}
+
+func (req Request) EnableSearch() bool {
+	return array.In("search", req.Flags)
 }
 
 func (req Request) Clone() Request {
@@ -212,6 +222,7 @@ func (req Request) Clone() Request {
 		RoomID:    req.RoomID,
 		WebSocket: req.WebSocket,
 		TempModel: req.TempModel,
+		Flags:     req.Flags,
 	}
 }
 
