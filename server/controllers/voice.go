@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/voice"
@@ -24,6 +25,7 @@ type VoiceController struct {
 	voice      *voice.Voice      `autowire:"@"`
 	translater youdao.Translater `autowire:"@"`
 	quotaRepo  *repo.QuotaRepo   `autowire:"@"`
+	conf       *config.Config    `autowire:"@"`
 }
 
 func NewVoiceController(resolver infra.Resolver) web.Controller {
@@ -40,6 +42,10 @@ func (ctl *VoiceController) Register(router web.Router) {
 
 // Text2Voice 语音合成
 func (ctl *VoiceController) Text2Voice(ctx context.Context, webCtx web.Context, user *auth.User) web.Response {
+	if !ctl.conf.EnableTextToVoice {
+		return webCtx.JSONError("text to voice is disabled", http.StatusForbidden)
+	}
+
 	text := strings.TrimSpace(webCtx.Input("text"))
 	if text == "" {
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, "语音文本不能为空"), http.StatusBadRequest)

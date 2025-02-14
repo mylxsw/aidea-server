@@ -314,6 +314,11 @@ type Config struct {
 	// TextToVoiceAzureKey Azure 语音服务密钥
 	TextToVoiceAzureKey string `json:"text_to_voice_azure_key" yaml:"text_to_voice_azure_key"`
 
+	// 是否允许语音转文本
+	EnableVoiceToText bool `json:"enable_voice_to_text" yaml:"enable_voice_to_text"`
+	// 是否允许文本转语音
+	EnableTextToVoice bool `json:"enable_text_to_voice" yaml:"enable_text_to_voice"`
+
 	// MiniMax 配置
 	MiniMaxAPIKey  string `json:"minimax_api_key" yaml:"minimax_api_key"`
 	MiniMaxGroupID string `json:"minimax_group_id" yaml:"minimax_group_id"`
@@ -640,6 +645,9 @@ func Register(ins *app.App) {
 			TextToVoiceEngine:      ctx.String("text-to-voice-engine"),
 			TextToVoiceAzureRegion: ctx.String("text-to-voice-azure-region"),
 			TextToVoiceAzureKey:    ctx.String("text-to-voice-azure-key"),
+
+			EnableVoiceToText: ctx.Bool("enable-voice-to-text"),
+			EnableTextToVoice: ctx.Bool("enable-text-to-voice"),
 
 			MiniMaxAPIKey:  ctx.String("minimax-api-key"),
 			MiniMaxGroupID: ctx.String("minimax-group-id"),

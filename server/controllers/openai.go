@@ -91,6 +91,10 @@ func (ctl *OpenAIController) Register(router web.Router) {
 // audioTranscriptions 语音转文本
 // https://platform.openai.com/docs/api-reference/audio/createTranscription
 func (ctl *OpenAIController) audioTranscriptions(ctx context.Context, webCtx web.Context, user *auth.User, quotaRepo *repo.QuotaRepo) web.Response {
+	if !ctl.conf.EnableVoiceToText {
+		return webCtx.JSONError("voice to text is disabled", http.StatusForbidden)
+	}
+
 	// TODO 增加客户端控制语音转文本的参数：model/file/language/prompt/response_format/temperature
 	model := ternary.If(ctl.conf.UseTencentVoiceToText, "tencent", "whisper-1")
 
