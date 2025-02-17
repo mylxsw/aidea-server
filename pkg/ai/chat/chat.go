@@ -17,6 +17,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
+	"github.com/mylxsw/go-utils/ternary"
 	"net/http"
 	"strings"
 
@@ -187,12 +188,13 @@ func (ms Messages) Fix() Messages {
 
 // Request represents a request structure for chat completion API.
 type Request struct {
-	Stream    bool     `json:"stream,omitempty"`
-	Model     string   `json:"model"`
-	Messages  Messages `json:"messages"`
-	MaxTokens int      `json:"max_tokens,omitempty"`
-	N         int      `json:"n,omitempty"` // 复用作为 room_id
-	HistoryID int      `json:"history_id,omitempty"`
+	Stream      bool     `json:"stream,omitempty"`
+	Model       string   `json:"model"`
+	Messages    Messages `json:"messages"`
+	MaxTokens   int      `json:"max_tokens,omitempty"`
+	N           int      `json:"n,omitempty"` // 复用作为 room_id
+	HistoryID   int      `json:"history_id,omitempty"`
+	Temperature float64  `json:"temperature,omitempty"`
 
 	// 业务定制字段
 	RoomID    int64 `json:"-"`
@@ -202,6 +204,9 @@ type Request struct {
 	TempModel string `json:"temp_model,omitempty"`
 	// Flags 用于传递一些特殊的标记，进行更高级的控制
 	Flags []string `json:"flags,omitempty"`
+
+	// 额外参数
+	SearchCount int `json:"search_count,omitempty"`
 }
 
 func (req Request) EnableReasoning() bool {
@@ -214,15 +219,17 @@ func (req Request) EnableSearch() bool {
 
 func (req Request) Clone() Request {
 	return Request{
-		Stream:    req.Stream,
-		Model:     req.Model,
-		Messages:  array.Map(req.Messages, func(item Message, _ int) Message { return item }),
-		MaxTokens: req.MaxTokens,
-		N:         req.N,
-		RoomID:    req.RoomID,
-		WebSocket: req.WebSocket,
-		TempModel: req.TempModel,
-		Flags:     req.Flags,
+		Stream:      req.Stream,
+		Model:       req.Model,
+		Messages:    array.Map(req.Messages, func(item Message, _ int) Message { return item }),
+		MaxTokens:   req.MaxTokens,
+		N:           req.N,
+		Temperature: req.Temperature,
+		RoomID:      req.RoomID,
+		WebSocket:   req.WebSocket,
+		TempModel:   req.TempModel,
+		Flags:       req.Flags,
+		SearchCount: req.SearchCount,
 	}
 }
 
@@ -274,6 +281,26 @@ func (req Request) Init() Request {
 func (req Request) ReplaceSystemPrompt(prompt string) *Request {
 	if len(req.Messages) > 0 && req.Messages[0].Role == "system" {
 		req.Messages[0].Content = prompt
+	} else {
+		req.Messages = append(Messages{{Role: "system", Content: prompt}}, req.Messages...)
+	}
+
+	return &req
+}
+
+// GetSystemPrompt 获取系统提示消息
+func (req Request) GetSystemPrompt() string {
+	if len(req.Messages) > 0 && req.Messages[0].Role == "system" {
+		return req.Messages[0].Content
+	}
+
+	return ""
+}
+
+// MergeSystemPrompt 合并系统提示消息
+func (req Request) MergeSystemPrompt(prompt string) *Request {
+	if len(req.Messages) > 0 && req.Messages[0].Role == "system" {
+		req.Messages[0].Content = prompt + "\n" + req.Messages[0].Content
 	} else {
 		req.Messages = append(Messages{{Role: "system", Content: prompt}}, req.Messages...)
 	}
@@ -509,6 +536,14 @@ func (ai *Imp) fixRequest(ctx context.Context, req Request) (Request, repo.Model
 		} else {
 			systemPrompts = Messages{{Role: "system", Content: mod.Meta.Prompt}}
 		}
+	}
+
+	if mod.Meta.Temperature > 0 {
+		req.Temperature = mod.Meta.Temperature
+	}
+
+	if req.EnableSearch() {
+		req.SearchCount = ternary.If(mod.Meta.SearchCount > 0, mod.Meta.SearchCount, 3)
 	}
 
 	req.Messages = Messages(append(systemPrompts, chatMessages...)).Fix()

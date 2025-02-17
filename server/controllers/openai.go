@@ -325,16 +325,6 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
-	// 免费模型
-	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
-	var leftCount, maxFreeCount int
-	if user.User.ID > 0 {
-		leftCount, maxFreeCount = ctl.chatSrv.FreeChatRequestCounts(subCtx, user.User.ID, req.Model)
-	} else {
-		// 匿名用户，每次都是免费的，不限制次数，通过流控来限制访问
-		leftCount, maxFreeCount = 1, 0
-	}
-
 	// 查询模型信息
 	mod := ctl.chatSrv.Model(subCtx, req.Model)
 	if mod == nil || mod.Status == repo.ModelStatusDisabled {
@@ -342,10 +332,31 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
+	// 免费模型
+	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
+	var leftCount, maxFreeCount int
+
+	// 如果启用了搜索，并且模型的搜索价格>0，则必须收费
+	if mod.Meta.SearchPrice > 0 && req.EnableSearch() {
+		leftCount, maxFreeCount = 0, 0
+	} else {
+		if user.User.ID > 0 {
+			leftCount, maxFreeCount = ctl.chatSrv.FreeChatRequestCounts(subCtx, user.User.ID, req.Model)
+		} else {
+			// 匿名用户，每次都是免费的，不限制次数，通过流控来限制访问
+			leftCount, maxFreeCount = 1, 0
+		}
+	}
+
 	if leftCount <= 0 {
 		quota, needCoins, err := ctl.queryChatQuota(subCtx, user.User, sw, webCtx, inputTokenCount, mod)
 		if err != nil {
 			return
+		}
+
+		// 如果启用了 Search，需要额外的智慧果
+		if mod.Meta.SearchPrice > 0 && req.EnableSearch() {
+			needCoins += int64(mod.Meta.SearchPrice)
 		}
 
 		// 智慧果不足
@@ -464,6 +475,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			meta.InputPrice = quotaConsume.InputPrice
 			meta.OutputPrice = quotaConsume.OutputPrice
 			meta.ReqPrice = quotaConsume.PerReqPrice
+			meta.SearchPrice = int64(mod.Meta.SearchPrice)
 
 			if err := quotaRepo.QuotaConsume(ctx, user.User.ID, quotaConsume.TotalPrice, meta); err != nil {
 				log.Errorf("used quota add failed: %s", err)
@@ -949,6 +961,7 @@ type QuotaConsume struct {
 	InputPrice   float64
 	OutputPrice  float64
 	PerReqPrice  int64
+	SearchPrice  int64
 	TotalPrice   int64
 }
 
@@ -968,8 +981,10 @@ func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText st
 	ret := QuotaConsume{
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
+		SearchPrice:  int64(ternary.If(req.EnableSearch() && mod.Meta.SearchPrice > 0, mod.Meta.SearchPrice, 0)),
 	}
 	ret.InputPrice, ret.OutputPrice, ret.PerReqPrice, ret.TotalPrice = coins.GetTextModelCoinsDetail(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
+	ret.TotalPrice += ret.SearchPrice
 
 	// 免费请求，不扣除智慧果
 	if isFreeRequest || replyText == "" {

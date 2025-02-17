@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/asteria/log"
 	"io"
 	"math/rand"
 	"strings"
@@ -134,10 +135,17 @@ func (client *realClientImpl) client(model string) *openai.Client {
 }
 
 func (client *realClientImpl) CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error) {
+	if log.DebugEnabled() {
+		log.With(request).Debug("create chat completion")
+	}
 	return client.client(request.Model).CreateChatCompletion(ctx, request)
 }
 
 func (client *realClientImpl) CreateChatCompletionStream(ctx context.Context, request openai.ChatCompletionRequest) (stream *openai.ChatCompletionStream, err error) {
+	if log.DebugEnabled() {
+		log.With(request).Debug("create chat completion stream")
+	}
+
 	return client.client(request.Model).CreateChatCompletionStream(ctx, request)
 }
 

@@ -1888,6 +1888,14 @@ const docTemplate = `{
                     "description": "Search 是否支持搜索能力",
                     "type": "boolean"
                 },
+                "search_count": {
+                    "description": "SearchCount 搜索结果数量",
+                    "type": "integer"
+                },
+                "search_price": {
+                    "description": "SearchPrice 每次使用搜索价格（智慧果/次）",
+                    "type": "integer"
+                },
                 "tag": {
                     "description": "Tag 模型标签",
                     "type": "string"
@@ -1897,6 +1905,10 @@ const docTemplate = `{
                 },
                 "tag_text_color": {
                     "type": "string"
+                },
+                "temperature": {
+                    "description": "Temperature 温度",
+                    "type": "number"
                 },
                 "vision": {
                     "description": "Vision 是否支持视觉能力",

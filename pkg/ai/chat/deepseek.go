@@ -19,6 +19,9 @@ func NewDeepSeekChat(oai *deepseek.DeepSeek) *DeepSeekChat {
 
 func (chat *DeepSeekChat) initRequest(req Request) (*openai.ChatCompletionRequest, error) {
 	req.Model = strings.TrimPrefix(req.Model, "deepseek:")
+	if req.EnableReasoning() && !strings.Contains(req.GetSystemPrompt(), "<think>") {
+		req = *req.MergeSystemPrompt("In every output, response using the following format:\n<think>\n{reasoning_content}\n</think>\n\n{content}")
+	}
 
 	var systemMessages []openai.ChatCompletionMessage
 	var contextMessages []openai.ChatCompletionMessage
@@ -38,9 +41,10 @@ func (chat *DeepSeekChat) initRequest(req Request) (*openai.ChatCompletionReques
 
 	messages := append(systemMessages, contextMessages...)
 	return &openai.ChatCompletionRequest{
-		Model:     req.Model,
-		Messages:  messages,
-		MaxTokens: req.MaxTokens,
+		Model:       req.Model,
+		Messages:    messages,
+		MaxTokens:   req.MaxTokens,
+		Temperature: float32(req.Temperature),
 	}, nil
 }
 
