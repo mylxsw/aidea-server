@@ -522,3 +522,10 @@ enable-text-to-voice: true
 # API 申请：https://www.minimaxi.com
 minimax-api-key: ""
 minimax-group-id: ""
+
+######## Search 配置 ########
+# 搜索引擎，支持 bigmodel
+search-engine: bigmodel
+# BigModel 搜索 API Key
+bigmodel-search-enabled: true
+bigmodel-search-api-key: ""

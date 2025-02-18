@@ -261,4 +261,9 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("flux-api-server", "https://api.bfl.ml", "flux api server")
 	ins.AddStringFlag("flux-api-key", "", "flux api key")
+
+	ins.AddBoolFlag("bigmodel-search-enabled", "是否启用 BigModel 搜索功能")
+	ins.AddStringFlag("bigmodel-search-api-key", "", "BigModel 搜索 API Key")
+
+	ins.AddStringFlag("search-engine", "bigmodel", "搜索引擎，支持 bigmodel")
 }

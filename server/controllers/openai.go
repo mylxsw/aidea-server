@@ -5,6 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/ai/control"
 	openaiHelper "github.com/mylxsw/aidea-server/pkg/ai/openai"
@@ -13,16 +20,11 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/search"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/tencent"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/mylxsw/go-utils/array"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -218,6 +220,7 @@ type FinalMessage struct {
 	Info          string  `json:"info,omitempty"`
 	Error         string  `json:"error,omitempty"`
 	TimeConsumed  float64 `json:"time_consumed,omitempty"`
+	Data          string  `json:"data,omitempty"`
 }
 
 func (m FinalMessage) ToJSON() string {
@@ -431,7 +434,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	quotaConsume = ctl.resolveConsumeQuota(req, replyText+thinkingProcess.Content, leftCount > 0, mod)
 
 	func() {
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 
 		// 写入用户消息
@@ -573,7 +576,16 @@ func (ctl *OpenAIController) handleChat(
 
 	newReq := req.Clone()
 
-	stream, err := ctl.chat.ChatStream(chatCtx, newReq.Purification())
+	var stream <-chan chat.Response
+	var err error
+	var documents []search.Document
+
+	if css, ok := ctl.chat.(chat.ChatStreamWithSearch); ok {
+		stream, documents, err = css.ChatStreamWithSearch(chatCtx, newReq.Purification())
+	} else {
+		stream, err = ctl.chat.ChatStream(chatCtx, newReq.Purification())
+	}
+
 	if err != nil {
 		shouldReturnError := retryTimes >= maxRetryTimes || startTime.Add(60*time.Second).Before(time.Now())
 
@@ -606,6 +618,14 @@ func (ctl *OpenAIController) handleChat(
 
 	if replyText == "" {
 		return replyText, thinkingProcess, ErrChatResponseEmpty
+	}
+
+	if len(documents) > 0 {
+		referenceData, _ := json.Marshal(documents)
+		ctl.writeControlMessage(sw, client, req.Model, FinalMessage{
+			Type: "reference-documents",
+			Data: string(referenceData),
+		})
 	}
 
 	return replyText, thinkingProcess, nil

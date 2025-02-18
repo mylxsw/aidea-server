@@ -2,11 +2,12 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
-	"os"
-	"strings"
 
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/starter/app"
@@ -330,6 +331,12 @@ type Config struct {
 	// Flux model
 	FluxAPIServer string `json:"flux_api_server" yaml:"flux_api_server"`
 	FluxAPIKey    string `json:"flux_api_key" yaml:"flux_api_key"`
+
+	// Search 配置
+	SearchEngine string `json:"search_engine" yaml:"search_engine"`
+	// BigModel Search 配置
+	BigModelSearchEnabled bool   `json:"bigmodel_search_enabled" yaml:"bigmodel_search_enabled"`
+	BigModelSearchAPIKey  string `json:"bigmodel_search_api_key" yaml:"bigmodel_search_api_key"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -654,6 +661,11 @@ func Register(ins *app.App) {
 
 			FluxAPIServer: ctx.String("flux-api-server"),
 			FluxAPIKey:    ctx.String("flux-api-key"),
+
+			BigModelSearchEnabled: ctx.Bool("bigmodel-search-enabled"),
+			BigModelSearchAPIKey:  ctx.String("bigmodel-search-api-key"),
+
+			SearchEngine: ctx.String("search-engine"),
 		}
 	})
 }

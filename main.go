@@ -14,6 +14,7 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
 	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"github.com/mylxsw/aidea-server/pkg/file"
+	"github.com/mylxsw/aidea-server/pkg/search"
 	"github.com/mylxsw/aidea-server/pkg/wechat"
 
 	"github.com/mylxsw/aidea-server/api"
@@ -180,6 +181,7 @@ func main() {
 		sky.Provider{},
 		zhipuai.Provider{},
 		moonshot.Provider{},
+		search.Provider{},
 	)
 
 	app.MustRun(ins)

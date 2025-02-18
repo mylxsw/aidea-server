@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"github.com/Vernacular-ai/godub/converter"
-	"github.com/lithammer/shortuuid/v4"
 	"math/rand"
 	"mime"
 	"net/http"
@@ -18,6 +16,9 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/Vernacular-ai/godub/converter"
+	"github.com/lithammer/shortuuid/v4"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/mylxsw/asteria/log"
@@ -215,6 +216,19 @@ func SubString(str string, length int) string {
 	}
 
 	return string([]rune(str)[:length]) + "..."
+}
+
+func ReduceString(str string, length int) string {
+	size := utf8.RuneCountInString(str)
+	if size <= length {
+		return str
+	}
+
+	runes := []rune(str)
+	half := (length - 3) / 2
+	remain := (length - 3) % 2
+
+	return string(runes[:half+remain]) + "..." + string(runes[size-half:])
 }
 
 func SubStringRaw(str string, length int) string {
