@@ -683,7 +683,7 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 	defer thinkingDone()
 
 	// 生成 SSE 流
-	timer := time.NewTimer(180 * time.Second)
+	timer := time.NewTimer(600 * time.Second)
 	defer timer.Stop()
 
 	id := 0
