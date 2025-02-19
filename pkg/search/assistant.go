@@ -123,12 +123,6 @@ func (s *SearchAssistant) GenerateSearchQuery(ctx context.Context, query string,
 		"",
 	)
 
-	log.WithFields(log.Fields{
-		"query":     query,
-		"histories": histories,
-		"content":   content,
-	}).Debug("generate search query response")
-
 	// Remove the query formulation section (analysis details) from the response, keeping only the final search query
 	content = regexp.MustCompile(`(?s)<query_formulation>.*?</query_formulation>`).ReplaceAllString(content, "")
 	keyword = strings.TrimSpace(content)

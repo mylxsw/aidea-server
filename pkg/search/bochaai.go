@@ -8,8 +8,6 @@ import (
 	"io"
 	"net/http"
 	"time"
-
-	"github.com/mylxsw/asteria/log"
 )
 
 type BochaaiSearch struct {
@@ -39,8 +37,6 @@ func (b *BochaaiSearch) Search(ctx context.Context, req *Request) (*Response, er
 	if err != nil {
 		return nil, err
 	}
-
-	log.WithFields(data).Debug("bochaai search request")
 
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", "https://api.bochaai.com/v1/web-search", bytes.NewBuffer(jsonData))
 	if err != nil {
