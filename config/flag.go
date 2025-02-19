@@ -262,8 +262,10 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("flux-api-server", "https://api.bfl.ml", "flux api server")
 	ins.AddStringFlag("flux-api-key", "", "flux api key")
 
-	ins.AddBoolFlag("bigmodel-search-enabled", "是否启用 BigModel 搜索功能")
 	ins.AddStringFlag("bigmodel-search-api-key", "", "BigModel 搜索 API Key")
-
-	ins.AddStringFlag("search-engine", "bigmodel", "搜索引擎，支持 bigmodel")
+	ins.AddStringFlag("bochaai-search-api-key", "", "Bochaai 搜索 API Key")
+	ins.AddStringFlag("search-engine", "bigmodel", "搜索引擎，支持 bigmodel/bochaai")
+	ins.AddStringFlag("search-assistant-model", "gpt-4o-mini", "搜索助手模型")
+	ins.AddStringFlag("search-assistant-api-base", "https://api.openai.com/v1", "搜索助手 API Base")
+	ins.AddStringFlag("search-assistant-api-key", "", "搜索助手 API Key")
 }

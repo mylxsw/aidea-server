@@ -524,8 +524,15 @@ minimax-api-key: ""
 minimax-group-id: ""
 
 ######## Search 配置 ########
-# 搜索引擎，支持 bigmodel
+# 搜索引擎，支持 bigmodel/bochaai
 search-engine: bigmodel
 # BigModel 搜索 API Key
-bigmodel-search-enabled: true
 bigmodel-search-api-key: ""
+# Bochaai 搜索 API Key
+bochaai-search-api-key: ""
+
+######## Search Assistant 配置 ########
+# 搜索引擎助手，支持 bigmodel/bochaai
+search-assistant-model: gpt-4o-mini
+search-assistant-api-base: https://api.openai.com/v1
+search-assistant-api-key: ""

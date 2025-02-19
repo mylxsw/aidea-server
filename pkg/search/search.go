@@ -42,12 +42,14 @@ type Searcher interface {
 }
 
 type searchEngine struct {
-	conf *config.Config
+	conf      *config.Config
+	assistant *SearchAssistant
 }
 
-func NewSearcher(conf *config.Config) Searcher {
+func NewSearcher(conf *config.Config, assistant *SearchAssistant) Searcher {
 	return &searchEngine{
-		conf: conf,
+		conf:      conf,
+		assistant: assistant,
 	}
 }
 
@@ -62,6 +64,9 @@ func (s *searchEngine) Search(ctx context.Context, req *Request) (*Response, err
 	switch s.conf.SearchEngine {
 	case "bigmodel":
 		return NewBigModelSearch(s.conf.BigModelSearchAPIKey).Search(ctx, req)
+	case "bochaai":
+		return NewBochaaiSearch(s.conf.BochaaiSearchAPIKey, s.assistant).Search(ctx, req)
+	default:
 	}
 
 	return &Response{}, nil
