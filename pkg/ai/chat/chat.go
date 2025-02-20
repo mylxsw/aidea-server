@@ -530,6 +530,21 @@ func (ai *Imp) Channels(modelName string) []repo.ModelProvider {
 
 func (ai *Imp) fixRequest(ctx context.Context, req Request) (Request, repo.ModelProvider) {
 	mod := ai.queryModel(req.Model)
+
+	// 如果启用了 Reasoning，则优先使用 Reasoning 模型
+	reasoningModels := array.Filter(mod.Providers, func(pro repo.ModelProvider, _ int) bool {
+		return pro.Type == repo.ModelProviderTypeReasoning
+	})
+	defaultModels := array.Filter(mod.Providers, func(pro repo.ModelProvider, _ int) bool {
+		return pro.Type != repo.ModelProviderTypeReasoning
+	})
+
+	if req.EnableReasoning() {
+		mod.Providers = append(reasoningModels, defaultModels...)
+	} else {
+		mod.Providers = append(defaultModels, reasoningModels...)
+	}
+
 	pro := mod.SelectProvider(ctx)
 
 	if pro.ModelRewrite != "" {
@@ -545,10 +560,6 @@ func (ai *Imp) fixRequest(ctx context.Context, req Request) (Request, repo.Model
 
 	if req.EnableSearch() {
 		req.SearchCount = ternary.If(mod.Meta.SearchCount > 0, mod.Meta.SearchCount, 3)
-	}
-
-	if req.EnableReasoning() && pro.ReasoningModel != "" {
-		req.Model = pro.ReasoningModel
 	}
 
 	return req, pro
