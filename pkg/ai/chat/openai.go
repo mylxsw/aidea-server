@@ -75,9 +75,10 @@ func (chat *OpenAIChat) initRequest(req Request) (*openai.ChatCompletionRequest,
 
 	messages := append(systemMessages, contextMessages...)
 	return &openai.ChatCompletionRequest{
-		Model:     req.Model,
-		Messages:  messages,
-		MaxTokens: req.MaxTokens,
+		Model:       req.Model,
+		Messages:    messages,
+		MaxTokens:   req.MaxTokens,
+		Temperature: float32(req.Temperature),
 	}, nil
 }
 

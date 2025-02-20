@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/deepseek"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
@@ -13,12 +17,12 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/proxy"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/search"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
-	"net/http"
-	"strings"
+	"github.com/mylxsw/go-utils/ternary"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/go-utils/array"
@@ -106,7 +110,7 @@ func (ms Messages) ToLogEntry() Messages {
 	for i, msg := range ms {
 		mm := Message{
 			Role:    msg.Role,
-			Content: misc.SubString(msg.Content, 20),
+			Content: misc.ReduceString(msg.Content, 200),
 		}
 
 		if msg.MultipartContents != nil {
@@ -114,12 +118,12 @@ func (ms Messages) ToLogEntry() Messages {
 			for j, part := range msg.MultipartContents {
 				mm.MultipartContents[j] = &MultipartContent{
 					Type: part.Type,
-					Text: misc.SubString(part.Text, 20),
+					Text: misc.ReduceString(part.Text, 200),
 				}
 
 				if part.ImageURL != nil {
 					mm.MultipartContents[j].ImageURL = &ImageURL{
-						URL:    misc.SubString(part.ImageURL.URL, 20),
+						URL:    misc.ReduceString(part.ImageURL.URL, 200),
 						Detail: part.ImageURL.Detail,
 					}
 				}
@@ -187,12 +191,13 @@ func (ms Messages) Fix() Messages {
 
 // Request represents a request structure for chat completion API.
 type Request struct {
-	Stream    bool     `json:"stream,omitempty"`
-	Model     string   `json:"model"`
-	Messages  Messages `json:"messages"`
-	MaxTokens int      `json:"max_tokens,omitempty"`
-	N         int      `json:"n,omitempty"` // 复用作为 room_id
-	HistoryID int      `json:"history_id,omitempty"`
+	Stream      bool     `json:"stream,omitempty"`
+	Model       string   `json:"model"`
+	Messages    Messages `json:"messages"`
+	MaxTokens   int      `json:"max_tokens,omitempty"`
+	N           int      `json:"n,omitempty"` // 复用作为 room_id
+	HistoryID   int      `json:"history_id,omitempty"`
+	Temperature float64  `json:"temperature,omitempty"`
 
 	// 业务定制字段
 	RoomID    int64 `json:"-"`
@@ -202,6 +207,9 @@ type Request struct {
 	TempModel string `json:"temp_model,omitempty"`
 	// Flags 用于传递一些特殊的标记，进行更高级的控制
 	Flags []string `json:"flags,omitempty"`
+
+	// 额外参数
+	SearchCount int `json:"search_count,omitempty"`
 }
 
 func (req Request) EnableReasoning() bool {
@@ -214,15 +222,17 @@ func (req Request) EnableSearch() bool {
 
 func (req Request) Clone() Request {
 	return Request{
-		Stream:    req.Stream,
-		Model:     req.Model,
-		Messages:  array.Map(req.Messages, func(item Message, _ int) Message { return item }),
-		MaxTokens: req.MaxTokens,
-		N:         req.N,
-		RoomID:    req.RoomID,
-		WebSocket: req.WebSocket,
-		TempModel: req.TempModel,
-		Flags:     req.Flags,
+		Stream:      req.Stream,
+		Model:       req.Model,
+		Messages:    array.Map(req.Messages, func(item Message, _ int) Message { return item }),
+		MaxTokens:   req.MaxTokens,
+		N:           req.N,
+		Temperature: req.Temperature,
+		RoomID:      req.RoomID,
+		WebSocket:   req.WebSocket,
+		TempModel:   req.TempModel,
+		Flags:       req.Flags,
+		SearchCount: req.SearchCount,
 	}
 }
 
@@ -281,6 +291,39 @@ func (req Request) ReplaceSystemPrompt(prompt string) *Request {
 	return &req
 }
 
+// GetSystemPrompt 获取系统提示消息
+func (req Request) GetSystemPrompt() string {
+	if len(req.Messages) > 0 && req.Messages[0].Role == "system" {
+		return req.Messages[0].Content
+	}
+
+	return ""
+}
+
+// MergeSystemPrompt 合并系统提示消息
+func (req Request) MergeSystemPrompt(prompt string) *Request {
+	if prompt == "" {
+		return &req
+	}
+
+	if len(req.Messages) > 0 && req.Messages[0].Role == "system" {
+		req.Messages[0].Content = prompt + "\n" + req.Messages[0].Content
+	} else {
+		req.Messages = append(Messages{{Role: "system", Content: prompt}}, req.Messages...)
+	}
+
+	return &req
+}
+
+// AddContextToLastMessage 添加上下文到最后一轮对话
+func (req Request) AddContextToLastMessage(context string) *Request {
+	if len(req.Messages) > 0 {
+		req.Messages[len(req.Messages)-1].Content = context + "\n" + req.Messages[len(req.Messages)-1].Content
+	}
+
+	return &req
+}
+
 // Fix 修复请求内容，注意：上下文长度修复后，最终的上下文数量不包含 system 消息和用户最后一条消息
 func (req Request) Fix(chat Chat, maxContextLength int64, maxTokenCount int) (*Request, int64, error) {
 	// 自动缩减上下文长度至满足模型要求的最大长度，尽可能避免出现超过模型上下文长度的问题
@@ -308,7 +351,7 @@ func (req Request) Fix(chat Chat, maxContextLength int64, maxTokenCount int) (*R
 	if len(messages) > 0 {
 		lastMessageContent := messages[len(messages)-1].Content
 		lastMessageTokens, _ := TextTokenCount(lastMessageContent, req.Model)
-		if lastMessageTokens >= 4000 || misc.WordCount(lastMessageContent) >= 20000 {
+		if lastMessageTokens >= 7000 {
 			return nil, 0, errors.New("单条消息长度超过最大限制，请缩短输入内容长度")
 		}
 	}
@@ -352,6 +395,10 @@ type Chat interface {
 	MaxContextLength(model string) int
 }
 
+type ChatStreamWithSearch interface {
+	ChatStreamWithSearch(ctx context.Context, req Request) (<-chan Response, []search.Document, error)
+}
+
 type ChannelQuery interface {
 	// Channels Get all channels for the specified model
 	Channels(modelName string) []repo.ModelProvider
@@ -362,9 +409,10 @@ type Imp struct {
 	svc      *service.Service
 	proxy    *proxy.Proxy
 	resolver infra.Resolver
+	searcher search.Searcher
 }
 
-func NewChat(conf *config.Config, resolver infra.Resolver, svc *service.Service, ai *AI) Chat {
+func NewChat(conf *config.Config, resolver infra.Resolver, svc *service.Service, ai *AI, searcher search.Searcher) Chat {
 	var proxyDialer *proxy.Proxy
 	if conf.SupportProxy() {
 		resolver.MustResolve(func(pp *proxy.Proxy) {
@@ -372,7 +420,7 @@ func NewChat(conf *config.Config, resolver infra.Resolver, svc *service.Service,
 		})
 	}
 
-	return &Imp{ai: ai, svc: svc, proxy: proxyDialer, resolver: resolver}
+	return &Imp{ai: ai, svc: svc, proxy: proxyDialer, resolver: resolver, searcher: searcher}
 }
 
 func (ai *Imp) queryModel(modelId string) repo.Model {
@@ -481,45 +529,116 @@ func (ai *Imp) Channels(modelName string) []repo.ModelProvider {
 }
 
 func (ai *Imp) fixRequest(ctx context.Context, req Request) (Request, repo.ModelProvider) {
-	// TODO 这里是临时解决方案
-	// 使用微软的 Azure OpenAI 接口时，聊天内容只有“继续”两个字时，会触发风控，导致无法继续对话
-	req.Messages = array.Map(req.Messages, func(item Message, _ int) Message {
-		content := strings.TrimSpace(item.Content)
-		if content == "继续" {
-			item.Content = "请接着说"
-		}
+	mod := ai.queryModel(req.Model)
 
-		return item
+	// 如果启用了 Reasoning，则优先使用 Reasoning 模型
+	reasoningModels := array.Filter(mod.Providers, func(pro repo.ModelProvider, _ int) bool {
+		return pro.Type == repo.ModelProviderTypeReasoning
+	})
+	defaultModels := array.Filter(mod.Providers, func(pro repo.ModelProvider, _ int) bool {
+		return pro.Type != repo.ModelProviderTypeReasoning
 	})
 
-	mod := ai.queryModel(req.Model)
+	if req.EnableReasoning() {
+		mod.Providers = append(reasoningModels, defaultModels...)
+	} else {
+		mod.Providers = append(defaultModels, reasoningModels...)
+	}
+
 	pro := mod.SelectProvider(ctx)
 
 	if pro.ModelRewrite != "" {
 		req.Model = pro.ModelRewrite
 	}
 
-	systemPrompts := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
-	chatMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" })
+	req = *req.MergeSystemPrompt(mod.Meta.Prompt)
+	req.Messages = req.Messages.Fix()
 
-	if mod.Meta.Prompt != "" {
-		if len(systemPrompts) > 0 {
-			systemPrompts[0].Content = mod.Meta.Prompt + "\n" + systemPrompts[0].Content
-			systemPrompts = Messages{systemPrompts[0]}
-		} else {
-			systemPrompts = Messages{{Role: "system", Content: mod.Meta.Prompt}}
-		}
+	if mod.Meta.Temperature > 0 {
+		req.Temperature = mod.Meta.Temperature
 	}
 
-	req.Messages = Messages(append(systemPrompts, chatMessages...)).Fix()
+	if req.EnableSearch() {
+		req.SearchCount = ternary.If(mod.Meta.SearchCount > 0, mod.Meta.SearchCount, 3)
+	}
 
 	return req, pro
 }
 
+const searchPrompt = `# The following contents are the search results related to the user's message:
+%s
+In the search results I provide to you, each result is formatted as [webpage X begin]...[webpage X end], where X represents the numerical index of each article. Please cite the context at the end of the relevant sentence when appropriate. Use the citation format [citation:X] in the corresponding part of your answer. If a sentence is derived from multiple contexts, list all relevant citation numbers, such as [citation:3][citation:5]. Be sure all symbols in [citation:X] must be in English half-symbols and must not contain any spaces between them, such as "[citation:1]" should be "[citation:1]" not "【citation: 1】".
+When responding, please keep the following points in mind:
+- Today is %s.
+- Not all content in the search results is closely related to the user's question. You need to evaluate and filter the search results based on the question.
+- For listing-type questions (e.g., listing all flight information), try to limit the answer to 10 key points and inform the user that they can refer to the search sources for complete information. Prioritize providing the most complete and relevant items in the list. Avoid mentioning content not provided in the search results unless necessary.
+- For creative tasks (e.g., writing an essay), ensure that references are cited within the body of the text, such as [citation:3][citation:5], rather than only at the end of the text. You need to interpret and summarize the user's requirements, choose an appropriate format, fully utilize the search results, extract key information, and generate an answer that is insightful, creative, and professional. Extend the length of your response as much as possible, addressing each point in detail and from multiple perspectives, ensuring the content is rich and thorough.
+- If the response is lengthy, structure it well and summarize it in paragraphs. If a point-by-point format is needed, try to limit it to 5 points and merge related content.
+- For objective Q&A, if the answer is very brief, you may add one or two related sentences to enrich the content.
+- Choose an appropriate and visually appealing format for your response based on the user's requirements and the content of the answer, ensuring strong readability.
+- Your answer should synthesize information from multiple relevant webpages and avoid repeatedly citing the same webpage.
+- Unless the user requests otherwise, your response should be in the same language as the user's question.
+
+# The user's message is:
+`
+
 func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	req, pro := ai.fixRequest(ctx, req)
+
+	if req.EnableSearch() {
+		searchResult, err := ai.searcher.Search(ctx, &search.Request{
+			Query: req.Messages[len(req.Messages)-1].Content,
+			Histories: array.Map(req.Messages, func(item Message, _ int) search.History {
+				return search.History{
+					Role:    item.Role,
+					Content: item.Content,
+				}
+			}),
+			ResultCount: req.SearchCount,
+		})
+		if err != nil {
+			log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Errorf("search failed: %v", err)
+		} else {
+			searchMessage, _ := searchResult.ToMessage(req.SearchCount)
+			req = *req.AddContextToLastMessage(fmt.Sprintf(searchPrompt, searchMessage, time.Now().Format(time.RFC3339)))
+			// 移除 search 标记，避免在模型层级重复搜索 （比如 OpenRouter 渠道的模型本身就支持搜索）
+			req.Flags = array.Filter(req.Flags, func(flag string, _ int) bool { return flag != "search" })
+		}
+	}
+
 	log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Debug("chat stream request")
 	return ai.selectImp(pro).ChatStream(ctx, req)
+}
+
+func (ai *Imp) ChatStreamWithSearch(ctx context.Context, req Request) (<-chan Response, []search.Document, error) {
+	req, pro := ai.fixRequest(ctx, req)
+
+	var documents []search.Document
+	if req.EnableSearch() {
+		searchResult, err := ai.searcher.Search(ctx, &search.Request{
+			Query: req.Messages[len(req.Messages)-1].Content,
+			Histories: array.Map(req.Messages, func(item Message, _ int) search.History {
+				return search.History{
+					Role:    item.Role,
+					Content: item.Content,
+				}
+			}),
+			ResultCount: req.SearchCount,
+		})
+		if err != nil {
+			log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Errorf("search failed: %v", err)
+		} else {
+			searchMessage, _ := searchResult.ToMessage(req.SearchCount)
+			req = *req.AddContextToLastMessage(fmt.Sprintf(searchPrompt, searchMessage, time.Now().Format(time.RFC3339)))
+			// 移除 search 标记，避免在模型层级重复搜索 （比如 OpenRouter 渠道的模型本身就支持搜索）
+			req.Flags = array.Filter(req.Flags, func(flag string, _ int) bool { return flag != "search" })
+			documents = searchResult.Documents[:req.SearchCount]
+		}
+	}
+
+	log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Debug("chat stream request")
+	resp, err := ai.selectImp(pro).ChatStream(ctx, req)
+	return resp, documents, err
 }
 
 func (ai *Imp) MaxContextLength(model string) int {

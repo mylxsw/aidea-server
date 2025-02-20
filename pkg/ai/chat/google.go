@@ -3,13 +3,14 @@ package chat
 import (
 	"context"
 	"encoding/base64"
+	"strings"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
 	"github.com/mylxsw/go-utils/ternary"
-	"strings"
 )
 
 type GoogleChat struct {
@@ -115,42 +116,18 @@ func (chat *GoogleChat) Chat(ctx context.Context, req Request) (*Response, error
 		return nil, err
 	}
 
-	// Vision 模型必须要有图片才能用
-	if req.Model == google.ModelGeminiProVision && !googleReq.HasImage() {
-		return &Response{Text: "当前模型有以下限制，请您知晓：\n\n- 每次提问必须上传一张图片\n- 不支持多轮对话"}, nil
-	}
-
 	res, err := chat.gai.Chat(ctx, req.Model, *googleReq)
 	if err != nil {
 		return nil, err
 	}
 
-	resText := res.String()
-	if req.Model == google.ModelGeminiProVision {
-		resText += "\n\n> 注意：当前模型不支持多轮对话，对话结束"
-	}
-
-	return &Response{Text: resText}, nil
+	return &Response{Text: res.String()}, nil
 }
 
 func (chat *GoogleChat) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
 	googleReq, err := chat.initRequest(req)
 	if err != nil {
 		return nil, err
-	}
-
-	// Vision 模型必须要有图片才能用
-	if req.Model == google.ModelGeminiProVision && !googleReq.HasImage() {
-		res := make(chan Response)
-		go func() {
-			defer close(res)
-			select {
-			case <-ctx.Done():
-			case res <- Response{Text: "当前模型有以下限制，请您知晓：\n\n- 每次提问必须上传一张图片\n- 不支持多轮对话"}:
-			}
-		}()
-
-		return res, nil
 	}
 
 	stream, err := chat.gai.ChatStream(ctx, req.Model, *googleReq)
@@ -161,12 +138,6 @@ func (chat *GoogleChat) ChatStream(ctx context.Context, req Request) (<-chan Res
 	res := make(chan Response)
 	go func() {
 		defer func() {
-			if req.Model == google.ModelGeminiProVision {
-				select {
-				case res <- Response{Text: "\n\n> 注意：当前模型不支持多轮对话，对话结束"}:
-				}
-			}
-
 			close(res)
 		}()
 

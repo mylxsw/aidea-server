@@ -373,6 +373,7 @@ type ModelPriceInfo struct {
 	Input   int    `json:"input,omitempty"`
 	Output  int    `json:"output,omitempty"`
 	Request int    `json:"request,omitempty"`
+	Search  int    `json:"search,omitempty"`
 	Note    string `json:"note,omitempty"`
 }
 
@@ -387,11 +388,15 @@ func (ctl *ModelController) generatePriceInfo(item repo.Model) string {
 	if item.Meta.PerReqPrice > 0 {
 		noteItems = append(noteItems, fmt.Sprintf("每次请求%s扣除 %d 个智慧果", ternary.If(len(noteItems) > 0, "额外", ""), item.Meta.PerReqPrice))
 	}
+	if item.Meta.SearchPrice > 0 {
+		noteItems = append(noteItems, fmt.Sprintf("每次搜索扣除 %d 个智慧果", item.Meta.SearchPrice))
+	}
 
 	data, _ := json.Marshal(ModelPriceInfo{
 		Input:   item.Meta.InputPrice,
 		Output:  item.Meta.OutputPrice,
 		Request: item.Meta.PerReqPrice,
+		Search:  item.Meta.SearchPrice,
 		Note:    ternary.If(len(noteItems) > 0, strings.Join(noteItems, "，")+"。", ""),
 	})
 

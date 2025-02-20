@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mylxsw/aidea-server/pkg/misc"
 	"io"
 	"math/rand"
 	"strings"
+
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/asteria/log"
 
 	"github.com/mylxsw/go-utils/array"
 	"github.com/pkoukk/tiktoken-go"
@@ -134,10 +136,17 @@ func (client *realClientImpl) client(model string) *openai.Client {
 }
 
 func (client *realClientImpl) CreateChatCompletion(ctx context.Context, request openai.ChatCompletionRequest) (response openai.ChatCompletionResponse, err error) {
+	if log.DebugEnabled() {
+		log.With(request).Debug("create chat completion")
+	}
 	return client.client(request.Model).CreateChatCompletion(ctx, request)
 }
 
 func (client *realClientImpl) CreateChatCompletionStream(ctx context.Context, request openai.ChatCompletionRequest) (stream *openai.ChatCompletionStream, err error) {
+	if log.DebugEnabled() {
+		log.With(request).Debug("create chat completion stream")
+	}
+
 	return client.client(request.Model).CreateChatCompletionStream(ctx, request)
 }
 
@@ -211,7 +220,7 @@ func (client *realClientImpl) QuickAsk(ctx context.Context, prompt string, quest
 	messages = append(messages, openai.ChatCompletionMessage{Content: question, Role: openai.ChatMessageRoleUser})
 
 	req := openai.ChatCompletionRequest{
-		Model:       SelectBestModel("gpt-3.5-turbo", 200),
+		Model:       "gpt-4o-mini",
 		MaxTokens:   maxTokenCount,
 		Temperature: 0.2,
 		Messages:    messages,

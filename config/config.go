@@ -2,11 +2,12 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
-	"os"
-	"strings"
 
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/glacier/starter/app"
@@ -330,6 +331,17 @@ type Config struct {
 	// Flux model
 	FluxAPIServer string `json:"flux_api_server" yaml:"flux_api_server"`
 	FluxAPIKey    string `json:"flux_api_key" yaml:"flux_api_key"`
+
+	// Search 配置
+	SearchEngine string `json:"search_engine" yaml:"search_engine"`
+	// BigModel Search 配置
+	BigModelSearchAPIKey string `json:"bigmodel_search_api_key" yaml:"bigmodel_search_api_key"`
+	// Bochaai Search 配置
+	BochaaiSearchAPIKey string `json:"bochaai_search_api_key" yaml:"bochaai_search_api_key"`
+	// Search Assistant 配置 (用于将用户的对话上下文转换为搜索查询
+	SearchAssistantModel   string `json:"search_assistant_model" yaml:"search_assistant_model"`
+	SearchAssistantAPIBase string `json:"search_assistant_api_base" yaml:"search_assistant_api_base"`
+	SearchAssistantAPIKey  string `json:"search_assistant_api_key" yaml:"search_assistant_api_key"`
 }
 
 func (conf *Config) SupportProxy() bool {
@@ -654,6 +666,13 @@ func Register(ins *app.App) {
 
 			FluxAPIServer: ctx.String("flux-api-server"),
 			FluxAPIKey:    ctx.String("flux-api-key"),
+
+			BigModelSearchAPIKey:   ctx.String("bigmodel-search-api-key"),
+			BochaaiSearchAPIKey:    ctx.String("bochaai-search-api-key"),
+			SearchEngine:           ctx.String("search-engine"),
+			SearchAssistantModel:   ctx.String("search-assistant-model"),
+			SearchAssistantAPIBase: ctx.String("search-assistant-api-base"),
+			SearchAssistantAPIKey:  ctx.String("search-assistant-api-key"),
 		}
 	})
 }

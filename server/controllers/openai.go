@@ -5,6 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/chat"
 	"github.com/mylxsw/aidea-server/pkg/ai/control"
 	openaiHelper "github.com/mylxsw/aidea-server/pkg/ai/openai"
@@ -13,16 +20,11 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
+	"github.com/mylxsw/aidea-server/pkg/search"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/tencent"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
 	"github.com/mylxsw/go-utils/array"
-	"net/http"
-	"os"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -218,6 +220,7 @@ type FinalMessage struct {
 	Info          string  `json:"info,omitempty"`
 	Error         string  `json:"error,omitempty"`
 	TimeConsumed  float64 `json:"time_consumed,omitempty"`
+	Data          string  `json:"data,omitempty"`
 }
 
 func (m FinalMessage) ToJSON() string {
@@ -325,16 +328,6 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
-	// 免费模型
-	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
-	var leftCount, maxFreeCount int
-	if user.User.ID > 0 {
-		leftCount, maxFreeCount = ctl.chatSrv.FreeChatRequestCounts(subCtx, user.User.ID, req.Model)
-	} else {
-		// 匿名用户，每次都是免费的，不限制次数，通过流控来限制访问
-		leftCount, maxFreeCount = 1, 0
-	}
-
 	// 查询模型信息
 	mod := ctl.chatSrv.Model(subCtx, req.Model)
 	if mod == nil || mod.Status == repo.ModelStatusDisabled {
@@ -342,10 +335,31 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		return
 	}
 
+	// 免费模型
+	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
+	var leftCount, maxFreeCount int
+
+	// 如果启用了搜索，并且模型的搜索价格>0，则必须收费
+	if mod.Meta.SearchPrice > 0 && req.EnableSearch() {
+		leftCount, maxFreeCount = 0, 0
+	} else {
+		if user.User.ID > 0 {
+			leftCount, maxFreeCount = ctl.chatSrv.FreeChatRequestCounts(subCtx, user.User.ID, req.Model)
+		} else {
+			// 匿名用户，每次都是免费的，不限制次数，通过流控来限制访问
+			leftCount, maxFreeCount = 1, 0
+		}
+	}
+
 	if leftCount <= 0 {
 		quota, needCoins, err := ctl.queryChatQuota(subCtx, user.User, sw, webCtx, inputTokenCount, mod)
 		if err != nil {
 			return
+		}
+
+		// 如果启用了 Search，需要额外的智慧果
+		if mod.Meta.SearchPrice > 0 && req.EnableSearch() {
+			needCoins += int64(mod.Meta.SearchPrice)
 		}
 
 		// 智慧果不足
@@ -420,7 +434,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	quotaConsume = ctl.resolveConsumeQuota(req, replyText+thinkingProcess.Content, leftCount > 0, mod)
 
 	func() {
-		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 
 		// 写入用户消息
@@ -464,6 +478,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 			meta.InputPrice = quotaConsume.InputPrice
 			meta.OutputPrice = quotaConsume.OutputPrice
 			meta.ReqPrice = quotaConsume.PerReqPrice
+			meta.SearchPrice = int64(mod.Meta.SearchPrice)
 
 			if err := quotaRepo.QuotaConsume(ctx, user.User.ID, quotaConsume.TotalPrice, meta); err != nil {
 				log.Errorf("used quota add failed: %s", err)
@@ -561,7 +576,16 @@ func (ctl *OpenAIController) handleChat(
 
 	newReq := req.Clone()
 
-	stream, err := ctl.chat.ChatStream(chatCtx, newReq.Purification())
+	var stream <-chan chat.Response
+	var err error
+	var documents []search.Document
+
+	if css, ok := ctl.chat.(chat.ChatStreamWithSearch); ok {
+		stream, documents, err = css.ChatStreamWithSearch(chatCtx, newReq.Purification())
+	} else {
+		stream, err = ctl.chat.ChatStream(chatCtx, newReq.Purification())
+	}
+
 	if err != nil {
 		shouldReturnError := retryTimes >= maxRetryTimes || startTime.Add(60*time.Second).Before(time.Now())
 
@@ -594,6 +618,14 @@ func (ctl *OpenAIController) handleChat(
 
 	if replyText == "" {
 		return replyText, thinkingProcess, ErrChatResponseEmpty
+	}
+
+	if len(documents) > 0 {
+		referenceData, _ := json.Marshal(documents)
+		ctl.writeControlMessage(sw, client, req.Model, FinalMessage{
+			Type: "reference-documents",
+			Data: string(referenceData),
+		})
 	}
 
 	return replyText, thinkingProcess, nil
@@ -651,7 +683,7 @@ func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Re
 	defer thinkingDone()
 
 	// 生成 SSE 流
-	timer := time.NewTimer(180 * time.Second)
+	timer := time.NewTimer(600 * time.Second)
 	defer timer.Stop()
 
 	id := 0
@@ -949,6 +981,7 @@ type QuotaConsume struct {
 	InputPrice   float64
 	OutputPrice  float64
 	PerReqPrice  int64
+	SearchPrice  int64
 	TotalPrice   int64
 }
 
@@ -968,8 +1001,10 @@ func (ctl *OpenAIController) resolveConsumeQuota(req *chat.Request, replyText st
 	ret := QuotaConsume{
 		InputTokens:  inputTokens,
 		OutputTokens: outputTokens,
+		SearchPrice:  int64(ternary.If(req.EnableSearch() && mod.Meta.SearchPrice > 0, mod.Meta.SearchPrice, 0)),
 	}
 	ret.InputPrice, ret.OutputPrice, ret.PerReqPrice, ret.TotalPrice = coins.GetTextModelCoinsDetail(mod.ToCoinModel(), int64(inputTokens), int64(outputTokens))
+	ret.TotalPrice += ret.SearchPrice
 
 	// 免费请求，不扣除智慧果
 	if isFreeRequest || replyText == "" {

@@ -2,9 +2,11 @@ package chat
 
 import (
 	"context"
+	"fmt"
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
+	"github.com/mylxsw/go-utils/ternary"
 	"github.com/sashabaranov/go-openai"
 	"strings"
 )
@@ -37,11 +39,23 @@ func (chat *OpenRouterChat) initRequest(req Request) (*openai.ChatCompletionRequ
 	}
 
 	messages := append(systemMessages, contextMessages...)
-	return &openai.ChatCompletionRequest{
-		Model:     req.Model,
-		Messages:  messages,
-		MaxTokens: req.MaxTokens,
-	}, nil
+	newReq := openai.ChatCompletionRequest{
+		Model:       req.Model,
+		Messages:    messages,
+		MaxTokens:   req.MaxTokens,
+		Temperature: float32(req.Temperature),
+	}
+
+	if req.EnableSearch() {
+		// Doc: https://openrouter.ai/docs/features/web-search
+		newReq.Model = fmt.Sprintf("%s:online", newReq.Model)
+		newReq.Plugins = []map[string]any{{
+			"id":          "web",
+			"max_results": ternary.If(req.SearchCount > 0, req.SearchCount, 3),
+		}}
+	}
+
+	return &newReq, nil
 }
 
 func (chat *OpenRouterChat) Chat(ctx context.Context, req Request) (*Response, error) {

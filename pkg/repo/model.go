@@ -101,6 +101,8 @@ type ModelMeta struct {
 	OutputPrice int `json:"output_price"`
 	// PerReqPrice 每次请求价格（智慧果/次）
 	PerReqPrice int `json:"per_req_price,omitempty"`
+	// SearchPrice 每次使用搜索价格（智慧果/次）
+	SearchPrice int `json:"search_price,omitempty"`
 
 	// Prompt 全局的系统提示语
 	Prompt string `json:"prompt,omitempty"`
@@ -121,6 +123,11 @@ type ModelMeta struct {
 	Reasoning bool `json:"reasoning,omitempty"`
 	// Search 是否支持搜索能力
 	Search bool `json:"search,omitempty"`
+	// SearchCount 搜索结果数量
+	SearchCount int `json:"search_count,omitempty"`
+
+	// Temperature 温度
+	Temperature float64 `json:"temperature,omitempty"`
 }
 
 type ModelProvider struct {
@@ -130,7 +137,14 @@ type ModelProvider struct {
 	Name string `json:"name,omitempty"`
 	// ModelRewrite 模型名称重写，如果为空，则使用模型的名称
 	ModelRewrite string `json:"model_rewrite,omitempty"`
+	// Type 模型类型：default,reasoning
+	Type string `json:"type,omitempty"`
 }
+
+const (
+	ModelProviderTypeDefault   = "default"
+	ModelProviderTypeReasoning = "reasoning"
+)
 
 // SupportProvider check if the model support the provider
 func (m Model) SupportProvider(providerName string) *ModelProvider {
