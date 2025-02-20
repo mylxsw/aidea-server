@@ -547,6 +547,10 @@ func (ai *Imp) fixRequest(ctx context.Context, req Request) (Request, repo.Model
 		req.SearchCount = ternary.If(mod.Meta.SearchCount > 0, mod.Meta.SearchCount, 3)
 	}
 
+	if req.EnableReasoning() && pro.ReasoningModel != "" {
+		req.Model = pro.ReasoningModel
+	}
+
 	return req, pro
 }
 

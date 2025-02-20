@@ -1930,6 +1930,10 @@ const docTemplate = `{
                 "name": {
                     "description": "Name 供应商名称",
                     "type": "string"
+                },
+                "reasoning_model": {
+                    "description": "ReasoningModel 推理模型名称",
+                    "type": "string"
                 }
             }
         },

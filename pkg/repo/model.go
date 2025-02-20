@@ -137,6 +137,8 @@ type ModelProvider struct {
 	Name string `json:"name,omitempty"`
 	// ModelRewrite 模型名称重写，如果为空，则使用模型的名称
 	ModelRewrite string `json:"model_rewrite,omitempty"`
+	// ReasoningModel 推理模型名称
+	ReasoningModel string `json:"reasoning_model,omitempty"`
 }
 
 // SupportProvider check if the model support the provider
