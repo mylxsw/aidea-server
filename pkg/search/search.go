@@ -39,6 +39,9 @@ type Document struct {
 	Source  string `json:"source,omitempty"`
 	Title   string `json:"title,omitempty"`
 	Content string `json:"content,omitempty"`
+	Icon    string `json:"icon,omitempty"`
+	Media   string `json:"media,omitempty"`
+	Index   string `json:"index,omitempty"`
 }
 
 type Searcher interface {

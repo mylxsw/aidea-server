@@ -75,6 +75,7 @@ func (b *BigModelSearch) Search(ctx context.Context, req *Request) (*Response, e
 	}
 
 	var documents []Document
+	var index int
 	for _, choice := range apiResp.Choices {
 		for _, toolCall := range choice.Message.ToolCalls {
 			if toolCall.Type != "search_result" {
@@ -90,7 +91,11 @@ func (b *BigModelSearch) Search(ctx context.Context, req *Request) (*Response, e
 					Content: result.Content,
 					Source:  result.Link,
 					Title:   result.Title,
+					Icon:    result.Icon,
+					Media:   result.Media,
+					Index:   fmt.Sprintf("%d", index+1),
 				})
+				index++
 			}
 		}
 	}

@@ -73,11 +73,14 @@ func (b *BochaaiSearch) Search(ctx context.Context, req *Request) (*Response, er
 	}
 
 	var documents []Document
-	for _, result := range apiResp.Data.WebPages.Value {
+	for i, result := range apiResp.Data.WebPages.Value {
 		documents = append(documents, Document{
 			Title:   result.Name,
 			Source:  result.URL,
 			Content: result.Summary,
+			Icon:    result.SiteIcon,
+			Media:   result.SiteName,
+			Index:   fmt.Sprintf("%d", i+1),
 		})
 	}
 
