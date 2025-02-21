@@ -23,6 +23,10 @@ type Response struct {
 }
 
 func (resp *Response) ToMessage(limit int) (string, []Document) {
+	if limit > len(resp.Documents) {
+		limit = len(resp.Documents)
+	}
+
 	result := ""
 	for i, doc := range resp.Documents[:limit] {
 		result += fmt.Sprintf("[webpage %d begin]\nurl: %s\ntitle: %s\ncontent: %s\n[webpage %d end]\n", i+1, doc.Source, doc.Title, doc.Content, i+1)
