@@ -106,6 +106,10 @@ func (svc *ChatService) ChannelTypes() []ChannelType {
 // IsFreeModel 判断模型是否免费
 func (svc *ChatService) IsFreeModel(ctx context.Context, modelID string) bool {
 	mod := svc.Model(ctx, modelID)
+	if mod == nil {
+		return false
+	}
+	
 	return mod.Meta.InputPrice == 0 && mod.Meta.OutputPrice == 0 && mod.Meta.PerReqPrice == 0
 }
 

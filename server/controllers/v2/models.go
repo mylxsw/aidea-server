@@ -199,7 +199,7 @@ func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.Clie
 		return ret
 	})
 
-	sortPriority := []string{"OpenAI", "Anthropic", "Google", "xAI", "Amazon", "Meta", "百度", "阿里", "科大讯飞"}
+	sortPriority := []string{"DeepSeek", "OpenAI", "Anthropic", "Google", "xAI", "Perplexity", "Amazon", "Meta", "科大讯飞", "阿里", "百度"}
 	models = array.Sort(models, func(i, j controllers.Model) bool {
 		if i.Category == "" && j.Category != "" {
 			return false

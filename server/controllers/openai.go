@@ -586,6 +586,15 @@ func (ctl *OpenAIController) handleChat(
 		stream, err = ctl.chat.ChatStream(chatCtx, newReq.Purification())
 	}
 
+	if len(documents) > 0 {
+		// 发送搜索结果给客户端
+		searchResult, _ := json.Marshal(documents)
+		ctl.writeControlMessage(sw, client, req.Model, FinalMessage{
+			Type: "search-results",
+			Data: string(searchResult),
+		})
+	}
+
 	if err != nil {
 		shouldReturnError := retryTimes >= maxRetryTimes || startTime.Add(60*time.Second).Before(time.Now())
 
@@ -620,13 +629,13 @@ func (ctl *OpenAIController) handleChat(
 		return replyText, thinkingProcess, ErrChatResponseEmpty
 	}
 
-	if len(documents) > 0 {
-		referenceData, _ := json.Marshal(documents)
-		ctl.writeControlMessage(sw, client, req.Model, FinalMessage{
-			Type: "reference-documents",
-			Data: string(referenceData),
-		})
-	}
+	//if len(documents) > 0 {
+	//	referenceData, _ := json.Marshal(documents)
+	//	ctl.writeControlMessage(sw, client, req.Model, FinalMessage{
+	//		Type: "reference-documents",
+	//		Data: string(referenceData),
+	//	})
+	//}
 
 	return replyText, thinkingProcess, nil
 }

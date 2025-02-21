@@ -615,25 +615,35 @@ func (ai *Imp) ChatStreamWithSearch(ctx context.Context, req Request) (<-chan Re
 
 	var documents []search.Document
 	if req.EnableSearch() {
-		searchResult, err := ai.searcher.Search(ctx, &search.Request{
-			Query: req.Messages[len(req.Messages)-1].Content,
-			Histories: array.Map(req.Messages, func(item Message, _ int) search.History {
-				return search.History{
-					Role:    item.Role,
-					Content: item.Content,
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Errorf("search panic: %v", r)
 				}
-			}),
-			ResultCount: req.SearchCount,
-		})
-		if err != nil {
-			log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Errorf("search failed: %v", err)
-		} else {
-			searchMessage, _ := searchResult.ToMessage(req.SearchCount)
-			req = *req.AddContextToLastMessage(fmt.Sprintf(searchPrompt, searchMessage, time.Now().Format(time.RFC3339)))
-			// 移除 search 标记，避免在模型层级重复搜索 （比如 OpenRouter 渠道的模型本身就支持搜索）
-			req.Flags = array.Filter(req.Flags, func(flag string, _ int) bool { return flag != "search" })
-			documents = searchResult.Documents[:req.SearchCount]
-		}
+			}()
+			searchResult, err := ai.searcher.Search(ctx, &search.Request{
+				Query: req.Messages[len(req.Messages)-1].Content,
+				Histories: array.Map(req.Messages, func(item Message, _ int) search.History {
+					return search.History{
+						Role:    item.Role,
+						Content: item.Content,
+					}
+				}),
+				ResultCount: req.SearchCount,
+			})
+			if err != nil {
+				log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Errorf("search failed: %v", err)
+			} else {
+				searchMessage, _ := searchResult.ToMessage(req.SearchCount)
+				req = *req.AddContextToLastMessage(fmt.Sprintf(searchPrompt, searchMessage, time.Now().Format(time.RFC3339)))
+				// 移除 search 标记，避免在模型层级重复搜索 （比如 OpenRouter 渠道的模型本身就支持搜索）
+				req.Flags = array.Filter(req.Flags, func(flag string, _ int) bool { return flag != "search" })
+				if req.SearchCount > len(searchResult.Documents) {
+					req.SearchCount = len(searchResult.Documents)
+				}
+				documents = searchResult.Documents[:req.SearchCount]
+			}
+		}()
 	}
 
 	log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Debug("chat stream request")
