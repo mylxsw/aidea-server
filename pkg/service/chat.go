@@ -109,7 +109,7 @@ func (svc *ChatService) IsFreeModel(ctx context.Context, modelID string) bool {
 	if mod == nil {
 		return false
 	}
-	
+
 	return mod.Meta.InputPrice == 0 && mod.Meta.OutputPrice == 0 && mod.Meta.PerReqPrice == 0
 }
 
@@ -153,7 +153,8 @@ func PureModelID(modelID string) string {
 		return modelID
 	}
 
-	res := pureModelID()
+	res := strings.TrimPrefix(pureModelID(), "v2@model|")
+
 	// 临时处理，南贤北丑模型名称已经变更，这里做一个兼容处理
 	switch res {
 	case "nanxian":

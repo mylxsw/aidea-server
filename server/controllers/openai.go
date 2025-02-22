@@ -529,7 +529,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	// 更新用户免费聊天次数
 	if replyText != "" {
 		func() {
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 
 			if err := ctl.chatSrv.UpdateFreeChatCount(ctx, user.User.ID, req.Model); err != nil {
@@ -544,7 +544,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	// 扣除智慧果
 	if leftCount <= 0 && quotaConsume.TotalPrice > 0 {
 		func() {
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 
 			meta := repo.NewQuotaUsedMeta("chat", req.Model)
@@ -641,7 +641,7 @@ func (ctl *OpenAIController) handleChat(
 	maxRetryTimes int,
 	startTime time.Time,
 ) (string, ThinkingProcess, error) {
-	chatCtx, cancel := context.WithTimeout(ctx, 180*time.Second)
+	chatCtx, cancel := context.WithTimeout(ctx, 600*time.Second)
 	defer cancel()
 
 	// 如果是重试请求，则优先使用备用模型
@@ -1136,7 +1136,7 @@ func (ctl *OpenAIController) saveChatQuestion(ctx context.Context, user *auth.Us
 func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int64, userID int64) (int64, *model.Rooms) {
 	var maxContextLength int64 = 3
 	if roomID > 0 && userID > 0 {
-		ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
 
 		room, err := ctl.chatSrv.Room(ctx, userID, roomID)

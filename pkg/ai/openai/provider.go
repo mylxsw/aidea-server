@@ -88,14 +88,14 @@ func createOpenAIClient(isAzure bool, apiVersion string, server, organization, k
 	openaiConf := openai.DefaultConfig(key)
 	openaiConf.BaseURL = server
 	openaiConf.OrgID = organization
-	httpClient := &http.Client{Timeout: 180 * time.Second}
+	httpClient := &http.Client{Timeout: 600 * time.Second}
 	if pp != nil {
 		httpClient.Transport = NewCustomRequestTransport(pp.BuildTransport(), header)
 	} else {
 		httpClient.Transport = NewCustomRequestTransport(
 			&http.Transport{
 				DialContext: (&net.Dialer{
-					Timeout: 120 * time.Second,
+					Timeout: 180 * time.Second,
 				}).DialContext,
 			},
 			header,
