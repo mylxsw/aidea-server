@@ -36,19 +36,19 @@ func TestRequestFix(t *testing.T) {
 	}.Init()
 
 	{
-		fixed, _, err := req.Fix(ChatTestClient{}, 0, 1024*200)
+		fixed, _, err := req.FixContextWindow(ChatTestClient{}, 0, 1024*200)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(fixed.Messages))
 	}
 
 	{
-		fixed, _, err := req.Fix(ChatTestClient{}, 1, 1024*200)
+		fixed, _, err := req.FixContextWindow(ChatTestClient{}, 1, 1024*200)
 		assert.NoError(t, err)
 		assert.Equal(t, 4, len(fixed.Messages))
 	}
 
 	{
-		fixed, _, err := req.Fix(ChatTestClient{}, 2, 1024*200)
+		fixed, _, err := req.FixContextWindow(ChatTestClient{}, 2, 1024*200)
 		assert.NoError(t, err)
 		assert.Equal(t, 6, len(fixed.Messages))
 	}
@@ -61,11 +61,15 @@ func TestMessages_Fix(t *testing.T) {
 		{Role: "user", Content: "怎么了？"},
 		{Role: "user", Content: "你是谁？"},
 		{Role: "user", Content: "你是谁？"},
+		{Role: "assistant", Content: "我是小助手"},
+		{Role: "assistant", Content: "我在呢，你有什么问题吗？"},
 		{Role: "assistant", Content: "我在呢，你有什么问题吗？"},
 	}
 
 	messages = messages.Fix()
-	log.With(messages).Debug("messages")
+	for _, msg := range messages {
+		log.Debugf("%s: %s", msg.Role, msg.Content)
+	}
 }
 
 func TestDashscopeChat_InitRequest(t *testing.T) {
@@ -81,14 +85,14 @@ func TestDashscopeChat_InitRequest(t *testing.T) {
 		}
 
 		res := client.initRequest(Request{Messages: messages})
-		assert.Equal(t, "继续", res.Input.Prompt)
-		assert.Equal(t, 2, len(res.Input.History))
+		assert.Equal(t, "假如你是鲁迅，请使用批判性，略带讽刺的语言来回答我的问题，语言要风趣，幽默，略带调侃", res.Input.Prompt)
+		assert.Equal(t, 5, len(res.Input.History))
 
 		for i, msg := range res.Input.History {
 			log.With(msg).Debugf("history #%d", i)
 		}
 
-		assert.Equal(t, 2, len(res.Input.History))
+		assert.Equal(t, 5, len(res.Input.History))
 
 		log.Debug("=====================================")
 	}
@@ -101,7 +105,7 @@ func TestDashscopeChat_InitRequest(t *testing.T) {
 		}
 
 		res := client.initRequest(Request{Messages: messages})
-		assert.Equal(t, "老铁，最近怎么样？", res.Input.Prompt)
+		assert.Equal(t, "假如你是鲁迅，请使用批判性，略带讽刺的语言来回答我的问题，语言要风趣，幽默，略带调侃", res.Input.Prompt)
 
 		for i, msg := range res.Input.History {
 			log.With(msg).Debugf("history #%d", i)
@@ -119,7 +123,7 @@ func TestDashscopeChat_InitRequest(t *testing.T) {
 		}
 
 		res := client.initRequest(Request{Messages: messages})
-		assert.Equal(t, "老铁，最近怎么样？", res.Input.Prompt)
+		assert.Equal(t, "假如你是鲁迅，请使用批判性，略带讽刺的语言来回答我的问题，语言要风趣，幽默，略带调侃", res.Input.Prompt)
 
 		for i, msg := range res.Input.History {
 			log.With(msg).Debugf("history #%d", i)
@@ -179,7 +183,7 @@ func TestDashscopeChat_InitRequest(t *testing.T) {
 			log.With(msg).Debugf("history #%d", i)
 		}
 
-		assert.Equal(t, 0, len(res.Input.History))
+		assert.Equal(t, 1, len(res.Input.History))
 
 		log.Debug("=====================================")
 	}
