@@ -175,7 +175,11 @@ func (ms Messages) Fix() Messages {
 
 	for _, m := range array.Reverse(msgs) {
 		if m.Role == lastRole {
-			continue
+			complementaryRole := ternary.If(m.Role == "assistant", "user", "assistant")
+			finalMessages = append(finalMessages, Message{
+				Role:    complementaryRole,
+				Content: ternary.If(complementaryRole == "user", "继续", "嗯，我需要一点时间来思考一下"),
+			})
 		}
 
 		lastRole = m.Role
@@ -324,8 +328,8 @@ func (req Request) AddContextToLastMessage(context string) *Request {
 	return &req
 }
 
-// Fix 修复请求内容，注意：上下文长度修复后，最终的上下文数量不包含 system 消息和用户最后一条消息
-func (req Request) Fix(chat Chat, maxContextLength int64, maxTokenCount int) (*Request, int64, error) {
+// FixContextWindow 修复请求内容，注意：上下文长度修复后，最终的上下文数量不包含 system 消息和用户最后一条消息
+func (req Request) FixContextWindow(chat Chat, maxContextLength int64, maxTokenCount int) (*Request, int64, error) {
 	// 自动缩减上下文长度至满足模型要求的最大长度，尽可能避免出现超过模型上下文长度的问题
 	systemMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
 	systemMessageLen, _ := MessageTokenCount(systemMessages, req.Model)
@@ -519,7 +523,7 @@ func (ai *Imp) selectProvider(name string) Chat {
 }
 
 func (ai *Imp) Chat(ctx context.Context, req Request) (*Response, error) {
-	req, pro := ai.fixRequest(ctx, req)
+	req, pro := ai.standardizedRequest(ctx, req)
 	return ai.selectImp(pro).Chat(ctx, req)
 }
 
@@ -528,7 +532,8 @@ func (ai *Imp) Channels(modelName string) []repo.ModelProvider {
 	return ai.queryModel(modelName).Providers
 }
 
-func (ai *Imp) fixRequest(ctx context.Context, req Request) (Request, repo.ModelProvider) {
+// standardizedRequest 标准化请求，根据请求的模型选择合适的 AI 服务提供商等
+func (ai *Imp) standardizedRequest(ctx context.Context, req Request) (Request, repo.ModelProvider) {
 	mod := ai.queryModel(req.Model)
 
 	// 如果启用了 Reasoning，则优先使用 Reasoning 模型
@@ -583,7 +588,7 @@ When responding, please keep the following points in mind:
 `
 
 func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, error) {
-	req, pro := ai.fixRequest(ctx, req)
+	req, pro := ai.standardizedRequest(ctx, req)
 
 	if req.EnableSearch() {
 		searchResult, err := ai.searcher.Search(ctx, &search.Request{
@@ -611,7 +616,7 @@ func (ai *Imp) ChatStream(ctx context.Context, req Request) (<-chan Response, er
 }
 
 func (ai *Imp) ChatStreamWithSearch(ctx context.Context, req Request) (<-chan Response, []search.Document, error) {
-	req, pro := ai.fixRequest(ctx, req)
+	req, pro := ai.standardizedRequest(ctx, req)
 
 	var documents []search.Document
 	if req.EnableSearch() {
