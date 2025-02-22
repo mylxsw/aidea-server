@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/search"
+	"github.com/mylxsw/go-utils/must"
 	"net/http"
 	"os"
 	"strconv"
@@ -20,7 +22,6 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/repo/model"
-	"github.com/mylxsw/aidea-server/pkg/search"
 	"github.com/mylxsw/aidea-server/pkg/service"
 	"github.com/mylxsw/aidea-server/pkg/tencent"
 	"github.com/mylxsw/aidea-server/pkg/youdao"
@@ -53,6 +54,7 @@ type OpenAIController struct {
 	chatSrv     *service.ChatService     `autowire:"@"`
 	limiter     *rate.RateLimiter        `autowire:"@"`
 	repo        *repo.Repository         `autowire:"@"`
+	search      search.Searcher          `autowire:"@"`
 
 	upgrader websocket.Upgrader
 
@@ -227,6 +229,23 @@ func (m FinalMessage) ToJSON() string {
 	data, _ := json.Marshal(m)
 	return string(data)
 }
+
+const searchPrompt = `# The following contents are the search results related to the user's message:
+%s
+In the search results I provide to you, each result is formatted as [webpage X begin]...[webpage X end], where X represents the numerical index of each article. Please cite the context at the end of the relevant sentence when appropriate. Use the citation format [citation:X] in the corresponding part of your answer. If a sentence is derived from multiple contexts, list all relevant citation numbers, such as [citation:3][citation:5]. Be sure all symbols in [citation:X] must be in English half-symbols and must not contain any spaces between them, such as "[citation:1]" should be "[citation:1]" not "【citation: 1】".
+When responding, please keep the following points in mind:
+- Today is %s.
+- Not all content in the search results is closely related to the user's question. You need to evaluate and filter the search results based on the question.
+- For listing-type questions (e.g., listing all flight information), try to limit the answer to 10 key points and inform the user that they can refer to the search sources for complete information. Prioritize providing the most complete and relevant items in the list. Avoid mentioning content not provided in the search results unless necessary.
+- For creative tasks (e.g., writing an essay), ensure that references are cited within the body of the text, such as [citation:3][citation:5], rather than only at the end of the text. You need to interpret and summarize the user's requirements, choose an appropriate format, fully utilize the search results, extract key information, and generate an answer that is insightful, creative, and professional. Extend the length of your response as much as possible, addressing each point in detail and from multiple perspectives, ensuring the content is rich and thorough.
+- If the response is lengthy, structure it well and summarize it in paragraphs. If a point-by-point format is needed, try to limit it to 5 points and merge related content.
+- For objective Q&A, if the answer is very brief, you may add one or two related sentences to enrich the content.
+- Choose an appropriate and visually appealing format for your response based on the user's requirements and the content of the answer, ensuring strong readability.
+- Your answer should synthesize information from multiple relevant webpages and avoid repeatedly citing the same webpage.
+- Unless the user requests otherwise, your response should be in the same language as the user's question.
+
+# The user's message is:
+`
 
 // Chat 聊天接口，接口参数参考 https://platform.openai.com/docs/api-reference/chat/create
 // 该接口会返回一个 SSE 流，接口参数 stream 总是为 true（忽略客户端设置）
@@ -419,6 +438,62 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		maxRetryTimes = len(cq.Channels(req.Model))
 	}
 
+	// 联网搜索
+	if req.EnableSearch() {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Errorf("search panic: %v", r)
+				}
+			}()
+			ctl.writeControlMessage(sw, client, req.Model, FinalMessage{Type: "searching"})
+
+			req.SearchCount = ternary.IfLazy(
+				mod != nil && mod.Meta.SearchCount > 0,
+				func() int { return mod.Meta.SearchCount },
+				func() int { return 5 },
+			)
+
+			searchResult, err := ctl.search.Search(ctx, &search.Request{
+				Query: req.Messages[len(req.Messages)-1].Content,
+				Histories: array.Map(req.Messages, func(item chat.Message, _ int) search.History {
+					return search.History{
+						Role:    item.Role,
+						Content: item.Content,
+					}
+				}),
+				ResultCount: req.SearchCount,
+			})
+			if err != nil {
+				log.F(log.M{"model": req.Model, "message": req.Messages.ToLogEntry()}).Errorf("search failed: %v", err)
+			} else {
+				docStr, documents := searchResult.ToMessage(req.SearchCount)
+				if len(documents) > 0 {
+					searchMessage := fmt.Sprintf(searchPrompt, docStr, time.Now().Format(time.RFC3339))
+					req = req.AddContextToLastMessage(searchMessage)
+
+					// 移除 search 标记，避免在模型层级重复搜索 （比如 OpenRouter 渠道的模型本身就支持搜索）
+					req.Flags = array.Filter(req.Flags, func(flag string, _ int) bool { return flag != "search" })
+					if req.SearchCount > len(searchResult.Documents) {
+						req.SearchCount = len(searchResult.Documents)
+					}
+
+					// 发送搜索结果给客户端
+					ctl.writeControlMessage(sw, client, req.Model, FinalMessage{
+						Type: "search-results",
+						Data: string(must.Must(json.Marshal(documents))),
+					})
+				}
+
+				log.WithFields(log.Fields{
+					"user_id":       user.User.ID,
+					"model":         req.Model,
+					"history_count": len(req.Messages),
+				}).Debugf("search finished, found %d documents", len(documents))
+			}
+		}()
+	}
+
 	replyText, thinkingProcess, err, done := ctl.chatWithRetry(subCtx, req, user, client, sw, webCtx, questionID, startTime, 0, maxRetryTimes)
 	if done {
 		return
@@ -578,23 +653,8 @@ func (ctl *OpenAIController) handleChat(
 
 	var stream <-chan chat.Response
 	var err error
-	var documents []search.Document
 
-	if css, ok := ctl.chat.(chat.ChatStreamWithSearch); ok {
-		stream, documents, err = css.ChatStreamWithSearch(chatCtx, newReq.Purification())
-	} else {
-		stream, err = ctl.chat.ChatStream(chatCtx, newReq.Purification())
-	}
-
-	if len(documents) > 0 {
-		// 发送搜索结果给客户端
-		searchResult, _ := json.Marshal(documents)
-		ctl.writeControlMessage(sw, client, req.Model, FinalMessage{
-			Type: "search-results",
-			Data: string(searchResult),
-		})
-	}
-
+	stream, err = ctl.chat.ChatStream(chatCtx, newReq.Purification())
 	if err != nil {
 		shouldReturnError := retryTimes >= maxRetryTimes || startTime.Add(60*time.Second).Before(time.Now())
 
