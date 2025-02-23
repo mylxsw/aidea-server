@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-func TestBochaaiSearch_Search(t *testing.T) {
-	s := NewBochaaiSearch(os.Getenv("BOCHAAI_API_KEY"), nil)
+func TestBochaWebSearch_Search(t *testing.T) {
+	s := NewBochaWebSearch(os.Getenv("BOCHAAI_API_KEY"), nil)
 
 	req := Request{
 		Query:       "现在比特币价格多少？",

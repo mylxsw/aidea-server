@@ -524,7 +524,7 @@ minimax-api-key: ""
 minimax-group-id: ""
 
 ######## Search 配置 ########
-# 搜索引擎，支持 bigmodel/bochaai
+# 搜索引擎，支持 bigmodel/bocha-web/bocha-ai
 search-engine: bigmodel
 # BigModel 搜索 API Key
 bigmodel-search-api-key: ""

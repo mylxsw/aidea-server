@@ -170,8 +170,13 @@ func (ms Messages) Fix() Messages {
 
 	finalMessages := make([]Message, 0)
 	var lastRole string
+	var lastContent string
 
 	for _, m := range array.Reverse(msgs) {
+		if m.Role == lastRole && m.Content == lastContent {
+			continue
+		}
+
 		if m.Role == lastRole {
 			complementaryRole := ternary.If(m.Role == "assistant", "user", "assistant")
 			finalMessages = append(finalMessages, Message{
@@ -181,6 +186,7 @@ func (ms Messages) Fix() Messages {
 		}
 
 		lastRole = m.Role
+		lastContent = m.Content
 		finalMessages = append(finalMessages, m)
 	}
 

@@ -10,16 +10,16 @@ import (
 	"time"
 )
 
-type BochaaiSearch struct {
+type BochaWebSearch struct {
 	apiKey    string
 	assistant *SearchAssistant
 }
 
-func NewBochaaiSearch(apiKey string, assistant *SearchAssistant) *BochaaiSearch {
-	return &BochaaiSearch{apiKey: apiKey, assistant: assistant}
+func NewBochaWebSearch(apiKey string, assistant *SearchAssistant) *BochaWebSearch {
+	return &BochaWebSearch{apiKey: apiKey, assistant: assistant}
 }
 
-func (b *BochaaiSearch) Search(ctx context.Context, req *Request) (*Response, error) {
+func (b *BochaWebSearch) Search(ctx context.Context, req *Request) (*Response, error) {
 	keyword := req.Query
 	if b.assistant != nil {
 		keyword, _ = b.assistant.GenerateSearchQuery(ctx, req.Query, req.Histories)
@@ -67,7 +67,7 @@ func (b *BochaaiSearch) Search(ctx context.Context, req *Request) (*Response, er
 	//	log.Debugf("bochaai search response: %s", respBody)
 	//}
 
-	var apiResp BochAAISearchResponse
+	var apiResp BochaWebSearchResponse
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
 		return nil, err
 	}
@@ -91,31 +91,31 @@ func (b *BochaaiSearch) Search(ctx context.Context, req *Request) (*Response, er
 	return &Response{Documents: documents}, nil
 }
 
-type BochAAISearchResponse struct {
-	Code  int             `json:"code,omitempty"`
-	LogID string          `json:"log_id,omitempty"`
-	Msg   *string         `json:"msg,omitempty"`
-	Data  BochAAIDataResp `json:"data,omitempty"`
+type BochaWebSearchResponse struct {
+	Code  int              `json:"code,omitempty"`
+	LogID string           `json:"log_id,omitempty"`
+	Msg   *string          `json:"msg,omitempty"`
+	Data  BochaWebDataResp `json:"data,omitempty"`
 }
 
-type BochAAIDataResp struct {
-	Type         string              `json:"_type,omitempty"`
-	QueryContext BochAAIQueryContext `json:"queryContext,omitempty"`
-	WebPages     BochAAIWebPages     `json:"webPages,omitempty"`
+type BochaWebDataResp struct {
+	Type         string               `json:"_type,omitempty"`
+	QueryContext BochaWebQueryContext `json:"queryContext,omitempty"`
+	WebPages     BochaWebPages        `json:"webPages,omitempty"`
 }
 
-type BochAAIQueryContext struct {
+type BochaWebQueryContext struct {
 	OriginalQuery string `json:"originalQuery,omitempty"`
 }
 
-type BochAAIWebPages struct {
-	WebSearchURL          string           `json:"webSearchUrl,omitempty"`
-	TotalEstimatedMatches int              `json:"totalEstimatedMatches,omitempty"`
-	Value                 []BochAAIWebPage `json:"value,omitempty"`
-	SomeResultsRemoved    bool             `json:"someResultsRemoved,omitempty"`
+type BochaWebPages struct {
+	WebSearchURL          string         `json:"webSearchUrl,omitempty"`
+	TotalEstimatedMatches int            `json:"totalEstimatedMatches,omitempty"`
+	Value                 []BochaWebPage `json:"value,omitempty"`
+	SomeResultsRemoved    bool           `json:"someResultsRemoved,omitempty"`
 }
 
-type BochAAIWebPage struct {
+type BochaWebPage struct {
 	ID               string  `json:"id,omitempty"`
 	Name             string  `json:"name,omitempty"`
 	URL              string  `json:"url,omitempty"`

@@ -64,11 +64,16 @@ func TestMessages_Fix(t *testing.T) {
 		{Role: "assistant", Content: "我是小助手"},
 		{Role: "assistant", Content: "我在呢，你有什么问题吗？"},
 		{Role: "assistant", Content: "我在呢，你有什么问题吗？"},
+		{Role: "user", Content: "无响应了？"},
+		{Role: "user", Content: "无响应了？"},
+		{Role: "user", Content: "无响应了？"},
+		{Role: "user", Content: "无响应了？"},
+		{Role: "user", Content: "无响应了？"},
 	}
 
 	messages = messages.Fix()
 	for _, msg := range messages {
-		log.Debugf("%s: %s", msg.Role, msg.Content)
+		log.Debugf("【%-10s】: %s", msg.Role, msg.Content)
 	}
 }
 

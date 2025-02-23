@@ -11,7 +11,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/mylxsw/aidea-server/pkg/ai/chat"
@@ -678,7 +677,19 @@ func (ctl *OpenAIController) handleChat(
 		return "", ThinkingProcess{}, ErrChatShouldRetry
 	}
 
-	replyText, thinkingProcess, err := ctl.writeChatResponse(chatCtx, req, stream, user, client, sw)
+	replyText, thinkingProcess, err := HandleChatResponse(chatCtx, req, stream, &EventHandler{
+		RequestContext: map[string]any{
+			"user_id": user.ID,
+			"req":     req,
+		},
+		WriteControlEvent: func(event FinalMessage) error {
+			ctl.writeControlMessage(sw, client, req.Model, event)
+			return nil
+		},
+		WriteChatEvent: func(event ChatCompletionStreamResponse) error {
+			return sw.WriteStream(event)
+		},
+	})
 	if err != nil {
 		return replyText, thinkingProcess, err
 	}
@@ -710,183 +721,6 @@ var (
 type ThinkingProcess struct {
 	TimeConsumed float64 `json:"time_consumed,omitempty"`
 	Content      string  `json:"content,omitempty"`
-}
-
-func sepThinkingContent(replyText string) (thinkingContent string, content string) {
-	if strings.HasPrefix(strings.TrimSpace(replyText), "<think>") {
-		start := strings.Index(replyText, "<think>")
-		end := strings.Index(replyText, "</think>")
-		if start != -1 && end != -1 && end > start {
-			thinkingContent = replyText[start+len("<think>") : end]
-			content = replyText[:start] + replyText[end+len("</think>"):]
-			return
-		}
-	}
-
-	return "", replyText
-}
-
-func (ctl *OpenAIController) writeChatResponse(ctx context.Context, req *chat.Request, stream <-chan chat.Response, user *auth.User, client *auth.ClientInfo, sw *streamwriter.StreamWriter) (replyText string, thinkingProcess ThinkingProcess, err error) {
-	defer func() {
-		if thinkingProcess.Content == "" {
-			thinkingProcess.Content, replyText = sepThinkingContent(replyText)
-		}
-	}()
-
-	hasSentReply := false
-	startTime := time.Now()
-
-	// 发送 thinking 消息
-	ctl.writeControlMessage(sw, client, req.Model, FinalMessage{Type: "thinking"})
-	thinkingDone := sync.OnceFunc(func() {
-		thinkingProcess.TimeConsumed = time.Since(startTime).Seconds()
-		// 发送 thinking-done 消息
-		ctl.writeControlMessage(
-			sw,
-			client,
-			req.Model,
-			FinalMessage{Type: "thinking-done", TimeConsumed: thinkingProcess.TimeConsumed},
-		)
-	})
-
-	defer thinkingDone()
-
-	// 生成 SSE 流
-	timer := time.NewTimer(600 * time.Second)
-	defer timer.Stop()
-
-	id := 0
-	for {
-		if id > 0 {
-			timer.Reset(60 * time.Second)
-		}
-
-		select {
-		case <-timer.C:
-			return replyText, thinkingProcess, ErrChatResponseGapTimeout
-		case <-ctx.Done():
-			return replyText, thinkingProcess, nil
-		case res, ok := <-stream:
-			if !ok {
-				return replyText, thinkingProcess, nil
-			}
-
-			id++
-
-			if res.ErrorCode != "" {
-				if id <= 1 || strings.TrimSpace(replyText) == "" {
-					log.WithFields(log.Fields{"req": req, "user_id": user.ID}).Warningf("chat response failed, we need a retry: %v", res)
-					return replyText, thinkingProcess, ErrChatResponseEmpty
-				}
-
-				log.WithFields(log.Fields{"req": req, "user_id": user.ID}).Errorf("chat response failed: %v", res)
-
-				if res.Error != "" {
-					res.Text = fmt.Sprintf("\n\n---\nSorry, we encountered some errors. Here are the error details: \n```\n%s\n```\n", res.Error)
-				} else {
-					return replyText, thinkingProcess, nil
-				}
-			} else {
-				replyText += res.Text
-				if req.EnableReasoning() {
-					thinkingProcess.Content += res.ReasoningContent
-				}
-			}
-
-			noSpaceReplyText := strings.TrimSpace(replyText)
-			if req.EnableReasoning() && thinkingProcess.Content != "" {
-				// DeepSeek Style 的深度推理
-				if replyText != "" {
-					thinkingDone()
-				}
-
-				resp := ChatCompletionStreamResponse{
-					ID:      strconv.Itoa(id),
-					Created: time.Now().Unix(),
-					Model:   req.Model,
-					Object:  "chat.completion",
-					Choices: []ChatCompletionStreamChoice{
-						{
-							Delta: ChatCompletionStreamChoiceDelta{
-								Role:    "assistant",
-								Content: ternary.If(res.Text != "", res.Text, res.ReasoningContent),
-							},
-						},
-					},
-				}
-
-				if err := sw.WriteStream(resp); err != nil {
-					log.F(log.M{"req": req, "user_id": user.ID}).Warningf("write response failed: %v", err)
-					return replyText, thinkingProcess, nil
-				}
-			} else {
-				// 使用 <think></think> 标签包裹的深度思考风格
-				shouldSent := len(noSpaceReplyText) > len("<think>")
-				if !req.EnableReasoning() && strings.HasPrefix(noSpaceReplyText, "<think>") {
-					if strings.Contains(noSpaceReplyText, "</think>") {
-						shouldSent = true
-						thinkingProcess.Content, replyText = sepThinkingContent(replyText)
-						noSpaceReplyText = strings.TrimSpace(replyText)
-					} else {
-						shouldSent = false
-					}
-				}
-
-				if shouldSent {
-					if !strings.HasPrefix(noSpaceReplyText, "<think>") {
-						thinkingDone()
-					}
-
-					resp := ChatCompletionStreamResponse{
-						ID:      strconv.Itoa(id),
-						Created: time.Now().Unix(),
-						Model:   req.Model,
-						Object:  "chat.completion",
-						Choices: []ChatCompletionStreamChoice{
-							{
-								Delta: ChatCompletionStreamChoiceDelta{
-									Role:    "assistant",
-									Content: ternary.If(hasSentReply, res.Text, replyText),
-								},
-							},
-						},
-					}
-
-					hasSentReply = true
-					if err := sw.WriteStream(resp); err != nil {
-						log.F(log.M{"req": req, "user_id": user.ID}).Warningf("write response failed: %v", err)
-						return replyText, thinkingProcess, nil
-					}
-
-					if strings.HasPrefix(noSpaceReplyText, "<think>") {
-						if strings.Contains(noSpaceReplyText, "</think>") {
-							thinkingDone()
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-type ChatCompletionStreamResponse struct {
-	ID      string                       `json:"id"`
-	Object  string                       `json:"object"`
-	Created int64                        `json:"created"`
-	Model   string                       `json:"model"`
-	Choices []ChatCompletionStreamChoice `json:"choices"`
-}
-
-type ChatCompletionStreamChoice struct {
-	Index        int                             `json:"index"`
-	Delta        ChatCompletionStreamChoiceDelta `json:"delta"`
-	FinishReason *string                         `json:"finish_reason,omitempty"`
-}
-
-type ChatCompletionStreamChoiceDelta struct {
-	Content      string               `json:"content"`
-	Role         string               `json:"role,omitempty"`
-	FunctionCall *openai.FunctionCall `json:"function_call,omitempty"`
 }
 
 func (*OpenAIController) writeControlMessage(sw *streamwriter.StreamWriter, client *auth.ClientInfo, model string, controlMsg FinalMessage) {
