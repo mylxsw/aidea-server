@@ -65,6 +65,10 @@ func (b *BigModelSearch) Search(ctx context.Context, req *Request) (*Response, e
 		return nil, err
 	}
 
+	//if log.DebugEnabled() {
+	//	log.WithFields(data).Debugf("bigModel search response: %s", respBody)
+	//}
+
 	var apiResp BigModelSearchResponse
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
 		return nil, err

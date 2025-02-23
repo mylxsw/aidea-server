@@ -16,7 +16,7 @@ FROM ubuntu:22.04
 
 ENV TZ=Asia/Shanghai
 
-RUN apt-get -y update && DEBIAN_FRONTEND="nointeractive" apt install -y tzdata ca-certificates --no-install-recommends && rm -r /var/lib/apt/lists/*
+RUN apt-get -y update && DEBIAN_FRONTEND="nointeractive" apt install -y tzdata ca-certificates ffmpeg --no-install-recommends && rm -r /var/lib/apt/lists/*
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /data

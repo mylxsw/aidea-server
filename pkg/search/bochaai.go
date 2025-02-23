@@ -63,6 +63,10 @@ func (b *BochaaiSearch) Search(ctx context.Context, req *Request) (*Response, er
 		return nil, err
 	}
 
+	//if log.DebugEnabled() {
+	//	log.Debugf("bochaai search response: %s", respBody)
+	//}
+
 	var apiResp BochAAISearchResponse
 	if err := json.Unmarshal(respBody, &apiResp); err != nil {
 		return nil, err
