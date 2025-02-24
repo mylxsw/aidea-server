@@ -242,6 +242,7 @@ When responding, please keep the following points in mind:
 - Choose an appropriate and visually appealing format for your response based on the user's requirements and the content of the answer, ensuring strong readability.
 - Your answer should synthesize information from multiple relevant webpages and avoid repeatedly citing the same webpage.
 - Unless the user requests otherwise, your response should be in the same language as the user's question.
+- Search results may contain a lot of content, do not refer all, but choose the part that best meets the user's question, cited pages to limit to 10 (may be less), the same point of view of the citation is not too much, preferably not more than 2
 
 # The user's message is:
 `
