@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/pkg/ai/anthropic"
 	"github.com/mylxsw/aidea-server/pkg/ai/deepseek"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/oneapi"
@@ -467,6 +468,8 @@ func (ai *Imp) selectImp(provider repo.ModelProvider) Chat {
 				return ai.createOpenRouterClient(ch)
 			case service.ProviderDeepSeek:
 				return ai.createDeepSeekClient(ch)
+			case service.ProviderAnthropic:
+				return ai.createAnthropicClient(ch)
 			default:
 				if ret := ai.selectProvider(ch.Type); ret != nil {
 					return ret
@@ -662,4 +665,18 @@ func (ai *Imp) createDeepSeekClient(ch *repo.Channel) Chat {
 	}
 
 	return NewDeepSeekChat(deepseek.NewDeepSeek(openai.NewOpenAIClient(&conf, ai.proxy)))
+}
+
+// createAnthropicClient 创建一个 Anthropic Client
+func (ai *Imp) createAnthropicClient(ch *repo.Channel) Chat {
+	if ch.Server == "" {
+		ch.Server = "https://api.anthropic.com"
+	}
+
+	client := &http.Client{}
+	if ch.Meta.UsingProxy && ai.proxy != nil {
+		client.Transport = ai.proxy.BuildTransport()
+	}
+
+	return NewAnthropicChat(anthropic.New(ch.Server, ch.Secret, &http.Client{}))
 }

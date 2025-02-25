@@ -63,8 +63,20 @@ func (chat *AnthropicChat) initRequest(req Request) (anthropic.MessageRequest, e
 	}
 
 	res := anthropic.MessageRequest{
-		Model:    anthropic.Model(req.Model),
-		Messages: contextMessages,
+		Model:     anthropic.Model(req.Model),
+		Messages:  contextMessages,
+		MaxTokens: 20000,
+	}
+
+	if req.Temperature > 0 {
+		res.Temperature = req.Temperature
+	}
+
+	if req.EnableReasoning() {
+		res.Thinking = &anthropic.Thinking{
+			Type:         "enabled",
+			BudgetTokens: 16000,
+		}
 	}
 
 	if systemMessage != "" {
@@ -132,7 +144,7 @@ func (chat *AnthropicChat) ChatStream(ctx context.Context, req Request) (<-chan 
 				select {
 				case <-ctx.Done():
 					return
-				case res <- Response{Text: data.Text()}:
+				case res <- Response{Text: data.Text(), ReasoningContent: data.Thinking()}:
 				}
 			}
 		}

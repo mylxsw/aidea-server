@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/mylxsw/go-utils/array"
 	"io"
 	"net/http"
 	"strings"
@@ -67,9 +68,9 @@ type MessageRequest struct {
 	// MaxTokens The maximum number of tokens to generate before stopping.
 	// Note that our models may stop before reaching this maximum.
 	// This parameter only specifies the absolute maximum number of tokens to generate.
-	MaxTokens int `json:"max_tokens"`
+	MaxTokens int `json:"max_tokens,omitempty"`
 	// Stream Whether to incrementally stream the response using server-sent events.
-	Stream bool `json:"stream"`
+	Stream bool `json:"stream,omitempty"`
 	// Temperature Amount of randomness injected into the response.
 	// Defaults to 1.0. Ranges from 0.0 to 1.0.
 	// Use temperature closer to 0.0 for analytical / multiple choice, and closer to 1.0 for creative and generative tasks.
@@ -84,6 +85,14 @@ type MessageRequest struct {
 	// Used to remove "long tail" low probability responses. Learn more technical details here.
 	// Recommended for advanced use cases only. You usually only need to use temperature.
 	TopK int `json:"top_k,omitempty"`
+
+	// Thinking 扩展思维
+	Thinking *Thinking `json:"thinking,omitempty"`
+}
+
+type Thinking struct {
+	Type         string `json:"type,omitempty"`
+	BudgetTokens int    `json:"budget_tokens,omitempty"`
 }
 
 type Message struct {
@@ -249,9 +258,18 @@ func (res MessageStreamResponse) Text() string {
 	return ""
 }
 
+func (res MessageStreamResponse) Thinking() string {
+	if res.Delta != nil {
+		return res.Delta.Thinking
+	}
+
+	return ""
+}
+
 type MessageDelta struct {
 	Type         string `json:"type,omitempty"`
 	Text         string `json:"text,omitempty"`
+	Thinking     string `json:"thinking,omitempty"`
 	StopReason   string `json:"stop_reason,omitempty"`
 	StopSequence string `json:"stop_sequence,omitempty"`
 	Usage        *Usage `json:"usage,omitempty"`
@@ -260,9 +278,6 @@ type MessageDelta struct {
 func (ai *Anthropic) ChatStream(ctx context.Context, req MessageRequest) (<-chan MessageStreamResponse, error) {
 	req.Stream = true
 	req.Model = ai.resolveModel(req.Model)
-	if req.MaxTokens <= 0 {
-		req.MaxTokens = 4000
-	}
 
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -339,7 +354,7 @@ func (ai *Anthropic) ChatStream(ctx context.Context, req MessageRequest) (<-chan
 				return
 			}
 
-			if chatResponse.Delta != nil {
+			if array.In(chatResponse.Type, []string{"content_block_delta", "message_delta"}) && chatResponse.Delta != nil {
 				select {
 				case <-ctx.Done():
 					return

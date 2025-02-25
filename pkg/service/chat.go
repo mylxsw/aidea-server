@@ -87,6 +87,7 @@ func (svc *ChatService) ChannelTypes() []ChannelType {
 		{Name: ProviderOneAPI, Dynamic: true, Display: "OneAPI"},
 		{Name: ProviderOpenRouter, Dynamic: true, Display: "OpenRouter"},
 		{Name: ProviderDeepSeek, Dynamic: true, Display: "DeepSeek"},
+		{Name: ProviderAnthropic, Dynamic: true, Display: "Anthropic"},
 
 		{Name: ProviderXunFei, Dynamic: false, Display: "讯飞星火"},
 		{Name: ProviderWenXin, Dynamic: false, Display: "文心千帆"},
@@ -99,7 +100,6 @@ func (svc *ChatService) ChannelTypes() []ChannelType {
 		{Name: ProviderZhipu, Dynamic: false, Display: "智谱"},
 		{Name: ProviderMoonshot, Dynamic: false, Display: "月之暗面"},
 		{Name: ProviderGoogle, Dynamic: false, Display: "Google"},
-		{Name: ProviderAnthropic, Dynamic: false, Display: "Anthropic"},
 	}
 }
 

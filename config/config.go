@@ -334,6 +334,8 @@ type Config struct {
 
 	// Search 配置
 	SearchEngine string `json:"search_engine" yaml:"search_engine"`
+	// AvailableSearchEngines 可用的搜索引擎
+	AvailableSearchEngines []string `json:"available_search_engines" yaml:"available_search_engines"`
 	// BigModel Search 配置
 	BigModelSearchAPIKey string `json:"bigmodel_search_api_key" yaml:"bigmodel_search_api_key"`
 	// Bochaai Search 配置
@@ -670,6 +672,7 @@ func Register(ins *app.App) {
 			BigModelSearchAPIKey:   ctx.String("bigmodel-search-api-key"),
 			BochaaiSearchAPIKey:    ctx.String("bochaai-search-api-key"),
 			SearchEngine:           ctx.String("search-engine"),
+			AvailableSearchEngines: array.Uniq(append(ctx.StringSlice("available-search-engines"), ctx.String("search-engine"))),
 			SearchAssistantModel:   ctx.String("search-assistant-model"),
 			SearchAssistantAPIBase: ctx.String("search-assistant-api-base"),
 			SearchAssistantAPIKey:  ctx.String("search-assistant-api-key"),

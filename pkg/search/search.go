@@ -3,14 +3,16 @@ package search
 import (
 	"context"
 	"fmt"
+	"github.com/mylxsw/go-utils/array"
 
 	"github.com/mylxsw/aidea-server/config"
 )
 
 type Request struct {
-	Query       string    `json:"query,omitempty"`
-	Histories   []History `json:"histories,omitempty"`
-	ResultCount int       `json:"result_count,omitempty"`
+	Query        string    `json:"query,omitempty"`
+	Histories    []History `json:"histories,omitempty"`
+	ResultCount  int       `json:"result_count,omitempty"`
+	PreferEngine string    `json:"prefer_engine,omitempty"`
 }
 
 type History struct {
@@ -46,6 +48,7 @@ type Document struct {
 
 type Searcher interface {
 	Search(ctx context.Context, req *Request) (*Response, error)
+	AvailableSearchEngines() []string
 }
 
 type searchEngine struct {
@@ -68,7 +71,12 @@ func (s *searchEngine) Search(ctx context.Context, req *Request) (*Response, err
 		}
 	}
 
-	switch s.conf.SearchEngine {
+	preferEngine := req.PreferEngine
+	if preferEngine == "" || !array.In(preferEngine, s.AvailableSearchEngines()) {
+		preferEngine = s.conf.SearchEngine
+	}
+
+	switch preferEngine {
 	case "bigmodel":
 		return NewBigModelSearch(s.conf.BigModelSearchAPIKey).Search(ctx, req)
 	case "bocha-web":
@@ -79,4 +87,8 @@ func (s *searchEngine) Search(ctx context.Context, req *Request) (*Response, err
 	}
 
 	return &Response{}, nil
+}
+
+func (s *searchEngine) AvailableSearchEngines() []string {
+	return s.conf.AvailableSearchEngines
 }

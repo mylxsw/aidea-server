@@ -494,6 +494,9 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		}()
 	}
 
+	// 发送 thinking 消息
+	ctl.writeControlMessage(sw, client, req.Model, FinalMessage{Type: "thinking"})
+
 	replyText, thinkingProcess, err, done := ctl.chatWithRetry(subCtx, req, user, client, sw, webCtx, questionID, startTime, 0, maxRetryTimes)
 	if done {
 		return
