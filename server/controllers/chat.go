@@ -47,8 +47,6 @@ func HandleChatResponse(
 ) (replyText string, thinkingProcess ThinkingProcess, err error) {
 	startTime := time.Now()
 
-	// 发送 thinking 消息
-	_ = eventHandler.WriteControlEvent(FinalMessage{Type: "thinking"})
 	thinkingDone := sync.OnceFunc(func() {
 		thinkingProcess.TimeConsumed = time.Since(startTime).Seconds()
 		// 发送 thinking-done 消息

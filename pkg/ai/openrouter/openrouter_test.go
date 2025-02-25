@@ -18,7 +18,7 @@ import (
 func TestOpenRouter_ChatStream(t *testing.T) {
 	client := createClient()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 600*time.Second)
 	defer cancel()
 
 	response, err := client.ChatStream(ctx, openai.ChatCompletionRequest{
@@ -30,11 +30,13 @@ func TestOpenRouter_ChatStream(t *testing.T) {
 			},
 		},
 		MaxTokens: 500,
+		Stop:      []string{"</think>"},
 	})
 
 	assert.NoError(t, err)
 
 	var finalText string
+	var reasoning string
 	for res := range response {
 		print(string(must.Must(json.Marshal(res))))
 		if res.Code != "" {
@@ -44,8 +46,10 @@ func TestOpenRouter_ChatStream(t *testing.T) {
 
 		log.Debugf("-> %s", res.ChatResponse.Choices[0].Delta.Content)
 		finalText += res.ChatResponse.Choices[0].Delta.Content
+		reasoning += res.ChatResponse.Choices[0].Delta.Reasoning
 	}
 
+	log.Debugf("reasoning: %s", reasoning)
 	log.Debugf("final text: %s", finalText)
 }
 
