@@ -41,23 +41,6 @@ func New(serverURL, apiKey string, client *http.Client) *Anthropic {
 	return &Anthropic{apiKey: apiKey, serverURL: serverURL, client: client}
 }
 
-func (ai *Anthropic) resolveModel(model Model) Model {
-	switch model {
-	case "claude-instant-1":
-		return "claude-instant-1.2"
-	case "claude-2":
-		return "claude-2.1"
-	case "claude-3-opus":
-		return "claude-3-opus-20240229"
-	case "claude-3-sonnet":
-		return "claude-3-sonnet-20240229"
-	case "claude-3-haiku":
-		return "claude-3-haiku-20240307"
-	default:
-		return model
-	}
-}
-
 type MessageRequest struct {
 	// Model The model that will complete your prompt.
 	Model Model `json:"model"`
@@ -195,9 +178,8 @@ type MessageResponseContent struct {
 
 func (ai *Anthropic) Chat(ctx context.Context, req MessageRequest) (*MessageResponse, error) {
 	req.Stream = false
-	req.Model = ai.resolveModel(req.Model)
 	if req.MaxTokens <= 0 {
-		req.MaxTokens = 4000
+		req.MaxTokens = 20000
 	}
 
 	body, err := json.Marshal(req)
@@ -277,8 +259,6 @@ type MessageDelta struct {
 
 func (ai *Anthropic) ChatStream(ctx context.Context, req MessageRequest) (<-chan MessageStreamResponse, error) {
 	req.Stream = true
-	req.Model = ai.resolveModel(req.Model)
-
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
