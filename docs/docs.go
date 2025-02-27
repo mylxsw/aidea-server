@@ -1914,7 +1914,7 @@ const docTemplate = `{
                     "description": "TestUserIds 测试用户 ID 列表",
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "type": "integer"
                     }
                 },
                 "vision": {

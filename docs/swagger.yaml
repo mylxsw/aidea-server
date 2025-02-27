@@ -553,7 +553,7 @@ definitions:
       test_user_ids:
         description: TestUserIds 测试用户 ID 列表
         items:
-          type: string
+          type: integer
         type: array
       vision:
         description: Vision 是否支持视觉能力
