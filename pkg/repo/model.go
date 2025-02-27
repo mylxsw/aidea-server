@@ -128,6 +128,8 @@ type ModelMeta struct {
 
 	// Temperature 温度
 	Temperature float64 `json:"temperature,omitempty"`
+	// TestUserIds 测试用户 ID 列表
+	TestUserIds []string `json:"test_user_ids,omitempty"`
 }
 
 type ModelProvider struct {

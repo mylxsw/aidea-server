@@ -1910,6 +1910,13 @@ const docTemplate = `{
                     "description": "Temperature 温度",
                     "type": "number"
                 },
+                "test_user_ids": {
+                    "description": "TestUserIds 测试用户 ID 列表",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "vision": {
                     "description": "Vision 是否支持视觉能力",
                     "type": "boolean"

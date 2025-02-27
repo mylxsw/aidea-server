@@ -550,6 +550,11 @@ definitions:
       temperature:
         description: Temperature 温度
         type: number
+      test_user_ids:
+        description: TestUserIds 测试用户 ID 列表
+        items:
+          type: string
+        type: array
       vision:
         description: Vision 是否支持视觉能力
         type: boolean
