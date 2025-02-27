@@ -135,69 +135,82 @@ func (ctl *ModelController) Models(ctx context.Context, webCtx web.Context, clie
 
 // loadRawModels Load all large language models
 func (ctl *ModelController) loadRawModels(ctx context.Context, client *auth.ClientInfo, user *auth.UserOptional) []controllers.Model {
-	models := array.Map(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) controllers.Model {
-		priceInfo := ctl.generatePriceInfo(item)
-		ret := controllers.Model{
-			ID:               item.ModelId,
-			Name:             item.Name,
-			ShortName:        item.ShortName,
-			Description:      item.Description,
-			PriceInfo:        priceInfo,
-			AvatarURL:        item.AvatarUrl,
-			Category:         item.Meta.Category,
-			IsImage:          false,
-			Disabled:         item.Status == repo.ModelStatusDisabled,
-			VersionMin:       item.VersionMin,
-			VersionMax:       item.VersionMax,
-			IsChat:           true,
-			SupportVision:    item.Meta.Vision,
-			IsNew:            item.Meta.IsNew,
-			Tag:              item.Meta.Tag,
-			TagTextColor:     item.Meta.TagTextColor,
-			TagBgColor:       item.Meta.TagBgColor,
-			IsDefault:        item.ModelId == "gpt-4o-mini",
-			Recommend:        item.Meta.IsRecommend,
-			SupportReasoning: item.Meta.Reasoning,
-			SupportSearch:    item.Meta.Search,
-			UserNoPermission: false,
-		}
-
-		if misc.VersionOlder(client.Version, "2.0.0") {
-			if item.Meta.InputPrice == 0 && item.Meta.OutputPrice == 0 && ret.Tag != "限免" {
-				ret.Tag = "限免"
-				ret.TagTextColor = "#ffffff"
-				ret.TagBgColor = "#5694ED"
+	models := array.Map(
+		array.Filter(ctl.svc.Chat.Models(ctx, true), func(item repo.Model, _ int) bool {
+			if len(item.Meta.TestUserIds) == 0 {
+				return true
 			}
-		}
 
-		if ret.Disabled {
-			return ret
-		}
-
-		if client.Version != "" && item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
-			ret.Disabled = true
-			return ret
-		}
-
-		if client.Version != "" && item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
-			ret.Disabled = true
-			return ret
-		}
-
-		if client.IsCNLocalMode(ctl.conf) && item.Meta.Restricted && (user.User == nil || !user.User.ExtraPermissionUser()) {
-			ret.Disabled = true
-			return ret
-		}
-
-		// 如果用户没有登录，则只能查看免费模型
-		if user == nil || user.User == nil || user.User.ID == 0 {
-			if item.Meta.InputPrice > 0 || item.Meta.OutputPrice > 0 || item.Meta.PerReqPrice > 0 {
-				ret.UserNoPermission = true
+			if user != nil && user.User != nil {
+				return array.In(user.User.ID, item.Meta.TestUserIds)
 			}
-		}
 
-		return ret
-	})
+			return false
+		}),
+		func(item repo.Model, _ int) controllers.Model {
+			priceInfo := ctl.generatePriceInfo(item)
+			ret := controllers.Model{
+				ID:               item.ModelId,
+				Name:             item.Name,
+				ShortName:        item.ShortName,
+				Description:      item.Description,
+				PriceInfo:        priceInfo,
+				AvatarURL:        item.AvatarUrl,
+				Category:         item.Meta.Category,
+				IsImage:          false,
+				Disabled:         item.Status == repo.ModelStatusDisabled,
+				VersionMin:       item.VersionMin,
+				VersionMax:       item.VersionMax,
+				IsChat:           true,
+				SupportVision:    item.Meta.Vision,
+				IsNew:            item.Meta.IsNew,
+				Tag:              item.Meta.Tag,
+				TagTextColor:     item.Meta.TagTextColor,
+				TagBgColor:       item.Meta.TagBgColor,
+				IsDefault:        item.ModelId == "gpt-4o-mini",
+				Recommend:        item.Meta.IsRecommend,
+				SupportReasoning: item.Meta.Reasoning,
+				SupportSearch:    item.Meta.Search,
+				UserNoPermission: false,
+			}
+
+			if misc.VersionOlder(client.Version, "2.0.0") {
+				if item.Meta.InputPrice == 0 && item.Meta.OutputPrice == 0 && ret.Tag != "限免" {
+					ret.Tag = "限免"
+					ret.TagTextColor = "#ffffff"
+					ret.TagBgColor = "#5694ED"
+				}
+			}
+
+			if ret.Disabled {
+				return ret
+			}
+
+			if client.Version != "" && item.VersionMin != "" && misc.VersionOlder(client.Version, item.VersionMin) {
+				ret.Disabled = true
+				return ret
+			}
+
+			if client.Version != "" && item.VersionMax != "" && misc.VersionNewer(client.Version, item.VersionMax) {
+				ret.Disabled = true
+				return ret
+			}
+
+			if client.IsCNLocalMode(ctl.conf) && item.Meta.Restricted && (user.User == nil || !user.User.ExtraPermissionUser()) {
+				ret.Disabled = true
+				return ret
+			}
+
+			// 如果用户没有登录，则只能查看免费模型
+			if user == nil || user.User == nil || user.User.ID == 0 {
+				if item.Meta.InputPrice > 0 || item.Meta.OutputPrice > 0 || item.Meta.PerReqPrice > 0 {
+					ret.UserNoPermission = true
+				}
+			}
+
+			return ret
+		},
+	)
 
 	sortPriority := []string{"DeepSeek", "OpenAI", "Anthropic", "Google", "xAI", "Perplexity", "Amazon", "Meta", "科大讯飞", "阿里", "百度"}
 	models = array.Sort(models, func(i, j controllers.Model) bool {
