@@ -1860,6 +1860,10 @@
                     "description": "MaxContext 最大上下文长度",
                     "type": "integer"
                 },
+                "max_token_per_message": {
+                    "description": "MaxTokenPerMessage 每条聊天记录最大 Token 数量",
+                    "type": "integer"
+                },
                 "output_price": {
                     "description": "OutputPrice 输出 Token 价格（智慧果/1K Token）",
                     "type": "integer"

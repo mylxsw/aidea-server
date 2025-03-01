@@ -247,6 +247,14 @@ When responding, please keep the following points in mind:
 # The user's message is:
 `
 
+func (ctl *OpenAIController) buildMessageBox(client *auth.ClientInfo, typ string, message string) string {
+	if client == nil || misc.VersionOlder(client.Version, "2.0.0") {
+		return message
+	}
+
+	return fmt.Sprintf("[::%s::]>>%s", typ, message)
+}
+
 // Chat 聊天接口，接口参数参考 https://platform.openai.com/docs/api-reference/chat/create
 // 该接口会返回一个 SSE 流，接口参数 stream 总是为 true（忽略客户端设置）
 func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user *auth.UserOptional, quotaRepo *repo.QuotaRepo, w http.ResponseWriter, client *auth.ClientInfo) {
@@ -294,9 +302,23 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		// 匿名用户，检查模型是否为免费模型
 		currentModel := ternary.If(req.TempModel != "", req.TempModel, req.Model)
 		if !ctl.chatSrv.IsFreeModel(ctx, currentModel) {
-			misc.NoError(sw.WriteErrorStream(errors.New("当前模型不支持匿名用户访问，请登录后再试"), http.StatusUnprocessableEntity))
+			misc.NoError(sw.WriteErrorStream(errors.New(ctl.buildMessageBox(client, "info", "当前模型不支持匿名用户访问，请登录后再试")), http.StatusUnprocessableEntity))
 			return
 		}
+	}
+
+	// 检查请求参数
+	// 上下文消息为空（含当前消息）
+	if len(req.Messages) == 0 {
+		misc.NoError(sw.WriteErrorStream(errors.New(ctl.buildMessageBox(client, "error", common.Text(webCtx, ctl.translater, common.ErrInvalidRequest))), http.StatusBadRequest))
+		return
+	}
+
+	// 查询模型信息
+	mod := ctl.chatSrv.Model(subCtx, req.Model)
+	if mod == nil || mod.Status == repo.ModelStatusDisabled {
+		misc.NoError(sw.WriteErrorStream(errors.New(ctl.buildMessageBox(client, "warn", "当前模型暂不可用，请选择其它模型")), http.StatusNotFound))
+		return
 	}
 
 	// 请求参数预处理
@@ -318,7 +340,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		if err != nil {
 			selectedModel, chatMessages, err = ctl.resolveModelMessages(subCtx, req.Messages, user, req.Model)
 			if err != nil {
-				misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
+				misc.NoError(sw.WriteErrorStream(errors.New(ctl.buildMessageBox(client, "error", err.Error())), http.StatusBadRequest))
 				return
 			}
 		}
@@ -327,46 +349,43 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 		req.Messages = chatMessages
 
 		// 模型最大上下文长度限制
-		maxContextLen, room := ctl.loadRoomContextLen(subCtx, req.RoomID, user.User.ID)
+		maxContextMessageCount, room := ctl.loadRoomContext(subCtx, req.RoomID, user.User.ID)
 		// 修正 SystemPrompt
 		if room != nil && room.SystemPrompt != "" {
 			req = req.ReplaceSystemPrompt(room.SystemPrompt)
 		}
 
-		req, inputTokenCount, err = req.FixContextWindow(ctl.chat, maxContextLen, ternary.If(user.User.ID > 0, 1000*200, 1000))
+		maxTokens := ternary.If(
+			user.User.ID > 0,
+			ternary.If(mod.Meta.MaxContext > 0, mod.Meta.MaxContext, 1000*200),
+			1000,
+		)
+		maxTokenPerMessage := ternary.If(
+			user.User.ID > 0,
+			ternary.If(mod.Meta.MaxTokenPerMessage > 0, mod.Meta.MaxTokenPerMessage, 5000),
+			1000,
+		)
+
+		req, inputTokenCount, err = req.FixContextWindow(ctl.chat, maxContextMessageCount, maxTokens, maxTokenPerMessage)
 		if err != nil {
-			misc.NoError(sw.WriteErrorStream(err, http.StatusBadRequest))
+			misc.NoError(sw.WriteErrorStream(errors.New(ctl.buildMessageBox(client, "warn", err.Error())), http.StatusBadRequest))
 			return
 		}
 	}
 
-	// 检查请求参数
-	// 上下文消息为空（含当前消息）
-	if len(req.Messages) == 0 {
-		misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest)), http.StatusBadRequest))
-		return
-	}
-
-	// 查询模型信息
-	mod := ctl.chatSrv.Model(subCtx, req.Model)
-	if mod == nil || mod.Status == repo.ModelStatusDisabled {
-		misc.NoError(sw.WriteErrorStream(errors.New("当前模型暂不可用，请选择其它模型"), http.StatusNotFound))
-		return
-	}
-
 	// 免费模型
 	// 获取当前用户剩余的智慧果数量，如果不足，则返回错误
-	var leftCount, maxFreeCount int
+	var leftCount int
 
 	// 如果启用了搜索，并且模型的搜索价格>0，则必须收费
 	if mod.Meta.SearchPrice > 0 && req.EnableSearch() {
-		leftCount, maxFreeCount = 0, 0
+		leftCount = 0
 	} else {
 		if user.User.ID > 0 {
-			leftCount, maxFreeCount = ctl.chatSrv.FreeChatRequestCounts(subCtx, user.User.ID, req.Model)
+			leftCount, _ = ctl.chatSrv.FreeChatRequestCounts(subCtx, user.User.ID, req.Model)
 		} else {
 			// 匿名用户，每次都是免费的，不限制次数，通过流控来限制访问
-			leftCount, maxFreeCount = 1, 0
+			leftCount = 1
 		}
 	}
 
@@ -383,12 +402,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 
 		// 智慧果不足
 		if quota.Rest-quota.Freezed < needCoins {
-			if maxFreeCount > 0 {
-				misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, "今日免费额度已不足，请充值后再试")), http.StatusPaymentRequired))
-				return
-			}
-
-			misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrQuotaNotEnough)), http.StatusPaymentRequired))
+			misc.NoError(sw.WriteErrorStream(errors.New(ctl.buildMessageBox(client, "warn", fmt.Sprintf("智慧果不足，完成本次请求需余额大于 ￠%d。", needCoins))), http.StatusPaymentRequired))
 			return
 		}
 
@@ -547,7 +561,7 @@ func (ctl *OpenAIController) Chat(ctx context.Context, webCtx web.Context, user 
 	// 扣除智慧果
 	if leftCount <= 0 && quotaConsume.TotalPrice > 0 {
 		func() {
-			ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
 
 			meta := repo.NewQuotaUsedMeta("chat", req.Model)
@@ -674,7 +688,7 @@ func (ctl *OpenAIController) handleChat(
 				return "", ThinkingProcess{}, ErrChatResponseHasSent
 			}
 
-			misc.NoError(sw.WriteErrorStream(errors.New(common.Text(webCtx, ctl.translater, common.ErrInternalError)), http.StatusInternalServerError))
+			misc.NoError(sw.WriteErrorStream(errors.New(ctl.buildMessageBox(client, "error", common.ErrInternalError)), http.StatusInternalServerError))
 			return "", ThinkingProcess{}, ErrChatResponseHasSent
 		}
 
@@ -813,8 +827,8 @@ func (ctl *OpenAIController) queryChatQuota(
 		return nil, 0, err
 	}
 
-	// 假设本次请求将会消耗 500 个输出 Token
-	return quota, coins.GetTextModelCoins(mod.ToCoinModel(), inputTokenCount, 500), nil
+	// 假设本次请求将会消耗 2000 个输出 Token
+	return quota, coins.GetTextModelCoins(mod.ToCoinModel(), inputTokenCount, 2000), nil
 }
 
 func (ctl *OpenAIController) rateLimitPass(ctx context.Context, client *auth.ClientInfo, user *auth.User) error {
@@ -971,8 +985,8 @@ func (ctl *OpenAIController) saveChatQuestion(ctx context.Context, user *auth.Us
 	return 0
 }
 
-func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int64, userID int64) (int64, *model.Rooms) {
-	var maxContextLength int64 = 3
+func (ctl *OpenAIController) loadRoomContext(ctx context.Context, roomID int64, userID int64) (int64, *model.Rooms) {
+	var maxContextMessageCount int64 = 3
 	if roomID > 0 && userID > 0 {
 		ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()
@@ -983,13 +997,13 @@ func (ctl *OpenAIController) loadRoomContextLen(ctx context.Context, roomID int6
 		}
 
 		if room != nil && room.MaxContext > 0 {
-			maxContextLength = room.MaxContext
+			maxContextMessageCount = room.MaxContext
 		}
 
-		return maxContextLength, room
+		return maxContextMessageCount, room
 	}
 
-	return maxContextLength, nil
+	return maxContextMessageCount, nil
 }
 
 // 内容安全检测

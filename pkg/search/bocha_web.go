@@ -21,7 +21,7 @@ func NewBochaWebSearch(apiKey string, assistant *SearchAssistant) *BochaWebSearc
 
 func (b *BochaWebSearch) Search(ctx context.Context, req *Request) (*Response, error) {
 	keyword := req.Query
-	if b.assistant != nil {
+	if b.assistant != nil && len(req.Histories) > 0 {
 		keyword, _ = b.assistant.GenerateSearchQuery(ctx, req.Query, req.Histories)
 	}
 

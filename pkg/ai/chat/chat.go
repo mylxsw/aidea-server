@@ -334,7 +334,7 @@ func (req Request) AddContextToLastMessage(context string) *Request {
 }
 
 // FixContextWindow 修复请求内容，注意：上下文长度修复后，最终的上下文数量不包含 system 消息和用户最后一条消息
-func (req Request) FixContextWindow(chat Chat, maxContextLength int64, maxTokenCount int) (*Request, int64, error) {
+func (req Request) FixContextWindow(chat Chat, maxContextMessageCount int64, maxTokenCount int, maxTokenPerMessage int) (*Request, int64, error) {
 	// 自动缩减上下文长度至满足模型要求的最大长度，尽可能避免出现超过模型上下文长度的问题
 	systemMessages := array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role == "system" })
 	systemMessageLen, _ := MessageTokenCount(systemMessages, req.Model)
@@ -348,7 +348,7 @@ func (req Request) FixContextWindow(chat Chat, maxContextLength int64, maxTokenC
 	messages, inputTokens, err := ReduceMessageContext(
 		ReduceMessageContextUpToContextWindow(
 			array.Filter(req.Messages, func(item Message, _ int) bool { return item.Role != "system" }),
-			int(maxContextLength),
+			int(maxContextMessageCount),
 		),
 		req.Model,
 		maxTokenCount,
@@ -358,10 +358,11 @@ func (req Request) FixContextWindow(chat Chat, maxContextLength int64, maxTokenC
 	}
 
 	if len(messages) > 0 {
-		lastMessageContent := messages[len(messages)-1].Content
-		lastMessageTokens, _ := TextTokenCount(lastMessageContent, req.Model)
-		if lastMessageTokens >= 7000 {
-			return nil, 0, errors.New("单条消息长度超过最大限制，请缩短输入内容长度")
+		for _, msg := range messages {
+			tks, _ := TextTokenCount(msg.Content, req.Model)
+			if tks > maxTokenPerMessage {
+				return nil, 0, errors.New("单条消息长度超过最大限制，请缩短输入内容长度")
+			}
 		}
 	}
 

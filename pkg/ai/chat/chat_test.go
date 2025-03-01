@@ -36,19 +36,19 @@ func TestRequestFix(t *testing.T) {
 	}.Init()
 
 	{
-		fixed, _, err := req.FixContextWindow(ChatTestClient{}, 0, 1024*200)
+		fixed, _, err := req.FixContextWindow(ChatTestClient{}, 0, 1024*200, 2000)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(fixed.Messages))
 	}
 
 	{
-		fixed, _, err := req.FixContextWindow(ChatTestClient{}, 1, 1024*200)
+		fixed, _, err := req.FixContextWindow(ChatTestClient{}, 1, 1024*200, 2000)
 		assert.NoError(t, err)
 		assert.Equal(t, 4, len(fixed.Messages))
 	}
 
 	{
-		fixed, _, err := req.FixContextWindow(ChatTestClient{}, 2, 1024*200)
+		fixed, _, err := req.FixContextWindow(ChatTestClient{}, 2, 1024*200, 2000)
 		assert.NoError(t, err)
 		assert.Equal(t, 6, len(fixed.Messages))
 	}
