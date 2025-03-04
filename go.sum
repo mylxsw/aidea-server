@@ -214,8 +214,8 @@ github.com/mylxsw/glacier v1.1.6-0.20241122033456-95ca85273d28 h1:iUdpxAxtsoWU0O
 github.com/mylxsw/glacier v1.1.6-0.20241122033456-95ca85273d28/go.mod h1:memrPz3F1+z+uczIOsv4pux//xezU+GQk4R8dtNmB7Q=
 github.com/mylxsw/go-ioc v1.1.0 h1:oBHGkeIl511UTw22wM4wNJlsvQjheyLsfo8K5p4hp+U=
 github.com/mylxsw/go-ioc v1.1.0/go.mod h1:HUGesamRKCt0Rd7DEPYKfj+ZJuY7rtjiYuZLNGasekk=
-github.com/mylxsw/go-openai v0.0.0-20250217063006-a914e360c009 h1:54EMmZChVbjWnKREGu2TecWjD3o31r0EzctlhwyGftE=
-github.com/mylxsw/go-openai v0.0.0-20250217063006-a914e360c009/go.mod h1:lj5b/K+zjTSFxVLijLSTDZuP7adOgerWeFyZLUhAKRg=
+github.com/mylxsw/go-openai v0.0.0-20250304071559-e02d98077134 h1:wJqXTDta8mIVmgkZGdYaGXTJ3BqHqcMLSjzAJIL0S+8=
+github.com/mylxsw/go-openai v0.0.0-20250304071559-e02d98077134/go.mod h1:lj5b/K+zjTSFxVLijLSTDZuP7adOgerWeFyZLUhAKRg=
 github.com/mylxsw/go-utils v1.0.3 h1:kL1n25xVzEDCjhtNx32dXXixFvuslCE5RGKMEUxeeJI=
 github.com/mylxsw/go-utils v1.0.3/go.mod h1:F5pQ/vTAgccZxQA7jsIBXM6m2INAbqPKfzbNwQgqhzY=
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=

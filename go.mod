@@ -17,6 +17,7 @@ require (
 	github.com/fvbommel/sortorder v1.1.0
 	github.com/go-pay/gopay v1.5.94
 	github.com/go-redis/redis_rate/v10 v10.0.1
+	github.com/google/uuid v1.3.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/hashicorp/go-version v1.6.0
 	github.com/iancoleman/strcase v0.2.0
@@ -67,7 +68,6 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/schema v1.2.0 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
@@ -123,4 +123,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-replace github.com/sashabaranov/go-openai => github.com/mylxsw/go-openai v0.0.0-20250217063006-a914e360c009
+replace github.com/sashabaranov/go-openai => github.com/mylxsw/go-openai v0.0.0-20250304071559-e02d98077134
