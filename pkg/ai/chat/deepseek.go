@@ -3,6 +3,8 @@ package chat
 import (
 	"context"
 	"github.com/mylxsw/aidea-server/pkg/ai/deepseek"
+	"github.com/mylxsw/aidea-server/pkg/misc"
+	"github.com/mylxsw/aidea-server/pkg/uploader"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
 	"github.com/sashabaranov/go-openai"
@@ -30,6 +32,39 @@ func (chat *DeepSeekChat) initRequest(req Request) (*openai.ChatCompletionReques
 		m := openai.ChatCompletionMessage{
 			Role:    msg.Role,
 			Content: msg.Content,
+		}
+
+		if len(msg.MultipartContents) > 0 {
+			m.Content = ""
+			m.MultiContent = array.Map(msg.MultipartContents, func(item *MultipartContent, _ int) openai.ChatMessagePart {
+				ret := openai.ChatMessagePart{
+					Text: item.Text,
+					Type: openai.ChatMessagePartType(item.Type),
+				}
+				if item.Type == "image_url" && item.ImageURL != nil {
+					url := item.ImageURL.URL
+					if strings.HasPrefix(url, "http://") || strings.HasPrefix(url, "https://") {
+						encoded, err := uploader.DownloadRemoteFileAsBase64(context.TODO(), item.ImageURL.URL)
+						if err == nil {
+							url = encoded
+						} else {
+							log.With(err).Errorf("download remote image failed: %s", item.ImageURL.URL)
+						}
+					} else {
+						imageMimeType, err := misc.Base64ImageMediaType(url)
+						if err == nil {
+							url = misc.AddImageBase64Prefix(misc.RemoveImageBase64Prefix(url), imageMimeType)
+						}
+					}
+
+					ret.ImageURL = &openai.ChatMessageImageURL{
+						URL:    url,
+						Detail: openai.ImageURLDetail(item.ImageURL.Detail),
+					}
+				}
+
+				return ret
+			})
 		}
 
 		if msg.Role == "system" {
