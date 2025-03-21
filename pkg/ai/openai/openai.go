@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/go-utils/ternary"
 	"io"
 	"math/rand"
 	"strings"
@@ -11,7 +12,6 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/misc"
 	"github.com/mylxsw/asteria/log"
 
-	"github.com/mylxsw/go-utils/array"
 	"github.com/pkoukk/tiktoken-go"
 	"github.com/sashabaranov/go-openai"
 )
@@ -231,13 +231,6 @@ func (client *realClientImpl) QuickAsk(ctx context.Context, prompt string, quest
 		return "", err
 	}
 
-	content := array.Reduce(
-		resp.Choices,
-		func(carry string, item openai.ChatCompletionChoice) string {
-			return carry + "\n" + item.Message.Content
-		},
-		"",
-	)
-
+	content := ternary.IfLazy(len(resp.Choices) > 0, func() string { return resp.Choices[0].Message.Content }, func() string { return "" })
 	return content, nil
 }

@@ -6,6 +6,7 @@ import (
 	oai "github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/go-utils/array"
+	"github.com/mylxsw/go-utils/ternary"
 	"github.com/sashabaranov/go-openai"
 	"strings"
 )
@@ -72,14 +73,9 @@ func (chat *MoonshotChat) Chat(ctx context.Context, req Request) (*Response, err
 		return nil, err
 	}
 
+	content := ternary.IfLazy(len(res.Choices) > 0, func() string { return res.Choices[0].Message.Content }, func() string { return "" })
 	return &Response{
-		Text: array.Reduce(
-			res.Choices,
-			func(carry string, item openai.ChatCompletionChoice) string {
-				return carry + "\n" + item.Message.Content
-			},
-			"",
-		),
+		Text:         content,
 		InputTokens:  res.Usage.PromptTokens,
 		OutputTokens: res.Usage.CompletionTokens,
 	}, nil
@@ -129,14 +125,11 @@ func (chat *MoonshotChat) ChatStream(ctx context.Context, req Request) (<-chan R
 					return
 				}
 
-				res <- Response{
-					Text: array.Reduce(
-						data.ChatResponse.Choices,
-						func(carry string, item openai.ChatCompletionStreamChoice) string {
-							return carry + item.Delta.Content
-						},
-						"",
-					),
+				if len(data.ChatResponse.Choices) > 0 {
+					res <- Response{
+						Text:             data.ChatResponse.Choices[0].Delta.Content,
+						ReasoningContent: data.ChatResponse.Choices[0].Delta.Reasoning,
+					}
 				}
 			}
 		}
