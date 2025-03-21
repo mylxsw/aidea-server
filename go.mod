@@ -123,4 +123,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-replace github.com/sashabaranov/go-openai => github.com/mylxsw/go-openai v0.0.0-20250304071559-e02d98077134
+replace github.com/sashabaranov/go-openai => github.com/mylxsw/go-openai v0.0.0-20250321100125-d47544f6af0c
