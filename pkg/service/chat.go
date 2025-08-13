@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/aidea-server/internal/coins"
 	"github.com/mylxsw/aidea-server/pkg/misc"
@@ -17,8 +20,6 @@ import (
 	"github.com/mylxsw/go-utils/must"
 	"github.com/mylxsw/go-utils/ternary"
 	"github.com/redis/go-redis/v9"
-	"strings"
-	"time"
 )
 
 type ChatService struct {
@@ -203,10 +204,6 @@ func (svc *ChatService) isModelEnabled(item repo.Model) bool {
 	}
 
 	if svc.conf.EnableSenseNovaAI && item.SupportProvider(ProviderSenseNova) != nil {
-		return true
-	}
-
-	if svc.conf.EnableTencentAI && item.SupportProvider(ProviderTencent) != nil {
 		return true
 	}
 

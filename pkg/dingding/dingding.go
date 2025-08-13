@@ -7,14 +7,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/mylxsw/go-utils/must"
-	"github.com/mylxsw/go-utils/ternary"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/mylxsw/go-utils/must"
+	"github.com/mylxsw/go-utils/ternary"
 
 	"github.com/mylxsw/go-utils/str"
 )
@@ -48,6 +49,10 @@ func (m MarkdownMessage) Encode() ([]byte, error) {
 
 func (m MarkdownMessage) EncodeSlack() ([]byte, error) {
 	return []byte(slackRequestBody("event", "AIdea", "sparkles", m.Markdown.Text)), nil
+}
+
+func (m MarkdownMessage) EncodeApprise(tags string) ([]byte, error) {
+	return []byte(appriseRequestBody(m.Markdown.Title, m.Markdown.Text, tags)), nil
 }
 
 // NewMarkdownMessage create a new MarkdownMessage
@@ -100,19 +105,24 @@ type MessageAtSomebody struct {
 }
 
 type Dingding struct {
-	Endpoint  string
-	Token     string
-	Secret    string
-	SlackMode bool
+	Endpoint     string
+	Token        string
+	Secret       string
+	SlackMode    bool
+	AppriseMode  bool
+	AppriseURL   string
+	AppriseToken string
+	AppriseTags  string
 }
 
-func NewDingding(slackMode bool, token string, secret string) *Dingding {
-	return &Dingding{SlackMode: slackMode, Endpoint: "https://oapi.dingtalk.com/robot/send", Token: token, Secret: secret}
+func NewDingding(slackMode bool, token string, secret string, appriseMode bool, appriseURL string, appriseToken string, appriseTags string) *Dingding {
+	return &Dingding{SlackMode: slackMode, Endpoint: "https://oapi.dingtalk.com/robot/send", Token: token, Secret: secret, AppriseMode: appriseMode, AppriseURL: appriseURL, AppriseToken: appriseToken, AppriseTags: appriseTags}
 }
 
 type Message interface {
 	Encode() ([]byte, error)
 	EncodeSlack() ([]byte, error)
+	EncodeApprise(tags string) ([]byte, error)
 }
 
 // dingResponse 钉钉响应
@@ -127,11 +137,52 @@ func (ding *Dingding) Send(msg Message) error {
 		return nil
 	}
 
+	if ding.AppriseMode {
+		return ding.sendAppriseNotify(msg)
+	}
+
 	if ding.SlackMode {
 		return ding.sendSlackNotify(msg)
 	}
 
 	return ding.sendDingDingNotify(msg)
+}
+
+func (ding *Dingding) sendAppriseNotify(msg Message) error {
+	msgEncoded, err := msg.EncodeApprise(ding.AppriseTags)
+	if err != nil {
+		return fmt.Errorf("apprise message encode failed: %s", err.Error())
+	}
+
+	endpointURL := ding.AppriseURL
+
+	reader := bytes.NewReader(msgEncoded)
+	request, err := http.NewRequest("POST", endpointURL, reader)
+	if err != nil {
+		return fmt.Errorf("apprise create request failed: %w", err)
+	}
+
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	usernameAndPassword := strings.SplitN(ding.AppriseToken, ":", 2)
+	request.SetBasicAuth(usernameAndPassword[0], usernameAndPassword[1])
+
+	client := http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		return fmt.Errorf("apprise send msg failed: %w", err)
+	}
+
+	if resp.StatusCode > 299 {
+		respBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("apprise read response failed: %w", err)
+		}
+
+		return fmt.Errorf("apprise send finished, response： %s", string(respBytes))
+	}
+
+	return nil
 }
 
 func (ding *Dingding) sendSlackNotify(msg Message) error {
@@ -230,5 +281,18 @@ func slackRequestBody(channelName string, username string, emoji string, text st
 
 	params := url.Values{}
 	params.Add("payload", payloadStr)
+	return params.Encode()
+}
+
+// appriseRequestBody Build Apprise request body
+func appriseRequestBody(title string, body string, tags string) string {
+	params := url.Values{}
+	if title != body {
+		params.Add("title", title)
+	}
+
+	params.Add("body", body)
+	params.Add("tags", tags)
+
 	return params.Encode()
 }

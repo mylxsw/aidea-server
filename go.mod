@@ -34,8 +34,6 @@ require (
 	github.com/stripe/stripe-go/v76 v76.19.0
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.3
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/aiart v1.0.727
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/hunyuan v1.0.857
 	github.com/tideland/gorest v2.15.5+incompatible
 	github.com/wagslane/go-password-validator v0.3.0
 	github.com/wechatpay-apiv3/wechatpay-go v0.2.18
@@ -114,9 +112,9 @@ require (
 	github.com/qiniu/go-sdk/v7 v7.15.0
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/stretchr/testify v1.9.0
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/asr v1.0.665
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.857
-	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.671
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/asr v1.0.192
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.1.10
+	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms v1.0.192
 	github.com/urfave/cli/v2 v2.23.7 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	golang.org/x/crypto v0.22.0

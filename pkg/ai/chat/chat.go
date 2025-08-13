@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/anthropic"
 	"github.com/mylxsw/aidea-server/pkg/ai/deepseek"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
@@ -20,8 +23,6 @@ import (
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
 	"github.com/mylxsw/go-utils/ternary"
-	"net/http"
-	"strings"
 
 	"github.com/mylxsw/aidea-server/config"
 	"github.com/mylxsw/go-utils/array"
@@ -500,8 +501,6 @@ func (ai *Imp) selectProvider(name string) Chat {
 		return ai.ai.DashScope
 	case service.ProviderSenseNova:
 		return ai.ai.SenseNova
-	case service.ProviderTencent:
-		return ai.ai.Tencent
 	case service.ProviderBaiChuan:
 		return ai.ai.Baichuan
 	case service.Provider360:

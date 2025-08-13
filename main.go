@@ -34,7 +34,6 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/stabilityai"
-	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
 	"github.com/mylxsw/aidea-server/pkg/aliyun"
 	"github.com/mylxsw/aidea-server/pkg/dingding"
@@ -170,7 +169,6 @@ func main() {
 		leap.Provider{},
 		baidu.Provider{},
 		sensenova.Provider{},
-		tencentai.Provider{},
 		anthropic.Provider{},
 		baichuan.Provider{},
 		gpt360.Provider{},

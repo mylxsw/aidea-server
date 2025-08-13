@@ -381,12 +381,6 @@ tencent-smssdkappid: "1400827805"
 tencent-smstemplateid: "18220292"
 tencent-smssign: "AIdea"
 
-# 混元大模型
-# API 申请：https://hunyuan.tencent.com/
-
-# 是否启用腾讯混元大模型
-enable-tencentai: false
-
 ######## 阿里云配置 ########
 
 # 阿里云服务配置，提供短信验证码、内容安全服务（用于用户输入信息是否合规）

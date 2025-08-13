@@ -14,7 +14,6 @@ import (
 	"github.com/mylxsw/aidea-server/pkg/ai/openrouter"
 	"github.com/mylxsw/aidea-server/pkg/ai/sensenova"
 	"github.com/mylxsw/aidea-server/pkg/ai/sky"
-	"github.com/mylxsw/aidea-server/pkg/ai/tencentai"
 	"github.com/mylxsw/aidea-server/pkg/ai/xfyun"
 	"github.com/mylxsw/aidea-server/pkg/ai/zhipuai"
 	"github.com/mylxsw/aidea-server/pkg/file"
@@ -44,7 +43,6 @@ type AIProvider struct {
 	Dashscope  *dashscope.DashScope   `autowire:"@"`
 	Xfyun      *xfyun.XFYunAI         `autowire:"@"`
 	SenseNova  *sensenova.SenseNova   `autowire:"@"`
-	Tencent    *tencentai.TencentAI   `autowire:"@"`
 	Anthropic  *anthropic.Anthropic   `autowire:"@"`
 	Baichuan   *baichuan.BaichuanAI   `autowire:"@"`
 	GPT360     *gpt360.GPT360         `autowire:"@"`
@@ -62,7 +60,6 @@ type AI struct {
 	DashScope  *DashScopeChat
 	Xfyun      *XFYunChat
 	SenseNova  *SenseNovaChat
-	Tencent    *TencentAIChat
 	Anthropic  *AnthropicChat
 	Baichuan   *BaichuanAIChat
 	GPT360     *GPT360Chat
@@ -84,7 +81,6 @@ func NewAI(
 		DashScope:  NewDashScopeChat(aiProvider.Dashscope, file),
 		Xfyun:      NewXFYunChat(aiProvider.Xfyun),
 		SenseNova:  NewSenseNovaChat(aiProvider.SenseNova),
-		Tencent:    NewTencentAIChat(aiProvider.Tencent),
 		Anthropic:  NewAnthropicChat(aiProvider.Anthropic),
 		Baichuan:   NewBaichuanAIChat(aiProvider.Baichuan),
 		GPT360:     NewGPT360Chat(aiProvider.GPT360),

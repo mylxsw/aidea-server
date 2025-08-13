@@ -180,7 +180,6 @@ func initCmdFlags(ins *app.App) {
 	ins.AddStringFlag("tencent-smstemplateid", "", "腾讯短信验证码模板 ID")
 	ins.AddStringFlag("tencent-smssign", "AIdea", "腾讯短信签名")
 	ins.AddBoolFlag("tencent-voice", "是否使用腾讯的语音转文本服务，不启用则使用 OpenAI 的 Whisper 模型")
-	ins.AddBoolFlag("enable-tencentai", "是否启用腾讯混元大模型 AI 服务")
 
 	ins.AddStringFlag("aliyun-key", "", "aliyun app key")
 	ins.AddStringFlag("aliyun-secret", "", "aliyun app secret")
@@ -208,6 +207,11 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("dingding-slack-mode", "启用后，钉钉通知将发送至 Slack，而不是钉钉群")
 	ins.AddStringFlag("dingding-token", "", "钉钉群通知 Token，留空则不通知")
 	ins.AddStringFlag("dingding-secret", "", "钉钉群通知 Secret")
+
+	ins.AddBoolFlag("dingding-apprise-mode", "启用后，钉钉通知将发送至 Apprise，而不是钉钉群，优先于 dingding-slack-mode")
+	ins.AddStringFlag("notify-apprise-url", "", "通知 Apprise URL")
+	ins.AddStringFlag("notify-apprise-token", "", "通知 Apprise Token")
+	ins.AddStringFlag("notify-apprise-tags", "", "通知 Apprise Tags")
 
 	ins.AddBoolFlag("cnlocal-mode", "是否启用国产化模式，启用后，将使用 cnlocal-vendor/cnlocal-model 指定的模型替代数字人默认的 GPT 模型")
 	ins.AddBoolFlag("cnlocal-onlyios", "国产化模式只对 IOS 系统有效，客户端版本 > 1.0.4")

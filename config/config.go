@@ -229,7 +229,6 @@ type Config struct {
 	UseTencentVoiceToText bool   `json:"use_tencent_voice_to_text" yaml:"use_tencent_voice_to_text"`
 	TencentSecretID       string `json:"tencent_secret_id" yaml:"tencent_secret_id"`
 	TencentSecretKey      string `json:"-" yaml:"tencent_secret_key"`
-	EnableTencentAI       bool   `json:"enable_tencent_ai" yaml:"enable_tencent_ai"`
 	TencentSMSSDKAppID    string `json:"tencent_sms_sdk_appid" yaml:"tencent_sms_sdk_appid"`
 	TencentSMSTemplateID  string `json:"tencent_sms_template_id" yaml:"tencent_sms_template_id"`
 	TencentSMSSign        string `json:"tencent_sms_sign" yaml:"tencent_sms_sign"`
@@ -262,6 +261,12 @@ type Config struct {
 	DingDingSlackMode bool   `json:"dingding_slack_mode" yaml:"dingding_slack_mode"`
 	DingDingToken     string `json:"-" yaml:"dingding_token"`
 	DingDingSecret    string `json:"-" yaml:"dingding_secret"`
+
+	// Apprise 通知设置
+	AppriseMode  bool   `json:"apprise_mode" yaml:"apprise_mode"`
+	AppriseURL   string `json:"apprise_url" yaml:"apprise_url"`
+	AppriseToken string `json:"apprise_token" yaml:"apprise_token"`
+	AppriseTags  string `json:"apprise_tags" yaml:"apprise_tags"`
 
 	// 国产化模式
 	CNLocalMode    bool   `json:"cn_local_mode" yaml:"cn_local_mode"`
@@ -598,7 +603,6 @@ func Register(ins *app.App) {
 			TencentSMSSDKAppID:    ctx.String("tencent-smssdkappid"),
 			TencentSMSTemplateID:  ctx.String("tencent-smstemplateid"),
 			TencentSMSSign:        ctx.String("tencent-smssign"),
-			EnableTencentAI:       ctx.Bool("enable-tencentai"),
 
 			AliyunAccessKeyID:   ctx.String("aliyun-key"),
 			AliyunAccessSecret:  ctx.String("aliyun-secret"),
@@ -623,6 +627,11 @@ func Register(ins *app.App) {
 			DingDingSlackMode: ctx.Bool("dingding-slack-mode"),
 			DingDingToken:     ctx.String("dingding-token"),
 			DingDingSecret:    ctx.String("dingding-secret"),
+
+			AppriseMode:  ctx.Bool("dingding-apprise-mode"),
+			AppriseURL:   ctx.String("notify-apprise-url"),
+			AppriseToken: ctx.String("notify-apprise-token"),
+			AppriseTags:  ctx.String("notify-apprise-tags"),
 
 			CNLocalMode:    ctx.Bool("cnlocal-mode"),
 			CNLocalOnlyIOS: ctx.Bool("cnlocal-onlyios"),

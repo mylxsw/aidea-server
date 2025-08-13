@@ -83,7 +83,7 @@ func (t *Tencent) SendSMS(ctx context.Context, templateID string, templateParams
 	req.TemplateParamSet = common.StringPtrs(templateParams)
 	req.PhoneNumberSet = common.StringPtrs(receivers)
 
-	_, err := t.sms.SendSmsWithContext(ctx, req)
+	_, err := t.sms.SendSms(req)
 	return err
 }
 
@@ -104,7 +104,7 @@ func (t *Tencent) VoiceToText(ctx context.Context, filename string) (string, err
 	req.Data = common.StringPtr(data)
 	req.DataLen = common.Int64Ptr(int64(len(data)))
 
-	resp, err := t.voice.SentenceRecognitionWithContext(ctx, req)
+	resp, err := t.voice.SentenceRecognition(req)
 	if err != nil {
 		return "", err
 	}

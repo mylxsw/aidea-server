@@ -2,13 +2,13 @@ package chat
 
 import (
 	"context"
+	"strings"
+
 	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
 	oai "github.com/mylxsw/aidea-server/pkg/ai/openai"
 	"github.com/mylxsw/asteria/log"
-	"github.com/mylxsw/go-utils/array"
 	"github.com/mylxsw/go-utils/ternary"
 	"github.com/sashabaranov/go-openai"
-	"strings"
 )
 
 type MoonshotChat struct {
