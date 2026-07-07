@@ -340,6 +340,8 @@ type Config struct {
 	BigModelSearchAPIKey string `json:"bigmodel_search_api_key" yaml:"bigmodel_search_api_key"`
 	// Bochaai Search 配置
 	BochaaiSearchAPIKey string `json:"bochaai_search_api_key" yaml:"bochaai_search_api_key"`
+	// You.com Search 配置
+	YouComSearchAPIKey string `json:"youcom_search_api_key" yaml:"youcom_search_api_key"`
 	// Search Assistant 配置 (用于将用户的对话上下文转换为搜索查询
 	SearchAssistantModel   string `json:"search_assistant_model" yaml:"search_assistant_model"`
 	SearchAssistantAPIBase string `json:"search_assistant_api_base" yaml:"search_assistant_api_base"`
@@ -671,6 +673,7 @@ func Register(ins *app.App) {
 
 			BigModelSearchAPIKey:   ctx.String("bigmodel-search-api-key"),
 			BochaaiSearchAPIKey:    ctx.String("bochaai-search-api-key"),
+			YouComSearchAPIKey:     ctx.String("youcom-search-api-key"),
 			SearchEngine:           ctx.String("search-engine"),
 			AvailableSearchEngines: array.Uniq(append(ctx.StringSlice("available-search-engines"), ctx.String("search-engine"))),
 			SearchAssistantModel:   ctx.String("search-assistant-model"),
