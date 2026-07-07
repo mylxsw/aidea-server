@@ -83,6 +83,8 @@ func (s *searchEngine) Search(ctx context.Context, req *Request) (*Response, err
 		return NewBochaWebSearch(s.conf.BochaaiSearchAPIKey, s.assistant).Search(ctx, req)
 	case "bocha-ai":
 		return NewBochaAISearch(s.conf.BochaaiSearchAPIKey, s.assistant).Search(ctx, req)
+	case "youcom":
+		return NewYouComSearch(s.conf.YouComSearchAPIKey, s.assistant).Search(ctx, req)
 	default:
 	}
 

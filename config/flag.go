@@ -264,7 +264,8 @@ func initCmdFlags(ins *app.App) {
 
 	ins.AddStringFlag("bigmodel-search-api-key", "", "BigModel 搜索 API Key")
 	ins.AddStringFlag("bochaai-search-api-key", "", "Bochaai 搜索 API Key")
-	ins.AddStringFlag("search-engine", "bigmodel", "搜索引擎，支持 bigmodel/bocha-web/bocha-ai")
+	ins.AddStringFlag("youcom-search-api-key", os.Getenv("YDC_API_KEY"), "You.com 搜索 API Key（默认读取环境变量 YDC_API_KEY）")
+	ins.AddStringFlag("search-engine", "bigmodel", "搜索引擎，支持 bigmodel/bocha-web/bocha-ai/youcom")
 	ins.AddStringSliceFlag("available-search-engines", []string{}, "可用的搜索引擎")
 	ins.AddStringFlag("search-assistant-model", "gpt-4o-mini", "搜索助手模型")
 	ins.AddStringFlag("search-assistant-api-base", "https://api.openai.com/v1", "搜索助手 API Base")

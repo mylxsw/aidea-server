@@ -524,12 +524,14 @@ minimax-api-key: ""
 minimax-group-id: ""
 
 ######## Search 配置 ########
-# 搜索引擎，支持 bigmodel/bocha-web/bocha-ai
+# 搜索引擎，支持 bigmodel/bocha-web/bocha-ai/youcom
 search-engine: bigmodel
 # BigModel 搜索 API Key
 bigmodel-search-api-key: ""
 # Bochaai 搜索 API Key
 bochaai-search-api-key: ""
+# You.com 搜索 API Key（默认读取环境变量 YDC_API_KEY）
+youcom-search-api-key: ""
 
 ######## Search Assistant 配置 ########
 # 搜索引擎助手，支持 bigmodel/bochaai
