@@ -2,32 +2,14 @@ package externalpay
 
 import (
 	"context"
-	"database/sql"
-	"os"
 	"testing"
-
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/mylxsw/aidea-server/migrate/data"
-	"github.com/mylxsw/eloquent/migrate"
 )
 
 // Run against a disposable database with AIDEA_EXTERNALPAY_TEST_DSN set.
 func TestExternalPaymentDatabaseFlow(t *testing.T) {
-	dsn := os.Getenv("AIDEA_EXTERNALPAY_TEST_DSN")
-	if dsn == "" {
-		t.Skip("set AIDEA_EXTERNALPAY_TEST_DSN to test the payment schema against a disposable MariaDB database")
-	}
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
+	db := externalPayTestDB(t)
 	ctx := context.Background()
-	m := migrate.NewManager(db).Init(ctx)
-	data.Migrate20261018DDL(m)
-	if err := m.Run(ctx); err != nil {
-		t.Fatalf("migration failed: %v", err)
-	}
+	var err error
 	clientID, err := randomID("app_")
 	if err != nil {
 		t.Fatal(err)

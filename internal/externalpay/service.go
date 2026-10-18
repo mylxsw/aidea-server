@@ -28,9 +28,18 @@ var merchantIDPattern = regexp.MustCompile(`^[a-zA-Z0-9_.:-]{1,100}$`)
 type Service struct {
 	store      *Store
 	conf       *config.Config
-	gateway    *gateway
+	gateway    paymentGateway
 	signer     ed25519.PrivateKey
 	httpClient *http.Client
+}
+
+// paymentGateway keeps the HTTP/order flow testable without calling live payment providers.
+type paymentGateway interface {
+	prepay(context.Context, Order) (string, error)
+	alipayNotification(*http.Request) (verifiedPayment, error)
+	wechatNotification(context.Context, *http.Request) (verifiedPayment, error)
+	query(context.Context, Order) (verifiedPayment, error)
+	close(context.Context, Order) error
 }
 
 type Provider struct{}

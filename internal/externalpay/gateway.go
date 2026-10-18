@@ -165,6 +165,11 @@ func (g *gateway) wechatNotification(ctx context.Context, r *http.Request) (veri
 	if err != nil {
 		return p, err
 	}
+	return g.parseWechatNotification(ctx, r, handler)
+}
+
+func (g *gateway) parseWechatNotification(ctx context.Context, r *http.Request, handler *notify.Handler) (verifiedPayment, error) {
+	var p verifiedPayment
 	transaction := new(payments.Transaction)
 	notice, err := handler.ParseNotifyRequest(ctx, r, transaction)
 	if err != nil {
