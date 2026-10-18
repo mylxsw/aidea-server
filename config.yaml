@@ -417,6 +417,10 @@ alipay-root-cert: ""
 alipay-public-key: ""
 # 支付宝通知地址
 alipay-notify-url: https://your_domain/v1/payment/callback/alipay-notify
+# 外部应用支付默认关闭。启用前配置独立签名私钥与公开 HTTPS 地址。
+external-pay-enabled: false
+external-pay-base-url: ""
+external-pay-private-key-path: ""
 alipay-return-url: https://your_domain/public/payment/alipay-return
 # 支付宝沙盒模式
 #alipay-sandbox: true

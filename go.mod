@@ -5,6 +5,7 @@ go 1.21
 toolchain go1.21.4
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/Timothylock/go-signin-with-apple v0.2.0
 	github.com/Vernacular-ai/godub v0.1.6
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.4

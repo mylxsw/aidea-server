@@ -191,6 +191,9 @@ func initCmdFlags(ins *app.App) {
 	ins.AddBoolFlag("enable-applepay", "启用 Apple 应用内支付")
 
 	ins.AddBoolFlag("enable-alipay", "启用支付宝支付支持，需要指定 alipay-xxx 的所有配置项")
+	ins.AddBoolFlag("external-pay-enabled", "启用独立的外部应用支付接口")
+	ins.AddStringFlag("external-pay-base-url", "", "外部支付 API 的公开 HTTPS 基础地址，例如 https://ai-api.aicode.cc")
+	ins.AddStringFlag("external-pay-private-key-path", "", "用于签名外部支付通知的 Ed25519 PKCS8 PEM 私钥路径")
 	ins.AddStringFlag("alipay-appid", "", "支付宝 APP ID")
 	ins.AddStringFlag("alipay-app-private-key", "path/to/alipay-app-private-key.txt", "支付宝 APP 私钥存储路径")
 	ins.AddStringFlag("alipay-app-public-key", "path/to/appCertPublicKey_2021004100000000.crt", "支付宝 APP 公钥证书存储路径")

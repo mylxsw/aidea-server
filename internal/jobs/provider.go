@@ -3,6 +3,7 @@ package jobs
 import (
 	"time"
 
+	"github.com/mylxsw/aidea-server/internal/externalpay"
 	"github.com/mylxsw/aidea-server/internal/queue"
 	"github.com/mylxsw/asteria/log"
 	"github.com/mylxsw/glacier/infra"
@@ -39,6 +40,12 @@ func (Provider) Register(binder infra.Binder) {
 }
 
 func (Provider) Jobs(cc infra.Resolver, creator scheduler.JobCreator) {
+	if err := creator.Add("external-payment-delivery", "*/10 * * * * *", scheduler.WithoutOverlap(externalpay.DispatchJob)); err != nil {
+		log.Errorf("注册 external-payment-delivery 失败: %v", err)
+	}
+	if err := creator.Add("external-payment-reconcile", "0 * * * * *", scheduler.WithoutOverlap(externalpay.ReconcileJob)); err != nil {
+		log.Errorf("注册 external-payment-reconcile 失败: %v", err)
+	}
 	// 每天凌晨 0:10 执行一次配额使用统计
 	if err := creator.Add(
 		"quota-usage-statistics",

@@ -31,7 +31,10 @@ type Config struct {
 	// 是否启用 API Keys 功能
 	EnableAPIKeys bool `json:"enable_api_keys" yaml:"enable_api_keys"`
 	// 是否是生产环境
-	IsProduction bool `json:"is_production" yaml:"is_production"`
+	IsProduction              bool   `json:"is_production" yaml:"is_production"`
+	ExternalPayEnabled        bool   `json:"external_pay_enabled" yaml:"external_pay_enabled"`
+	ExternalPayBaseURL        string `json:"external_pay_base_url" yaml:"external_pay_base_url"`
+	ExternalPayPrivateKeyPath string `json:"external_pay_private_key_path" yaml:"external_pay_private_key_path"`
 
 	// 临时文件存储路径
 	TempDir string `json:"temp_dir" yaml:"temp_dir"`
@@ -422,16 +425,19 @@ func Register(ins *app.App) {
 		))
 
 		return &Config{
-			Listen:              ctx.String("listen"),
-			DBURI:               ctx.String("db-uri"),
-			SessionSecret:       ctx.String("session-secret"),
-			PrometheusToken:     ctx.String("prometheus-token"),
-			EnableRecordChat:    ctx.Bool("enable-recordchat"),
-			EnableCORS:          ctx.Bool("enable-cors"),
-			EnableWebsocket:     ctx.Bool("enable-websocket"),
-			DebugWithSQL:        ctx.Bool("debug-with-sql"),
-			UniversalLinkConfig: strings.TrimSpace(ctx.String("universal-link-config")),
-			ShouldBindPhone:     ctx.Bool("should-bind-phone"),
+			Listen:                    ctx.String("listen"),
+			DBURI:                     ctx.String("db-uri"),
+			SessionSecret:             ctx.String("session-secret"),
+			PrometheusToken:           ctx.String("prometheus-token"),
+			EnableRecordChat:          ctx.Bool("enable-recordchat"),
+			EnableCORS:                ctx.Bool("enable-cors"),
+			ExternalPayEnabled:        ctx.Bool("external-pay-enabled"),
+			ExternalPayBaseURL:        ctx.String("external-pay-base-url"),
+			ExternalPayPrivateKeyPath: ctx.String("external-pay-private-key-path"),
+			EnableWebsocket:           ctx.Bool("enable-websocket"),
+			DebugWithSQL:              ctx.Bool("debug-with-sql"),
+			UniversalLinkConfig:       strings.TrimSpace(ctx.String("universal-link-config")),
+			ShouldBindPhone:           ctx.Bool("should-bind-phone"),
 
 			EnableSummarizer: ctx.Bool("enable-summarizer"),
 			SummarizerModel:  ctx.String("summarizer-model"),

@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mylxsw/aidea-server/config"
@@ -269,12 +270,33 @@ func (ctl *PaymentController) QueryPaymentStatus(ctx context.Context, webCtx web
 }
 
 func priceStrToInt64Penny(price string) int64 {
-	priceFloat, err := strconv.ParseFloat(price, 64)
-	if err != nil {
-		return 0
-	}
+	value, _ := strictPriceFen(price)
+	return value
+}
 
-	return int64(priceFloat * 100)
+func strictPriceFen(price string) (int64, error) {
+	parts := strings.Split(price, ".")
+	if len(parts) == 0 || len(parts) > 2 || parts[0] == "" {
+		return 0, errors.New("invalid amount")
+	}
+	yuan, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil || yuan < 0 || yuan > 100000000 {
+		return 0, errors.New("invalid amount")
+	}
+	if len(parts) == 1 {
+		return yuan * 100, nil
+	}
+	if len(parts[1]) < 1 || len(parts[1]) > 2 {
+		return 0, errors.New("invalid amount")
+	}
+	fen, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil || fen < 0 {
+		return 0, errors.New("invalid amount")
+	}
+	if len(parts[1]) == 1 {
+		fen *= 10
+	}
+	return yuan*100 + fen, nil
 }
 
 // AlipayNotify 支付宝支付结果服务端回调通知 https://opendocs.alipay.com/open/204/105301
@@ -321,8 +343,21 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 	log.With(params).Debugf("alipay callback params")
 
 	signOk, err := ctl.alipay.VerifyCallbackSign(params)
-	if err != nil {
+	if err != nil || !signOk {
 		log.WithFields(log.Fields{"err": err}).Error("verify alipay callback sign failed")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+	order, err := ctl.payRepo.GetPaymentHistory(ctx, paymentId)
+	if err != nil {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+	paidFen, err := strictPriceFen(totalAmount)
+	if err != nil || paidFen != order.RetailPrice || appId != ctl.conf.AliPayAppID || !strings.HasPrefix(order.Source, "alipay-") {
+		log.WithFields(log.Fields{"payment_id": paymentId}).Error("alipay callback order mismatch")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
+	if tradeStatus == "WAIT_BUYER_PAY" {
+		return webCtx.Raw(func(w http.ResponseWriter) { _, _ = w.Write([]byte("success")) })
 	}
 
 	log.WithFields(log.Fields{
@@ -347,7 +382,7 @@ func (ctl *PaymentController) AlipayNotify(ctx context.Context, webCtx web.Conte
 
 	var status int64
 	var note string
-	if tradeStatus == "TRADE_SUCCESS" {
+	if tradeStatus == "TRADE_SUCCESS" || tradeStatus == "TRADE_FINISHED" {
 		status = int64(repo.PaymentStatusSuccess)
 	} else {
 		status = int64(repo.PaymentStatusFailed)
@@ -1052,11 +1087,18 @@ func (ctl *PaymentController) WechatPayNotify(ctx context.Context, webCtx web.Co
 	if notifyReq.EventType != "TRANSACTION.SUCCESS" {
 		return webCtx.JSON(web.M{})
 	}
+	if transaction.OutTradeNo == nil || transaction.TransactionId == nil || transaction.Appid == nil || transaction.Mchid == nil || transaction.Amount == nil || transaction.Amount.Total == nil || transaction.TradeState == nil || *transaction.TradeState != "SUCCESS" {
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
+	}
 
 	his, err := ctl.payRepo.GetPaymentHistory(ctx, *transaction.OutTradeNo)
 	if err != nil {
 		log.WithFields(log.Fields{"err": err}).Error("get payment history failed")
 		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInternalError), http.StatusInternalServerError)
+	}
+	if !strings.HasPrefix(his.Source, "wechat-pay-") || *transaction.Appid != ctl.conf.WeChatAppID || *transaction.Mchid != ctl.conf.WeChatPayMchID || *transaction.Amount.Total != his.RetailPrice || (transaction.Amount.Currency != nil && *transaction.Amount.Currency != "CNY") {
+		log.WithFields(log.Fields{"payment_id": his.PaymentId}).Error("wechat callback order mismatch")
+		return webCtx.JSONError(common.Text(webCtx, ctl.translater, common.ErrInvalidRequest), http.StatusBadRequest)
 	}
 
 	wechatPayHis, err := ctl.payRepo.GetWechatHistory(ctx, his.PaymentId)

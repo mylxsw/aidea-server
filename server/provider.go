@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mylxsw/aidea-server/internal/externalpay"
 	"github.com/mylxsw/aidea-server/pkg/rate"
 	"github.com/mylxsw/aidea-server/pkg/repo"
 	"github.com/mylxsw/aidea-server/pkg/service"
@@ -348,6 +349,9 @@ func routes(resolver infra.Resolver, router web.Router, mw web.RequestMiddleware
 
 func muxRoutes(resolver infra.Resolver, router *mux.Router) {
 	resolver.MustResolve(func(conf *config.Config) {
+		resolver.MustResolve(func(service *externalpay.Service) {
+			router.PathPrefix("/partner/v1/payments").Handler(service.Handler())
+		})
 		// 添加 prometheus metrics 支持
 		router.PathPrefix("/metrics").Handler(PrometheusHandler{token: conf.PrometheusToken})
 		// 添加健康检查接口支持

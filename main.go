@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/mylxsw/aidea-server/internal/externalpay"
 	"github.com/mylxsw/aidea-server/internal/payment/wechatpay"
 	"github.com/mylxsw/aidea-server/pkg/ai/google"
 	"github.com/mylxsw/aidea-server/pkg/ai/moonshot"
@@ -128,6 +129,7 @@ func main() {
 	ins.Provider(
 		api.Provider{},
 		server.Provider{},
+		externalpay.Provider{},
 		repo.Provider{},
 		redis.Provider{},
 		queue.Provider{},

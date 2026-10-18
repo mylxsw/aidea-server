@@ -5,6 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/wechatpay-apiv3/wechatpay-go/core"
 	"github.com/wechatpay-apiv3/wechatpay-go/core/option"
+	"github.com/wechatpay-apiv3/wechatpay-go/services/payments"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/app"
 	"github.com/wechatpay-apiv3/wechatpay-go/services/payments/native"
 	"github.com/wechatpay-apiv3/wechatpay-go/utils"
@@ -67,6 +68,28 @@ func (w *WeChatPayImpl) NativePrepay(ctx context.Context, req PrepayRequest) (*P
 	return &PrepayResponse{CodeURL: *resp.CodeUrl}, nil
 }
 
+func (w *WeChatPayImpl) QueryNative(ctx context.Context, outTradeNo string) (*payments.Transaction, error) {
+	client, err := w.createClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	svc := native.NativeApiService{Client: client}
+	resp, _, err := svc.QueryOrderByOutTradeNo(ctx, native.QueryOrderByOutTradeNoRequest{
+		OutTradeNo: core.String(outTradeNo), Mchid: core.String(w.conf.WeChatPayMchID),
+	})
+	return resp, err
+}
+
+func (w *WeChatPayImpl) CloseNative(ctx context.Context, outTradeNo string) error {
+	client, err := w.createClient(ctx)
+	if err != nil {
+		return err
+	}
+	svc := native.NativeApiService{Client: client}
+	_, err = svc.CloseOrder(ctx, native.CloseOrderRequest{OutTradeNo: core.String(outTradeNo), Mchid: core.String(w.conf.WeChatPayMchID)})
+	return err
+}
+
 // AppPrepay creates a app prepay order
 func (w *WeChatPayImpl) AppPrepay(ctx context.Context, req PrepayRequest) (*PrepayResponse, error) {
 	client, err := w.createClient(ctx)
@@ -127,6 +150,6 @@ func (w *WeChatPayImpl) SignAppPay(appID, timestamp, nocestr, prepayID string) (
 	if err != nil {
 		return "", errors.Wrap(err, "sign failed")
 	}
-	
+
 	return sign, nil
 }
