@@ -135,6 +135,10 @@ func (s *Service) serveHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleWechat(w, r)
 		return
 	}
+	if r.Method == http.MethodGet && strings.HasSuffix(path, "/pay") && strings.Count(strings.Trim(path, "/"), "/") == 1 {
+		s.openPay(w, r, strings.TrimSuffix(strings.TrimPrefix(path, "/"), "/pay"))
+		return
+	}
 	if r.Method != http.MethodGet && r.Method != http.MethodPost {
 		writeError(w, 405, "method_not_allowed", "unsupported method")
 		return
@@ -270,7 +274,7 @@ func (s *Service) create(w http.ResponseWriter, r *http.Request, client Client, 
 				return
 			}
 		}
-		writeJSON(w, 200, old)
+		writeJSON(w, 200, s.publicOrder(old))
 		return
 	} else if !errors.Is(err, sql.ErrNoRows) {
 		writeError(w, 500, "storage_error", "could not read order")
@@ -293,13 +297,18 @@ func (s *Service) create(w http.ResponseWriter, r *http.Request, client Client, 
 	o := Order{PaymentID: id, ClientID: client.ID, MerchantOrderID: input.MerchantOrderID, Channel: input.Channel, AmountFen: input.AmountFen, Currency: input.Currency, Subject: input.Subject, CallbackURL: input.CallbackURL, Status: "creating"}
 	if err := s.store.insertOrder(r.Context(), o); err != nil {
 		if old, e := s.store.merchantOrder(r.Context(), client.ID, input.MerchantOrderID); e == nil && sameOrder(old, input) {
-			writeJSON(w, 200, old)
+			writeJSON(w, 200, s.publicOrder(old))
 			return
 		}
 		writeError(w, 500, "storage_error", "could not create order")
 		return
 	}
-	s.finishPrepay(w, r, o, 201)
+	created, err := s.store.order(r.Context(), o.PaymentID)
+	if err != nil {
+		writeError(w, 500, "storage_error", "could not read new order")
+		return
+	}
+	s.finishPrepay(w, r, created, 201)
 }
 
 func (s *Service) finishPrepay(w http.ResponseWriter, r *http.Request, o Order, successCode int) {
@@ -321,7 +330,42 @@ func (s *Service) finishPrepay(w http.ResponseWriter, r *http.Request, o Order, 
 		writeError(w, 500, "storage_error", "could not read new order")
 		return
 	}
-	writeJSON(w, successCode, created)
+	writeJSON(w, successCode, s.publicOrder(created))
+}
+
+func (s *Service) publicOrder(o Order) Order {
+	if o.Channel == "alipay_page" && o.Status == "pending" && o.PayURL != "" {
+		o.PayURL = strings.TrimRight(s.conf.ExternalPayBaseURL, "/") + "/partner/v1/payments/" + url.PathEscape(o.PaymentID) + "/pay"
+	}
+	return o
+}
+
+func (s *Service) openPay(w http.ResponseWriter, r *http.Request, id string) {
+	if !clientIDPattern.MatchString(id) {
+		http.NotFound(w, r)
+		return
+	}
+	o, err := s.store.order(r.Context(), id)
+	if err != nil || o.Channel != "alipay_page" || o.PayURL == "" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	active, err := s.store.paymentLinkActive(r.Context(), id)
+	if err != nil {
+		writeError(w, 500, "storage_error", "could not check payment link")
+		return
+	}
+	if !active {
+		writeError(w, 410, "payment_closed", "payment link is no longer available")
+		return
+	}
+	link, err := url.Parse(o.PayURL)
+	if err != nil || link.Scheme != "https" || (link.Hostname() != "openapi.alipay.com" && link.Hostname() != "openapi.alipaydev.com") {
+		writeError(w, 502, "provider_error", "payment link is unavailable")
+		return
+	}
+	http.Redirect(w, r, link.String(), http.StatusFound)
 }
 
 func sameOrder(o Order, input createRequest) bool {
@@ -334,7 +378,7 @@ func (s *Service) get(w http.ResponseWriter, r *http.Request, c Client, id strin
 		writeError(w, 404, "not_found", "order not found")
 		return
 	}
-	writeJSON(w, 200, o)
+	writeJSON(w, 200, s.publicOrder(o))
 }
 
 func (s *Service) close(w http.ResponseWriter, r *http.Request, c Client, id string) {
@@ -344,7 +388,7 @@ func (s *Service) close(w http.ResponseWriter, r *http.Request, c Client, id str
 		return
 	}
 	if o.Status == "closed" {
-		writeJSON(w, 200, o)
+		writeJSON(w, 200, s.publicOrder(o))
 		return
 	}
 	if o.Status != "pending" {
@@ -364,13 +408,14 @@ func (s *Service) close(w http.ResponseWriter, r *http.Request, c Client, id str
 		writeError(w, 502, "provider_error", "could not verify payment state")
 		return
 	}
-	if p.Status != "TRADE_CLOSED" && p.Status != "CLOSED" {
+	if p.Status != "TRADE_CLOSED" && p.Status != "CLOSED" && p.Status != "NOT_EXIST" {
 		if err := s.gateway.close(r.Context(), o); err != nil {
 			writeError(w, 502, "provider_error", "could not close provider order")
 			return
 		}
 	}
-	if _, err := s.store.markClosed(r.Context(), id); err != nil {
+	changed, err := s.store.markClosed(r.Context(), id)
+	if err != nil {
 		writeError(w, 500, "storage_error", "could not close local order")
 		return
 	}
@@ -379,7 +424,15 @@ func (s *Service) close(w http.ResponseWriter, r *http.Request, c Client, id str
 		writeError(w, 500, "storage_error", "could not read order")
 		return
 	}
-	writeJSON(w, 200, closed)
+	if !changed && closed.Status == "paid" {
+		writeError(w, 409, "already_paid", "payment already completed")
+		return
+	}
+	if closed.Status != "closed" {
+		writeError(w, 409, "invalid_state", "payment state changed during closure")
+		return
+	}
+	writeJSON(w, 200, s.publicOrder(closed))
 }
 
 func (s *Service) list(w http.ResponseWriter, r *http.Request, c Client) {
@@ -391,6 +444,9 @@ func (s *Service) list(w http.ResponseWriter, r *http.Request, c Client) {
 	}
 	if orders == nil {
 		orders = []Order{}
+	}
+	for i := range orders {
+		orders[i] = s.publicOrder(orders[i])
 	}
 	writeJSON(w, 200, map[string]any{"orders": orders, "next_cursor": next, "has_more": hasMore})
 }

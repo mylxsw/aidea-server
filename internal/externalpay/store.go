@@ -77,6 +77,12 @@ func (s *Store) order(ctx context.Context, paymentID string) (Order, error) {
 	return scanOrder(s.db.QueryRowContext(ctx, `SELECT `+orderColumns+` FROM external_pay_orders WHERE payment_id=?`, paymentID))
 }
 
+func (s *Store) paymentLinkActive(ctx context.Context, paymentID string) (bool, error) {
+	var active bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM external_pay_orders WHERE payment_id=? AND status='pending' AND created_at>CURRENT_TIMESTAMP(6)-INTERVAL 15 MINUTE)`, paymentID).Scan(&active)
+	return active, err
+}
+
 func (s *Store) merchantOrder(ctx context.Context, clientID, merchantID string) (Order, error) {
 	return scanOrder(s.db.QueryRowContext(ctx, `SELECT `+orderColumns+` FROM external_pay_orders WHERE client_id=? AND merchant_order_id=?`, clientID, merchantID))
 }

@@ -62,7 +62,8 @@ func (g *gateway) prepay(ctx context.Context, o Order) (string, error) {
 		if g.ali == nil {
 			return "", errors.New("alipay unavailable")
 		}
-		return g.ali.TradePagePay(ctx, gopay.BodyMap{"out_trade_no": o.PaymentID, "total_amount": fmt.Sprintf("%d.%02d", o.AmountFen/100, o.AmountFen%100), "subject": o.Subject})
+		expires := time.Now().Add(15 * time.Minute).In(time.FixedZone("CST", 8*60*60))
+		return g.ali.TradePagePay(ctx, gopay.BodyMap{"out_trade_no": o.PaymentID, "total_amount": fmt.Sprintf("%d.%02d", o.AmountFen/100, o.AmountFen%100), "subject": o.Subject, "time_expire": expires.Format("2006-01-02 15:04:05")})
 	case "wechat_native":
 		if !g.conf.WeChatPayEnabled {
 			return "", errors.New("wechat pay unavailable")
@@ -211,6 +212,9 @@ func (g *gateway) query(ctx context.Context, o Order) (verifiedPayment, error) {
 		}
 		resp, err := g.ali.TradeQuery(ctx, gopay.BodyMap{"out_trade_no": o.PaymentID})
 		if err != nil {
+			if business, ok := ali.IsBizError(err); ok && business.SubCode == "ACQ.TRADE_NOT_EXIST" {
+				return verifiedPayment{PaymentID: o.PaymentID, Channel: o.Channel, Status: "NOT_EXIST"}, nil
+			}
 			return p, err
 		}
 		if resp.Response.OutTradeNo != o.PaymentID {

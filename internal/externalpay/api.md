@@ -113,13 +113,13 @@ console.log(response.status, await response.json());
 }
 ```
 
-相同应用的相同 `merchant_order_id` 再次提交相同参数，返回原订单（`200`）；关键参数不同返回 `409 order_conflict`。若支付渠道临时不可用，返回 `502 provider_error`，可稍后用原 `merchant_order_id` 重试。`pay_url` 对微信是二维码内容，对支付宝是浏览器地址。不要将支付地址误认为已付款证明。
+相同应用的相同 `merchant_order_id` 再次提交相同参数，返回原订单（`200`）；关键参数不同返回 `409 order_conflict`。若支付渠道临时不可用，返回 `502 provider_error`，可稍后用原 `merchant_order_id` 重试。`pay_url` 对微信是二维码内容，对支付宝是 AIDEA 的付款跳转地址。该地址只在订单待支付且创建后 15 分钟内可打开；支付宝收银台也设置了 15 分钟付款期限。不要将支付地址误认为已付款证明。
 
 ## 查询和补漏
 
 - `GET /partner/v1/payments/{payment_id}`：查询自己的订单。
 - `GET /partner/v1/payments?cursor=<上次返回的游标>&limit=100`：按更新时间、记录 ID 顺序读取自己的订单；返回 `{"orders":[...],"next_cursor":"...","has_more":false}`。有结果时始终保存 `next_cursor`，`has_more=true` 时继续翻页；`false` 时下次定期从保存的游标继续。
-- `POST /partner/v1/payments/{payment_id}/close`：关闭自己的待支付订单；AIDEA 先向渠道查单，确认未支付后再向渠道关单。已支付订单返回 `409`。
+- `POST /partner/v1/payments/{payment_id}/close`：关闭自己的待支付订单；AIDEA 先向渠道查单。有待支付交易时向渠道关单；支付宝确认交易尚不存在时，直接关闭本地订单并禁用付款跳转地址。已支付订单返回 `409`。
 
 订单状态：`creating`、`pending`、`paid`、`closed`、`init_failed`。只有 `paid` 表示 AIDEA 已经确认收款。若因网络或回调丢失导致暂时 `pending`，AIDEA 会主动向渠道查单；应用也应继续查询而非立刻生成第二笔付款。
 

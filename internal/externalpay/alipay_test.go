@@ -185,7 +185,9 @@ func TestAlipayPrepayUsesExternalNotifyURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	before := time.Now()
 	payURL, err := g.prepay(context.Background(), Order{PaymentID: "EX_test", Channel: "alipay_page", AmountFen: 1990, Subject: "test item"})
+	after := time.Now()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -199,8 +201,11 @@ func TestAlipayPrepayUsesExternalNotifyURL(t *testing.T) {
 	var content struct {
 		PaymentID string `json:"out_trade_no"`
 		Amount    string `json:"total_amount"`
+		ExpiresAt string `json:"time_expire"`
 	}
-	if err := json.Unmarshal([]byte(parsed.Query().Get("biz_content")), &content); err != nil || content.PaymentID != "EX_test" || content.Amount != "19.90" {
-		t.Fatalf("incorrect Alipay order content: %+v, %v", content, err)
+	decodeErr := json.Unmarshal([]byte(parsed.Query().Get("biz_content")), &content)
+	expiry, parseErr := time.ParseInLocation("2006-01-02 15:04:05", content.ExpiresAt, time.FixedZone("CST", 8*60*60))
+	if decodeErr != nil || content.PaymentID != "EX_test" || content.Amount != "19.90" || parseErr != nil || expiry.Before(before.Add(15*time.Minute-time.Second)) || expiry.After(after.Add(15*time.Minute)) {
+		t.Fatalf("incorrect Alipay order content: %+v, %v, %v", content, decodeErr, parseErr)
 	}
 }

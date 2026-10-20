@@ -33,6 +33,9 @@ func (g *e2eGateway) prepay(_ context.Context, o Order) (string, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	g.prepayIDs = append(g.prepayIDs, o.PaymentID)
+	if o.Channel == "alipay_page" {
+		return "https://openapi.alipay.com/gateway.do?order=test", nil
+	}
 	return "weixin://wxpay/" + o.PaymentID, nil
 }
 
@@ -161,7 +164,7 @@ func TestExternalPaymentEndToEnd(t *testing.T) {
 	}
 	service := &Service{
 		store:      &Store{db: db},
-		conf:       &config.Config{ExternalPayEnabled: true},
+		conf:       &config.Config{ExternalPayEnabled: true, ExternalPayBaseURL: "https://pay.example.com"},
 		gateway:    gateway,
 		signer:     serverPrivate,
 		httpClient: &http.Client{Transport: rewriteCallbackTransport{target: receiverURL, base: receiver.Client().Transport}, Timeout: 5 * time.Second},
@@ -355,5 +358,62 @@ func TestExternalPaymentEndToEnd(t *testing.T) {
 	}
 	if len(gateway.closeIDs) != 1 || gateway.closeIDs[0] != open.PaymentID {
 		t.Fatalf("provider close not called: %+v", gateway.closeIDs)
+	}
+	alipayBody, _ := json.Marshal(createRequest{MerchantOrderID: "business-alipay", Channel: "alipay_page", AmountFen: 1990, Currency: "CNY", Subject: "test subscription", CallbackURL: "https://callback.example.com/alipay"})
+	res, data = call("POST", "/partner/v1/payments", alipayBody, clientID, clientPrivate)
+	if res.StatusCode != 201 {
+		t.Fatalf("alipay create HTTP %d: %s", res.StatusCode, data)
+	}
+	var alipayOrder Order
+	if err := json.Unmarshal(data, &alipayOrder); err != nil {
+		t.Fatal(err)
+	}
+	path := "/partner/v1/payments/" + alipayOrder.PaymentID + "/pay"
+	if alipayOrder.PayURL != "https://pay.example.com"+path {
+		t.Fatalf("Alipay signed URL was exposed: %s", alipayOrder.PayURL)
+	}
+	redirectClient := &http.Client{CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	redirect, err := redirectClient.Get(api.URL + path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	redirect.Body.Close()
+	if redirect.StatusCode != 302 || redirect.Header.Get("Location") != "https://openapi.alipay.com/gateway.do?order=test" {
+		t.Fatalf("active Alipay link not redirected: HTTP %d", redirect.StatusCode)
+	}
+	gateway.mu.Lock()
+	gateway.queryState[alipayOrder.PaymentID] = verifiedPayment{PaymentID: alipayOrder.PaymentID, Channel: "alipay_page", Status: "NOT_EXIST"}
+	gateway.mu.Unlock()
+	res, data = call("POST", strings.TrimSuffix(path, "/pay")+"/close", nil, clientID, clientPrivate)
+	if res.StatusCode != 200 || !bytes.Contains(data, []byte(`"status":"closed"`)) || len(gateway.closeIDs) != 1 {
+		t.Fatalf("Alipay trade-not-exist closure failed: HTTP %d, %s", res.StatusCode, data)
+	}
+	redirect, err = redirectClient.Get(api.URL + path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	redirect.Body.Close()
+	if redirect.StatusCode != 410 {
+		t.Fatalf("closed Alipay link remained usable: HTTP %d", redirect.StatusCode)
+	}
+	expiredBody, _ := json.Marshal(createRequest{MerchantOrderID: "business-alipay-expired", Channel: "alipay_page", AmountFen: 1990, Currency: "CNY", Subject: "expired subscription", CallbackURL: "https://callback.example.com/alipay"})
+	res, data = call("POST", "/partner/v1/payments", expiredBody, clientID, clientPrivate)
+	if res.StatusCode != 201 {
+		t.Fatalf("expired Alipay test order creation HTTP %d: %s", res.StatusCode, data)
+	}
+	var expiredOrder Order
+	if err := json.Unmarshal(data, &expiredOrder); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE external_pay_orders SET created_at=CURRENT_TIMESTAMP(6)-INTERVAL 16 MINUTE WHERE payment_id=?`, expiredOrder.PaymentID); err != nil {
+		t.Fatal(err)
+	}
+	redirect, err = redirectClient.Get(api.URL + "/partner/v1/payments/" + expiredOrder.PaymentID + "/pay")
+	if err != nil {
+		t.Fatal(err)
+	}
+	redirect.Body.Close()
+	if redirect.StatusCode != 410 {
+		t.Fatalf("expired Alipay link remained usable: HTTP %d", redirect.StatusCode)
 	}
 }
