@@ -3,16 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="light">
   <title>返回应用</title>
   <style>
     :root {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      color: #263c3e;
-      background: #f7faf9;
+      color: #243648;
+      background: #f5f7fa;
     }
 
     body {
+      box-sizing: border-box;
       min-width: 280px;
       min-height: 100vh;
       min-height: 100dvh;
@@ -30,7 +31,7 @@
     svg {
       width: 54px;
       height: 54px;
-      color: #2c8175;
+      color: #3b7895;
     }
 
     h1 {
@@ -43,15 +44,9 @@
 
     p {
       margin: 13px 0 0;
-      color: #687e7d;
+      color: #6c7d8c;
       font-size: 15px;
       line-height: 1.7;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root { color: #eef5f3; background: #142023; }
-      svg { color: #76c6b6; }
-      p { color: #a5b9b5; }
     }
   </style>
 </head>
@@ -62,7 +57,7 @@
       <path d="M37 28H19m0 0 7-7m-7 7 7 7"></path>
     </svg>
     <h1>回到应用查看结果</h1>
-    <p>未自动关闭？请关闭此标签页。</p>
+    <p>你可以关闭该页面了。</p>
   </main>
   <script>
     try { history.replaceState(null, '', window.location.pathname); } catch (_) {}

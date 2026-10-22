@@ -80,7 +80,7 @@ func TestPaymentReturnPageDoesNotTreatRedirectAsPaymentSuccess(t *testing.T) {
 		t.Fatal("return page may expose or cache payment redirect parameters")
 	}
 	body := response.Body.String()
-	if !strings.Contains(body, "回到应用查看结果") || !strings.Contains(body, "window.close()") || !strings.Contains(body, "关闭此标签页") {
+	if !strings.Contains(body, "回到应用查看结果") || !strings.Contains(body, "window.close()") || !strings.Contains(body, "你可以关闭该页面了") {
 		t.Fatal("return page does not provide close and fallback guidance")
 	}
 	if strings.Contains(body, "PAYMENT_MARKER") || strings.Contains(body, "支付成功") {
