@@ -68,6 +68,32 @@ func TestDocumentationAvailableWhenPaymentsDisabled(t *testing.T) {
 	}
 }
 
+func TestPaymentReturnPageDoesNotTreatRedirectAsPaymentSuccess(t *testing.T) {
+	service := &Service{conf: &config.Config{ExternalPayEnabled: true}}
+	response := httptest.NewRecorder()
+	service.Handler().ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/partner/v1/payments/return?out_trade_no=PAYMENT_MARKER&trade_status=TRADE_SUCCESS", nil))
+
+	if response.Code != http.StatusOK || !strings.HasPrefix(response.Header().Get("Content-Type"), "text/html") {
+		t.Fatalf("return page unavailable: HTTP %d, content type %q", response.Code, response.Header().Get("Content-Type"))
+	}
+	if response.Header().Get("Cache-Control") != "no-store" || response.Header().Get("Referrer-Policy") != "no-referrer" {
+		t.Fatal("return page may expose or cache payment redirect parameters")
+	}
+	body := response.Body.String()
+	if !strings.Contains(body, "回到应用") || !strings.Contains(body, "window.close()") || !strings.Contains(body, "手动关闭") {
+		t.Fatal("return page does not provide close and fallback guidance")
+	}
+	if strings.Contains(body, "PAYMENT_MARKER") || strings.Contains(body, "支付成功") {
+		t.Fatal("return page trusts or exposes unverified redirect parameters")
+	}
+
+	wrongMethod := httptest.NewRecorder()
+	service.Handler().ServeHTTP(wrongMethod, httptest.NewRequest(http.MethodPost, "/partner/v1/payments/return", nil))
+	if wrongMethod.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("return page accepted POST: HTTP %d", wrongMethod.Code)
+	}
+}
+
 func TestAuthenticateBindsRequestAndRejectsReplayedJWT(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>返回应用查看支付结果</title>
+  <style>
+    :root {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: #233a46;
+      background: #edf3f4;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      min-height: 100dvh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 32px 20px;
+      background:
+        radial-gradient(circle at 84% 8%, #d9eae8 0, transparent 32%),
+        radial-gradient(circle at 12% 92%, #e0eaf1 0, transparent 36%),
+        #edf3f4;
+    }
+
+    main {
+      width: min(100%, 570px);
+      padding: clamp(32px, 7vw, 58px);
+      background: #fff;
+      border: 1px solid #dce7e9;
+      border-radius: 24px;
+      box-shadow: 0 20px 70px rgba(35, 58, 70, .08);
+    }
+
+    .symbol {
+      width: 68px;
+      height: 68px;
+      display: grid;
+      place-items: center;
+      color: #177d72;
+      background: #e7f4f0;
+      border-radius: 20px;
+    }
+
+    .symbol svg { width: 34px; height: 34px; }
+
+    h1 {
+      margin: 30px 0 14px;
+      font-size: clamp(27px, 5vw, 36px);
+      font-weight: 650;
+      line-height: 1.25;
+      letter-spacing: -.025em;
+    }
+
+    .intro {
+      max-width: 28em;
+      margin: 0;
+      color: #526a75;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+
+    .divider {
+      height: 1px;
+      margin: 34px 0 28px;
+      background: #e4ecee;
+    }
+
+    .next {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .next-icon {
+      flex: none;
+      display: grid;
+      place-items: center;
+      width: 32px;
+      height: 32px;
+      border: 1px solid #c8e4dd;
+      border-radius: 50%;
+      color: #177d72;
+      font-size: 19px;
+      line-height: 1;
+    }
+
+    .next strong {
+      display: block;
+      margin: 1px 0 4px;
+      font-size: 15px;
+      font-weight: 620;
+    }
+
+    .next p {
+      margin: 0;
+      color: #647984;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    button {
+      margin-top: 30px;
+      min-height: 44px;
+      padding: 0 21px;
+      border: 0;
+      border-radius: 10px;
+      background: #177d72;
+      color: #fff;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover { background: #12675e; }
+    button:focus-visible { outline: 3px solid #78cbbd; outline-offset: 3px; }
+
+    .fallback {
+      margin: 15px 0 0;
+      color: #647984;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 480px) {
+      body { padding: 16px; }
+      main { border-radius: 18px; }
+      button { width: 100%; }
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      main { animation: arrive .45s ease-out both; }
+      @keyframes arrive {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="symbol" aria-hidden="true">
+      <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="6" width="28" height="24" rx="5"></rect>
+        <path d="M13 18h12m-5-5 5 5-5 5"></path>
+      </svg>
+    </div>
+    <h1>现在可以回到应用了</h1>
+    <p class="intro">已从支付宝返回，订单结果正在确认。回到应用后，即可查看最终支付状态。</p>
+    <div class="divider" aria-hidden="true"></div>
+    <div class="next">
+      <span class="next-icon" aria-hidden="true">↶</span>
+      <div>
+        <strong>接下来</strong>
+        <p>切回原应用，查看订单的最新状态。</p>
+      </div>
+    </div>
+    <button type="button" id="close-page">关闭此页面</button>
+    <p class="fallback" id="fallback" role="status">页面会尝试自动关闭。如果没有关闭，请手动关闭标签页并返回应用。</p>
+  </main>
+  <script>
+    try { history.replaceState(null, '', window.location.pathname); } catch (_) {}
+    const fallback = document.getElementById('fallback');
+    function tryClose() {
+      try { window.close(); } catch (_) {}
+      window.setTimeout(() => {
+        fallback.textContent = '浏览器可能不允许网页自动关闭。请手动关闭此标签页，再返回应用查看结果。';
+      }, 600);
+    }
+    document.getElementById('close-page').addEventListener('click', tryClose);
+    window.setTimeout(tryClose, 1200);
+  </script>
+</body>
+</html>

@@ -115,6 +115,8 @@ console.log(response.status, await response.json());
 
 相同应用的相同 `merchant_order_id` 再次提交相同参数，返回原订单（`200`）；关键参数不同返回 `409 order_conflict`。若支付渠道临时不可用，返回 `502 provider_error`，可稍后用原 `merchant_order_id` 重试。`pay_url` 对微信是二维码内容，对支付宝是 AIDEA 的付款跳转地址。该地址只在订单待支付且创建后 15 分钟内可打开；支付宝收银台也设置了 15 分钟付款期限。不要将支付地址误认为已付款证明。
 
+支付宝付款后会跳转到 AIDEA 的返回页。页面会尝试自动关闭；若浏览器不允许，用户可关闭标签页并回到应用。此跳转只用于引导用户，不能据此发放权益；应用仍应等待支付通知或查询到 `paid`。
+
 ## 查询和补漏
 
 - `GET /partner/v1/payments/{payment_id}`：查询自己的订单。
